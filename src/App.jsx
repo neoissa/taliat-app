@@ -3,6 +3,7 @@ import Login from './components/Login';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
+import ScoutList from './components/ScoutList';
 import { auth } from './firebase';
 import { signOut } from 'firebase/auth';
 
@@ -67,6 +68,18 @@ export default function App() {
           </button>
           {isLeader && (
             <button
+              onClick={() => setCurrentTab('scouts')}
+              className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
+                currentTab === 'scouts'
+                  ? 'border-emerald-500 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Scout Progress
+            </button>
+          )}
+          {isLeader && (
+            <button
               onClick={() => setCurrentTab('admin')}
               className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
                 currentTab === 'admin'
@@ -84,6 +97,7 @@ export default function App() {
       <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+        {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
       </main>
     </div>
