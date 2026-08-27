@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: fetch the calling user's Firestore profile
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Users collection – readable by the owner only
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Scoped patrol chat: /chats/{leaderId}/messages/{messageId}
+    // A scout (or leader) may only access the room whose leaderId matches
+    // the leaderId stored in their own user document.
+    match /chats/{leaderId}/messages/{messageId} {
+      allow read: if request.auth != null
+                  && userDoc().leaderId == leaderId;
+
+      allow create: if request.auth != null
+                    && userDoc().leaderId == leaderId
+                    // Enforce the message carries the correct leaderId field
+                    && request.resource.data.leaderId == leaderId
+                    // Sender can only write as themselves
+                    && request.resource.data.senderId == request.auth.uid;
+
+      allow update, delete: if false;
+    }
+  }
+}
