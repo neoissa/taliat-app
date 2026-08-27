@@ -3,6 +3,7 @@ import Login from './components/Login';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
+import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import { auth } from './firebase';
 import { signOut } from 'firebase/auth';
 
