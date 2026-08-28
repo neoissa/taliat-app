@@ -13,10 +13,6 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-function generateUsername(fullName) {
-  return fullName.trim().toLowerCase().replace(/\s+/g, '.') + Math.floor(100 + Math.random() * 900);
-}
-
 function ScoutDetail({ scout, leaderId, onBack }) {
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState('');
@@ -182,6 +178,8 @@ export default function PatrolRoster({ currentUser }) {
   // Add scout form state
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newRank, setNewRank] = useState('');
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState('');
@@ -202,12 +200,20 @@ export default function PatrolRoster({ currentUser }) {
     e.preventDefault();
     setAddError('');
     setAddMsg('');
-    if (!newName.trim()) return;
+    const username = newUsername.trim().toLowerCase();
+    const password = newPassword;
+    if (!newName.trim() || !username || !password) return;
+    if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+      setAddError('Username must be 3–30 characters and use only letters, numbers, dots, underscores, or hyphens.');
+      return;
+    }
+    if (password.length < 6) {
+      setAddError('Temporary password must be at least 6 characters.');
+      return;
+    }
     setAdding(true);
 
-    const username = generateUsername(newName);
     const email = `${username}@talia.app`;
-    const defaultPassword = `Scout${Math.floor(1000 + Math.random() * 9000)}!`;
 
     try {
       // Use a secondary Firebase app instance so creating a new user doesn't
@@ -219,7 +225,7 @@ export default function PatrolRoster({ currentUser }) {
         secondaryApp = initializeApp(firebaseConfig, 'secondary');
       }
       const secondaryAuth = getAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, defaultPassword);
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       const newUid = cred.user.uid;
       await secondaryAuth.signOut();
 
@@ -235,8 +241,10 @@ export default function PatrolRoster({ currentUser }) {
         createdAt: serverTimestamp(),
       });
 
-      setAddMsg(`Scout added! Username: ${username} · Temporary password: ${defaultPassword}`);
+      setAddMsg(`Scout added! Username: ${username} · Temporary password: ${password}`);
       setNewName('');
+      setNewUsername('');
+      setNewPassword('');
       setNewRank('');
       setShowForm(false);
     } catch (err) {
@@ -295,6 +303,33 @@ export default function PatrolRoster({ currentUser }) {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Ahmad Al-Rashid"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Username</label>
+              <input
+                type="text"
+                required
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="e.g. ahmad.scout"
+                pattern="[a-zA-Z0-9._-]{3,30}"
+                title="3–30 letters, numbers, dots, underscores, or hyphens"
+                autoCapitalize="none"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Temporary Password</label>
+              <input
+                type="text"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
