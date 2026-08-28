@@ -54,7 +54,7 @@ export default function Login({ onUserAuthenticated }) {
         onUserAuthenticated({
           uid: user.uid,
           email: user.email,
-          role: 'leader',
+          role: 'scout',
           leaderId: null,
           patrolId: null,
           fullName: user.email,
