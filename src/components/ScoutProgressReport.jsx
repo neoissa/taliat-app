@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { Printer, ArrowLeft, Save } from 'lucide-react';
 
-export default function ScoutProgressReport({ scout, currentUser, onBack }) {
+export default function ScoutProgressReport({ scout, currentUser, onBack, setChatScout, setCurrentTab }) {
   const [requirements, setRequirements] = useState([]);
   const [progress, setProgress] = useState({});
   const [leaderNote, setLeaderNote] = useState('');
@@ -127,13 +127,24 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           <ArrowLeft size={16} />
           Back to Scout List
         </button>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-900/30"
-        >
-          <Printer size={16} />
-          Print Progress Report
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setChatScout(scout);
+              setCurrentTab('chat');
+            }}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer text-sm"
+          >
+            Chat with Scout
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-900/30"
+          >
+            <Printer size={16} />
+            Print Progress Report
+          </button>
+        </div>
       </div>
 
       {/* ── PRINT REPORT CONTAINER ── */}
