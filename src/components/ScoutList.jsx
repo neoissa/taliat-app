@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import ScoutProgressReport from './ScoutProgressReport';
 import { Users, ChevronRight } from 'lucide-react';
 
@@ -10,15 +10,17 @@ export default function ScoutList({ currentUser }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+    const scoutsQuery = query(
+      collection(db, 'users'),
+      where('leaderId', '==', currentUser.uid)
+    );
+    const unsub = onSnapshot(scoutsQuery, (snap) => {
       const all = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-      // Show all members (non-leaders) or everyone — leaders can see all scouts
-      const members = all.filter((u) => u.role !== 'leader');
-      setScouts(members);
+      setScouts(all.filter((u) => u.role === 'scout'));
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [currentUser.uid]);
 
   if (selectedScout) {
     return (
