@@ -67,20 +67,14 @@ service cloud.firestore {
                                  && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
     }
 
-    // Chat room messages
-    match /chats/{leaderId}/messages/{messageId} {
-      allow read: if request.auth != null
-                  && (isOwner()
-                      || userDoc().leaderId == leaderId
-                      || request.auth.uid == leaderId);
-
-      allow create: if request.auth != null
-                    && (isOwner()
-                        || userDoc().leaderId == leaderId
-                        || request.auth.uid == leaderId)
+    // Chat room messages scoped by roomId (GroupId or Tali3a)
+    match /chats/{roomId}/messages/{messageId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null 
                     && request.resource.data.senderId == request.auth.uid;
-
-      allow update, delete: if false;
+      allow delete: if request.auth != null 
+                    && (isOwner() || userDoc().role == 'leader');
+      allow update: if false;
     }
   }
 }

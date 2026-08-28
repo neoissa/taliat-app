@@ -340,86 +340,61 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                         )}
                       </button>
 
-                      <div className="flex-1 min-w-0" onClick={() => toggleExpand(req.id)}>
-                        <div className="flex items-center justify-between cursor-pointer gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-bold text-slate-500">Requirement {req.number}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleRequirement(req.id);
-                              }}
-                              disabled={readOnly}
-                              className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition leading-none cursor-pointer ${
-                                isCompleted
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                  : 'bg-slate-700/50 text-slate-400 border border-slate-600'
-                              }`}
-                            >
-                              {isCompleted ? 'Tested' : 'Not Tested'}
-                            </button>
-                          </div>
-                          <span className="text-slate-400 hover:text-white transition">
-                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono font-bold text-slate-500">Requirement {req.number}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRequirement(req.id);
+                            }}
+                            disabled={readOnly}
+                            className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition leading-none cursor-pointer ${
+                              isCompleted
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-slate-700/50 text-slate-400 border border-slate-600'
+                            }`}
+                          >
+                            {isCompleted ? 'Tested' : 'Not Tested'}
+                          </button>
                         </div>
                         <p className={`text-sm mt-1 leading-relaxed ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-200'}`}>
                           {req.text}
                         </p>
-
-                        {/* Collapsed view status tags */}
-                        {!isExpanded && (noteValue || dateValue) && (
-                          <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-slate-500">
-                            {dateValue && (
-                              <span className="flex items-center gap-1">
-                                <Calendar size={12} /> {dateValue}
-                              </span>
-                            )}
-                            {noteValue && (
-                              <span className="flex items-center gap-1 truncate max-w-xs">
-                                <MessageSquare size={12} /> {noteValue}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
 
-                    {/* Collapsible Accordion */}
-                    {isExpanded && (
-                      <div className="px-4 pb-4 pt-2 border-t border-slate-700/40 bg-slate-900/30 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Date Field */}
-                          <div>
-                            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
-                              Completion Date
-                            </label>
-                            <input
-                              type="date"
-                              disabled={readOnly}
-                              value={dateValue}
-                              onChange={(e) => handleDateChange(req.id, e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                            />
-                          </div>
-
-                          {/* Reflections Field */}
-                          <div>
-                            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
-                              Notes & Sign-off reflections
-                            </label>
-                            <textarea
-                              rows={2}
-                              disabled={readOnly}
-                              value={noteValue}
-                              onChange={(e) => handleNoteChange(req.id, e.target.value)}
-                              placeholder={readOnly ? 'No notes entered' : 'Write notes or sign-off reflections here...'}
-                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none disabled:opacity-75"
-                            />
-                          </div>
-                        </div>
+                    {/* Date and Notes (Visible at all times!) */}
+                    <div className="px-4 pb-4 pt-2 border-t border-slate-700/40 bg-slate-900/10 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Date Field */}
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                          <Calendar size={12} /> Completion Date
+                        </label>
+                        <input
+                          type="date"
+                          disabled={readOnly}
+                          value={dateValue}
+                          onChange={(e) => handleDateChange(req.id, e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                        />
                       </div>
-                    )}
+
+                      {/* Reflections Field */}
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                          <MessageSquare size={12} /> Notes & Sign-off reflections
+                        </label>
+                        <input
+                          type="text"
+                          disabled={readOnly}
+                          value={noteValue}
+                          onChange={(e) => handleNoteChange(req.id, e.target.value)}
+                          placeholder={readOnly ? 'No notes entered' : 'Write notes or sign-off reflections here...'}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-75"
+                        />
+                      </div>
+                    </div>
                   </div>
                 );
               })}
