@@ -26,6 +26,10 @@ export default function PatrolChat({ currentUser }) {
   const defaultGroupId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
   const activeRoomId = isLeaderOrOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
 
+  useEffect(() => {
+    console.log("[PatrolChat Debug] User:", currentUser.email, "Role:", currentUser.role, "ActiveRoomId:", activeRoomId, "defaultGroupId:", defaultGroupId);
+  }, [currentUser, activeRoomId, defaultGroupId]);
+
   // 1. Fetch groups to populate room list for Leader/Owner
   useEffect(() => {
     if (!isLeaderOrOwner) return;
