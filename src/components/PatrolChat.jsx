@@ -24,24 +24,31 @@ export default function PatrolChat({ currentUser }) {
 
   // Determine chat room ID: Group / Patrol ID
   const defaultGroupId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
-  const activeRoomId = isOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
+  const activeRoomId = isLeaderOrOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
 
-  // 1. Fetch groups to populate room list for Owner
+  // 1. Fetch groups to populate room list for Leader/Owner
   useEffect(() => {
-    if (!isOwner) return;
+    if (!isLeaderOrOwner) return;
 
     const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(g => !g.archived);
       setGroups(list);
+      
+      // Auto-select the group the leader is assigned to, or fallback to the first group
       if (list.length > 0 && !selectedGroupId) {
-        setSelectedGroupId(list[0].id);
+        const assignedGroup = list.find(g => g.assignedLeaderIds && g.assignedLeaderIds.includes(currentUser.uid));
+        if (assignedGroup) {
+          setSelectedGroupId(assignedGroup.id);
+        } else {
+          setSelectedGroupId(list[0].id);
+        }
       }
     }, (err) => {
       console.error('Error fetching groups for chat:', err);
     });
 
     return () => unsub();
-  }, [isOwner]);
+  }, [isLeaderOrOwner, currentUser.uid]);
 
   // 2. Fetch messages for activeRoomId
   useEffect(() => {
@@ -135,14 +142,14 @@ export default function PatrolChat({ currentUser }) {
         <div>
           <h3 className="font-bold text-white text-base">Patrol Stream</h3>
           <p className="text-xs text-slate-400">
-            {isOwner 
-              ? 'Super Admin global stream switcher' 
+            {isLeaderOrOwner 
+              ? 'Taliʿa Stream Selector (Admin/Leader view)' 
               : `Taliʿa Group Chat: ${currentUser.groupId || currentUser.patrolId || 'General'}`}
           </p>
         </div>
 
-        {/* Room Switcher for Owner */}
-        {isOwner && (
+        {/* Room Switcher for Leader/Owner */}
+        {isLeaderOrOwner && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold text-slate-400">Taliʿa Stream:</span>
             <select
