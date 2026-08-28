@@ -3,6 +3,7 @@ import Login from './components/Login';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
+import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import { auth } from './firebase';
 import { signOut } from 'firebase/auth';
@@ -20,7 +21,7 @@ export default function App() {
     return <Login onUserAuthenticated={(user) => setCurrentUser(user)} />;
   }
 
-  const isLeader = currentUser.role === 'leader' || currentUser.email?.includes('neoissa');
+  const isLeader = currentUser.role === 'leader';
 
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col font-sans">
@@ -76,6 +77,28 @@ export default function App() {
           >
             Patrol Stream
           </button>
+          <button
+            onClick={() => setCurrentTab('meritbadges')}
+            className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
+              currentTab === 'meritbadges'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Merit Badges
+          </button>
+          {isLeader && (
+            <button
+              onClick={() => setCurrentTab('roster')}
+              className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
+                currentTab === 'roster'
+                  ? 'border-emerald-500 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Patrol Roster
+            </button>
+          )}
           {isLeader && (
             <button
               onClick={() => setCurrentTab('admin')}
@@ -96,6 +119,8 @@ export default function App() {
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+        {currentTab === 'roster' && isLeader && <PatrolRoster currentUser={currentUser} />}
+        {currentTab === 'meritbadges' && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
       </main>
     </div>
