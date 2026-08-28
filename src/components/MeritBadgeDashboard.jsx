@@ -136,6 +136,9 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${badge.name} merit badge details`}
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
