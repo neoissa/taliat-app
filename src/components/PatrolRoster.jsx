@@ -353,15 +353,16 @@ export default function PatrolRoster({ currentUser }) {
   const [addError, setAddError] = useState('');
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'users'),
-      where('leaderId', '==', currentUser.uid)
-    );
+    const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+    const q = isOwner
+      ? query(collection(db, 'users'), where('role', '==', 'scout'))
+      : query(collection(db, 'users'), where('role', '==', 'scout'), where('leaderId', '==', currentUser.uid));
+      
     const unsub = onSnapshot(q, (snap) => {
       setScouts(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [currentUser.uid]);
+  }, [currentUser.uid, currentUser.role, currentUser.email]);
 
   const handleAddScout = async (e) => {
     e.preventDefault();

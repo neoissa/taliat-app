@@ -71,15 +71,46 @@ const RANK_COLORS = {
 };
 
 export default function AdvancementTracker({ currentUser, scoutId: customScoutId, readOnly = false }) {
-  const scoutId = customScoutId || currentUser.uid;
+  const [selectedScoutId, setSelectedScoutId] = useState('');
+  const [scoutsList, setScoutsList] = useState([]);
+  
+  const isLeaderOrOwner = currentUser.role === 'leader' || currentUser.role === 'owner';
+  const scoutId = customScoutId || (isLeaderOrOwner ? selectedScoutId : currentUser.uid);
 
   const [selectedRankId, setSelectedRankId] = useState('scout');
   const [allRanksProgress, setAllRanksProgress] = useState({});
   const [expandedReqs, setExpandedReqs] = useState({}); // { [reqId]: boolean }
   const [loading, setLoading] = useState(true);
 
+  // Fetch scouts list if leader or owner and customScoutId is not provided
+  useEffect(() => {
+    if (!isLeaderOrOwner || customScoutId) return;
+
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      const scouts = allUsers.filter(u => {
+        if (u.role !== 'scout') return false;
+        if (currentUser.role === 'owner') return true;
+        return u.leaderId === currentUser.uid;
+      });
+      setScoutsList(scouts);
+      if (scouts.length > 0 && !selectedScoutId) {
+        setSelectedScoutId(scouts[0].uid);
+      }
+    }, (err) => {
+      console.error('Error listening to users in tracker:', err);
+    });
+
+    return () => unsub();
+  }, [isLeaderOrOwner, customScoutId, currentUser.role, currentUser.uid]);
+
   // Listen to all rank progress documents in real-time
   useEffect(() => {
+    if (!scoutId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const colRef = collection(db, 'user_progress', scoutId, 'ranks');
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const progressMap = {};
@@ -180,8 +211,34 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     return <div className="text-center py-10 text-slate-400 text-sm">Loading advancement portal...</div>;
   }
 
+  if (isLeaderOrOwner && !customScoutId && scoutsList.length === 0) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center text-slate-400 text-sm print-hide">
+        No active scouts found. Set up scouts in the Organization Hub first.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Scout Selector for Leader/Owner viewing the tracker directly */}
+      {isLeaderOrOwner && !customScoutId && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-wrap gap-4 items-center justify-between print-hide">
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Select Scout</h2>
+            <p className="text-xs text-slate-400">View and track requirements progress for this scout</p>
+          </div>
+          <select
+            value={selectedScoutId}
+            onChange={(e) => setSelectedScoutId(e.target.value)}
+            className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+          >
+            {scoutsList.map(s => (
+              <option key={s.uid} value={s.uid}>{s.fullName || s.username} ({s.rank || 'Scout'})</option>
+            ))}
+          </select>
+        </div>
+      )}
       {/* Ranks Tabs Bar */}
       <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none print-hide">
         {RANKS_DATA.map((rank) => {

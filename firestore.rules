@@ -8,34 +8,76 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Users may read their own profile. Leaders may read profiles assigned to them
-    // and create scout profiles belonging to themselves.
+    // Helper: check if owner
+    function isOwner() {
+      return request.auth != null && 
+        (userDoc().role == 'owner' || 
+         userDoc().isOwner == true || 
+         userDoc().email == 'neoissa@gmail.com');
+    }
+
+    // Users collection
     match /users/{userId} {
       allow read: if request.auth != null
                   && (request.auth.uid == userId
+                      || isOwner()
                       || (userDoc().role == 'leader'
                           && resource.data.leaderId == request.auth.uid));
 
       allow create: if request.auth != null
-                    && userDoc().role == 'leader'
-                    && request.resource.data.role == 'scout'
-                    && request.resource.data.leaderId == request.auth.uid;
+                    && (isOwner()
+                        || (userDoc().role == 'leader'
+                            && request.resource.data.role == 'scout'
+                            && request.resource.data.leaderId == request.auth.uid));
 
-      allow update, delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null
+                    && (request.auth.uid == userId || isOwner());
+
+      allow delete: if request.auth != null && isOwner();
     }
 
-    // Scoped patrol chat: /chats/{leaderId}/messages/{messageId}
-    // A scout (or leader) may only access the room whose leaderId matches
-    // the leaderId stored in their own user document.
+    // Groups collection
+    match /groups/{groupId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isOwner();
+    }
+
+    // Scout progress: ranks and merit badges
+    match /user_progress/{scoutId}/ranks/{rankId} {
+      allow read, write: if request.auth != null
+                         && (request.auth.uid == scoutId
+                             || isOwner()
+                             || (userDoc().role == 'leader'
+                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
+    }
+
+    match /user_progress/{scoutId}/merit_badges/{badgeId} {
+      allow read, write: if request.auth != null
+                         && (request.auth.uid == scoutId
+                             || isOwner()
+                             || (userDoc().role == 'leader'
+                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
+    }
+
+    // Private leader notes
+    match /scout_notes/{scoutId} {
+      allow read, write: if request.auth != null
+                         && (isOwner()
+                             || (userDoc().role == 'leader'
+                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
+    }
+
+    // Chat room messages
     match /chats/{leaderId}/messages/{messageId} {
       allow read: if request.auth != null
-                  && userDoc().leaderId == leaderId;
+                  && (isOwner()
+                      || userDoc().leaderId == leaderId
+                      || request.auth.uid == leaderId);
 
       allow create: if request.auth != null
-                    && userDoc().leaderId == leaderId
-                    // Enforce the message carries the correct leaderId field
-                    && request.resource.data.leaderId == leaderId
-                    // Sender can only write as themselves
+                    && (isOwner()
+                        || userDoc().leaderId == leaderId
+                        || request.auth.uid == leaderId)
                     && request.resource.data.senderId == request.auth.uid;
 
       allow update, delete: if false;

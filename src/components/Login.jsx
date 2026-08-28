@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Login({ onUserAuthenticated }) {
   const [username, setUsername] = useState('');
@@ -22,31 +22,48 @@ export default function Login({ onUserAuthenticated }) {
       const user = userCredential.user;
       
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        
+        let forcedRole = null;
+        let forcedOwner = false;
+        if (user.email === 'neoissa@gmail.com') {
+          forcedRole = 'owner';
+          forcedOwner = true;
+          await setDoc(userRef, { role: 'owner', isOwner: true }, { merge: true });
+        }
+
         if (userDoc.exists()) {
           const data = userDoc.data();
           onUserAuthenticated({
             uid: user.uid,
             email: user.email,
-            role: data.role || 'scout',
+            role: forcedRole || data.role || 'scout',
+            isOwner: forcedOwner || data.isOwner || false,
             leaderId: data.leaderId || null,
-            patrolId: data.patrolId || null,
+            groupId: data.groupId || data.patrolId || null,
             fullName: data.fullName || cleanInput.split('@')[0],
             username: data.username || cleanInput.split('@')[0],
             rank: data.rank || '',
             meritBadges: data.meritBadges || [],
           });
         } else {
-          onUserAuthenticated({
-            uid: user.uid,
-            email: user.email,
-            role: 'leader',
+          const newProfile = {
+            role: forcedRole || 'leader',
+            isOwner: forcedOwner,
             leaderId: null,
-            patrolId: null,
+            groupId: null,
             fullName: cleanInput.split('@')[0],
             username: cleanInput.split('@')[0],
             rank: '',
             meritBadges: [],
+          };
+          await setDoc(userRef, newProfile);
+          onUserAuthenticated({
+            uid: user.uid,
+            email: user.email,
+            ...newProfile
           });
         }
       } catch (dbErr) {
