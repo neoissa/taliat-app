@@ -312,7 +312,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
                       </td>
                       <td className="p-2 border border-slate-300 text-center">
                         <span className={isDone ? 'print-report-complete' : 'print-report-pending'}>
-                          {isDone ? 'COMPLETED' : 'PENDING'}
+                          {isDone ? 'TESTED' : 'NOT TESTED'}
                         </span>
                       </td>
                       <td className="p-2 border border-slate-300 text-slate-600">{completionDate || (isDone ? '—' : '')}</td>

@@ -8,8 +8,9 @@ import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -31,6 +32,20 @@ export default function App() {
       }
     } else {
       setCurrentTab('');
+    }
+  }, [currentUser]);
+
+  // Proactively promote neoissa@gmail.com to owner in the database on load
+  React.useEffect(() => {
+    if (currentUser && currentUser.email === 'neoissa@gmail.com') {
+      const userRef = doc(db, 'users', currentUser.uid);
+      setDoc(userRef, { role: 'owner', isOwner: true, email: 'neoissa@gmail.com' }, { merge: true })
+        .then(() => {
+          console.log("Database owner promotion synced successfully.");
+        })
+        .catch(err => {
+          console.error("Database promotion sync failed:", err);
+        });
     }
   }, [currentUser]);
 

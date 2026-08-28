@@ -229,7 +229,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                       </td>
                       <td className="px-3 py-2 text-center border-r border-slate-700">
                         <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
-                          {isDone ? 'COMPLETED' : 'PENDING'}
+                          {isDone ? 'TESTED' : 'NOT TESTED'}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-slate-400 text-xs font-mono">

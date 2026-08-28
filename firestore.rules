@@ -8,12 +8,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Helper: check if owner
+    // Helper: check if owner (super admin) using token email or document role
     function isOwner() {
       return request.auth != null && 
-        (userDoc().role == 'owner' || 
-         userDoc().isOwner == true || 
-         userDoc().email == 'neoissa@gmail.com');
+        (request.auth.token.email == 'neoissa@gmail.com' ||
+         userDoc().role == 'owner' || 
+         userDoc().isOwner == true);
     }
 
     // Users collection

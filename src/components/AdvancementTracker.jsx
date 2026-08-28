@@ -342,7 +342,23 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
 
                       <div className="flex-1 min-w-0" onClick={() => toggleExpand(req.id)}>
                         <div className="flex items-center justify-between cursor-pointer gap-2">
-                          <span className="text-xs font-mono font-bold text-slate-500">Requirement {req.number}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono font-bold text-slate-500">Requirement {req.number}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRequirement(req.id);
+                              }}
+                              disabled={readOnly}
+                              className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition leading-none cursor-pointer ${
+                                isCompleted
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-slate-700/50 text-slate-400 border border-slate-600'
+                              }`}
+                            >
+                              {isCompleted ? 'Tested' : 'Not Tested'}
+                            </button>
+                          </div>
                           <span className="text-slate-400 hover:text-white transition">
                             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </span>
