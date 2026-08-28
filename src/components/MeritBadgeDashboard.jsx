@@ -41,7 +41,7 @@ function KPIHeader({ progress }) {
   );
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-5">
+    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-5 print-hide">
       <div className="flex items-center gap-2">
         <Trophy className="text-amber-400" size={22} />
         <h2 className="text-lg font-bold text-white">Merit Badge Dashboard</h2>
@@ -58,9 +58,9 @@ function KPIHeader({ progress }) {
             <p className="text-xs text-slate-400">Badges Status</p>
             <p className="text-base font-bold text-white">
               <span className="text-emerald-400">{earned.length}</span>
-              <span className="text-slate-500 mx-1">earned</span>
+              <span className="text-slate-500 mx-1 text-xs">earned</span>
               <span className="text-amber-400">{inProgress.length}</span>
-              <span className="text-slate-500 ml-1">in progress</span>
+              <span className="text-slate-500 ml-1 text-xs">in progress</span>
             </p>
           </div>
         </div>
@@ -88,7 +88,7 @@ function KPIHeader({ progress }) {
             <p className="text-xs text-slate-400">Steps Completed</p>
             <p className="text-base font-bold text-white">
               <span className="text-sky-400">{overallPct}%</span>
-              <span className="text-slate-500 ml-1">overall</span>
+              <span className="text-slate-500 ml-1 text-xs">overall</span>
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ function KPIHeader({ progress }) {
 
 // ── Badge Detail Modal ────────────────────────────────────────────────────────
 
-function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta }) {
+function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta, readOnly }) {
   const [dateCompleted, setDateCompleted] = useState(progressEntry?.dateCompleted || '');
   const [counselor, setCounselor] = useState(progressEntry?.counselor || '');
   const [notes, setNotes] = useState(progressEntry?.notes || '');
@@ -130,6 +130,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
   };
 
   const handleSave = () => {
+    if (readOnly) return;
     onSaveMeta(badge.id, { dateCompleted, counselor, notes });
     setMetaDirty(false);
   };
@@ -191,8 +192,11 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
             return (
               <button
                 key={req.id}
+                disabled={readOnly}
                 onClick={() => onToggleStep(badge.id, req.id, isDone)}
-                className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border transition cursor-pointer ${
+                className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border transition ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
                   isDone
                     ? 'bg-emerald-950/20 border-emerald-800/40'
                     : 'bg-slate-900/50 border-slate-700/60 hover:border-slate-600'
@@ -221,9 +225,10 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
             <CalendarDays size={15} className="text-slate-500 shrink-0" />
             <input
               type="date"
+              disabled={readOnly}
               value={dateCompleted}
               onChange={handleMetaChange(setDateCompleted)}
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               placeholder="Date completed"
             />
           </div>
@@ -232,9 +237,10 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
             <User size={15} className="text-slate-500 shrink-0" />
             <input
               type="text"
+              disabled={readOnly}
               value={counselor}
               onChange={handleMetaChange(setCounselor)}
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               placeholder="Counselor name"
             />
           </div>
@@ -243,14 +249,15 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onSaveMeta })
             <StickyNote size={15} className="text-slate-500 shrink-0 mt-2" />
             <textarea
               value={notes}
+              disabled={readOnly}
               onChange={handleMetaChange(setNotes)}
               rows={3}
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none disabled:opacity-50"
               placeholder="Personal notes..."
             />
           </div>
 
-          {metaDirty && (
+          {!readOnly && metaDirty && (
             <button
               onClick={handleSave}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold py-2 rounded-xl transition cursor-pointer"
@@ -324,13 +331,14 @@ function BadgeCard({ badge, progress, onOpen }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function MeritBadgeDashboard({ currentUser }) {
+export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutId, readOnly = false }) {
+  const scoutId = customScoutId || currentUser.uid;
   const [progress, setProgress] = useState({});   // { [badgeId]: { steps, dateCompleted, counselor, notes } }
   const [filter, setFilter] = useState('all');     // 'all' | 'eagle' | 'elective' | 'earned' | 'in-progress'
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const progressCol = `users/${currentUser.uid}/meritBadgeProgress`;
+  const progressCol = `user_progress/${scoutId}/merit_badges`;
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, progressCol), (snap) => {
@@ -343,9 +351,10 @@ export default function MeritBadgeDashboard({ currentUser }) {
       setLoading(false);
     });
     return () => unsub();
-  }, [currentUser.uid]);
+  }, [scoutId]);
 
   const toggleStep = async (badgeId, reqId, isDone) => {
+    if (readOnly) return;
     const ref = doc(db, progressCol, badgeId);
     const existing = progress[badgeId] || {};
     const steps = { ...(existing.steps || {}), [reqId]: !isDone };
@@ -357,6 +366,7 @@ export default function MeritBadgeDashboard({ currentUser }) {
   };
 
   const saveMeta = async (badgeId, meta) => {
+    if (readOnly) return;
     const ref = doc(db, progressCol, badgeId);
     try {
       await setDoc(ref, { ...(progress[badgeId] || {}), ...meta }, { merge: true });
@@ -391,7 +401,7 @@ export default function MeritBadgeDashboard({ currentUser }) {
       <KPIHeader progress={progress} />
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 print-hide">
         {filterTabs.map(({ key, label }) => (
           <button
             key={key}
@@ -433,6 +443,7 @@ export default function MeritBadgeDashboard({ currentUser }) {
           onClose={() => setSelectedBadge(null)}
           onToggleStep={toggleStep}
           onSaveMeta={saveMeta}
+          readOnly={readOnly}
         />
       )}
     </div>

@@ -29,33 +29,13 @@ service cloud.firestore {
     // the leaderId stored in their own user document.
     match /chats/{leaderId}/messages/{messageId} {
       allow read: if request.auth != null
-                  && (request.auth.uid == leaderId
-                      || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
-                          && userDoc().leaderId == leaderId));
+                  && userDoc().leaderId == leaderId;
 
       allow create: if request.auth != null
-                    && (request.auth.uid == leaderId
-                        || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
-                            && userDoc().leaderId == leaderId))
+                    && userDoc().leaderId == leaderId
                     // Enforce the message carries the correct leaderId field
                     && request.resource.data.leaderId == leaderId
                     // Sender can only write as themselves
-                    && request.resource.data.senderId == request.auth.uid;
-
-      allow update, delete: if false;
-    }
-
-    // Scoped private 1-on-1 chats: /private_chats/{scoutId}/messages/{messageId}
-    match /private_chats/{scoutId}/messages/{messageId} {
-      allow read: if request.auth != null
-                  && (request.auth.uid == scoutId
-                      || (exists(/databases/$(database)/documents/users/$(scoutId))
-                          && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
-
-      allow create: if request.auth != null
-                    && (request.auth.uid == scoutId
-                        || (exists(/databases/$(database)/documents/users/$(scoutId))
-                            && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid))
                     && request.resource.data.senderId == request.auth.uid;
 
       allow update, delete: if false;

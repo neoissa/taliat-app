@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import {
-  collection,
-  onSnapshot,
-  doc,
-  getDoc,
-  setDoc,
-} from 'firebase/firestore';
-import { Printer, ArrowLeft, Save } from 'lucide-react';
+import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { RANKS, RANKS_SCHEMA } from '../data/ranksSchema';
+import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen } from 'lucide-react';
 
-export default function ScoutProgressReport({ scout, currentUser, onBack, setChatScout, setCurrentTab }) {
-  const [requirements, setRequirements] = useState([]);
-  const [progress, setProgress] = useState({});
+export default function ScoutProgressReport({ scout, currentUser, onBack }) {
+  const [ranksProgress, setRanksProgress] = useState({});
+  const [meritProgress, setMeritProgress] = useState({});
   const [leaderNote, setLeaderNote] = useState('');
   const [savedNote, setSavedNote] = useState('');
-  const [noteSaved, setNoteSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [selectedRank, setSelectedRank] = useState(scout.rank || 'Scout');
 
   const reportDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -23,102 +21,95 @@ export default function ScoutProgressReport({ scout, currentUser, onBack, setCha
     day: 'numeric',
   });
 
-  // Load requirements
+  // 1. Fetch Ranks & Merit Badges progress in real-time
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'requirements'), (snap) => {
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      // Sort by category then title for a consistent requirement number sequence
-      docs.sort((a, b) =>
-        (a.category || '').localeCompare(b.category || '') ||
-        (a.title || '').localeCompare(b.title || '')
-      );
-      setRequirements(docs);
-      setLoading(false);
+    const ranksRef = collection(db, 'user_progress', scout.uid, 'ranks');
+    const unsubRanks = onSnapshot(ranksRef, (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setRanksProgress(map);
     });
-    return () => unsub();
-  }, []);
 
-  // Load scout's individual progress (completedAt timestamps)
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, `users/${scout.uid}/progress`),
-      (snap) => {
-        const map = {};
-        snap.docs.forEach((d) => {
-          map[d.id] = d.data();
-        });
-        setProgress(map);
-      }
-    );
-    return () => unsub();
+    const meritRef = collection(db, 'user_progress', scout.uid, 'merit_badges');
+    const unsubMerit = onSnapshot(meritRef, (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setMeritProgress(map);
+    });
+
+    return () => {
+      unsubRanks();
+      unsubMerit();
+    };
   }, [scout.uid]);
 
-  // Load private leader notes for this scout
+  // 2. Fetch leader notes from /scout_notes/{scoutId}
   useEffect(() => {
-    const noteRef = doc(db, 'leaderNotes', scout.uid);
-    getDoc(noteRef).then((snap) => {
-      if (snap.exists()) {
-        const note = snap.data().note || '';
-        setLeaderNote(note);
-        setSavedNote(note);
+    const loadNotes = async () => {
+      const noteRef = doc(db, 'scout_notes', scout.uid);
+      try {
+        const snap = await getDoc(noteRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setLeaderNote(data.note || '');
+          setSavedNote(data.note || '');
+        }
+      } catch (err) {
+        console.error('Failed to load leader notes:', err);
+      } finally {
+        setNotesLoading(false);
       }
-    });
+    };
+    loadNotes();
   }, [scout.uid]);
 
   const handleSaveNote = async () => {
+    setSaving(true);
+    setSaveMsg('');
     try {
-      await setDoc(doc(db, 'leaderNotes', scout.uid), {
+      const noteRef = doc(db, 'scout_notes', scout.uid);
+      await setDoc(noteRef, {
         note: leaderNote,
-        updatedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
         updatedBy: currentUser.uid,
-      });
+      }, { merge: true });
       setSavedNote(leaderNote);
-      setNoteSaved(true);
-      setTimeout(() => setNoteSaved(false), 2500);
+      setSaveMsg('Notes saved.');
+      setTimeout(() => setSaveMsg(''), 2500);
     } catch (err) {
-      console.error('Failed to save note:', err);
+      console.error('Failed to save leader note:', err);
+      setSaveMsg('Error saving notes.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Derive stats
-  const totalReqs = requirements.length;
+  // Derive metrics
+  const completedRanksCount = RANKS.filter(rank => {
+    const rp = ranksProgress[rank] || { completed: {} };
+    const schema = RANKS_SCHEMA[rank];
+    const total = schema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+    const done = schema.categories.reduce((sum, c) => sum + c.requirements.filter(r => rp.completed?.[r.id]).length, 0);
+    return total > 0 && done === total;
+  }).length;
 
-  // A requirement is "completed" if the scout's UID is in completedBy (AdvancementTracker model)
-  // OR if there's a progress doc for it (ProgressDashboard model).
-  const completedReqs = requirements.filter(
-    (r) => r.completedBy?.includes(scout.uid) || !!progress[r.id]
-  );
-  const completedCount = completedReqs.length;
-  const progressPercent =
-    totalReqs > 0 ? Math.round((completedCount / totalReqs) * 100) : 0;
+  const activeRankSchema = RANKS_SCHEMA[selectedRank] || RANKS_SCHEMA.Scout;
+  const activeProg = ranksProgress[selectedRank] || { completed: {}, dates: {} };
+  const activeTotal = activeRankSchema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+  const activeDone = activeRankSchema.categories.reduce((sum, c) => sum + c.requirements.filter(r => activeProg.completed?.[r.id]).length, 0);
+  const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
 
-  // Merit badges: requirements in a "Merit Badge" category
-  const meritBadgesEarned = completedReqs.filter(
-    (r) =>
-      (r.category || '').toLowerCase().includes('merit') ||
-      (r.category || '').toLowerCase().includes('badge')
-  ).length;
-
-  // Build requirement number labels like "1", "2", "2a", "2b" based on sorted list
-  const reqNumberMap = {};
-  let catIndex = {};
-  requirements.forEach((r, idx) => {
-    const cat = r.category || 'General';
-    catIndex[cat] = (catIndex[cat] || 0) + 1;
-    reqNumberMap[r.id] = catIndex[cat];
+  // Merit Badge Stats
+  const badgesEarned = MERIT_BADGES.filter(b => {
+    const p = meritProgress[b.id];
+    if (!p) return false;
+    return b.requirements.filter(r => p.steps?.[r.id]).length === b.requirements.length;
   });
-
-  // Group requirements by category for the breakdown table
-  const byCategory = requirements.reduce((acc, r) => {
-    const cat = r.category || 'General';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(r);
-    return acc;
-  }, {});
+  const eagleBadgesEarned = badgesEarned.filter(b => b.eagleRequired).length;
 
   return (
     <div className="space-y-6">
-      {/* Screen-only action bar */}
+      {/* Action Bar (Screen Only) */}
       <div className="print-hide flex items-center justify-between">
         <button
           onClick={onBack}
@@ -127,43 +118,47 @@ export default function ScoutProgressReport({ scout, currentUser, onBack, setCha
           <ArrowLeft size={16} />
           Back to Scout List
         </button>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setChatScout(scout);
-              setCurrentTab('chat');
-            }}
-            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2.5 rounded-xl transition cursor-pointer text-sm"
-          >
-            Chat with Scout
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-900/30"
-          >
-            <Printer size={16} />
-            Print Progress Report
-          </button>
-        </div>
+        <button
+          onClick={() => window.print()}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-900/30"
+        >
+          <Printer size={16} />
+          Print Progress Report
+        </button>
       </div>
 
-      {/* ── PRINT REPORT CONTAINER ── */}
-      <div id="print-report" className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6">
+      {/* Screen Options Panel (Screen Only) */}
+      <div className="print-hide bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-wrap gap-4 items-center justify-between">
+        <div>
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Select Rank for Checklist</h2>
+          <p className="text-xs text-slate-400">Choose which rank checklist to view/print below</p>
+        </div>
+        <select
+          value={selectedRank}
+          onChange={(e) => setSelectedRank(e.target.value)}
+          className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+        >
+          {RANKS.map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── PROGRESS REPORT CONTAINER ── */}
+      <div id="print-report" className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6 shadow-xl">
 
         {/* Report Header */}
         <div className="report-header border-b border-slate-600 pb-4">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-black text-white">{scout.fullName || scout.email}</h1>
+              <h1 className="text-2xl font-black text-white">{scout.fullName || scout.username}</h1>
               <p className="text-sm text-slate-400 mt-0.5">
-                <span className="font-semibold text-emerald-400">{scout.rank || 'Scout'}</span>
-                {scout.patrol && (
-                  <> &bull; <span>{scout.patrol} Patrol</span></>
-                )}
+                Patrol: <span className="font-semibold text-emerald-400">{scout.patrolId || 'Taliʿa'} Patrol</span> &bull; 
+                Active Rank: <span className="font-semibold text-white">{scout.rank || 'Scout'}</span>
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400 uppercase font-semibold tracking-wide">Progress Report</p>
+            <div className="text-right font-sans">
+              <p className="text-xs text-slate-400 uppercase font-bold tracking-wide">Progress Report Summary</p>
               <p className="text-sm text-white mt-1">{reportDate}</p>
               <p className="text-xs text-slate-400 mt-0.5">
                 Leader: <span className="text-white">{currentUser.fullName || currentUser.email}</span>
@@ -172,156 +167,118 @@ export default function ScoutProgressReport({ scout, currentUser, onBack, setCha
           </div>
         </div>
 
-        {/* Summary Section */}
+        {/* Summary Metrics */}
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Summary</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Overall Progress</h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-emerald-400">{progressPercent}%</p>
-              <p className="text-xs text-slate-400 mt-1">Rank Progress</p>
+              <p className="text-3xl font-black text-emerald-400">{activePercent}%</p>
+              <p className="text-xs text-slate-400 mt-1">{selectedRank} Progress</p>
             </div>
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-white">{completedCount}</p>
-              <p className="text-xs text-slate-400 mt-1">
-                of {totalReqs} Requirements
-              </p>
+              <p className="text-3xl font-black text-white">{completedRanksCount} / 7</p>
+              <p className="text-xs text-slate-400 mt-1">Ranks Completed</p>
             </div>
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-amber-400">{meritBadgesEarned}</p>
-              <p className="text-xs text-slate-400 mt-1">Merit Badges Earned</p>
+              <p className="text-3xl font-black text-amber-400">{badgesEarned.length}</p>
+              <p className="text-xs text-slate-400 mt-1">{eagleBadgesEarned} / {TOTAL_EAGLE_REQUIRED_FOR_RANK} Eagle Badges</p>
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-4 w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-700">
+          {/* Active Rank Progress Bar (Screen Only) */}
+          <div className="mt-4 w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-700 print-hide">
             <div
               className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
+              style={{ width: `${activePercent}%` }}
             />
           </div>
         </div>
 
-        {/* Requirement Breakdown Table */}
+        {/* Requirement Checklist */}
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">
-            Requirement Breakdown
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+            Checklist: {selectedRank} Ranks Requirements
           </h2>
-          {loading ? (
-            <p className="text-slate-400 text-sm">Loading requirements…</p>
-          ) : (
-            <div className="space-y-4">
-              {Object.entries(byCategory).map(([category, reqs]) => (
-                <div key={category}>
-                  <h3 className="text-xs font-bold uppercase text-slate-300 bg-slate-900/60 border border-slate-700 rounded-t-lg px-3 py-2">
-                    {category}
-                  </h3>
-                  <table className="w-full text-sm border border-t-0 border-slate-700 rounded-b-lg overflow-hidden">
-                    <thead>
-                      <tr className="bg-slate-900/40 text-left text-xs text-slate-400">
-                        <th className="px-3 py-2 w-10">#</th>
-                        <th className="px-3 py-2">Requirement</th>
-                        <th className="px-3 py-2 w-28 text-center">Status</th>
-                        <th className="px-3 py-2 w-36">Date Completed</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reqs.map((req, i) => {
-                        const isCompleted =
-                          req.completedBy?.includes(scout.uid) || !!progress[req.id];
-                        const progressData = progress[req.id];
-                        const completedAt = progressData?.completedAt
-                          ? new Date(progressData.completedAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })
-                          : null;
-
-                        // Build req number label: category letter + index e.g. "K1", "F2"
-                        const catLetter = (category.charAt(0) || 'R').toUpperCase();
-                        const reqLabel = `${catLetter}${i + 1}`;
-
-                        return (
-                          <tr
-                            key={req.id}
-                            className={`border-t border-slate-700/50 ${
-                              isCompleted ? 'bg-emerald-950/10' : 'bg-slate-800/30'
-                            }`}
-                          >
-                            <td className="px-3 py-2 text-slate-400 font-mono text-xs">
-                              {reqLabel}
-                            </td>
-                            <td className="px-3 py-2">
-                              <p className={`font-medium ${isCompleted ? 'text-slate-400 line-through' : 'text-white'}`}>
-                                {req.title}
-                              </p>
-                              {req.description && (
-                                <p className="text-xs text-slate-500 mt-0.5">{req.description}</p>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              {isCompleted ? (
-                                <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/30">
-                                  Complete
-                                </span>
-                              ) : (
-                                <span className="inline-block px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 text-xs font-semibold border border-slate-600/30">
-                                  Pending
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-slate-400 text-xs">
-                              {completedAt || (isCompleted ? '—' : '')}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          )}
+          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
+                <th className="px-3 py-2 w-12 border-r border-slate-700">No.</th>
+                <th className="px-3 py-2 border-r border-slate-700">Requirement Detail</th>
+                <th className="px-3 py-2 w-28 text-center border-r border-slate-700">Status</th>
+                <th className="px-3 py-2 w-32">Completed Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeRankSchema.categories.map((category) => 
+                category.requirements.map((req) => {
+                  const isDone = !!activeProg.completed?.[req.id];
+                  const completionDate = activeProg.dates?.[req.id] || '';
+                  return (
+                    <tr key={req.id} className={`border-t border-slate-700/50 ${isDone ? 'bg-emerald-950/10' : 'bg-slate-800/20'}`}>
+                      <td className="px-3 py-2 border-r border-slate-700 font-mono font-bold text-slate-400 text-xs">
+                        {req.number}
+                      </td>
+                      <td className="px-3 py-2 border-r border-slate-700">
+                        <span className={isDone ? 'line-through text-slate-400' : 'text-slate-200'}>
+                          {req.description}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center border-r border-slate-700">
+                        <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
+                          {isDone ? 'COMPLETED' : 'PENDING'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-slate-400 text-xs font-mono">
+                        {completionDate || (isDone ? '—' : '')}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* Leader Notes Section */}
+        {/* Private Leader notes */}
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">
-            Leader Notes
-            <span className="ml-2 text-[10px] font-normal normal-case text-slate-600 border border-slate-700 rounded px-1.5 py-0.5">
-              Private — visible to leaders only
-            </span>
-          </h2>
-          <div className="border border-slate-600 rounded-xl overflow-hidden">
-            {/* Editable area (screen only) */}
-            <textarea
-              value={leaderNote}
-              onChange={(e) => setLeaderNote(e.target.value)}
-              rows={5}
-              placeholder="Add discussion points, observations, or goals for the parent conference…"
-              className="print-hide w-full bg-slate-900/70 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
-            />
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              Leader Discussion Notes
+              <span className="print-hide ml-2 text-[9px] font-normal normal-case text-slate-500 border border-slate-700 rounded px-1.5 py-0.5">
+                Private — visible to leaders only
+              </span>
+            </h2>
+            {saveMsg && <span className="text-xs text-emerald-400 font-semibold print-hide">{saveMsg}</span>}
+          </div>
 
-            {/* Static text for print */}
-            <div className="print-only bg-slate-900/30 px-4 py-3 min-h-[6rem] text-sm text-slate-200 whitespace-pre-wrap">
-              {savedNote || <span className="text-slate-500 italic">No notes recorded.</span>}
+          <div className="border border-slate-600 rounded-xl overflow-hidden">
+            {/* Screen textarea editor */}
+            {notesLoading ? (
+              <div className="p-4 text-xs text-slate-500">Loading notes...</div>
+            ) : (
+              <textarea
+                value={leaderNote}
+                onChange={(e) => setLeaderNote(e.target.value)}
+                rows={4}
+                placeholder="Write observations, goals, or concerns for parent-leader conference discussion..."
+                className="print-hide w-full bg-slate-900/60 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
+              />
+            )}
+
+            {/* Static notes visible on print */}
+            <div className="print-only bg-slate-900/10 px-4 py-3 min-h-[5rem] text-xs text-black whitespace-pre-wrap">
+              {savedNote || <span className="text-slate-400 italic">No notes recorded.</span>}
             </div>
 
-            {/* Save button (screen only) */}
-            <div className="print-hide flex items-center justify-between bg-slate-900/40 px-4 py-2 border-t border-slate-700/50">
-              {noteSaved && (
-                <span className="text-xs text-emerald-400 font-semibold">Notes saved!</span>
-              )}
-              <div className="ml-auto">
-                <button
-                  onClick={handleSaveNote}
-                  disabled={leaderNote === savedNote}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition cursor-pointer"
-                >
-                  <Save size={12} />
-                  Save Notes
-                </button>
-              </div>
+            {/* Save bar */}
+            <div className="print-hide flex items-center justify-end bg-slate-900/40 px-4 py-2 border-t border-slate-700/50">
+              <button
+                onClick={handleSaveNote}
+                disabled={saving || leaderNote === savedNote}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white transition cursor-pointer flex items-center gap-1.5"
+              >
+                Save Notes
+              </button>
             </div>
           </div>
         </div>

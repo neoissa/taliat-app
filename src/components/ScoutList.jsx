@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import ScoutProgressReport from './ScoutProgressReport';
 import { Users, ChevronRight } from 'lucide-react';
 
-export default function ScoutList({ currentUser, setChatScout, setCurrentTab }) {
+export default function ScoutList({ currentUser }) {
   const [scouts, setScouts] = useState([]);
   const [selectedScout, setSelectedScout] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,8 +28,6 @@ export default function ScoutList({ currentUser, setChatScout, setCurrentTab }) 
         scout={selectedScout}
         currentUser={currentUser}
         onBack={() => setSelectedScout(null)}
-        setChatScout={setChatScout}
-        setCurrentTab={setCurrentTab}
       />
     );
   }
@@ -67,10 +65,8 @@ export default function ScoutList({ currentUser, setChatScout, setCurrentTab }) 
                   {scout.fullName || scout.email}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {scout.rank && (
-                    <span className="mr-2 text-emerald-400 font-medium">{scout.rank}</span>
-                  )}
-                  {scout.patrol && <span>{scout.patrol} Patrol</span>}
+                  <span className="mr-2 text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span>
+                  <span>&bull; {scout.patrolId || scout.patrol || 'Taliʿa'} Patrol</span>
                 </p>
               </div>
               <ChevronRight size={18} className="text-slate-500 group-hover:text-emerald-400 transition" />
