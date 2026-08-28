@@ -170,7 +170,7 @@ function ScoutDetail({ scout, leaderId, onBack }) {
   );
 }
 
-export default function PatrolRoster({ currentUser }) {
+export default function PatrolRoster({ currentUser, setChatScout, setCurrentTab }) {
   const [scouts, setScouts] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -381,12 +381,23 @@ export default function PatrolRoster({ currentUser }) {
                       Merit badges: {scout.meritBadges.join(', ')}
                     </p>
                   )}
-                  <button
-                    onClick={() => setSelected(scout)}
-                    className="mt-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
-                  >
-                    View Advancement & Notes →
-                  </button>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => setSelected(scout)}
+                      className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                    >
+                      View Advancement & Notes →
+                    </button>
+                    <button
+                      onClick={() => {
+                        setChatScout(scout);
+                        setCurrentTab('chat');
+                      }}
+                      className="bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500/20 text-emerald-400 hover:text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1"
+                    >
+                      Chat
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

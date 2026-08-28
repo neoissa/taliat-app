@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import ScoutProgressReport from './ScoutProgressReport';
 import { Users, ChevronRight } from 'lucide-react';
 
-export default function ScoutList({ currentUser }) {
+export default function ScoutList({ currentUser, setChatScout, setCurrentTab }) {
   const [scouts, setScouts] = useState([]);
   const [selectedScout, setSelectedScout] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +28,8 @@ export default function ScoutList({ currentUser }) {
         scout={selectedScout}
         currentUser={currentUser}
         onBack={() => setSelectedScout(null)}
+        setChatScout={setChatScout}
+        setCurrentTab={setCurrentTab}
       />
     );
   }
