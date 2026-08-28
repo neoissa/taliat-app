@@ -82,6 +82,50 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
   const [expandedReqs, setExpandedReqs] = useState({}); // { [reqId]: boolean }
   const [loading, setLoading] = useState(true);
 
+  // Scout Biography states
+  const [scoutData, setScoutData] = useState(null);
+  const [bioInput, setBioInput] = useState('');
+  const [savingBio, setSavingBio] = useState(false);
+  const [bioMsg, setBioMsg] = useState('');
+
+  // 1. Subscribe to scout's specific profile info (including bio)
+  useEffect(() => {
+    if (!scoutId) {
+      setScoutData(null);
+      setBioInput('');
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'users', scoutId), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setScoutData(data);
+        setBioInput(data.bio || '');
+      } else {
+        setScoutData(null);
+        setBioInput('');
+      }
+    }, (err) => {
+      console.error("Failed to subscribe to scout details:", err);
+    });
+    return () => unsub();
+  }, [scoutId]);
+
+  const handleSaveBio = async () => {
+    if (!scoutId) return;
+    setSavingBio(true);
+    setBioMsg('');
+    try {
+      await setDoc(doc(db, 'users', scoutId), { bio: bioInput }, { merge: true });
+      setBioMsg('Biography updated successfully!');
+      setTimeout(() => setBioMsg(''), 3000);
+    } catch (err) {
+      console.error("Failed to update bio notes:", err);
+      setBioMsg('Failed to update bio notes.');
+    } finally {
+      setSavingBio(false);
+    }
+  };
+
   // Fetch scouts list if leader or owner and customScoutId is not provided
   useEffect(() => {
     if (!isLeaderOrOwner || customScoutId) return;
@@ -261,6 +305,48 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
           </select>
         </div>
       )}
+      {/* Scout Biography & Profile Notes */}
+      {scoutId && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">About Me & Scout Notes</h2>
+              <p className="text-[11px] text-slate-400">
+                {currentUser.uid === scoutId
+                  ? 'Share facts about yourself, interests, advancement goals, or troop notes.'
+                  : `Read biography notes for ${scoutData?.fullName || scoutData?.username || 'this scout'}.`}
+              </p>
+            </div>
+            {bioMsg && <span className="text-xs text-emerald-400 font-semibold">{bioMsg}</span>}
+          </div>
+
+          {currentUser.uid === scoutId ? (
+            <div className="space-y-2">
+              <textarea
+                value={bioInput}
+                onChange={(e) => setBioInput(e.target.value)}
+                placeholder="Write something about yourself, your interests, goals, or message to leaders..."
+                rows={3}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveBio}
+                  disabled={savingBio}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                >
+                  {savingBio ? 'Saving...' : 'Save Notes'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900/50 border border-slate-750 p-3 rounded-xl min-h-[50px] text-xs text-slate-300 leading-relaxed italic">
+              {scoutData?.bio ? scoutData.bio : "This scout hasn't added biography notes yet."}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Ranks Tabs Bar */}
       <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none print-hide">
         {RANKS_DATA.map((rank) => {

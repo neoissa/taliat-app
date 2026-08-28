@@ -39,6 +39,54 @@ export default function GroupManager({ currentUser }) {
     };
   }, []);
 
+  const compressAndResizeGroupIcon = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 120;
+          const MAX_HEIGHT = 120;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleGroupIconChange = async (groupId, file) => {
+    if (!file) return;
+    try {
+      const compressedBase64 = await compressAndResizeGroupIcon(file);
+      const groupRef = doc(db, 'groups', groupId);
+      await updateDoc(groupRef, { photoURL: compressedBase64 });
+      console.log("Group icon updated successfully!");
+    } catch (err) {
+      console.error("Failed to upload group icon:", err);
+      alert("Failed to update group icon: " + err.message);
+    }
+  };
+
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
@@ -56,6 +104,7 @@ export default function GroupManager({ currentUser }) {
         ownerId: currentUser.uid,
         assignedLeaderIds: [],
         archived: false,
+        photoURL: null,
         createdAt: serverTimestamp()
       });
       setNewGroupName('');
@@ -262,15 +311,40 @@ export default function GroupManager({ currentUser }) {
                           : 'bg-slate-900/10 border-slate-700/60 hover:border-slate-600 text-white'
                       }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-sm">{group.name}</h4>
-                          {group.archived && (
-                            <span className="text-[9px] bg-red-950 text-red-400 border border-red-900 font-bold px-1.5 py-0.5 rounded uppercase">
-                              Archived
-                            </span>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Group Icon with click-to-upload */}
+                        <label className="relative group cursor-pointer shrink-0" title="Click to upload group icon">
+                          {group.photoURL ? (
+                            <img
+                              src={group.photoURL}
+                              alt="Group Icon"
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-700 group-hover:border-emerald-500 transition"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs group-hover:border-emerald-500 transition uppercase">
+                              <Users size={16} />
+                            </div>
                           )}
-                        </div>
+                          <div className="absolute inset-0 bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none">
+                            Edit
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleGroupIconChange(group.id, e.target.files[0])}
+                            className="hidden"
+                          />
+                        </label>
+                        
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm">{group.name}</h4>
+                            {group.archived && (
+                              <span className="text-[9px] bg-red-950 text-red-400 border border-red-900 font-bold px-1.5 py-0.5 rounded uppercase">
+                                Archived
+                              </span>
+                            )}
+                          </div>
                         {group.description && (
                           <p className="text-xs text-slate-400 mt-1">{group.description}</p>
                         )}
@@ -287,6 +361,7 @@ export default function GroupManager({ currentUser }) {
                           )}
                         </div>
                       </div>
+                    </div>
 
                       <div className="flex items-center gap-2 shrink-0">
                         <button

@@ -148,13 +148,22 @@ function ScoutDetail({ scout, currentUser, onBack }) {
       </div>
 
       {/* Roster detail view dashboard (Screen Only) */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl print-hide">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h3 className="font-bold text-xl text-white">{scout.fullName || scout.username}</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              @{scout.username} &bull; <span className="text-emerald-400 font-bold">{activeRank}</span> &bull; {scout.patrolId || 'Taliʿa'} Patrol
-            </p>
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl print-hide space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700/60 pb-4">
+          <div className="flex items-center gap-3">
+            {scout.photoURL ? (
+              <img src={scout.photoURL} alt="Avatar" className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500/50" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold text-slate-200 text-lg uppercase">
+                {(scout.fullName || scout.username).charAt(0)}
+              </div>
+            )}
+            <div>
+              <h3 className="font-bold text-xl text-white">{scout.fullName || scout.username}</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                @{scout.username} &bull; <span className="text-emerald-400 font-bold">{activeRank}</span> &bull; {scout.patrolId || 'Taliʿa'} Patrol
+              </p>
+            </div>
           </div>
           <div className="flex gap-4">
             <div className="text-center px-4 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
@@ -169,6 +178,22 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               <span className="text-sm font-bold text-white block">{eagleBadgesEarned} / {TOTAL_EAGLE_REQUIRED_FOR_RANK}</span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Eagle Badges</span>
             </div>
+          </div>
+        </div>
+
+        {/* BSA & Contact Details */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">BSA Member ID</span>
+            <span className="font-semibold text-slate-200 text-sm">{scout.bsaId || '—'}</span>
+          </div>
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Scout Email</span>
+            <span className="font-semibold text-slate-200 text-sm">{scout.scoutEmail || '—'}</span>
+          </div>
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Email</span>
+            <span className="font-semibold text-slate-200 text-sm">{scout.parentEmail || '—'}</span>
           </div>
         </div>
       </div>
@@ -349,6 +374,9 @@ export default function PatrolRoster({ currentUser }) {
   const [newRank, setNewRank] = useState('Scout');
   const [newGroup, setNewGroup] = useState('');
   const [newLeader, setNewLeader] = useState('');
+  const [newBsaId, setNewBsaId] = useState('');
+  const [newPersonalEmail, setNewPersonalEmail] = useState('');
+  const [newParentEmail, setNewParentEmail] = useState('');
   const [groups, setGroups] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [adding, setAdding] = useState(false);
@@ -426,6 +454,9 @@ export default function PatrolRoster({ currentUser }) {
         groupId: newGroup || null,
         patrolId: newGroup || null,
         rank: newRank.trim(),
+        bsaId: newBsaId.trim(),
+        scoutEmail: newPersonalEmail.trim(),
+        parentEmail: newParentEmail.trim(),
         createdAt: serverTimestamp(),
       });
 
@@ -436,6 +467,9 @@ export default function PatrolRoster({ currentUser }) {
       setNewRank('Scout');
       setNewGroup('');
       setNewLeader('');
+      setNewBsaId('');
+      setNewPersonalEmail('');
+      setNewParentEmail('');
       setShowForm(false);
     } catch (err) {
       console.error(err);
@@ -523,6 +557,40 @@ export default function PatrolRoster({ currentUser }) {
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                <input
+                  type="text"
+                  value={newBsaId}
+                  onChange={(e) => setNewBsaId(e.target.value)}
+                  placeholder="e.g. 12345678"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Personal Email</label>
+                <input
+                  type="email"
+                  value={newPersonalEmail}
+                  onChange={(e) => setNewPersonalEmail(e.target.value)}
+                  placeholder="e.g. scout@gmail.com"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent's Email</label>
+                <input
+                  type="email"
+                  value={newParentEmail}
+                  onChange={(e) => setNewParentEmail(e.target.value)}
+                  placeholder="e.g. parent@gmail.com"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
             {isOwner && (
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Leader</label>
@@ -609,7 +677,22 @@ export default function PatrolRoster({ currentUser }) {
               </button>
 
               {expanded === scout.uid && (
-                <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-2">
+                <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300">
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
+                      <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Personal Email</span>
+                      <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Email</span>
+                      <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => setSelected(scout)}
                     className="mt-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"

@@ -41,6 +41,9 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [scoutLeader, setScoutLeader] = useState('');
   const [scoutGroup, setScoutGroup] = useState('');
   const [scoutRank, setScoutRank] = useState('Scout');
+  const [scoutBsaId, setScoutBsaId] = useState('');
+  const [scoutPersonalEmail, setScoutPersonalEmail] = useState('');
+  const [scoutParentEmail, setScoutParentEmail] = useState('');
   const [scoutMsg, setScoutMsg] = useState('');
   const [scoutErr, setScoutErr] = useState('');
   const [scoutAdding, setScoutAdding] = useState(false);
@@ -52,6 +55,9 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editGroup, setEditGroup] = useState('');
   const [editLeader, setEditLeader] = useState('');
   const [editRank, setEditRank] = useState('');
+  const [editBsaId, setEditBsaId] = useState('');
+  const [editPersonalEmail, setEditPersonalEmail] = useState('');
+  const [editParentEmail, setEditParentEmail] = useState('');
 
   useEffect(() => {
     // 1. Listen to all users
@@ -188,6 +194,9 @@ export default function GlobalAdminPanel({ currentUser }) {
         groupId: scoutGroup || null,
         patrolId: scoutGroup || null,
         rank: scoutRank,
+        bsaId: scoutBsaId.trim(),
+        scoutEmail: scoutPersonalEmail.trim(),
+        parentEmail: scoutParentEmail.trim(),
         createdAt: serverTimestamp()
       });
 
@@ -198,6 +207,9 @@ export default function GlobalAdminPanel({ currentUser }) {
       setScoutLeader('');
       setScoutGroup('');
       setScoutRank('Scout');
+      setScoutBsaId('');
+      setScoutPersonalEmail('');
+      setScoutParentEmail('');
     } catch (err) {
       console.error(err);
       setScoutErr(`Error: ${err.message}`);
@@ -228,6 +240,9 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditGroup(user.groupId || '');
     setEditLeader(user.leaderId || '');
     setEditRank(user.rank || 'Scout');
+    setEditBsaId(user.bsaId || '');
+    setEditPersonalEmail(user.scoutEmail || '');
+    setEditParentEmail(user.parentEmail || '');
   };
 
   const handleSaveEditUser = async (e) => {
@@ -243,7 +258,10 @@ export default function GlobalAdminPanel({ currentUser }) {
         patrolId: editGroup || null,
         leaderId: editRole === 'scout' ? (editLeader || null) : null,
         isOwner: editRole === 'owner' ? true : false,
-        rank: editRole === 'scout' ? editRank : null
+        rank: editRole === 'scout' ? editRank : null,
+        bsaId: editRole === 'scout' ? editBsaId.trim() : null,
+        scoutEmail: editRole === 'scout' ? editPersonalEmail.trim() : null,
+        parentEmail: editRole === 'scout' ? editParentEmail.trim() : null
       };
 
       await updateDoc(ref, updates);
@@ -339,6 +357,39 @@ export default function GlobalAdminPanel({ currentUser }) {
                 placeholder="At least 6 characters"
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                <input
+                  type="text"
+                  value={scoutBsaId}
+                  onChange={(e) => setScoutBsaId(e.target.value)}
+                  placeholder="e.g. 12345678"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">Scout Personal Email</label>
+                <input
+                  type="email"
+                  value={scoutPersonalEmail}
+                  onChange={(e) => setScoutPersonalEmail(e.target.value)}
+                  placeholder="e.g. scout@gmail.com"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">Parent's Email</label>
+                <input
+                  type="email"
+                  value={scoutParentEmail}
+                  onChange={(e) => setScoutParentEmail(e.target.value)}
+                  placeholder="e.g. parent@gmail.com"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -566,12 +617,21 @@ export default function GlobalAdminPanel({ currentUser }) {
                     <p className="text-[10px] text-slate-500 mt-1 font-mono">
                       @{user.username} &bull; {user.email}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-slate-400">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[10px] text-slate-400">
                       {userGroup && (
                         <span>Patrol: <span className="text-slate-300 font-semibold">{userGroup.name}</span></span>
                       )}
                       {user.role === 'scout' && userLeaderObj && (
                         <span>Leader: <span className="text-slate-300 font-semibold">{userLeaderObj.fullName || userLeaderObj.username}</span></span>
+                      )}
+                      {user.role === 'scout' && user.bsaId && (
+                        <span>BSA ID: <span className="text-slate-300 font-semibold">{user.bsaId}</span></span>
+                      )}
+                      {user.role === 'scout' && user.scoutEmail && (
+                        <span>Scout Email: <span className="text-slate-300 font-semibold">{user.scoutEmail}</span></span>
+                      )}
+                      {user.role === 'scout' && user.parentEmail && (
+                        <span>Parent Email: <span className="text-slate-300 font-semibold">{user.parentEmail}</span></span>
                       )}
                     </div>
                   </div>
@@ -659,6 +719,36 @@ export default function GlobalAdminPanel({ currentUser }) {
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                    <input
+                      type="text"
+                      value={editBsaId}
+                      onChange={(e) => setEditBsaId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Personal Email</label>
+                    <input
+                      type="email"
+                      value={editPersonalEmail}
+                      onChange={(e) => setEditPersonalEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent's Email</label>
+                    <input
+                      type="email"
+                      value={editParentEmail}
+                      onChange={(e) => setEditParentEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
                 </>
               )}
 
@@ -671,7 +761,7 @@ export default function GlobalAdminPanel({ currentUser }) {
                 >
                   <option value="">No Patrol</option>
                   {groups.map(g => (
-                    <option key={g.id} value={g.name}>{g.name}</option>
+                    <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
               </div>

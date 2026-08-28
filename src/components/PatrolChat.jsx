@@ -20,6 +20,8 @@ export default function PatrolChat({ currentUser }) {
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [fileData, setFileData] = useState(null); // { base64: string, name: string, type: string }
   const [uploading, setUploading] = useState(false);
+  const [activeGroupData, setActiveGroupData] = useState(null);
+  const [showEmojis, setShowEmojis] = useState(false);
   const bottomRef = useRef();
 
   // Determine chat room ID: Group / Patrol ID
@@ -74,6 +76,37 @@ export default function PatrolChat({ currentUser }) {
 
     return () => unsubscribe();
   }, [activeRoomId]);
+
+  // 3. Fetch active group details (name & photoURL) in real-time
+  useEffect(() => {
+    if (!activeRoomId || activeRoomId === 'general-stream') {
+      setActiveGroupData(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'groups', activeRoomId), (snap) => {
+      if (snap.exists()) {
+        setActiveGroupData(snap.data());
+      } else {
+        setActiveGroupData(null);
+      }
+    }, (err) => {
+      console.warn("Failed to listen to active group details:", err);
+    });
+    return () => unsub();
+  }, [activeRoomId]);
+
+  const handleClearChat = async () => {
+    if (!isOwner) return;
+    if (window.confirm("🚨 WARNING: Are you sure you want to PERMANENTLY delete all messages in this stream? This cannot be undone.")) {
+      try {
+        const promises = messages.map(m => deleteDoc(doc(db, 'chats', activeRoomId, 'messages', m.id)));
+        await Promise.all(promises);
+        console.log("Chat cleared successfully!");
+      } catch (err) {
+        console.error("Failed to clear chat:", err);
+      }
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -144,31 +177,56 @@ export default function PatrolChat({ currentUser }) {
     <div className="bg-slate-800 border border-slate-700 rounded-2xl flex flex-col h-[560px] shadow-xl overflow-hidden print-hide">
       {/* Header */}
       <div className="p-4 border-b border-slate-700 bg-slate-800/80 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-        <div>
-          <h3 className="font-bold text-white text-base">Patrol Stream</h3>
-          <p className="text-xs text-slate-400">
-            {isLeaderOrOwner 
-              ? 'Taliʿa Stream Selector (Admin/Leader view)' 
-              : `Taliʿa Group Chat: ${currentUser.groupId || currentUser.patrolId || 'General'}`}
-          </p>
+        <div className="flex items-center gap-3">
+          {/* Active Group Icon in header */}
+          {activeGroupData?.photoURL ? (
+            <img src={activeGroupData.photoURL} alt="Group Icon" className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-750 flex items-center justify-center text-slate-400 shrink-0">
+              <Users size={18} />
+            </div>
+          )}
+          <div>
+            <h3 className="font-bold text-white text-sm leading-tight">
+              {activeGroupData?.name || 'General Stream'}
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {isLeaderOrOwner 
+                ? 'Taliʿa Stream Selector (Admin/Leader view)' 
+                : `Taliʿa Group Chat: ${currentUser.groupId || currentUser.patrolId || 'General'}`}
+            </p>
+          </div>
         </div>
 
-        {/* Room Switcher for Leader/Owner */}
-        {isLeaderOrOwner && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold text-slate-400">Taliʿa Stream:</span>
-            <select
-              value={activeRoomId}
-              onChange={(e) => setSelectedGroupId(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+        <div className="flex items-center gap-3">
+          {/* Clear Chat Button (Owner Only) */}
+          {isOwner && activeRoomId && (
+            <button
+              onClick={handleClearChat}
+              className="bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 hover:border-red-500 text-red-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer"
+              title="Clear all messages in this stream"
             >
-              <option value="general-stream">General Stream</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
+              Clear Chat
+            </button>
+          )}
+
+          {/* Room Switcher for Leader/Owner */}
+          {isLeaderOrOwner && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Taliʿa Stream:</span>
+              <select
+                value={activeRoomId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              >
+                <option value="general-stream">General Stream</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages Feed */}
@@ -303,10 +361,32 @@ export default function PatrolChat({ currentUser }) {
         </div>
       )}
 
+      {/* Emoji picker popover */}
+      {showEmojis && (
+        <div className="absolute bottom-16 right-4 bg-slate-955 border border-slate-700 p-3 rounded-2xl shadow-2xl z-50 bg-slate-950">
+          <p className="text-[9px] uppercase font-bold text-slate-500 mb-2 tracking-wider text-center">Select Emoji</p>
+          <div className="grid grid-cols-4 gap-2">
+            {['😀','😂','😍','👍','🎉','🔥','👏','❤️','🚨','⛺','🌲','⚜️','🙌','👀','✨','🎈'].map(e => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => {
+                  setText(prev => prev + e);
+                  setShowEmojis(false);
+                }}
+                className="text-lg hover:scale-125 transition p-1 cursor-pointer bg-transparent border-0 focus:outline-none"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Form */}
-      <form onSubmit={handleSend} className="p-3 bg-slate-900 border-t border-slate-700 flex items-center gap-2">
+      <form onSubmit={handleSend} className="p-3 bg-slate-900 border-t border-slate-700 flex items-center gap-2 relative">
         {/* File attachment button */}
-        <label className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition cursor-pointer border border-slate-700 shrink-0">
+        <label className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition cursor-pointer border border-slate-700 shrink-0" title="Attach file">
           <Paperclip size={18} />
           <input
             type="file"
@@ -315,6 +395,17 @@ export default function PatrolChat({ currentUser }) {
             className="hidden"
           />
         </label>
+
+        {/* Emoji Button */}
+        <button
+          type="button"
+          onClick={() => setShowEmojis(!showEmojis)}
+          disabled={!activeRoomId}
+          className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition cursor-pointer border border-slate-700 shrink-0"
+          title="Add Emoji"
+        >
+          😊
+        </button>
 
         <input
           type="text"
