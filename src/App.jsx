@@ -57,6 +57,16 @@ export default function App() {
             Advancement Tracker
           </button>
           <button
+            onClick={() => setCurrentTab('merit-badges')}
+            className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
+              currentTab === 'merit-badges'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Merit Badges
+          </button>
+          <button
             onClick={() => setCurrentTab('chat')}
             className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
               currentTab === 'chat'
@@ -84,6 +94,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
+        {currentTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
       </main>
