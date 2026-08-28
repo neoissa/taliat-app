@@ -16,11 +16,12 @@ import AdvancementTracker from './AdvancementTracker';
 import MeritBadgeDashboard from './MeritBadgeDashboard';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2 } from 'lucide-react';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
-  const [notes, setNotes] = useState('');
-  const [savedNotes, setSavedNotes] = useState('');
+  const [notesList, setNotesList] = useState([]);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [notesLoading, setNotesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
@@ -38,8 +39,24 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-          setNotes(data.note || '');
-          setSavedNotes(data.note || '');
+          if (Array.isArray(data.notes)) {
+            setNotesList(data.notes);
+          } else if (data.note) {
+            // Migrate legacy note
+            const legacyNote = {
+              id: 'legacy',
+              text: data.note,
+              date: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              authorName: 'Leader',
+              authorPosition: 'Leader',
+              createdAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString() : new Date().toISOString()
+            };
+            setNotesList([legacyNote]);
+          } else {
+            setNotesList([]);
+          }
+        } else {
+          setNotesList([]);
         }
       } catch (err) {
         console.error('Failed to load notes:', err);
@@ -72,22 +89,56 @@ function ScoutDetail({ scout, currentUser, onBack }) {
     };
   }, [scout.uid]);
 
-  const saveNotes = async () => {
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
     setSaving(true);
     setSaveMsg('');
     try {
       const ref = doc(db, 'scout_notes', scout.uid);
+      const newNote = {
+        id: Date.now().toString(),
+        text: newNoteText.trim(),
+        date: newNoteDate || new Date().toISOString().split('T')[0],
+        authorId: currentUser.uid,
+        authorName: currentUser.fullName || currentUser.username || currentUser.email,
+        authorPosition: currentUser.leaderPosition || currentUser.role || 'Leader',
+        createdAt: new Date().toISOString()
+      };
+      const updatedNotes = [...notesList, newNote];
       await setDoc(ref, {
-        note: notes,
+        notes: updatedNotes,
         updatedAt: serverTimestamp(),
         updatedBy: currentUser.uid
       }, { merge: true });
-      setSavedNotes(notes);
-      setSaveMsg('Notes saved.');
+      setNotesList(updatedNotes);
+      setNewNoteText('');
+      setSaveMsg('Note added.');
       setTimeout(() => setSaveMsg(''), 2500);
     } catch (err) {
-      console.error('Failed to save notes:', err);
-      setSaveMsg('Error saving notes.');
+      console.error('Failed to add note:', err);
+      setSaveMsg('Error adding note.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
+    setSaving(true);
+    try {
+      const ref = doc(db, 'scout_notes', scout.uid);
+      const updatedNotes = notesList.filter(n => n.id !== noteId);
+      await setDoc(ref, {
+        notes: updatedNotes,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser.uid
+      }, { merge: true });
+      setNotesList(updatedNotes);
+      setSaveMsg('Note deleted.');
+      setTimeout(() => setSaveMsg(''), 2500);
+    } catch (err) {
+      console.error('Failed to delete note:', err);
+      setSaveMsg('Error deleting note.');
     } finally {
       setSaving(false);
     }
@@ -213,23 +264,69 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         {notesLoading ? (
           <div className="text-xs text-slate-400">Loading notes…</div>
         ) : (
-          <div className="space-y-3">
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter private evaluation notes, parent meeting notes, or milestones..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 resize-none"
-            />
-            <div className="flex justify-end">
-              <button
-                onClick={saveNotes}
-                disabled={saving || notes === savedNotes}
-                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Save size={12} />
-                {saving ? 'Saving...' : 'Save Private Notes'}
-              </button>
+          <div className="space-y-4">
+            {/* List of notes */}
+            {notesList.length > 0 ? (
+              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                {notesList.map((note) => {
+                  const canDelete = currentUser.uid === note.authorId || currentUser.role === 'owner';
+                  return (
+                    <div key={note.id} className="bg-slate-900/60 border border-slate-750 p-3 rounded-xl text-xs space-y-1 relative group">
+                      <div className="flex justify-between items-center text-slate-400 font-semibold border-b border-slate-800/40 pb-1 mb-1">
+                        <span>{note.authorName} ({note.authorPosition})</span>
+                        <div className="flex items-center gap-2">
+                          <span>{note.date}</span>
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="text-red-400 hover:text-red-300 transition cursor-pointer"
+                              title="Delete note"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{note.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-xs text-slate-450 italic bg-slate-900/30 border border-slate-800 p-3 rounded-xl text-center">
+                No private evaluation notes recorded yet.
+              </div>
+            )}
+
+            {/* Form to add note */}
+            <div className="border-t border-slate-700/50 pt-3 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <textarea
+                    rows={2}
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Enter new evaluation note..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"
+                  />
+                </div>
+                <div className="space-y-2 flex flex-col justify-between">
+                  <input
+                    type="date"
+                    value={newNoteDate}
+                    onChange={(e) => setNewNoteDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    onClick={handleAddNote}
+                    disabled={saving || !newNoteText.trim()}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Plus size={12} />
+                    Add Note
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -352,8 +449,22 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         {/* Leader Discussion Notes */}
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Leader Discussion Notes</h2>
-          <div className="leader-notes-box p-3 border border-black min-h-[100px] text-xs text-black whitespace-pre-wrap">
-            {savedNotes || <span className="text-slate-400 italic">No notes recorded.</span>}
+          <div className="space-y-2">
+            {notesList.length > 0 ? (
+              notesList.map((n) => (
+                <div key={n.id} className="p-2 border border-slate-350 rounded text-xs text-black bg-white">
+                  <div className="flex justify-between font-bold border-b border-slate-200 pb-0.5 mb-1 text-[10px] text-slate-600">
+                    <span>{n.authorName} ({n.authorPosition})</span>
+                    <span>{n.date}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap leading-relaxed text-black">{n.text}</p>
+                </div>
+              ))
+            ) : (
+              <div className="leader-notes-box p-3 border border-black min-h-[50px] text-xs text-slate-400 italic">
+                No notes recorded.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -385,7 +496,8 @@ export default function PatrolRoster({ currentUser }) {
 
   useEffect(() => {
     const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
-    const q = isOwner
+    const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
+    const q = (isOwner || isScoutmaster)
       ? query(collection(db, 'users'), where('role', '==', 'scout'))
       : query(collection(db, 'users'), where('role', '==', 'scout'), where('leaderId', '==', currentUser.uid));
       
@@ -393,7 +505,7 @@ export default function PatrolRoster({ currentUser }) {
       setScouts(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [currentUser.uid, currentUser.role, currentUser.email]);
+  }, [currentUser.uid, currentUser.role, currentUser.email, currentUser.leaderPosition]);
 
   useEffect(() => {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {

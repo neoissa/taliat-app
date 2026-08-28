@@ -75,6 +75,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
   const [scoutsList, setScoutsList] = useState([]);
   
   const isLeaderOrOwner = currentUser.role === 'leader' || currentUser.role === 'owner';
+  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
   const scoutId = customScoutId || (isLeaderOrOwner ? selectedScoutId : currentUser.uid);
 
   const [selectedRankId, setSelectedRankId] = useState('scout');
@@ -134,7 +135,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       const scouts = allUsers.filter(u => {
         if (u.role !== 'scout') return false;
-        if (currentUser.role === 'owner') return true;
+        if (currentUser.role === 'owner' || isScoutmaster) return true;
         return u.leaderId === currentUser.uid;
       });
       setScoutsList(scouts);
@@ -146,7 +147,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, customScoutId, currentUser.role, currentUser.uid]);
+  }, [isLeaderOrOwner, customScoutId, currentUser.role, currentUser.uid, isScoutmaster]);
 
   // Listen to all rank progress documents in real-time
   useEffect(() => {

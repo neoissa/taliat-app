@@ -10,17 +10,20 @@ export default function ScoutList({ currentUser }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const scoutsQuery = query(
-      collection(db, 'users'),
-      where('leaderId', '==', currentUser.uid)
-    );
+    const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+    const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
+    
+    const scoutsQuery = (isOwner || isScoutmaster)
+      ? query(collection(db, 'users'), where('role', '==', 'scout'))
+      : query(collection(db, 'users'), where('role', '==', 'scout'), where('leaderId', '==', currentUser.uid));
+
     const unsub = onSnapshot(scoutsQuery, (snap) => {
       const all = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
       setScouts(all.filter((u) => u.role === 'scout'));
       setLoading(false);
     });
     return () => unsub();
-  }, [currentUser.uid]);
+  }, [currentUser.uid, currentUser.role, currentUser.email, currentUser.leaderPosition]);
 
   if (selectedScout) {
     return (

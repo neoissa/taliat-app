@@ -3,16 +3,23 @@ import { db } from '../firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 
 export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
-  const [leaderNote, setLeaderNote] = useState('');
-  const [savedNote, setSavedNote] = useState('');
+  const [notesList, setNotesList] = useState([]);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [notesLoading, setNotesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // Authorization checks
+  const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
+  const isAssignedLeader = currentUser.role === 'leader' && scout.leaderId === currentUser.uid;
+  const canEdit = isOwner || isScoutmaster || isAssignedLeader;
 
   // Normalize selected rank ID (lowercase, with underscores)
   const initialRankId = (scout.rank || 'Scout').toLowerCase().replace(' ', '_');
@@ -54,8 +61,24 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         const snap = await getDoc(noteRef);
         if (snap.exists()) {
           const data = snap.data();
-          setLeaderNote(data.note || '');
-          setSavedNote(data.note || '');
+          if (Array.isArray(data.notes)) {
+            setNotesList(data.notes);
+          } else if (data.note) {
+            // Migrate legacy note
+            const legacyNote = {
+              id: 'legacy',
+              text: data.note,
+              date: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              authorName: 'Leader',
+              authorPosition: 'Leader',
+              createdAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString() : new Date().toISOString()
+            };
+            setNotesList([legacyNote]);
+          } else {
+            setNotesList([]);
+          }
+        } else {
+          setNotesList([]);
         }
       } catch (err) {
         console.error('Failed to load leader notes:', err);
@@ -66,24 +89,122 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     loadNotes();
   }, [scout.uid]);
 
-  const handleSaveNote = async () => {
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
     setSaving(true);
     setSaveMsg('');
     try {
       const noteRef = doc(db, 'scout_notes', scout.uid);
+      const newNote = {
+        id: Date.now().toString(),
+        text: newNoteText.trim(),
+        date: newNoteDate || new Date().toISOString().split('T')[0],
+        authorId: currentUser.uid,
+        authorName: currentUser.fullName || currentUser.username || currentUser.email,
+        authorPosition: currentUser.leaderPosition || currentUser.role || 'Leader',
+        createdAt: new Date().toISOString()
+      };
+      const updatedNotes = [...notesList, newNote];
       await setDoc(noteRef, {
-        note: leaderNote,
+        notes: updatedNotes,
         updatedAt: serverTimestamp(),
         updatedBy: currentUser.uid,
       }, { merge: true });
-      setSavedNote(leaderNote);
-      setSaveMsg('Notes saved.');
+      setNotesList(updatedNotes);
+      setNewNoteText('');
+      setSaveMsg('Note added.');
       setTimeout(() => setSaveMsg(''), 2500);
     } catch (err) {
       console.error('Failed to save leader note:', err);
       setSaveMsg('Error saving notes.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
+    setSaving(true);
+    try {
+      const noteRef = doc(db, 'scout_notes', scout.uid);
+      const updatedNotes = notesList.filter(n => n.id !== noteId);
+      await setDoc(noteRef, {
+        notes: updatedNotes,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser.uid,
+      }, { merge: true });
+      setNotesList(updatedNotes);
+      setSaveMsg('Note deleted.');
+      setTimeout(() => setSaveMsg(''), 2500);
+    } catch (err) {
+      console.error('Failed to delete note:', err);
+      setSaveMsg('Error deleting note.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Progress update helpers
+  const toggleRequirement = async (reqId) => {
+    if (!canEdit) return;
+    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
+    const existingReq = completedReqs[reqId] || {};
+    const newCompleted = !existingReq.completed;
+
+    const reqData = {
+      completed: newCompleted,
+      notes: existingReq.notes || '',
+      completedAt: newCompleted ? (existingReq.completedAt || new Date().toISOString().split('T')[0]) : ''
+    };
+
+    try {
+      await setDoc(docRef, {
+        completedRequirements: {
+          [reqId]: reqData
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error updating requirement status:', err);
+    }
+  };
+
+  const handleDateChange = async (reqId, dateString) => {
+    if (!canEdit) return;
+    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
+    const existingReq = completedReqs[reqId] || {};
+
+    try {
+      await setDoc(docRef, {
+        completedRequirements: {
+          [reqId]: {
+            completed: !!existingReq.completed,
+            notes: existingReq.notes || '',
+            completedAt: dateString
+          }
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error updating date:', err);
+    }
+  };
+
+  const handleScoutCompletionDateChange = async (dateVal) => {
+    if (!canEdit) return;
+    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
+    try {
+      await setDoc(docRef, { scoutCompletedAt: dateVal }, { merge: true });
+    } catch (err) {
+      console.error('Error updating scout completion date:', err);
+    }
+  };
+
+  const handleTestingDateChange = async (dateVal) => {
+    if (!canEdit) return;
+    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
+    try {
+      await setDoc(docRef, { testingCompletedAt: dateVal }, { merge: true });
+    } catch (err) {
+      console.error('Error updating testing completion date:', err);
     }
   };
 
@@ -228,12 +349,50 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center border-r border-slate-700">
-                        <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
-                          {isDone ? 'TESTED' : 'NOT TESTED'}
-                        </span>
+                        {/* Screen View */}
+                        <div className="print-hide">
+                          {canEdit ? (
+                            <button
+                              onClick={() => toggleRequirement(req.id)}
+                              className={`text-[10px] px-2 py-1 rounded font-bold uppercase transition leading-none cursor-pointer border ${
+                                isDone
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                  : 'bg-slate-700/50 text-slate-400 border-slate-600'
+                              }`}
+                            >
+                              {isDone ? 'TESTED' : 'NOT TESTED'}
+                            </button>
+                          ) : (
+                            <span className={isDone ? 'text-emerald-400 font-semibold text-xs' : 'text-slate-500 text-xs'}>
+                              {isDone ? 'TESTED' : 'NOT TESTED'}
+                            </span>
+                          )}
+                        </div>
+                        {/* Print View */}
+                        <div className="print-only">
+                          <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
+                            {isDone ? 'TESTED' : 'NOT TESTED'}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-3 py-2 text-slate-400 text-xs font-mono">
-                        {completionDate || (isDone ? '—' : '')}
+                      <td className="px-3 py-2 text-slate-450 text-xs font-mono">
+                        {/* Screen View */}
+                        <div className="print-hide">
+                          {canEdit ? (
+                            <input
+                              type="date"
+                              value={completionDate}
+                              onChange={(e) => handleDateChange(req.id, e.target.value)}
+                              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white focus:outline-none focus:border-emerald-500 max-w-[125px]"
+                            />
+                          ) : (
+                            <span>{completionDate || (isDone ? '—' : '')}</span>
+                          )}
+                        </div>
+                        {/* Print View */}
+                        <div className="print-only">
+                          <span>{completionDate || (isDone ? '—' : '')}</span>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -241,6 +400,58 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Milestones (Board of Review Sign-offs) */}
+        <div className="bg-slate-900/40 border border-slate-700 rounded-xl p-5 space-y-4">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest border-b border-slate-700/50 pb-2">
+            Rank Completion Sign-Off Milestones
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Scout Finished Date */}
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Calendar size={12} className="text-emerald-400" /> Scout Finished Date
+              </label>
+              <div className="print-hide">
+                {canEdit ? (
+                  <input
+                    type="date"
+                    value={activeProg.scoutCompletedAt || ''}
+                    onChange={(e) => handleScoutCompletionDateChange(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                ) : (
+                  <span className="text-slate-300 text-xs">{activeProg.scoutCompletedAt || 'No completion date set.'}</span>
+                )}
+              </div>
+              <div className="print-only text-xs text-black">
+                {activeProg.scoutCompletedAt || '—'}
+              </div>
+            </div>
+
+            {/* Board of Review / Testing Date */}
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Award size={12} className="text-amber-400" /> Board of Review / Testing Date
+              </label>
+              <div className="print-hide">
+                {canEdit ? (
+                  <input
+                    type="date"
+                    value={activeProg.testingCompletedAt || ''}
+                    onChange={(e) => handleTestingDateChange(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                ) : (
+                  <span className="text-slate-300 text-xs">{activeProg.testingCompletedAt || 'No review date set.'}</span>
+                )}
+              </div>
+              <div className="print-only text-xs text-black">
+                {activeProg.testingCompletedAt || '—'}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Private Leader notes */}
@@ -255,35 +466,96 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             {saveMsg && <span className="text-xs text-emerald-400 font-semibold print-hide">{saveMsg}</span>}
           </div>
 
-          <div className="border border-slate-600 rounded-xl overflow-hidden">
-            {/* Screen textarea editor */}
+          {/* Screen UI */}
+          <div className="print-hide bg-slate-900/30 border border-slate-700 rounded-xl p-4 space-y-4">
             {notesLoading ? (
-              <div className="p-4 text-xs text-slate-500">Loading notes...</div>
+              <div className="text-xs text-slate-500">Loading notes...</div>
             ) : (
-              <textarea
-                value={leaderNote}
-                onChange={(e) => setLeaderNote(e.target.value)}
-                rows={4}
-                placeholder="Write observations, goals, or concerns for parent-leader conference discussion..."
-                className="print-hide w-full bg-slate-900/60 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
-              />
+              <div className="space-y-4">
+                {/* List of notes on screen */}
+                {notesList.length > 0 ? (
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                    {notesList.map((note) => {
+                      const canDelete = currentUser.uid === note.authorId || currentUser.role === 'owner';
+                      return (
+                        <div key={note.id} className="bg-slate-900 border border-slate-750 p-3 rounded-xl text-xs space-y-1 relative group">
+                          <div className="flex justify-between items-center text-slate-400 font-semibold border-b border-slate-800/40 pb-1 mb-1">
+                            <span>{note.authorName} ({note.authorPosition})</span>
+                            <div className="flex items-center gap-2">
+                              <span>{note.date}</span>
+                              {canDelete && (
+                                <button
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="text-red-400 hover:text-red-300 transition cursor-pointer"
+                                  title="Delete note"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{note.text}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-450 italic bg-slate-900/30 border border-slate-800 p-3 rounded-xl text-center">
+                    No leader discussion notes recorded yet.
+                  </div>
+                )}
+
+                {/* Form to add note on screen */}
+                <div className="border-t border-slate-700/50 pt-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <textarea
+                        rows={2}
+                        value={newNoteText}
+                        onChange={(e) => setNewNoteText(e.target.value)}
+                        placeholder="Enter new discussion note..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"
+                      />
+                    </div>
+                    <div className="space-y-2 flex flex-col justify-between">
+                      <input
+                        type="date"
+                        value={newNoteDate}
+                        onChange={(e) => setNewNoteDate(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        onClick={handleAddNote}
+                        disabled={saving || !newNoteText.trim()}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Plus size={12} />
+                        Add Note
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
+          </div>
 
-            {/* Static notes visible on print */}
-            <div className="print-only bg-slate-900/10 px-4 py-3 min-h-[5rem] text-xs text-black whitespace-pre-wrap">
-              {savedNote || <span className="text-slate-400 italic">No notes recorded.</span>}
-            </div>
-
-            {/* Save bar */}
-            <div className="print-hide flex items-center justify-end bg-slate-900/40 px-4 py-2 border-t border-slate-700/50">
-              <button
-                onClick={handleSaveNote}
-                disabled={saving || leaderNote === savedNote}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white transition cursor-pointer flex items-center gap-1.5"
-              >
-                Save Notes
-              </button>
-            </div>
+          {/* Print-only static list */}
+          <div className="print-only space-y-2">
+            {notesList.length > 0 ? (
+              notesList.map((n) => (
+                <div key={n.id} className="p-2 border border-slate-300 rounded text-xs text-black bg-white">
+                  <div className="flex justify-between font-bold border-b border-slate-200 pb-0.5 mb-1 text-[10px] text-slate-500">
+                    <span>{n.authorName} ({n.authorPosition})</span>
+                    <span>{n.date}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap leading-relaxed text-black">{n.text}</p>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 border border-black min-h-[50px] text-xs text-slate-450 italic">
+                No leader notes recorded.
+              </div>
+            )}
           </div>
         </div>
 
