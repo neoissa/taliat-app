@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
@@ -10,18 +10,74 @@ import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentTab, setCurrentTab] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // 1. Real-time Firebase Auth & User Profile Listener
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (user) {
+        const userRef = doc(db, 'users', user.uid);
+        
+        // Listen to Firestore profile document in real-time
+        const unsubscribeProfile = onSnapshot(userRef, (snap) => {
+          if (snap.exists()) {
+            setCurrentUser({
+              uid: user.uid,
+              email: user.email,
+              ...snap.data()
+            });
+          } else {
+            // Profile document doesn't exist yet (e.g. fresh admin login)
+            const tempProfile = {
+              uid: user.uid,
+              email: user.email,
+              role: user.email === 'neoissa@gmail.com' ? 'owner' : 'leader',
+              isOwner: user.email === 'neoissa@gmail.com'
+            };
+            setCurrentUser(tempProfile);
+          }
+          setAuthLoading(false);
+        }, (err) => {
+          console.warn("Firestore profile fetch failed, using auth profile:", err);
+          setCurrentUser({
+            uid: user.uid,
+            email: user.email,
+            role: user.email === 'neoissa@gmail.com' ? 'owner' : 'scout'
+          });
+          setAuthLoading(false);
+        });
+
+        return () => unsubscribeProfile();
+      } else {
+        setCurrentUser(null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = !isOwner && currentUser?.role === 'leader';
   const isScout = !isOwner && (currentUser?.role === 'scout' || (!isOwner && !isLeader));
 
-  // Automatically set default tab when user logs in
-  React.useEffect(() => {
+  // 2. Proactively promote neoissa@gmail.com to owner in the database on load
+  useEffect(() => {
+    if (currentUser && currentUser.email === 'neoissa@gmail.com' && currentUser.role !== 'owner') {
+      const userRef = doc(db, 'users', currentUser.uid);
+      setDoc(userRef, { role: 'owner', isOwner: true, email: 'neoissa@gmail.com' }, { merge: true })
+        .then(() => console.log("Database owner promotion synced successfully."))
+        .catch(err => console.error("Database promotion sync failed:", err));
+    }
+  }, [currentUser]);
+
+  // 3. Automatically set default tab when user logs in or role changes
+  useEffect(() => {
     if (currentUser) {
       if (isOwner) {
         setCurrentTab('global-admin');
@@ -33,26 +89,20 @@ export default function App() {
     } else {
       setCurrentTab('');
     }
-  }, [currentUser]);
-
-  // Proactively promote neoissa@gmail.com to owner in the database on load
-  React.useEffect(() => {
-    if (currentUser && currentUser.email === 'neoissa@gmail.com') {
-      const userRef = doc(db, 'users', currentUser.uid);
-      setDoc(userRef, { role: 'owner', isOwner: true, email: 'neoissa@gmail.com' }, { merge: true })
-        .then(() => {
-          console.log("Database owner promotion synced successfully.");
-        })
-        .catch(err => {
-          console.error("Database promotion sync failed:", err);
-        });
-    }
-  }, [currentUser]);
+  }, [currentUser?.role, currentUser?.uid]);
 
   const handleLogout = async () => {
     await signOut(auth);
     setCurrentUser(null);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
+        Signing in to Taliʿa Portal...
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <Login onUserAuthenticated={(user) => setCurrentUser(user)} />;

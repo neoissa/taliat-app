@@ -23,7 +23,7 @@ export default function PatrolChat({ currentUser }) {
   const bottomRef = useRef();
 
   // Determine chat room ID: Group / Patrol ID
-  const defaultGroupId = currentUser.groupId || currentUser.patrolId || 'general-stream';
+  const defaultGroupId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
   const activeRoomId = isOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
 
   // 1. Fetch groups to populate room list for Owner
