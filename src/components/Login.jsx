@@ -22,7 +22,6 @@ export default function Login({ onUserAuthenticated }) {
       const user = userCredential.user;
       
       try {
-      try {
         const userRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userRef);
         
