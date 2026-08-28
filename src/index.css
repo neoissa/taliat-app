@@ -1,1 +1,103 @@
 @import "tailwindcss";
+
+/* ── Print helpers ── */
+.print-only { display: none; }
+
+@media print {
+  /* Hide navigation, sidebars, action buttons */
+  header,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset dark background; print on white */
+  html,
+  body,
+  #root {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Force the report card to look clean on paper */
+  #print-report {
+    background: #ffffff !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Report header */
+  .report-header {
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  /* Standard Letter paper: 8.5 × 11 in */
+  @page {
+    size: Letter portrait;
+    margin: 0.75in 0.75in 0.75in 0.75in;
+  }
+
+  /* Avoid page breaks inside a table row */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure tables render with visible borders */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    background: #fff !important;
+    padding: 4px 8px !important;
+  }
+
+  thead tr {
+    background: #f0f0f0 !important;
+  }
+
+  /* Status badges */
+  .print-report-complete {
+    color: #15803d !important;
+    font-weight: 700;
+  }
+  .print-report-pending {
+    color: #6b7280 !important;
+  }
+
+  /* Summary grid boxes */
+  .grid > div {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    color: #000 !important;
+    border-radius: 4px !important;
+  }
+
+  /* Progress bar: always show as solid line on paper */
+  .progress-bar-track {
+    border: 1px solid #ccc !important;
+    background: #f3f4f6 !important;
+  }
+
+  /* Leader notes box */
+  .leader-notes-box {
+    border: 1px solid #000 !important;
+    padding: 0.5rem !important;
+    min-height: 5rem;
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
