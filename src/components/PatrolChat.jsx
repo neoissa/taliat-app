@@ -24,7 +24,7 @@ export default function PatrolChat({ currentUser }) {
 
   // Determine chat room ID: Group / Patrol ID
   const defaultGroupId = currentUser.groupId || currentUser.patrolId || 'general-stream';
-  const activeRoomId = isOwner ? selectedGroupId : defaultGroupId;
+  const activeRoomId = isOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
 
   // 1. Fetch groups to populate room list for Owner
   useEffect(() => {
@@ -146,11 +146,11 @@ export default function PatrolChat({ currentUser }) {
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold text-slate-400">Taliʿa Stream:</span>
             <select
-              value={selectedGroupId}
+              value={activeRoomId}
               onChange={(e) => setSelectedGroupId(e.target.value)}
               className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
-              <option value="">Select Patrol</option>
+              <option value="general-stream">General Stream</option>
               {groups.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}

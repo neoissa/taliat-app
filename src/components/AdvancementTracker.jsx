@@ -130,6 +130,8 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
   const selectedRankData = RANKS_DATA.find((r) => r.id === selectedRankId) || RANKS_DATA[0];
   const activeProgress = allRanksProgress[selectedRankId] || { completedRequirements: {} };
   const completedRequirements = activeProgress.completedRequirements || {};
+  const scoutCompletedAt = activeProgress.scoutCompletedAt || '';
+  const testingCompletedAt = activeProgress.testingCompletedAt || '';
 
   const colorTheme = RANK_COLORS[selectedRankData.color] || RANK_COLORS.emerald;
 
@@ -200,6 +202,26 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       }, { merge: true });
     } catch (err) {
       console.error('Error updating date:', err);
+    }
+  };
+
+  const handleScoutCompletionDateChange = async (dateVal) => {
+    if (readOnly) return;
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
+    try {
+      await setDoc(docRef, { scoutCompletedAt: dateVal }, { merge: true });
+    } catch (err) {
+      console.error('Error updating scout completion date:', err);
+    }
+  };
+
+  const handleTestingDateChange = async (dateVal) => {
+    if (readOnly) return;
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
+    try {
+      await setDoc(docRef, { testingCompletedAt: dateVal }, { merge: true });
+    } catch (err) {
+      console.error('Error updating testing completion date:', err);
     }
   };
 
@@ -401,6 +423,44 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Rank Completion Milestones (Scout Finished Date & Testing Date) */}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-700/50 pb-2">
+          Rank Completion Sign-Off Milestones
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Scout Finished Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5 flex items-center gap-1">
+              <Calendar size={14} className="text-emerald-400" /> Scout Finished Date
+            </label>
+            <p className="text-[11px] text-slate-400 mb-2">Logged by the Scout when all requirements are finished.</p>
+            <input
+              type="date"
+              disabled={readOnly}
+              value={scoutCompletedAt}
+              onChange={(e) => handleScoutCompletionDateChange(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            />
+          </div>
+
+          {/* Leader Board of Review / Testing Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5 flex items-center gap-1">
+              <Award size={14} className="text-amber-400" /> Board of Review / Testing Date
+            </label>
+            <p className="text-[11px] text-slate-400 mb-2">Official date when tested and signed off by leaders.</p>
+            <input
+              type="date"
+              disabled={readOnly}
+              value={testingCompletedAt}
+              onChange={(e) => handleTestingDateChange(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
