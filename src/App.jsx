@@ -91,6 +91,56 @@ export default function App() {
     }
   }, [currentUser?.role, currentUser?.uid]);
 
+  const compressAndResizeImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 120;
+          const MAX_HEIGHT = 120;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const compressedBase64 = await compressAndResizeImage(file);
+      const userRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userRef, { photoURL: compressedBase64 }, { merge: true });
+      console.log("Avatar updated successfully!");
+    } catch (err) {
+      console.error("Failed to upload profile picture:", err);
+      alert("Failed to update profile picture: " + err.message);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     setCurrentUser(null);
@@ -133,12 +183,39 @@ export default function App() {
             )}
           </p>
         </div>
-        <button
-          onClick={handleLogout}
-          className="bg-slate-700 hover:bg-slate-600 text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Avatar with click-to-upload */}
+          <label className="relative group cursor-pointer shrink-0" title="Click to upload profile picture">
+            {currentUser.photoURL ? (
+              <img
+                src={currentUser.photoURL}
+                alt="Avatar"
+                className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/50 group-hover:border-emerald-400 transition"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold text-slate-200 group-hover:bg-slate-650 transition text-sm">
+                {(currentUser.fullName || currentUser.email || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            {/* Edit overlay */}
+            <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[9px] font-bold text-white leading-none text-center">
+              Edit
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </label>
+
+          <button
+            onClick={handleLogout}
+            className="bg-slate-700 hover:bg-slate-600 text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+          >
+            Sign Out
+          </button>
+        </div>
       </header>
 
       {/* Navigation Sub-header */}

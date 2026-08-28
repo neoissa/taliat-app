@@ -118,6 +118,7 @@ export default function PatrolChat({ currentUser }) {
         senderId: currentUser.uid,
         senderName: currentUser.fullName || currentUser.email?.split('@')[0] || 'Unknown',
         role: currentUser.role || 'scout',
+        senderPhotoURL: currentUser.photoURL || null,
         fileUrl: currentFile ? currentFile.base64 : null,
         fileName: currentFile ? currentFile.name : null,
         fileType: currentFile ? currentFile.type : null,
@@ -183,28 +184,46 @@ export default function PatrolChat({ currentUser }) {
             const isGrouped = prev && prev.senderId === m.senderId;
 
             return (
-              <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isGrouped ? 'mt-0.5' : 'mt-3'} group relative`}>
-                {/* Sender name + Role badge */}
-                {!isGrouped && (
-                  <div className={`flex items-center gap-1.5 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <span className="text-xs font-semibold text-slate-300">{m.senderName}</span>
-                    {m.role === 'owner' ? (
-                      <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30 leading-none font-bold uppercase">
-                        Admin
-                      </span>
-                    ) : m.role === 'leader' ? (
-                      <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 leading-none font-bold uppercase">
-                        Leader
-                      </span>
-                    ) : (
-                      <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded border border-slate-600 leading-none font-bold uppercase">
-                        Scout
-                      </span>
-                    )}
-                  </div>
+              <div key={m.id} className={`flex gap-2.5 ${isMe ? 'flex-row-reverse items-end' : 'items-start'} ${isGrouped ? 'mt-0.5' : 'mt-3'} group relative`}>
+                {/* Sender Profile Picture */}
+                {!isGrouped ? (
+                  m.senderPhotoURL ? (
+                    <img
+                      src={m.senderPhotoURL}
+                      alt="Avatar"
+                      className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0 mt-1"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase mt-1">
+                      {m.senderName.charAt(0)}
+                    </div>
+                  )
+                ) : (
+                  <div className="w-8 shrink-0" />
                 )}
 
-                <div className={`flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} flex-1 min-w-0`}>
+                  {/* Sender name + Role badge */}
+                  {!isGrouped && (
+                    <div className={`flex items-center gap-1.5 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-xs font-semibold text-slate-300">{m.senderName}</span>
+                      {m.role === 'owner' ? (
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30 leading-none font-bold uppercase">
+                          Admin
+                        </span>
+                      ) : m.role === 'leader' ? (
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30 leading-none font-bold uppercase">
+                          Leader
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded border border-slate-600 leading-none font-bold uppercase">
+                          Scout
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={`flex items-end gap-1.5 ${isMe ? 'flex-row-reverse' : ''} max-w-full`}>
                   <div
                     className={`px-4 py-2.5 max-w-[80%] text-sm break-words leading-relaxed space-y-2 relative ${
                       isMe
@@ -262,7 +281,8 @@ export default function PatrolChat({ currentUser }) {
                   )}
                 </div>
               </div>
-            );
+            </div>
+          );
           })
         )}
         <div ref={bottomRef} />

@@ -588,9 +588,22 @@ export default function PatrolRoster({ currentUser }) {
                 className="w-full flex justify-between items-center px-5 py-4 text-left cursor-pointer hover:bg-slate-700/50 transition"
                 onClick={() => setExpanded((v) => (v === scout.uid ? null : scout.uid))}
               >
-                <div>
-                  <p className="font-semibold text-white text-sm">{scout.fullName || scout.username}</p>
-                  <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
+                <div className="flex items-center gap-3">
+                  {scout.photoURL ? (
+                    <img
+                      src={scout.photoURL}
+                      alt="Scout Avatar"
+                      className="w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
+                      {(scout.fullName || scout.username).charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-semibold text-white text-sm">{scout.fullName || scout.username}</p>
+                    <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
+                  </div>
                 </div>
                 <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
               </button>

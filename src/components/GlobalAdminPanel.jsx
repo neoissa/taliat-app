@@ -533,24 +533,36 @@ export default function GlobalAdminPanel({ currentUser }) {
               
               return (
                 <div key={user.uid} className="p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-white">{user.fullName || user.username}</span>
-                      {user.role !== 'scout' && (
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase ${
-                          user.role === 'owner'
-                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                        }`}>
-                          {user.role}
-                        </span>
-                      )}
-                      {user.role === 'scout' && (
-                        <span className="text-[9px] bg-sky-950 text-sky-400 border border-sky-900 font-bold px-1.5 py-0.5 rounded leading-none uppercase">
-                          {user.rank || 'Scout'}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-3">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt="Profile"
+                        className="w-9 h-9 rounded-full object-cover border border-slate-700 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
+                        {(user.fullName || user.username).charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs text-white">{user.fullName || user.username}</span>
+                        {user.role !== 'scout' && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase ${
+                            user.role === 'owner'
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            {user.role}
+                          </span>
+                        )}
+                        {user.role === 'scout' && (
+                          <span className="text-[9px] bg-sky-950 text-sky-400 border border-sky-900 font-bold px-1.5 py-0.5 rounded leading-none uppercase">
+                            {user.rank || 'Scout'}
+                          </span>
+                        )}
+                      </div>
                     <p className="text-[10px] text-slate-500 mt-1 font-mono">
                       @{user.username} &bull; {user.email}
                     </p>
@@ -563,6 +575,7 @@ export default function GlobalAdminPanel({ currentUser }) {
                       )}
                     </div>
                   </div>
+                </div>
 
                   {isOwner && (
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
