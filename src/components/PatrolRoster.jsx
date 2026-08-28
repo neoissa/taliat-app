@@ -338,16 +338,19 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 }
 
 export default function PatrolRoster({ currentUser }) {
+  const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
   const [scouts, setScouts] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
-
-  // Add scout form state
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRank, setNewRank] = useState('Scout');
+  const [newGroup, setNewGroup] = useState('');
+  const [newLeader, setNewLeader] = useState('');
+  const [groups, setGroups] = useState([]);
+  const [leaders, setLeaders] = useState([]);
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState('');
   const [addError, setAddError] = useState('');
@@ -363,6 +366,22 @@ export default function PatrolRoster({ currentUser }) {
     });
     return () => unsub();
   }, [currentUser.uid, currentUser.role, currentUser.email]);
+
+  useEffect(() => {
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    });
+    
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      setLeaders(allUsers.filter(u => u.role === 'leader' || u.role === 'owner'));
+    });
+    
+    return () => {
+      unsubGroups();
+      unsubUsers();
+    };
+  }, []);
 
   const handleAddScout = async (e) => {
     e.preventDefault();
@@ -395,13 +414,17 @@ export default function PatrolRoster({ currentUser }) {
       const newUid = cred.user.uid;
       await secondaryAuth.signOut();
 
+      const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+      const assignedLeaderId = isOwner ? newLeader : currentUser.uid;
+
       await setDoc(doc(db, 'users', newUid), {
         fullName: newName.trim(),
         username,
         email,
         role: 'scout',
-        leaderId: currentUser.uid,
-        patrolId: currentUser.patrolId || currentUser.uid,
+        leaderId: assignedLeaderId || null,
+        groupId: newGroup || null,
+        patrolId: newGroup || null,
         rank: newRank.trim(),
         createdAt: serverTimestamp(),
       });
@@ -411,6 +434,8 @@ export default function PatrolRoster({ currentUser }) {
       setNewUsername('');
       setNewPassword('');
       setNewRank('Scout');
+      setNewGroup('');
+      setNewLeader('');
       setShowForm(false);
     } catch (err) {
       console.error(err);
@@ -497,6 +522,35 @@ export default function PatrolRoster({ currentUser }) {
                 autoComplete="new-password"
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+            {isOwner && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Leader</label>
+                <select
+                  required
+                  value={newLeader}
+                  onChange={(e) => setNewLeader(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="">Select Leader</option>
+                  {leaders.map(l => (
+                    <option key={l.uid} value={l.uid}>{l.fullName || l.username} ({l.role})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Patrol / Group</label>
+              <select
+                value={newGroup}
+                onChange={(e) => setNewGroup(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              >
+                <option value="">No Patrol</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Initial Rank</label>
