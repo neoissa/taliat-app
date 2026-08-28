@@ -602,7 +602,9 @@ export default function PatrolRoster({ currentUser }) {
                 >
                   <option value="">Select Leader</option>
                   {leaders.map(l => (
-                    <option key={l.uid} value={l.uid}>{l.fullName || l.username} ({l.role})</option>
+                    <option key={l.uid} value={l.uid}>
+                      {l.fullName || l.username} {l.leaderPosition ? `— ${l.leaderPosition}` : `(${l.role})`}
+                    </option>
                   ))}
                 </select>
               </div>

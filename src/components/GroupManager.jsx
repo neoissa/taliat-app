@@ -355,7 +355,7 @@ export default function GroupManager({ currentUser }) {
                           ) : (
                             assignedLeaders.map(l => (
                               <span key={l.uid} className="text-[10px] bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-slate-300">
-                                {l.fullName || l.username}
+                                {l.fullName || l.username} {l.leaderPosition ? `(${l.leaderPosition})` : ''}
                               </span>
                             ))
                           )}

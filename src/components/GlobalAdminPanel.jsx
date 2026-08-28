@@ -15,6 +15,20 @@ import {
 import { UserPlus, Shield, UserMinus, Search, Edit3, Trash2 } from 'lucide-react';
 import { RANKS_DATA } from '../data/ranksData';
 
+const BSA_LEADER_POSITIONS = [
+  'Scoutmaster',
+  'Assistant Scoutmaster',
+  'Committee Chair',
+  'Committee Member',
+  'Chartered Org Representative',
+  'Advancement Chair',
+  'Outdoor Activity Chair',
+  'Treasurer',
+  'Secretary',
+  'Patrol Advisor',
+  'Unit College Scouter Reserve'
+];
+
 export default function GlobalAdminPanel({ currentUser }) {
   const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
 
@@ -30,6 +44,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [leadUsername, setLeadUsername] = useState('');
   const [leadPassword, setLeadPassword] = useState('');
   const [leadGroup, setLeadGroup] = useState('');
+  const [leadPosition, setLeadPosition] = useState('Scoutmaster');
   const [leadMsg, setLeadMsg] = useState('');
   const [leadErr, setLeadErr] = useState('');
   const [leadAdding, setLeadAdding] = useState(false);
@@ -58,6 +73,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editBsaId, setEditBsaId] = useState('');
   const [editPersonalEmail, setEditPersonalEmail] = useState('');
   const [editParentEmail, setEditParentEmail] = useState('');
+  const [editLeadPosition, setEditLeadPosition] = useState('');
 
   useEffect(() => {
     // 1. Listen to all users
@@ -118,6 +134,7 @@ export default function GlobalAdminPanel({ currentUser }) {
         leaderId: null,
         groupId: leadGroup || null,
         patrolId: leadGroup || null,
+        leaderPosition: leadPosition,
         createdAt: serverTimestamp()
       });
 
@@ -140,6 +157,7 @@ export default function GlobalAdminPanel({ currentUser }) {
       setLeadUsername('');
       setLeadPassword('');
       setLeadGroup('');
+      setLeadPosition('Scoutmaster');
     } catch (err) {
       console.error(err);
       setLeadErr(`Error: ${err.message}`);
@@ -243,6 +261,7 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditBsaId(user.bsaId || '');
     setEditPersonalEmail(user.scoutEmail || '');
     setEditParentEmail(user.parentEmail || '');
+    setEditLeadPosition(user.leaderPosition || 'Scoutmaster');
   };
 
   const handleSaveEditUser = async (e) => {
@@ -261,7 +280,8 @@ export default function GlobalAdminPanel({ currentUser }) {
         rank: editRole === 'scout' ? editRank : null,
         bsaId: editRole === 'scout' ? editBsaId.trim() : null,
         scoutEmail: editRole === 'scout' ? editPersonalEmail.trim() : null,
-        parentEmail: editRole === 'scout' ? editParentEmail.trim() : null
+        parentEmail: editRole === 'scout' ? editParentEmail.trim() : null,
+        leaderPosition: editRole === 'leader' ? editLeadPosition : null
       };
 
       await updateDoc(ref, updates);
@@ -404,7 +424,9 @@ export default function GlobalAdminPanel({ currentUser }) {
                   >
                     <option value="">Select Leader</option>
                     {leadersList.map(l => (
-                      <option key={l.uid} value={l.uid}>{l.fullName || l.username} ({l.role})</option>
+                      <option key={l.uid} value={l.uid}>
+                        {l.fullName || l.username} {l.leaderPosition ? `— ${l.leaderPosition}` : `(${l.role})`}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -517,6 +539,19 @@ export default function GlobalAdminPanel({ currentUser }) {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">BSA Leadership Position</label>
+                <select
+                  value={leadPosition}
+                  onChange={(e) => setLeadPosition(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {BSA_LEADER_POSITIONS.map(pos => (
+                    <option key={pos} value={pos}>{pos}</option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 type="submit"
                 disabled={leadAdding}
@@ -608,6 +643,11 @@ export default function GlobalAdminPanel({ currentUser }) {
                             {user.role}
                           </span>
                         )}
+                        {user.role === 'leader' && user.leaderPosition && (
+                          <span className="text-[9px] bg-slate-800 text-emerald-400 border border-slate-700 font-bold px-1.5 py-0.5 rounded leading-none uppercase">
+                            {user.leaderPosition}
+                          </span>
+                        )}
                         {user.role === 'scout' && (
                           <span className="text-[9px] bg-sky-950 text-sky-400 border border-sky-900 font-bold px-1.5 py-0.5 rounded leading-none uppercase">
                             {user.rank || 'Scout'}
@@ -691,6 +731,21 @@ export default function GlobalAdminPanel({ currentUser }) {
                 </select>
               </div>
 
+              {editRole === 'leader' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Leadership Position</label>
+                  <select
+                    value={editLeadPosition}
+                    onChange={(e) => setEditLeadPosition(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    {BSA_LEADER_POSITIONS.map(pos => (
+                      <option key={pos} value={pos}>{pos}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {editRole === 'scout' && (
                 <>
                   <div>
@@ -702,7 +757,9 @@ export default function GlobalAdminPanel({ currentUser }) {
                     >
                       <option value="">No Assigned Leader</option>
                       {leadersList.map(l => (
-                        <option key={l.uid} value={l.uid}>{l.fullName || l.username}</option>
+                        <option key={l.uid} value={l.uid}>
+                          {l.fullName || l.username} {l.leaderPosition ? `— ${l.leaderPosition}` : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
