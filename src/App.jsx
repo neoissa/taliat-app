@@ -16,8 +16,8 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('');
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = currentUser?.role === 'leader';
-  const isScout = currentUser?.role === 'scout';
+  const isLeader = !isOwner && currentUser?.role === 'leader';
+  const isScout = !isOwner && (currentUser?.role === 'scout' || (!isOwner && !isLeader));
 
   // Automatically set default tab when user logs in
   React.useEffect(() => {
