@@ -15,7 +15,7 @@ import {
 import AdvancementTracker from './AdvancementTracker';
 import MeritBadgeDashboard from './MeritBadgeDashboard';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
-import { RANKS, RANKS_SCHEMA } from '../data/ranksSchema';
+import { RANKS_DATA } from '../data/ranksData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert } from 'lucide-react';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
@@ -94,19 +94,21 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   };
 
   // Derive summary metrics for scout
-  const completedRanksCount = RANKS.filter(rank => {
-    const rp = ranksProgress[rank] || { completed: {} };
-    const schema = RANKS_SCHEMA[rank];
-    const total = schema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-    const done = schema.categories.reduce((sum, c) => sum + c.requirements.filter(r => rp.completed?.[r.id]).length, 0);
+  const completedRanksCount = RANKS_DATA.filter(rank => {
+    const rp = ranksProgress[rank.id] || { completedRequirements: {} };
+    const completedReqs = rp.completedRequirements || {};
+    const total = rank.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+    const done = rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
     return total > 0 && done === total;
   }).length;
 
   const activeRank = scout.rank || 'Scout';
-  const activeSchema = RANKS_SCHEMA[activeRank] || RANKS_SCHEMA.Scout;
-  const activeProg = ranksProgress[activeRank] || { completed: {} };
-  const activeTotal = activeSchema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-  const activeDone = activeSchema.categories.reduce((sum, c) => sum + c.requirements.filter(r => activeProg.completed?.[r.id]).length, 0);
+  const activeRankId = activeRank.toLowerCase().replace(' ', '_');
+  const activeRankData = RANKS_DATA.find(r => r.id === activeRankId || r.name.toLowerCase() === activeRank.toLowerCase()) || RANKS_DATA[0];
+  const activeProg = ranksProgress[activeRankData.id] || { completedRequirements: {} };
+  const completedReqs = activeProg.completedRequirements || {};
+  const activeTotal = activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+  const activeDone = activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
   const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
 
   // Merit Badge Stats
@@ -284,7 +286,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         {/* Detailed Requirement Checklist */}
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-            Remaining vs. Completed Requirements ({activeRank})
+            Remaining vs. Completed Requirements ({activeRankData.name})
           </h2>
           <table className="w-full text-xs text-left border border-slate-300">
             <thead>
@@ -296,16 +298,16 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {activeSchema.categories.map((category) => 
+              {activeRankData.categories.map((category) => 
                 category.requirements.map((req) => {
-                  const isDone = !!activeProg.completed?.[req.id];
-                  const completionDate = activeProg.dates?.[req.id] || '';
+                  const isDone = !!completedReqs[req.id]?.completed;
+                  const completionDate = completedReqs[req.id]?.completedAt || '';
                   return (
                     <tr key={req.id} className="border-t border-slate-300">
                       <td className="p-2 border border-slate-300 font-mono font-bold text-slate-600">{req.number}</td>
                       <td className="p-2 border border-slate-300">
                         <span className={isDone ? 'line-through text-slate-400' : 'text-black font-medium'}>
-                          {req.description}
+                          {req.text}
                         </span>
                       </td>
                       <td className="p-2 border border-slate-300 text-center">
@@ -502,8 +504,8 @@ export default function PatrolRoster({ currentUser }) {
                 onChange={(e) => setNewRank(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
               >
-                {RANKS.map(r => (
-                  <option key={r} value={r}>{r}</option>
+                {RANKS_DATA.map(r => (
+                  <option key={r.name} value={r.name}>{r.name}</option>
                 ))}
               </select>
             </div>

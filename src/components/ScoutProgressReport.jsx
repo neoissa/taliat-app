@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { RANKS, RANKS_SCHEMA } from '../data/ranksSchema';
+import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen } from 'lucide-react';
 
@@ -13,7 +13,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [notesLoading, setNotesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [selectedRank, setSelectedRank] = useState(scout.rank || 'Scout');
+
+  // Normalize selected rank ID (lowercase, with underscores)
+  const initialRankId = (scout.rank || 'Scout').toLowerCase().replace(' ', '_');
+  const [selectedRankId, setSelectedRankId] = useState(initialRankId);
 
   const reportDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -85,18 +88,19 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   };
 
   // Derive metrics
-  const completedRanksCount = RANKS.filter(rank => {
-    const rp = ranksProgress[rank] || { completed: {} };
-    const schema = RANKS_SCHEMA[rank];
-    const total = schema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-    const done = schema.categories.reduce((sum, c) => sum + c.requirements.filter(r => rp.completed?.[r.id]).length, 0);
+  const completedRanksCount = RANKS_DATA.filter(rank => {
+    const rp = ranksProgress[rank.id] || { completedRequirements: {} };
+    const completedReqs = rp.completedRequirements || {};
+    const total = rank.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+    const done = rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
     return total > 0 && done === total;
   }).length;
 
-  const activeRankSchema = RANKS_SCHEMA[selectedRank] || RANKS_SCHEMA.Scout;
-  const activeProg = ranksProgress[selectedRank] || { completed: {}, dates: {} };
-  const activeTotal = activeRankSchema.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-  const activeDone = activeRankSchema.categories.reduce((sum, c) => sum + c.requirements.filter(r => activeProg.completed?.[r.id]).length, 0);
+  const activeRankData = RANKS_DATA.find(r => r.id === selectedRankId) || RANKS_DATA[0];
+  const activeProg = ranksProgress[activeRankData.id] || { completedRequirements: {} };
+  const completedReqs = activeProg.completedRequirements || {};
+  const activeTotal = activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0);
+  const activeDone = activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
   const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
 
   // Merit Badge Stats
@@ -134,12 +138,12 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           <p className="text-xs text-slate-400">Choose which rank checklist to view/print below</p>
         </div>
         <select
-          value={selectedRank}
-          onChange={(e) => setSelectedRank(e.target.value)}
+          value={selectedRankId}
+          onChange={(e) => setSelectedRankId(e.target.value)}
           className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
         >
-          {RANKS.map(r => (
-            <option key={r} value={r}>{r}</option>
+          {RANKS_DATA.map(r => (
+            <option key={r.id} value={r.id}>{r.name}</option>
           ))}
         </select>
       </div>
@@ -173,7 +177,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
               <p className="text-3xl font-black text-emerald-400">{activePercent}%</p>
-              <p className="text-xs text-slate-400 mt-1">{selectedRank} Progress</p>
+              <p className="text-xs text-slate-400 mt-1">{activeRankData.name} Progress</p>
             </div>
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
               <p className="text-3xl font-black text-white">{completedRanksCount} / 7</p>
@@ -197,7 +201,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         {/* Requirement Checklist */}
         <div>
           <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
-            Checklist: {selectedRank} Ranks Requirements
+            Checklist: {activeRankData.name} Requirements
           </h2>
           <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
             <thead>
@@ -209,10 +213,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {activeRankSchema.categories.map((category) => 
+              {activeRankData.categories.map((category) => 
                 category.requirements.map((req) => {
-                  const isDone = !!activeProg.completed?.[req.id];
-                  const completionDate = activeProg.dates?.[req.id] || '';
+                  const isDone = !!completedReqs[req.id]?.completed;
+                  const completionDate = completedReqs[req.id]?.completedAt || '';
                   return (
                     <tr key={req.id} className={`border-t border-slate-700/50 ${isDone ? 'bg-emerald-950/10' : 'bg-slate-800/20'}`}>
                       <td className="px-3 py-2 border-r border-slate-700 font-mono font-bold text-slate-400 text-xs">
@@ -220,7 +224,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                       </td>
                       <td className="px-3 py-2 border-r border-slate-700">
                         <span className={isDone ? 'line-through text-slate-400' : 'text-slate-200'}>
-                          {req.description}
+                          {req.text}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center border-r border-slate-700">
