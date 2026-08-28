@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { Trash2, Paperclip, FileText, Image as ImageIcon, Send, Download } from 'lucide-react';
+import { Trash2, Paperclip, FileText, Image as ImageIcon, Send, Download, Users } from 'lucide-react';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
