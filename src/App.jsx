@@ -4,6 +4,7 @@ import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
 import PatrolRoster from './components/PatrolRoster';
+import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import { auth } from './firebase';
 import { signOut } from 'firebase/auth';
 
@@ -66,6 +67,16 @@ export default function App() {
           >
             Patrol Stream
           </button>
+          <button
+            onClick={() => setCurrentTab('meritbadges')}
+            className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer ${
+              currentTab === 'meritbadges'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Merit Badges
+          </button>
           {isLeader && (
             <button
               onClick={() => setCurrentTab('roster')}
@@ -98,6 +109,7 @@ export default function App() {
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'roster' && isLeader && <PatrolRoster currentUser={currentUser} />}
+        {currentTab === 'meritbadges' && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
       </main>
     </div>
