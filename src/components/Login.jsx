@@ -24,13 +24,44 @@ export default function Login({ onUserAuthenticated }) {
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
-          onUserAuthenticated({ uid: user.uid, ...userDoc.data() });
+          const data = userDoc.data();
+          onUserAuthenticated({
+            uid: user.uid,
+            email: user.email,
+            role: data.role || 'scout',
+            leaderId: data.leaderId || null,
+            patrolId: data.patrolId || null,
+            fullName: data.fullName || cleanInput.split('@')[0],
+            username: data.username || cleanInput.split('@')[0],
+            rank: data.rank || '',
+            meritBadges: data.meritBadges || [],
+          });
         } else {
-          onUserAuthenticated({ uid: user.uid, fullName: cleanInput.split('@')[0], role: 'leader' });
+          onUserAuthenticated({
+            uid: user.uid,
+            email: user.email,
+            role: 'leader',
+            leaderId: null,
+            patrolId: null,
+            fullName: cleanInput.split('@')[0],
+            username: cleanInput.split('@')[0],
+            rank: '',
+            meritBadges: [],
+          });
         }
       } catch (dbErr) {
         console.warn('Firestore fetch failed, logging in with auth profile:', dbErr);
-        onUserAuthenticated({ uid: user.uid, fullName: user.email, role: 'leader' });
+        onUserAuthenticated({
+          uid: user.uid,
+          email: user.email,
+          role: 'scout',
+          leaderId: null,
+          patrolId: null,
+          fullName: user.email,
+          username: user.email.split('@')[0],
+          rank: '',
+          meritBadges: [],
+        });
       }
     } catch (err) {
       console.error('Login error:', err);
