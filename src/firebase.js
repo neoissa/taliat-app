@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCpcSwYcwUQ_f7_0BgYtQzKxSMnsZ2e6CE",
   authDomain: "taliat-portal.firebaseapp.com",
   projectId: "taliat-portal",
