@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import {
-  collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc
-} from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import {
   Award, CheckCircle2, Circle, ChevronDown, ChevronUp,
