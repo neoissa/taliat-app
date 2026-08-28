@@ -536,18 +536,18 @@ export default function GlobalAdminPanel({ currentUser }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-xs text-white">{user.fullName || user.username}</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase ${
-                        user.role === 'owner'
-                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                          : user.role === 'leader'
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
-                        {user.role}
-                      </span>
-                      {user.rank && user.role === 'scout' && (
+                      {user.role !== 'scout' && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border leading-none font-bold uppercase ${
+                          user.role === 'owner'
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        }`}>
+                          {user.role}
+                        </span>
+                      )}
+                      {user.role === 'scout' && (
                         <span className="text-[9px] bg-sky-950 text-sky-400 border border-sky-900 font-bold px-1.5 py-0.5 rounded leading-none uppercase">
-                          {user.rank}
+                          {user.rank || 'Scout'}
                         </span>
                       )}
                     </div>
