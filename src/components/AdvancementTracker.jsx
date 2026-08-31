@@ -464,7 +464,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                                 : 'bg-slate-700/50 text-slate-400 border border-slate-600'
                             }`}
                           >
-                            {isCompleted ? 'Tested' : 'Not Tested'}
+                            {isCompleted ? 'Completed' : 'Not Completed'}
                           </button>
                         </div>
                         <p className={`text-sm mt-1 leading-relaxed ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-200'}`}>
@@ -533,12 +533,12 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
             />
           </div>
 
-          {/* Leader Board of Review / Testing Date */}
+          {/* Leader Board of Review / Sign-Off Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5 flex items-center gap-1">
-              <Award size={14} className="text-amber-400" /> Board of Review / Testing Date
+              <Award size={14} className="text-amber-400" /> Board of Review / Sign-Off Date
             </label>
-            <p className="text-[11px] text-slate-400 mb-2">Official date when tested and signed off by leaders.</p>
+            <p className="text-[11px] text-slate-400 mb-2">Official date when completed and signed off by leaders.</p>
             <input
               type="date"
               disabled={readOnly}

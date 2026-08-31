@@ -233,7 +233,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         </div>
 
         {/* BSA & Contact Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
           <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
             <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">BSA Member ID</span>
             <span className="font-semibold text-slate-200 text-sm">{scout.bsaId || '—'}</span>
@@ -243,8 +243,31 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             <span className="font-semibold text-slate-200 text-sm">{scout.scoutEmail || '—'}</span>
           </div>
           <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Scout Phone</span>
+            <span className="font-semibold text-slate-200 text-sm">{scout.scoutPhone || '—'}</span>
+          </div>
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
             <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Email</span>
             <span className="font-semibold text-slate-200 text-sm">{scout.parentEmail || '—'}</span>
+          </div>
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Phone</span>
+            <div className="flex items-center justify-between gap-2 mt-0.5">
+              <span className="font-semibold text-slate-200 text-sm">{scout.parentPhone || '—'}</span>
+              {scout.parentPhone && (
+                <a
+                  href={`https://wa.me/${scout.parentPhone.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg p-1 transition cursor-pointer flex items-center justify-center"
+                  title="Chat with parent on WhatsApp"
+                >
+                  <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                  </svg>
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -434,7 +457,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
                       </td>
                       <td className="p-2 border border-slate-300 text-center">
                         <span className={isDone ? 'print-report-complete' : 'print-report-pending'}>
-                          {isDone ? 'TESTED' : 'NOT TESTED'}
+                          {isDone ? 'COMPLETED' : 'INCOMPLETE'}
                         </span>
                       </td>
                       <td className="p-2 border border-slate-300 text-slate-600">{completionDate || (isDone ? '—' : '')}</td>
@@ -488,6 +511,8 @@ export default function PatrolRoster({ currentUser }) {
   const [newBsaId, setNewBsaId] = useState('');
   const [newPersonalEmail, setNewPersonalEmail] = useState('');
   const [newParentEmail, setNewParentEmail] = useState('');
+  const [newScoutPhone, setNewScoutPhone] = useState('');
+  const [newParentPhone, setNewParentPhone] = useState('');
   const [groups, setGroups] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [adding, setAdding] = useState(false);
@@ -569,6 +594,8 @@ export default function PatrolRoster({ currentUser }) {
         bsaId: newBsaId.trim(),
         scoutEmail: newPersonalEmail.trim(),
         parentEmail: newParentEmail.trim(),
+        scoutPhone: newScoutPhone.trim(),
+        parentPhone: newParentPhone.trim(),
         createdAt: serverTimestamp(),
       });
 
@@ -582,6 +609,8 @@ export default function PatrolRoster({ currentUser }) {
       setNewBsaId('');
       setNewPersonalEmail('');
       setNewParentEmail('');
+      setNewScoutPhone('');
+      setNewParentPhone('');
       setShowForm(false);
     } catch (err) {
       console.error(err);
@@ -701,6 +730,26 @@ export default function PatrolRoster({ currentUser }) {
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Phone Number</label>
+                <input
+                  type="tel"
+                  value={newScoutPhone}
+                  onChange={(e) => setNewScoutPhone(e.target.value)}
+                  placeholder="e.g. +1234567890"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Phone Number</label>
+                <input
+                  type="tel"
+                  value={newParentPhone}
+                  onChange={(e) => setNewParentPhone(e.target.value)}
+                  placeholder="e.g. +1234567890"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             </div>
 
             {isOwner && (
@@ -792,7 +841,7 @@ export default function PatrolRoster({ currentUser }) {
 
               {expanded === scout.uid && (
                 <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
                     <div>
                       <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
                       <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
@@ -802,8 +851,31 @@ export default function PatrolRoster({ currentUser }) {
                       <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
                     </div>
                     <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Scout Phone</span>
+                      <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
+                    </div>
+                    <div>
                       <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Email</span>
                       <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Phone</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-semibold text-slate-200">{scout.parentPhone || '—'}</span>
+                        {scout.parentPhone && (
+                          <a
+                            href={`https://wa.me/${scout.parentPhone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer inline-flex items-center justify-center"
+                            title="Chat with parent on WhatsApp"
+                          >
+                            <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
 

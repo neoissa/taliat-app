@@ -360,18 +360,18 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                                   : 'bg-slate-700/50 text-slate-400 border-slate-600'
                               }`}
                             >
-                              {isDone ? 'TESTED' : 'NOT TESTED'}
+                              {isDone ? 'COMPLETED' : 'INCOMPLETE'}
                             </button>
                           ) : (
                             <span className={isDone ? 'text-emerald-400 font-semibold text-xs' : 'text-slate-500 text-xs'}>
-                              {isDone ? 'TESTED' : 'NOT TESTED'}
+                              {isDone ? 'COMPLETED' : 'INCOMPLETE'}
                             </span>
                           )}
                         </div>
                         {/* Print View */}
                         <div className="print-only">
                           <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
-                            {isDone ? 'TESTED' : 'NOT TESTED'}
+                            {isDone ? 'COMPLETED' : 'INCOMPLETE'}
                           </span>
                         </div>
                       </td>
@@ -430,10 +430,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               </div>
             </div>
 
-            {/* Board of Review / Testing Date */}
+            {/* Board of Review / Sign-Off Date */}
             <div>
               <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Award size={12} className="text-amber-400" /> Board of Review / Testing Date
+                <Award size={12} className="text-amber-400" /> Board of Review / Sign-Off Date
               </label>
               <div className="print-hide">
                 {canEdit ? (

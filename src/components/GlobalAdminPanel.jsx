@@ -59,6 +59,8 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [scoutBsaId, setScoutBsaId] = useState('');
   const [scoutPersonalEmail, setScoutPersonalEmail] = useState('');
   const [scoutParentEmail, setScoutParentEmail] = useState('');
+  const [scoutPhone, setScoutPhone] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
   const [scoutMsg, setScoutMsg] = useState('');
   const [scoutErr, setScoutErr] = useState('');
   const [scoutAdding, setScoutAdding] = useState(false);
@@ -73,6 +75,8 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editBsaId, setEditBsaId] = useState('');
   const [editPersonalEmail, setEditPersonalEmail] = useState('');
   const [editParentEmail, setEditParentEmail] = useState('');
+  const [editScoutPhone, setEditScoutPhone] = useState('');
+  const [editParentPhone, setEditParentPhone] = useState('');
   const [editLeadPosition, setEditLeadPosition] = useState('');
 
   useEffect(() => {
@@ -215,6 +219,8 @@ export default function GlobalAdminPanel({ currentUser }) {
         bsaId: scoutBsaId.trim(),
         scoutEmail: scoutPersonalEmail.trim(),
         parentEmail: scoutParentEmail.trim(),
+        scoutPhone: scoutPhone.trim(),
+        parentPhone: parentPhone.trim(),
         createdAt: serverTimestamp()
       });
 
@@ -228,6 +234,8 @@ export default function GlobalAdminPanel({ currentUser }) {
       setScoutBsaId('');
       setScoutPersonalEmail('');
       setScoutParentEmail('');
+      setScoutPhone('');
+      setParentPhone('');
     } catch (err) {
       console.error(err);
       setScoutErr(`Error: ${err.message}`);
@@ -261,6 +269,8 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditBsaId(user.bsaId || '');
     setEditPersonalEmail(user.scoutEmail || '');
     setEditParentEmail(user.parentEmail || '');
+    setEditScoutPhone(user.scoutPhone || '');
+    setEditParentPhone(user.parentPhone || '');
     setEditLeadPosition(user.leaderPosition || 'Scoutmaster');
   };
 
@@ -281,6 +291,8 @@ export default function GlobalAdminPanel({ currentUser }) {
         bsaId: editRole === 'scout' ? editBsaId.trim() : null,
         scoutEmail: editRole === 'scout' ? editPersonalEmail.trim() : null,
         parentEmail: editRole === 'scout' ? editParentEmail.trim() : null,
+        scoutPhone: editRole === 'scout' ? editScoutPhone.trim() : null,
+        parentPhone: editRole === 'scout' ? editParentPhone.trim() : null,
         leaderPosition: editRole === 'leader' ? editLeadPosition : null
       };
 
@@ -407,6 +419,29 @@ export default function GlobalAdminPanel({ currentUser }) {
                   value={scoutParentEmail}
                   onChange={(e) => setScoutParentEmail(e.target.value)}
                   placeholder="e.g. parent@gmail.com"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">Scout Phone Number</label>
+                <input
+                  type="tel"
+                  value={scoutPhone}
+                  onChange={(e) => setScoutPhone(e.target.value)}
+                  placeholder="e.g. +1234567890"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-300 uppercase mb-1">Parent Phone Number</label>
+                <input
+                  type="tel"
+                  value={parentPhone}
+                  onChange={(e) => setParentPhone(e.target.value)}
+                  placeholder="e.g. +1234567890"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -673,6 +708,25 @@ export default function GlobalAdminPanel({ currentUser }) {
                       {user.role === 'scout' && user.parentEmail && (
                         <span>Parent Email: <span className="text-slate-300 font-semibold">{user.parentEmail}</span></span>
                       )}
+                      {user.role === 'scout' && user.scoutPhone && (
+                        <span>Scout Phone: <span className="text-slate-300 font-semibold">{user.scoutPhone}</span></span>
+                      )}
+                      {user.role === 'scout' && user.parentPhone && (
+                        <span className="inline-flex items-center gap-1">
+                          Parent Phone: <span className="text-slate-300 font-semibold">{user.parentPhone}</span>
+                          <a
+                            href={`https://wa.me/${user.parentPhone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-450 hover:text-emerald-400 font-bold inline-flex items-center"
+                            title="Chat with parent on WhatsApp"
+                          >
+                            <svg className="w-3.5 h-3.5 fill-emerald-500 hover:fill-emerald-400 ml-0.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                            </svg>
+                          </a>
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -803,6 +857,26 @@ export default function GlobalAdminPanel({ currentUser }) {
                       type="email"
                       value={editParentEmail}
                       onChange={(e) => setEditParentEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Phone</label>
+                    <input
+                      type="tel"
+                      value={editScoutPhone}
+                      onChange={(e) => setEditScoutPhone(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Phone</label>
+                    <input
+                      type="tel"
+                      value={editParentPhone}
+                      onChange={(e) => setEditParentPhone(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
