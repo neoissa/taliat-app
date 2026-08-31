@@ -225,7 +225,7 @@ export default function App() {
 
       {/* Navigation Sub-header */}
       <div className="bg-slate-800/40 border-b border-slate-700/60 px-6 print-hide">
-        <div className="max-w-4xl mx-auto flex gap-6 overflow-x-auto scrollbar-none">
+        <div className="max-w-4xl mx-auto flex flex-wrap gap-x-6 gap-y-1">
           {isOwner && (
             <>
               <button
@@ -287,6 +287,16 @@ export default function App() {
                 }`}
               >
                 Resources
+              </button>
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'profile'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Profile
               </button>
             </>
           )}
@@ -352,6 +362,16 @@ export default function App() {
                 }`}
               >
                 Lesson Plans
+              </button>
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'profile'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Profile
               </button>
             </>
           )}
@@ -441,7 +461,7 @@ export default function App() {
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
-        {currentTab === 'profile' && isScout && <ScoutProfile currentUser={currentUser} />}
+        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && isScout && <IslamicBasics />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}

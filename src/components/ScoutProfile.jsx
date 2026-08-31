@@ -17,6 +17,7 @@ export default function ScoutProfile({ currentUser }) {
   const [bsaId, setBsaId] = useState('');
   const [patrolName, setPatrolName] = useState('Taliʿa');
   const [rankName, setRankName] = useState('Scout');
+  const [spt, setSpt] = useState('');
   
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,7 @@ export default function ScoutProfile({ currentUser }) {
           setPhotoPreview(data.photoURL || '');
           setBsaId(data.bsaId || '—');
           setRankName(data.rank || 'Scout');
+          setSpt(data.spt || '');
           
           if (data.groupId) {
             const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
@@ -98,15 +100,23 @@ export default function ScoutProfile({ currentUser }) {
     setProfileError('');
 
     try {
+      const isScout = currentUser.role === 'scout';
       const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
+      const updates = {
         fullName: fullName.trim(),
         scoutEmail: scoutEmail.trim(),
-        parentEmail: parentEmail.trim(),
         scoutPhone: scoutPhone.trim(),
-        parentPhone: parentPhone.trim(),
         photoURL: photoUrl || null
-      });
+      };
+
+      if (isScout) {
+        updates.parentEmail = parentEmail.trim();
+        updates.parentPhone = parentPhone.trim();
+      } else {
+        updates.spt = spt.trim();
+      }
+
+      await updateDoc(userRef, updates);
       setProfileSuccess("Profile updated successfully!");
       setTimeout(() => setProfileSuccess(''), 3000);
     } catch (err) {
@@ -237,33 +247,20 @@ export default function ScoutProfile({ currentUser }) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Mail size={12} /> Scout Email
+                  <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
                 </label>
                 <input
                   type="email"
                   value={scoutEmail}
                   onChange={(e) => setScoutEmail(e.target.value)}
-                  placeholder="scout@example.com"
+                  placeholder="name@example.com"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Mail size={12} /> Parent Email
-                </label>
-                <input
-                  type="email"
-                  value={parentEmail}
-                  onChange={(e) => setParentEmail(e.target.value)}
-                  placeholder="parent@example.com"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Phone size={12} /> Scout Phone
+                  <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
                 </label>
                 <input
                   type="tel"
@@ -274,18 +271,50 @@ export default function ScoutProfile({ currentUser }) {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Phone size={12} /> Parent Phone
-                </label>
-                <input
-                  type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
-                  placeholder="e.g. +1234567890"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+              {currentUser.role === 'scout' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <Mail size={12} /> Parent Email
+                    </label>
+                    <input
+                      type="email"
+                      value={parentEmail}
+                      onChange={(e) => setParentEmail(e.target.value)}
+                      placeholder="parent@example.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <Phone size={12} /> Parent Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={parentPhone}
+                      onChange={(e) => setParentPhone(e.target.value)}
+                      placeholder="e.g. +1234567890"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {currentUser.role !== 'scout' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                    Safety/Protection Training (SPT)
+                  </label>
+                  <input
+                    type="text"
+                    value={spt}
+                    onChange={(e) => setSpt(e.target.value)}
+                    placeholder="e.g. Completed on 2026-08-31"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
             </div>
 
             {profileSuccess && <p className="text-xs text-emerald-400 font-semibold">{profileSuccess}</p>}

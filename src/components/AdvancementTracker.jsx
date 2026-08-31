@@ -385,7 +385,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       )}
 
       {/* Ranks Tabs Bar */}
-      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none print-hide">
+      <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-700/60 print-hide">
         {RANKS_DATA.map((rank) => {
           const isActive = selectedRankId === rank.id;
           const rankColor = RANK_COLORS[rank.color] || RANK_COLORS.emerald;
