@@ -71,6 +71,54 @@ const DOCUMENT_RESOURCES = [
     title: '👥 Troop Junior Leadership Guide',
     url: 'https://filestore.scouting.org/filestore/training/pdf/511-037.pdf',
     description: 'Reference training guidebook for youth patrol leaders, assistants, and senior patrol leaders on troop operations.'
+  },
+  {
+    id: 'scout_rank_workbook',
+    title: '⚜️ Scout Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Scout.pdf',
+    description: 'Helpful fillable workbook covering Scout Oath, Law, motto, slogan, patrol method, basic knots (square knot, half-hitches, taut-line), and pocketknife safety.'
+  },
+  {
+    id: 'tenderfoot_rank_workbook',
+    title: '🥾 Tenderfoot Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Tenderfoot.pdf',
+    description: 'Helpful fillable workbook covering camping gear, cooking assistance, basic tools (knife, saw, ax), first aid (cuts, burns, snakebites), hiking buddy system, physical fitness (pushups, situps), and flag display.'
+  },
+  {
+    id: 'second_class_workbook',
+    title: '⛺ Second Class Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Second-Class.pdf',
+    description: 'Comprehensive workbook covering camping sites, cooking fires/stoves, knots (sheet bend, bowline), compass navigation, animal tracking, water rescue precautions, first aid (second-degree burns, heat exhaustion), and flag ceremonies.'
+  },
+  {
+    id: 'first_class_workbook',
+    title: '🏕️ First Class Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/First-Class.pdf',
+    description: 'Comprehensive workbook covering camping requirements, cooking menus, lashings, navigation (GPS & map), weather, aquatics (swimmer test), and first aid (CPR).'
+  },
+  {
+    id: 'star_rank_workbook',
+    title: '⭐ Star Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Star.pdf',
+    description: 'Workbook for tracking Star Scout requirements, including 6 service hours, position of responsibility active service, and earning 6 merit badges (including 4 Eagle-required).'
+  },
+  {
+    id: 'life_rank_workbook',
+    title: '⭐ Life Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Life.pdf',
+    description: 'Workbook for tracking service hours, leadership positions, Teaching EDGE method demonstration, and merit badges required for the Life Scout rank.'
+  },
+  {
+    id: 'eagle_rank_workbook',
+    title: '🦅 Eagle Rank Workbook / Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Eagle.pdf',
+    description: 'Preparation workbook detailing the 21 required merit badges, position of responsibility active service, and the Eagle Scout board of review requirements.'
+  },
+  {
+    id: 'eagle_palm_checklist',
+    title: '🌴 Eagle Palm Checklist & Worksheet',
+    url: 'https://usscouts.org/usscouts/workbooks/Eagle-Palm.pdf',
+    description: 'Checklist for tracking Palms (Bronze, Gold, Silver) earned both concurrently with and after the Eagle Scout Board of Review.'
   }
 ];
 

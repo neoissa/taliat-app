@@ -10,6 +10,8 @@ import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import VideoResources from './components/VideoResources';
 import ScoutProfile from './components/ScoutProfile';
+import LessonPlans from './components/LessonPlans';
+import IslamicBasics from './components/IslamicBasics';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -340,6 +342,16 @@ export default function App() {
               >
                 Resources
               </button>
+              <button
+                onClick={() => setCurrentTab('lesson-plans')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'lesson-plans'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Lesson Plans
+              </button>
             </>
           )}
 
@@ -395,6 +407,16 @@ export default function App() {
               >
                 My Profile
               </button>
+              <button
+                onClick={() => setCurrentTab('islamic')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'islamic'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Islamic Basics
+              </button>
             </>
           )}
         </div>
@@ -409,6 +431,8 @@ export default function App() {
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && isScout && <ScoutProfile currentUser={currentUser} />}
+        {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
+        {currentTab === 'islamic' && isScout && <IslamicBasics />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
