@@ -304,15 +304,38 @@ export default function ScoutProfile({ currentUser }) {
               {currentUser.role !== 'scout' && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                    Safety/Protection Training (SPT)
+                    Safety/Protection Training (SPT) Date
                   </label>
-                  <input
-                    type="text"
-                    value={spt}
-                    onChange={(e) => setSpt(e.target.value)}
-                    placeholder="e.g. Completed on 2026-08-31"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={spt}
+                      onChange={(e) => setSpt(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    />
+                    {spt && (
+                      <div className="flex gap-1 shrink-0">
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Salam! Just sharing that I have completed my Safety/Protection Training (SPT) on ${spt}.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-3 flex items-center justify-center transition cursor-pointer text-xs font-semibold"
+                          title="Share on WhatsApp"
+                        >
+                          <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                          </svg>
+                        </a>
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent("Safety/Protection Training (SPT) Completion")}&body=${encodeURIComponent(`Salam,\n\nThis is to share that I have completed my Safety/Protection Training (SPT) on ${spt}.\n\nShukran.`)}`}
+                          className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-3 flex items-center justify-center transition cursor-pointer text-xs font-semibold"
+                          title="Share via Email"
+                        >
+                          <Mail size={14} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

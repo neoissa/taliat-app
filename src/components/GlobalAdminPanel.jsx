@@ -959,13 +959,12 @@ export default function GlobalAdminPanel({ currentUser }) {
               {/* Leader-Only Safety/Protection Training (SPT) */}
               {editRole !== 'scout' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Safety/Protection Training (SPT)</label>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Safety/Protection Training (SPT) Date</label>
                   <input
-                    type="text"
+                    type="date"
                     value={editSpt}
                     onChange={(e) => setEditSpt(e.target.value)}
-                    placeholder="e.g. Completed on 2026-08-31"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                   />
                 </div>
               )}
