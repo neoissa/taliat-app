@@ -29,8 +29,8 @@ service cloud.firestore {
                   && (request.auth.uid == userId
                       || isOwner()
                       || isScoutmaster()
-                      || (userDoc().role == 'leader'
-                          && resource.data.leaderId == request.auth.uid));
+                      || userDoc().role == 'leader'
+                      || (userDoc().role == 'scout' && userId == userDoc().leaderId));
 
       allow create: if request.auth != null
                     && (isOwner()

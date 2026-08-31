@@ -21,6 +21,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentTab, setCurrentTab] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
+  const [userGroupName, setUserGroupName] = useState('');
 
   // 1. Real-time Firebase Auth & User Profile Listener
   useEffect(() => {
@@ -80,6 +81,26 @@ export default function App() {
         .catch(err => console.error("Database promotion sync failed:", err));
     }
   }, [currentUser]);
+
+  // Fetch the user's group/patrol name in real-time
+  useEffect(() => {
+    const targetGroupId = currentUser?.groupId || currentUser?.patrolId;
+    if (targetGroupId) {
+      const unsub = onSnapshot(doc(db, 'groups', targetGroupId), (snap) => {
+        if (snap.exists()) {
+          setUserGroupName(snap.data().name);
+        } else {
+          setUserGroupName('');
+        }
+      }, (err) => {
+        console.warn("Failed to fetch user group name:", err);
+        setUserGroupName('');
+      });
+      return () => unsub();
+    } else {
+      setUserGroupName('');
+    }
+  }, [currentUser?.groupId, currentUser?.patrolId]);
 
   // 3. Automatically set default tab when user logs in or role changes
   useEffect(() => {
@@ -276,7 +297,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Patrol Stream
+                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
@@ -331,7 +352,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Scoped Chat
+                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
               </button>
               <button
                 onClick={() => setCurrentTab('admin')}
@@ -406,7 +427,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Patrol Chat
+                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}

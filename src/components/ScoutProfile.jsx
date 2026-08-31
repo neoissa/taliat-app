@@ -18,6 +18,10 @@ export default function ScoutProfile({ currentUser }) {
   const [patrolName, setPatrolName] = useState('Taliʿa');
   const [rankName, setRankName] = useState('Scout');
   const [spt, setSpt] = useState('');
+  const [sptFileUrl, setSptFileUrl] = useState('');
+  const [sptFileName, setSptFileName] = useState('');
+  const [uploadingSpt, setUploadingSpt] = useState(false);
+  const [leaderData, setLeaderData] = useState(null);
   
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -50,6 +54,15 @@ export default function ScoutProfile({ currentUser }) {
           setBsaId(data.bsaId || '—');
           setRankName(data.rank || 'Scout');
           setSpt(data.spt || '');
+          setSptFileUrl(data.sptFileUrl || '');
+          setSptFileName(data.sptFileName || '');
+          
+          if (data.leaderId) {
+            const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
+            if (leaderSnap.exists()) {
+              setLeaderData(leaderSnap.data());
+            }
+          }
           
           if (data.groupId) {
             const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
@@ -114,6 +127,8 @@ export default function ScoutProfile({ currentUser }) {
         updates.parentPhone = parentPhone.trim();
       } else {
         updates.spt = spt.trim();
+        updates.sptFileUrl = sptFileUrl || null;
+        updates.sptFileName = sptFileName || null;
       }
 
       await updateDoc(userRef, updates);
@@ -124,6 +139,30 @@ export default function ScoutProfile({ currentUser }) {
       setProfileError("Failed to update profile: " + err.message);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleSptFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingSpt(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      const storageRef = ref(storage, `leader_spt/${currentUser.uid}/${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      setSptFileUrl(url);
+      setSptFileName(file.name);
+      setProfileSuccess("Certificate uploaded! Click 'Save Profile Changes' to save.");
+      setTimeout(() => setProfileSuccess(''), 4000);
+    } catch (err) {
+      console.error(err);
+      setProfileError("Failed to upload certificate: " + err.message);
+    } finally {
+      setUploadingSpt(false);
     }
   };
 
@@ -302,40 +341,77 @@ export default function ScoutProfile({ currentUser }) {
               )}
 
               {currentUser.role !== 'scout' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                    Safety/Protection Training (SPT) Date
-                  </label>
-                  <div className="flex gap-2">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                      Safety/Protection Training (SPT) Date
+                    </label>
                     <input
                       type="date"
                       value={spt}
                       onChange={(e) => setSpt(e.target.value)}
-                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                     />
-                    {spt && (
-                      <div className="flex gap-1 shrink-0">
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                      Safety/Protection Training (SPT) Certificate File
+                    </label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={handleSptFileChange}
+                        className="hidden"
+                        id="spt-file-upload"
+                      />
+                      <label
+                        htmlFor="spt-file-upload"
+                        className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer transition flex items-center gap-1.5"
+                      >
+                        <ImageIcon size={14} /> {uploadingSpt ? 'Uploading...' : (sptFileName ? 'Replace Certificate' : 'Upload Certificate')}
+                      </label>
+                      {sptFileUrl && (
                         <a
-                          href={`https://wa.me/?text=${encodeURIComponent(`Salam! Just sharing that I have completed my Safety/Protection Training (SPT) on ${spt}.`)}`}
+                          href={sptFileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-3 flex items-center justify-center transition cursor-pointer text-xs font-semibold"
+                          className="bg-slate-900/50 hover:bg-slate-900 border border-slate-800 text-emerald-400 hover:text-emerald-350 text-xs font-semibold px-3 py-2 rounded-xl transition truncate max-w-[200px]"
+                        >
+                          View Uploaded File
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {spt && (
+                    <div className="pt-2">
+                      <span className="block text-xs font-semibold text-slate-350 uppercase mb-2">Share Completion Status</span>
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Salam! Just sharing that I have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate here: ${sptFileUrl}` : ''}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold shadow-lg shadow-emerald-950/40"
                           title="Share on WhatsApp"
                         >
                           <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
                           </svg>
+                          <span>Share on WhatsApp</span>
                         </a>
                         <a
-                          href={`mailto:?subject=${encodeURIComponent("Safety/Protection Training (SPT) Completion")}&body=${encodeURIComponent(`Salam,\n\nThis is to share that I have completed my Safety/Protection Training (SPT) on ${spt}.\n\nShukran.`)}`}
-                          className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-3 flex items-center justify-center transition cursor-pointer text-xs font-semibold"
+                          href={`mailto:?subject=${encodeURIComponent("Safety/Protection Training (SPT) Completion")}&body=${encodeURIComponent(`Salam,\n\nThis is to share that I have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate here: ${sptFileUrl}` : ''}\n\nShukran.`)}`}
+                          className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold"
                           title="Share via Email"
                         >
-                          <Mail size={14} />
+                          <Mail size={15} />
+                          <span>Share via Email</span>
                         </a>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -408,6 +484,77 @@ export default function ScoutProfile({ currentUser }) {
             </button>
           </form>
         </div>
+
+        {/* Assigned Leader Card */}
+        {currentUser.role === 'scout' && leaderData && (
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+              <Shield className="text-emerald-400" size={16} />
+              Your Patrol Leader Information
+            </h3>
+            <div className="flex items-center gap-4">
+              {leaderData.photoURL ? (
+                <img
+                  src={leaderData.photoURL}
+                  alt="Leader Avatar"
+                  className="w-12 h-12 rounded-full object-cover border border-slate-650"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-200 uppercase">
+                  {(leaderData.fullName || leaderData.username).charAt(0)}
+                </div>
+              )}
+              <div>
+                <h4 className="font-bold text-white text-sm">{leaderData.fullName || leaderData.username}</h4>
+                <p className="text-xs text-slate-400 capitalize">{leaderData.leaderPosition || 'Leader'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+                <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Email Address</span>
+                <span className="font-semibold text-slate-200">{leaderData.scoutEmail || leaderData.email || '—'}</span>
+              </div>
+              <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+                <span className="text-slate-555 block uppercase text-[9px] font-bold text-slate-500">Phone Number</span>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <span className="font-semibold text-slate-200">{leaderData.scoutPhone || '—'}</span>
+                  {leaderData.scoutPhone && (
+                    <a
+                      href={`https://wa.me/${leaderData.scoutPhone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg p-1 transition cursor-pointer flex items-center justify-center"
+                      title="Chat on WhatsApp"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40 sm:col-span-2">
+                <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Safety Training (SPT) Status</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+                  <span className="font-semibold text-slate-200">
+                    {leaderData.spt ? `Completed on ${leaderData.spt}` : 'Not completed yet'}
+                  </span>
+                  {leaderData.sptFileUrl && (
+                    <a
+                      href={leaderData.sptFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-lg transition cursor-pointer"
+                    >
+                      View SPT Certificate
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

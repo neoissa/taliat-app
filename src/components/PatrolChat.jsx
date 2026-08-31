@@ -193,7 +193,7 @@ export default function PatrolChat({ currentUser }) {
             <p className="text-[11px] text-slate-400 mt-0.5">
               {isLeaderOrOwner 
                 ? 'Taliʿa Stream Selector (Admin/Leader view)' 
-                : `Taliʿa Group Chat: ${currentUser.groupId || currentUser.patrolId || 'General'}`}
+                : `Taliʿa Messenger: ${activeGroupData?.name || currentUser.groupId || currentUser.patrolId || 'General'}`}
             </p>
           </div>
         </div>

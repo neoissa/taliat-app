@@ -691,6 +691,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 export default function PatrolRoster({ currentUser }) {
   const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
   const [activeGroupTab, setActiveGroupTab] = useState('all');
+  const [rosterSubTab, setRosterSubTab] = useState('scouts');
   const [scouts, setScouts] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -839,294 +840,406 @@ export default function PatrolRoster({ currentUser }) {
       <div className="flex justify-between items-center">
         <div>
           <h3 className="font-bold text-lg text-white">Patrol Roster</h3>
-          <p className="text-xs text-slate-400">{scouts.length} scout{scouts.length !== 1 ? 's' : ''} assigned to you</p>
+          <p className="text-xs text-slate-400">
+            {rosterSubTab === 'scouts' 
+              ? `${scouts.length} scout${scouts.length !== 1 ? 's' : ''} assigned to you`
+              : `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in the troop`}
+          </p>
         </div>
+        {rosterSubTab === 'scouts' && (
+          <button
+            onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+          >
+            {showForm ? 'Cancel' : '+ Add Scout'}
+          </button>
+        )}
+      </div>
+
+      {/* Directory Sub-tabs */}
+      <div className="flex gap-4 border-b border-slate-700/60 pb-1">
         <button
-          onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+          onClick={() => setRosterSubTab('scouts')}
+          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer ${
+            rosterSubTab === 'scouts' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
-          {showForm ? 'Cancel' : '+ Add Scout'}
+          Scouts Roster
+        </button>
+        <button
+          onClick={() => setRosterSubTab('leaders')}
+          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer ${
+            rosterSubTab === 'leaders' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Leaders Directory
         </button>
       </div>
 
-      {addMsg && (
-        <div className="p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 rounded-xl text-xs font-semibold">
-          {addMsg}
-        </div>
-      )}
-
-      {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-2xl">
-          <h4 className="font-semibold text-white text-sm mb-3">Create Scout Account</h4>
-          {addError && (
-            <div className="p-3 mb-3 bg-red-950 border border-red-800 text-red-300 text-xs rounded-xl">
-              {addError}
+      {rosterSubTab === 'scouts' ? (
+        <>
+          {addMsg && (
+            <div className="p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 rounded-xl text-xs font-semibold">
+              {addMsg}
             </div>
           )}
-          <form onSubmit={handleAddScout} className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
-              <input
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Ahmad Al-Rashid"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Username</label>
-              <input
-                type="text"
-                required
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="e.g. ahmad.scout"
-                pattern="[a-zA-Z0-9._-]{3,30}"
-                title="3–30 letters, numbers, dots, underscores, or hyphens"
-                autoCapitalize="none"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Temporary Password</label>
-              <input
-                type="text"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                autoComplete="new-password"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
-                <input
-                  type="text"
-                  value={newBsaId}
-                  onChange={(e) => setNewBsaId(e.target.value)}
-                  placeholder="e.g. 12345678"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Personal Email</label>
-                <input
-                  type="email"
-                  value={newPersonalEmail}
-                  onChange={(e) => setNewPersonalEmail(e.target.value)}
-                  placeholder="e.g. scout@gmail.com"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent's Email</label>
-                <input
-                  type="email"
-                  value={newParentEmail}
-                  onChange={(e) => setNewParentEmail(e.target.value)}
-                  placeholder="e.g. parent@gmail.com"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Phone Number</label>
-                <input
-                  type="tel"
-                  value={newScoutPhone}
-                  onChange={(e) => setNewScoutPhone(e.target.value)}
-                  placeholder="e.g. +1234567890"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Phone Number</label>
-                <input
-                  type="tel"
-                  value={newParentPhone}
-                  onChange={(e) => setNewParentPhone(e.target.value)}
-                  placeholder="e.g. +1234567890"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
+          {showForm && (
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+              <h4 className="font-semibold text-white text-sm mb-3">Create Scout Account</h4>
+              {addError && (
+                <div className="p-3 mb-3 bg-red-950 border border-red-800 text-red-300 text-xs rounded-xl">
+                  {addError}
+                </div>
+              )}
+              <form onSubmit={handleAddScout} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="e.g. Ali Ahmed"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
 
-            {isOwner && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Leader</label>
-                <select
-                  required
-                  value={newLeader}
-                  onChange={(e) => setNewLeader(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Username (Used for Login)</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="e.g. aliahmed"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Temporary Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    autoComplete="new-password"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                    <input
+                      type="text"
+                      value={newBsaId}
+                      onChange={(e) => setNewBsaId(e.target.value)}
+                      placeholder="e.g. 12345678"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Personal Email</label>
+                    <input
+                      type="email"
+                      value={newPersonalEmail}
+                      onChange={(e) => setNewPersonalEmail(e.target.value)}
+                      placeholder="e.g. scout@gmail.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent's Email</label>
+                    <input
+                      type="email"
+                      value={newParentEmail}
+                      onChange={(e) => setNewParentEmail(e.target.value)}
+                      placeholder="e.g. parent@gmail.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Scout Phone Number</label>
+                    <input
+                      type="tel"
+                      value={newScoutPhone}
+                      onChange={(e) => setNewScoutPhone(e.target.value)}
+                      placeholder="e.g. +1234567890"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Phone Number</label>
+                    <input
+                      type="tel"
+                      value={newParentPhone}
+                      onChange={(e) => setNewParentPhone(e.target.value)}
+                      placeholder="e.g. +1234567890"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {isOwner && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Leader</label>
+                    <select
+                      required
+                      value={newLeader}
+                      onChange={(e) => setNewLeader(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Select Leader</option>
+                      {leaders.map(l => (
+                        <option key={l.uid} value={l.uid}>
+                          {l.fullName || l.username} {l.leaderPosition ? `— ${l.leaderPosition}` : `(${l.role})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Patrol / Group</label>
+                  <select
+                    value={newGroup}
+                    onChange={(e) => setNewGroup(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="">No Patrol</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Initial Rank</label>
+                  <select
+                    value={newRank}
+                    onChange={(e) => setNewRank(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {RANKS_DATA.map(r => (
+                      <option key={r.name} value={r.name}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={adding}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition cursor-pointer text-sm"
                 >
-                  <option value="">Select Leader</option>
-                  {leaders.map(l => (
-                    <option key={l.uid} value={l.uid}>
-                      {l.fullName || l.username} {l.leaderPosition ? `— ${l.leaderPosition}` : `(${l.role})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Patrol / Group</label>
-              <select
-                value={newGroup}
-                onChange={(e) => setNewGroup(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-              >
-                <option value="">No Patrol</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+                  {adding ? 'Creating account…' : 'Create Scout Account'}
+                </button>
+              </form>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Initial Rank</label>
-              <select
-                value={newRank}
-                onChange={(e) => setNewRank(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-              >
-                {RANKS_DATA.map(r => (
-                  <option key={r.name} value={r.name}>{r.name}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={adding}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition cursor-pointer text-sm"
-            >
-              {adding ? 'Creating account…' : 'Create Scout Account'}
-            </button>
-          </form>
-        </div>
-      )}
+          )}
 
-      {/* Group Tabs selection */}
-      {visibleGroups.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none mb-4">
-          <button
-            onClick={() => setActiveGroupTab('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
-              activeGroupTab === 'all'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
-                : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
-            }`}
-          >
-            All Patrols ({scouts.length})
-          </button>
-          {visibleGroups.map((g) => {
-            const groupScoutsCount = scouts.filter(s => s.groupId === g.id).length;
-            return (
+          {/* Group Tabs selection */}
+          {visibleGroups.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none mb-4">
               <button
-                key={g.id}
-                onClick={() => setActiveGroupTab(g.id)}
+                onClick={() => setActiveGroupTab('all')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
-                  activeGroupTab === g.id
+                  activeGroupTab === 'all'
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
                     : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
                 }`}
               >
-                {g.name} Patrol ({groupScoutsCount})
+                All Patrols ({scouts.length})
               </button>
-            );
-          })}
-        </div>
-      )}
+              {visibleGroups.map((g) => {
+                const groupScoutsCount = scouts.filter(s => s.groupId === g.id).length;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setActiveGroupTab(g.id)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                      activeGroupTab === g.id
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                        : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {g.name} Patrol ({groupScoutsCount})
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-      {/* Scout list */}
-      <div className="space-y-2">
-        {filteredScouts.length === 0 ? (
-          <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-            No scouts found in this patrol.
-          </div>
-        ) : (
-          filteredScouts.map((scout) => (
-            <div key={scout.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
-              <button
-                className="w-full flex justify-between items-center px-5 py-4 text-left cursor-pointer hover:bg-slate-700/50 transition"
-                onClick={() => setExpanded((v) => (v === scout.uid ? null : scout.uid))}
-              >
-                <div className="flex items-center gap-3">
-                  {scout.photoURL ? (
-                    <img
-                      src={scout.photoURL}
-                      alt="Scout Avatar"
-                      className="w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
-                      {(scout.fullName || scout.username).charAt(0)}
+          {/* Scout list */}
+          <div className="space-y-2">
+            {filteredScouts.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
+                No scouts found in this patrol.
+              </div>
+            ) : (
+              filteredScouts.map((scout) => (
+                <div key={scout.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
+                  <button
+                    className="w-full flex justify-between items-center px-5 py-4 text-left cursor-pointer hover:bg-slate-700/50 transition"
+                    onClick={() => setExpanded((v) => (v === scout.uid ? null : scout.uid))}
+                  >
+                    <div className="flex items-center gap-3">
+                      {scout.photoURL ? (
+                        <img
+                          src={scout.photoURL}
+                          alt="Scout Avatar"
+                          className="w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
+                          {(scout.fullName || scout.username).charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-white text-sm">{scout.fullName || scout.username}</p>
+                        <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
+                      </div>
+                    </div>
+                    <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
+                  </button>
+
+                  {expanded === scout.uid && (
+                    <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
+                        <div>
+                          <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
+                          <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Personal Email</span>
+                          <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Scout Phone</span>
+                          <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Email</span>
+                          <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Phone</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-semibold text-slate-200">{scout.parentPhone || '—'}</span>
+                            {scout.parentPhone && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setActiveWhatsappPhone(scout.parentPhone);
+                                  setActiveWhatsappName(`${scout.fullName || scout.username}'s Parent`);
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
+                                title="Chat with parent on WhatsApp"
+                              >
+                                <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setSelected(scout)}
+                        className="mt-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                      >
+                        Open Granular Portal & Notes &rarr;
+                      </button>
                     </div>
                   )}
-                  <div>
-                    <p className="font-semibold text-white text-sm">{scout.fullName || scout.username}</p>
-                    <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-3">
+          {leaders.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
+              No leaders registered in the organization.
+            </div>
+          ) : (
+            leaders.map((lead) => (
+              <div key={lead.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
+                <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {lead.photoURL ? (
+                      <img
+                        src={lead.photoURL}
+                        alt="Avatar"
+                        className="w-10 h-10 rounded-full object-cover border border-slate-650 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shrink-0 uppercase">
+                        {(lead.fullName || lead.username).charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">{lead.fullName || lead.username}</h4>
+                      <p className="text-xs text-slate-400 capitalize">{lead.leaderPosition || lead.role}</p>
+                    </div>
                   </div>
                 </div>
-                <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
-              </button>
 
-              {expanded === scout.uid && (
-                <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
+                <div className="px-5 pb-4 border-t border-slate-700/60 pt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-355 col-span-full">
                     <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
-                      <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Email Address</span>
+                      <span className="font-semibold text-slate-200 truncate block max-w-[200px]" title={lead.scoutEmail || lead.email}>
+                        {lead.scoutEmail || lead.email || '—'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Personal Email</span>
-                      <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Scout Phone</span>
-                      <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Email</span>
-                      <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Phone</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-semibold text-slate-200">{scout.parentPhone || '—'}</span>
-                        {scout.parentPhone && (
-                          <a
-                            href={`https://wa.me/${scout.parentPhone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer inline-flex items-center justify-center"
-                            title="Chat with parent on WhatsApp"
+                      <span className="text-slate-555 block uppercase text-[9px] font-bold text-slate-500">Phone Number</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-semibold text-slate-200">{lead.scoutPhone || '—'}</span>
+                        {lead.scoutPhone && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setActiveWhatsappPhone(lead.scoutPhone);
+                              setActiveWhatsappName(lead.fullName || lead.username);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
+                            title="Chat on WhatsApp"
                           >
                             <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                               <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
                             </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Safety Training (SPT)</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-semibold text-slate-200">
+                          {lead.spt ? `Done: ${lead.spt}` : '—'}
+                        </span>
+                        {lead.sptFileUrl && (
+                          <a
+                            href={lead.sptFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded transition cursor-pointer"
+                          >
+                            View Cert
                           </a>
                         )}
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => setSelected(scout)}
-                    className="mt-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
-                  >
-                    Open Granular Portal & Notes &rarr;
-                  </button>
                 </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
