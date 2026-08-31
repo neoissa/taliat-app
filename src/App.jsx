@@ -8,6 +8,7 @@ import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
+import VideoResources from './components/VideoResources';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -353,6 +354,16 @@ export default function App() {
               >
                 Patrol Chat
               </button>
+              <button
+                onClick={() => setCurrentTab('video-resources')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'video-resources'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Video Resources
+              </button>
             </>
           )}
         </div>
@@ -365,6 +376,7 @@ export default function App() {
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
+        {currentTab === 'video-resources' && isScout && <VideoResources currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}

@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import AdvancementTracker from './AdvancementTracker';
 import MeritBadgeDashboard from './MeritBadgeDashboard';
+import VideoResources from './VideoResources';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2 } from 'lucide-react';
@@ -25,7 +26,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesLoading, setNotesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [detailTab, setDetailTab] = useState('advancement'); // 'advancement' | 'merit-badges'
+  const [detailTab, setDetailTab] = useState('advancement'); // 'advancement' | 'merit-badges' | 'video-resources'
 
   // Loading rank and merit badge counts for the KPI summary
   const [ranksProgress, setRanksProgress] = useState({});
@@ -377,14 +378,28 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         >
           Merit Badges Tracker
         </button>
+        <button
+          onClick={() => setDetailTab('video-resources')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition cursor-pointer ${
+            detailTab === 'video-resources'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Video Resources
+        </button>
       </div>
 
       {/* Render selected tracker (Screen Only) */}
       <div className="print-hide">
-        {detailTab === 'advancement' ? (
+        {detailTab === 'advancement' && (
           <AdvancementTracker currentUser={currentUser} scoutId={scout.uid} />
-        ) : (
+        )}
+        {detailTab === 'merit-badges' && (
           <MeritBadgeDashboard currentUser={currentUser} scoutId={scout.uid} />
+        )}
+        {detailTab === 'video-resources' && (
+          <VideoResources currentUser={currentUser} scoutId={scout.uid} />
         )}
       </div>
 

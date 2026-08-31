@@ -51,17 +51,8 @@ service cloud.firestore {
       allow write: if request.auth != null && isOwner();
     }
 
-    // Scout progress: ranks and merit badges
-    match /user_progress/{scoutId}/ranks/{rankId} {
-      allow read, write: if request.auth != null
-                         && (request.auth.uid == scoutId
-                             || isOwner()
-                             || isScoutmaster()
-                             || (userDoc().role == 'leader'
-                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
-    }
-
-    match /user_progress/{scoutId}/merit_badges/{badgeId} {
+    // Scout progress: generic progress categories (ranks, merit badges, safety videos, etc.)
+    match /user_progress/{scoutId}/{progressType}/{docId} {
       allow read, write: if request.auth != null
                          && (request.auth.uid == scoutId
                              || isOwner()
