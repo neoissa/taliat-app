@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { db, firebaseConfig } from '../firebase';
 import {
   collection,
@@ -26,6 +26,10 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesLoading, setNotesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [adminResetPassword, setAdminResetPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
   const [detailTab, setDetailTab] = useState('advancement'); // 'advancement' | 'merit-badges' | 'video-resources'
 
   // Loading rank and merit badge counts for the KPI summary
@@ -142,6 +146,55 @@ function ScoutDetail({ scout, currentUser, onBack }) {
       setSaveMsg('Error deleting note.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAdminResetPassword = async () => {
+    if (!adminResetPassword.trim()) return;
+    if (adminResetPassword.trim().length < 6) {
+      setResetPasswordError("Password must be at least 6 characters.");
+      return;
+    }
+    setResettingPassword(true);
+    setResetPasswordError('');
+    setResetPasswordSuccess('');
+    
+    try {
+      const secretsRef = doc(db, 'users', scout.uid, 'private', 'secrets');
+      const secretsSnap = await getDoc(secretsRef);
+      
+      let currentPassword = '';
+      if (secretsSnap.exists()) {
+        currentPassword = secretsSnap.data().password;
+      } else {
+        currentPassword = scout.username;
+      }
+      
+      if (!currentPassword) {
+        throw new Error("Could not retrieve current password for reset.");
+      }
+      
+      const userEmail = scout.email || `${scout.username}@talia.app`;
+      
+      let secApp;
+      try {
+        secApp = getApp('secondary');
+      } catch {
+        secApp = initializeApp(firebaseConfig, 'secondary');
+      }
+      const secAuth = getAuth(secApp);
+      const userCred = await signInWithEmailAndPassword(secAuth, userEmail, currentPassword);
+      await updatePassword(userCred.user, adminResetPassword.trim());
+      await secAuth.signOut();
+      
+      await setDoc(secretsRef, { password: adminResetPassword.trim() }, { merge: true });
+      setResetPasswordSuccess("Password updated successfully!");
+      setAdminResetPassword('');
+    } catch (err) {
+      console.error(err);
+      setResetPasswordError("Failed to reset password: " + err.message);
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -271,6 +324,37 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Administrative Password Reset (Owners Only) */}
+        {(currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com') && (
+          <div className="bg-slate-900/40 border border-slate-700/40 rounded-xl p-4 mt-4 print-hide">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Administrative Controls</h4>
+            <p className="text-[11px] text-slate-400 mt-1">Set a new password for this scout.</p>
+            <div className="mt-3 flex flex-col sm:flex-row gap-3 max-w-md">
+              <input
+                type="password"
+                value={adminResetPassword}
+                onChange={(e) => setAdminResetPassword(e.target.value)}
+                placeholder="Enter new password (min 6 chars)"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                autoComplete="new-password"
+              />
+              <button
+                onClick={handleAdminResetPassword}
+                disabled={resettingPassword || !adminResetPassword.trim()}
+                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-xl transition cursor-pointer shrink-0"
+              >
+                {resettingPassword ? 'Updating...' : 'Set Password'}
+              </button>
+            </div>
+            {resetPasswordSuccess && (
+              <p className="text-xs text-emerald-400 font-semibold mt-2">{resetPasswordSuccess}</p>
+            )}
+            {resetPasswordError && (
+              <p className="text-xs text-red-400 font-semibold mt-2">{resetPasswordError}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Private Notes Section (Screen Only) */}
@@ -379,14 +463,14 @@ function ScoutDetail({ scout, currentUser, onBack }) {
           Merit Badges Tracker
         </button>
         <button
-          onClick={() => setDetailTab('video-resources')}
+          onClick={() => setDetailTab('resources')}
           className={`px-4 py-2 text-sm font-semibold border-b-2 transition cursor-pointer ${
-            detailTab === 'video-resources'
+            detailTab === 'resources'
               ? 'border-emerald-500 text-emerald-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Video Resources
+          Resources
         </button>
       </div>
 
@@ -398,8 +482,8 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         {detailTab === 'merit-badges' && (
           <MeritBadgeDashboard currentUser={currentUser} scoutId={scout.uid} />
         )}
-        {detailTab === 'video-resources' && (
-          <VideoResources currentUser={currentUser} scoutId={scout.uid} />
+        {detailTab === 'resources' && (
+          <VideoResources currentUser={currentUser} scoutId={scout.uid} scout={scout} />
         )}
       </div>
 
@@ -613,6 +697,8 @@ export default function PatrolRoster({ currentUser }) {
         parentPhone: newParentPhone.trim(),
         createdAt: serverTimestamp(),
       });
+
+      await setDoc(doc(db, 'users', newUid, 'private', 'secrets'), { password });
 
       setAddMsg(`Scout added! Username: ${username} · Temporary password: ${password}`);
       setNewName('');

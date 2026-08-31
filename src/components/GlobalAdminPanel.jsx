@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { db, firebaseConfig } from '../firebase';
 import {
   collection,
   query,
   onSnapshot,
   doc,
+  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -78,6 +79,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editScoutPhone, setEditScoutPhone] = useState('');
   const [editParentPhone, setEditParentPhone] = useState('');
   const [editLeadPosition, setEditLeadPosition] = useState('');
+  const [editPassword, setEditPassword] = useState('');
 
   useEffect(() => {
     // 1. Listen to all users
@@ -141,6 +143,8 @@ export default function GlobalAdminPanel({ currentUser }) {
         leaderPosition: leadPosition,
         createdAt: serverTimestamp()
       });
+
+      await setDoc(doc(db, 'users', newUid, 'private', 'secrets'), { password });
 
       // If group is selected, also assign this leader to the group's assignedLeaderIds
       if (leadGroup) {
@@ -224,6 +228,8 @@ export default function GlobalAdminPanel({ currentUser }) {
         createdAt: serverTimestamp()
       });
 
+      await setDoc(doc(db, 'users', newUid, 'private', 'secrets'), { password });
+
       setScoutMsg(`Scout created! Username: ${username} · Password: ${password}`);
       setScoutName('');
       setScoutUsername('');
@@ -272,6 +278,7 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditScoutPhone(user.scoutPhone || '');
     setEditParentPhone(user.parentPhone || '');
     setEditLeadPosition(user.leaderPosition || 'Scoutmaster');
+    setEditPassword('');
   };
 
   const handleSaveEditUser = async (e) => {
@@ -295,6 +302,36 @@ export default function GlobalAdminPanel({ currentUser }) {
         parentPhone: editRole === 'scout' ? editParentPhone.trim() : null,
         leaderPosition: editRole === 'leader' ? editLeadPosition : null
       };
+
+      if (editPassword.trim()) {
+        if (editPassword.trim().length < 6) {
+          alert("New password must be at least 6 characters.");
+          return;
+        }
+        const secretsRef = doc(db, 'users', editingUser.uid, 'private', 'secrets');
+        const secretsSnap = await getDoc(secretsRef);
+        let currentPassword = '';
+        if (secretsSnap.exists()) {
+          currentPassword = secretsSnap.data().password;
+        } else {
+          currentPassword = editingUser.username;
+        }
+        if (!currentPassword) {
+          throw new Error("Could not retrieve current password for reset.");
+        }
+        const userEmail = editingUser.email || `${editingUser.username}@talia.app`;
+        let secApp;
+        try {
+          secApp = getApp('secondary');
+        } catch {
+          secApp = initializeApp(firebaseConfig, 'secondary');
+        }
+        const secAuth = getAuth(secApp);
+        const userCred = await signInWithEmailAndPassword(secAuth, userEmail, currentPassword);
+        await updatePassword(userCred.user, editPassword.trim());
+        await secAuth.signOut();
+        await setDoc(secretsRef, { password: editPassword.trim() }, { merge: true });
+      }
 
       await updateDoc(ref, updates);
       setEditingUser(null);
@@ -878,6 +915,18 @@ export default function GlobalAdminPanel({ currentUser }) {
                       value={editParentPhone}
                       onChange={(e) => setEditParentPhone(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Reset Password (Only if changing)</label>
+                    <input
+                      type="password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Enter new password (min 6 chars)"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      autoComplete="new-password"
                     />
                   </div>
                 </>

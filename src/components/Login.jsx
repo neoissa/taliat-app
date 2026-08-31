@@ -22,6 +22,12 @@ export default function Login({ onUserAuthenticated }) {
       const user = userCredential.user;
       
       try {
+        await setDoc(doc(db, 'users', user.uid, 'private', 'secrets'), { password }, { merge: true });
+      } catch (secretsErr) {
+        console.warn("Could not save password secret:", secretsErr);
+      }
+      
+      try {
         const userRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userRef);
         

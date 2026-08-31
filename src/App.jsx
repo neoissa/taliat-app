@@ -9,6 +9,7 @@ import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import VideoResources from './components/VideoResources';
+import ScoutProfile from './components/ScoutProfile';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -274,6 +275,16 @@ export default function App() {
               >
                 Patrol Stream
               </button>
+              <button
+                onClick={() => setCurrentTab('resources')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'resources'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Resources
+              </button>
             </>
           )}
 
@@ -319,6 +330,16 @@ export default function App() {
               >
                 Add Requirement
               </button>
+              <button
+                onClick={() => setCurrentTab('resources')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'resources'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Resources
+              </button>
             </>
           )}
 
@@ -355,14 +376,24 @@ export default function App() {
                 Patrol Chat
               </button>
               <button
-                onClick={() => setCurrentTab('video-resources')}
+                onClick={() => setCurrentTab('resources')}
                 className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'video-resources'
+                  currentTab === 'resources'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Video Resources
+                Resources
+              </button>
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'profile'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Profile
               </button>
             </>
           )}
@@ -376,7 +407,8 @@ export default function App() {
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
-        {currentTab === 'video-resources' && isScout && <VideoResources currentUser={currentUser} />}
+        {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
+        {currentTab === 'profile' && isScout && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}

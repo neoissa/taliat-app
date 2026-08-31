@@ -5,9 +5,18 @@ import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 
+const SAFETY_VIDEOS = [
+  { id: 'parent_overview', title: '📹 Parent Overview Briefing' },
+  { id: 'mod1', title: '🛡️ Module 1: Barriers to Abuse' },
+  { id: 'mod2', title: '🚩 Module 2: Awareness & Red Flags' },
+  { id: 'mod3', title: '💻 Module 3: Digital Safety & Privacy' },
+  { id: 'mod4', title: '📞 Module 4: Reporting Protocols' }
+];
+
 export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
+  const [safetyVideosProgress, setSafetyVideosProgress] = useState({});
   const [notesList, setNotesList] = useState([]);
   const [newNoteText, setNewNoteText] = useState('');
   const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
@@ -31,7 +40,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     day: 'numeric',
   });
 
-  // 1. Fetch Ranks & Merit Badges progress in real-time
+  // 1. Fetch Ranks, Merit Badges, & Safety Videos progress in real-time
   useEffect(() => {
     const ranksRef = collection(db, 'user_progress', scout.uid, 'ranks');
     const unsubRanks = onSnapshot(ranksRef, (snap) => {
@@ -47,9 +56,19 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
       setMeritProgress(map);
     });
 
+    const safetyRef = doc(db, 'user_progress', scout.uid, 'safety_videos', 'status');
+    const unsubSafety = onSnapshot(safetyRef, (snap) => {
+      if (snap.exists()) {
+        setSafetyVideosProgress(snap.data());
+      } else {
+        setSafetyVideosProgress({});
+      }
+    });
+
     return () => {
       unsubRanks();
       unsubMerit();
+      unsubSafety();
     };
   }, [scout.uid]);
 
@@ -452,6 +471,54 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Safeguarding & Youth Protection Training (Screen & Print) */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Safeguarding & Youth Protection Training
+          </h2>
+          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
+                <th className="px-3 py-2 border-r border-slate-700">Module / Video</th>
+                <th className="px-3 py-2 border-r border-slate-700 text-center w-24">Status</th>
+                <th className="px-3 py-2 border-r border-slate-700 w-28">Completion Date</th>
+                <th className="px-3 py-2">Lesson Learned Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SAFETY_VIDEOS.map((video) => {
+                const videoProg = safetyVideosProgress[video.id] || {};
+                const isWatched = !!videoProg.watched;
+                const completedDate = videoProg.completedDate || (videoProg.watchedAt ? new Date(videoProg.watchedAt).toLocaleDateString() : '');
+                const lesson = videoProg.lessonLearned || '';
+
+                return (
+                  <tr key={video.id} className="border-b border-slate-700 text-xs hover:bg-slate-900/10">
+                    <td className="px-3 py-2 border-r border-slate-700 font-medium text-slate-200">
+                      {video.title}
+                    </td>
+                    <td className="px-3 py-2 border-r border-slate-700 text-center">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                        isWatched
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-700/50 text-slate-400 border border-slate-600'
+                      }`}>
+                        {isWatched ? 'COMPLETED' : 'INCOMPLETE'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 border-r border-slate-700 text-slate-300 font-mono">
+                      {completedDate || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-350 italic whitespace-pre-wrap">
+                      {isWatched ? `"${lesson || 'No lesson entered.'}"` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
         {/* Private Leader notes */}
