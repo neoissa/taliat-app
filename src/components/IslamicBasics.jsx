@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { BookOpen, Star, Sparkles, Heart, HelpCircle, Shield, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
+import { BookOpen, Star, Sparkles, Heart, HelpCircle, Shield, Award, Calendar, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const USUL_AL_DIN = [
   {
@@ -64,8 +67,78 @@ const INFALLIBLES = [
   { number: 14, name: 'Imam Muhammad al-Mahdi (A.T.F.S.)', title: 'Al-Qaim (The Riser) / Al-Muntadhar (The Awaited)', life: '869 CE - Present', note: 'The twelfth Imam, currently in occultation (Ghaybah) by Allah\'s command.' }
 ];
 
-export default function IslamicBasics() {
-  const [activeTab, setActiveTab] = useState('roots'); // 'roots' | 'branches' | 'infallibles' | 'duas'
+export default function IslamicBasics({ currentUser, scoutId }) {
+  const targetScoutId = scoutId || currentUser?.uid;
+  const isLeaderOrOwner = currentUser?.role === 'leader' || currentUser?.role === 'owner';
+  
+  const [activeTab, setActiveTab] = useState('roots'); // 'roots' | 'branches' | 'infallibles' | 'duas' | 'tracker'
+  
+  // Progress tracker states
+  const [progress, setProgress] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [expandedTopic, setExpandedTopic] = useState(null);
+  const [tempDates, setTempDates] = useState({});
+
+  // 1. Subscribe to scout's islamic progress
+  useEffect(() => {
+    if (!targetScoutId) {
+      setLoading(false);
+      return;
+    }
+    const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        setProgress(snap.data());
+      } else {
+        setProgress({});
+      }
+      setLoading(false);
+    }, (err) => {
+      console.error("Failed to load Islamic progress:", err);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [targetScoutId]);
+
+  const handleMarkComplete = async (topicId) => {
+    if (!targetScoutId) return;
+    const dateVal = tempDates[topicId] || new Date().toISOString().split('T')[0];
+    try {
+      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+      await setDoc(docRef, {
+        [topicId]: {
+          completed: true,
+          completedDate: dateVal,
+          updatedBy: currentUser?.uid || 'system',
+          updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save topic completion:", err);
+    }
+  };
+
+  const handleMarkIncomplete = async (topicId) => {
+    if (!targetScoutId) return;
+    if (!window.confirm("Are you sure you want to mark this topic as incomplete?")) return;
+    try {
+      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+      await setDoc(docRef, {
+        [topicId]: {
+          completed: false,
+          completedDate: '',
+          updatedBy: currentUser?.uid || 'system',
+          updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to clear topic completion:", err);
+    }
+  };
+
+  const totalTopics = ISLAMIC_BASICS_TOPICS.length;
+  const completedTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.completed).length;
+  const percentage = Math.round((completedTopicsCount / totalTopics) * 100) || 0;
 
   return (
     <div className="space-y-6">
@@ -80,13 +153,13 @@ export default function IslamicBasics() {
             Islamic Shia Basics
           </h2>
           <p className="text-xs text-slate-350 mt-1.5 leading-relaxed">
-            Welcome to the Islamic Shia basics library! Explore the core roots of belief (Usul al-Din), the branches of practice (Furu al-Din), the biographies of the 14 Infallibles, and supplications.
+            Welcome to the Islamic Shia basics library! Explore the core roots of belief (Usul al-Din), the branches of practice (Furu al-Din), the biographies of the 14 Infallibles, and supplications. Track your learning progress through essential Shia topics.
           </p>
         </div>
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex flex-wrap gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-750 max-w-xl">
+      <div className="flex flex-wrap gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-750 max-w-2xl">
         <button
           onClick={() => setActiveTab('roots')}
           className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
@@ -112,7 +185,7 @@ export default function IslamicBasics() {
           className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
             activeTab === 'infallibles'
               ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
-              : 'text-slate-450 hover:text-slate-200 border border-transparent'
+              : 'text-slate-455 hover:text-slate-200 border border-transparent'
           }`}
         >
           14 Infallibles
@@ -122,80 +195,86 @@ export default function IslamicBasics() {
           className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
             activeTab === 'duas'
               ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
-              : 'text-slate-450 hover:text-slate-200 border border-transparent'
+              : 'text-slate-455 hover:text-slate-200 border border-transparent'
           }`}
         >
-          Duas & Supplications
+          Duas
+        </button>
+        <button
+          onClick={() => setActiveTab('tracker')}
+          className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
+            activeTab === 'tracker'
+              ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
+              : 'text-slate-455 hover:text-slate-200 border border-transparent'
+          }`}
+        >
+          Topics Tracker
         </button>
       </div>
 
-      {/* Rendering content */}
+      {/* Roots View */}
       {activeTab === 'roots' && (
         <div className="space-y-4">
           <div className="border-b border-slate-700 pb-2">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Shield size={16} className="text-emerald-400" />
-              Usul al-Din — The Five Roots of Religion
+              <Award size={16} className="text-emerald-400" />
+              Usul al-Din (Roots of Religion)
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">These are the foundational beliefs of faith that Shia Muslims must study and understand personally.</p>
+            <p className="text-[11px] text-slate-450 mt-0.5">The 5 core pillars of belief in Shia theology. A scout must understand and embrace these fundamentals.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {USUL_AL_DIN.map((root, i) => (
-              <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-slate-600 transition flex flex-col justify-between space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Root {i + 1}</span>
-                    <span className="text-xs font-semibold text-slate-400 font-mono" dir="rtl">{root.arabic}</span>
+          <div className="grid grid-cols-1 gap-4">
+            {USUL_AL_DIN.map((item, index) => (
+              <div key={item.name} className="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow space-y-2 hover:border-slate-600 transition">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-extrabold text-sm text-white">{index + 1}. {item.name}</h4>
+                    <span className="text-[10px] text-emerald-400 font-semibold">{item.meaning}</span>
                   </div>
-                  <h4 className="font-bold text-white text-sm">{root.name}</h4>
-                  <p className="text-[11px] text-slate-400 font-medium italic">{root.meaning}</p>
+                  <span className="text-base text-amber-400 font-serif" dir="rtl">{item.arabic}</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed pt-2 border-t border-slate-750/50">{root.description}</p>
+                <p className="text-xs text-slate-300 leading-relaxed pt-2 border-t border-slate-750">{item.description}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Branches View */}
       {activeTab === 'branches' && (
         <div className="space-y-4">
           <div className="border-b border-slate-700 pb-2">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Heart size={16} className="text-emerald-400" />
-              Furu al-Din — The Ten Branches of Practice
+              <Award size={16} className="text-emerald-400" />
+              Furu al-Din (Branches of Religion)
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">These are the practical actions and worship rituals required of every practicing Shia Muslim.</p>
+            <p className="text-[11px] text-slate-450 mt-0.5">The 10 practical actions and acts of worship required of a practicing Shia Muslim.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {FURU_AL_DIN.map((branch, i) => (
-              <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between hover:border-slate-655 transition">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-xs text-white flex items-center gap-1.5">
-                    <span className="w-5 h-5 bg-slate-900 border border-slate-700 text-emerald-400 rounded-full flex items-center justify-center text-[9px] font-bold">
-                      {i + 1}
-                    </span>
-                    {branch.name}
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-500 font-mono" dir="rtl">{branch.arabic}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FURU_AL_DIN.map((item, index) => (
+              <div key={item.name} className="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow space-y-2 hover:border-slate-650 transition flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-extrabold text-xs text-white">{index + 1}. {item.name}</h4>
+                    <span className="text-sm text-amber-400 font-serif" dir="rtl">{item.arabic}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">{item.meaning}</p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed pt-1.5 border-t border-slate-750">{item.details}</p>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium italic block mb-2 ml-6">{branch.meaning}</span>
-                <p className="text-[11px] text-slate-350 leading-relaxed border-t border-slate-750/40 pt-1.5 ml-6">
-                  {branch.details}
-                </p>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Infallibles View */}
       {activeTab === 'infallibles' && (
         <div className="space-y-4">
           <div className="border-b border-slate-700 pb-2">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Star size={16} className="text-amber-400" />
-              The 14 Infallibles (Chahardah Ma'sumeen)
+              <Award size={16} className="text-emerald-400" />
+              The 14 Infallibles (Ma'sumeen)
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">Those appointed by Allah who are free from sin and error, acting as beacons of complete guidance.</p>
           </div>
@@ -224,6 +303,7 @@ export default function IslamicBasics() {
         </div>
       )}
 
+      {/* Duas View */}
       {activeTab === 'duas' && (
         <div className="space-y-6">
           <div className="border-b border-slate-700 pb-2">
@@ -263,7 +343,7 @@ export default function IslamicBasics() {
 
             {/* Translation */}
             <div className="space-y-1 border-t border-slate-750/50 pt-3">
-              <span className="text-[10px] font-bold text-slate-450 uppercase block">Translation</span>
+              <span className="text-[10px] font-bold text-slate-455 uppercase block">Translation</span>
               <p className="text-xs text-slate-300 leading-relaxed italic">
                 "O Allah, be, for Your representative, the Hujjah (Proof), son of al-Hasan, Your blessings be on him and on his forefathers, in this hour and in every hour, a guardian, a protector, a leader, a helper, a guide, and an eye, until You enable him to dwell on Your earth in obedience and cause him to live in it for a long time."
               </p>
@@ -285,6 +365,122 @@ export default function IslamicBasics() {
                 "Indeed, Allah desires to repel all impurity from you, O People of the Cloak (Ahlul Bayt), and purify you with a thorough purification." (Quran 33:33)
               </span>
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Topics Tracker & Progress Tab */}
+      {activeTab === 'tracker' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen size={16} className="text-emerald-400" />
+                Islamic Basics Progress Tracker
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Track your understanding of core Shia beliefs, Islamic laws, rituals, and history.</p>
+            </div>
+            
+            <div className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl flex items-center gap-4 shrink-0 text-xs">
+              <div>
+                <span className="font-extrabold text-white">{completedTopicsCount} / {totalTopics}</span>
+                <span className="text-slate-400 block text-[9px] uppercase">Completed</span>
+              </div>
+              <div className="w-16 bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-750">
+                <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+              </div>
+              <span className="font-black text-emerald-400">{percentage}%</span>
+            </div>
+          </div>
+
+          {/* List of topics */}
+          <div className="space-y-3">
+            {ISLAMIC_BASICS_TOPICS.map((topic, index) => {
+              const itemProg = progress[topic.id] || {};
+              const isCompleted = !!itemProg.completed;
+              const isExpanded = expandedTopic === topic.id;
+              const completedDate = itemProg.completedDate || '';
+
+              return (
+                <div
+                  key={topic.id}
+                  className={`bg-slate-800 border rounded-2xl overflow-hidden transition ${
+                    isCompleted ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-slate-700'
+                  }`}
+                >
+                  <div
+                    onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
+                    className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-750/30 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isCompleted ? (
+                        <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
+                      ) : (
+                        <Circle className="text-slate-500 hover:text-emerald-400 shrink-0" size={20} />
+                      )}
+                      <div>
+                        <h4 className="font-bold text-xs text-white flex items-center gap-2">
+                          <span>{index + 1}. {topic.title}</span>
+                          <span className="text-[9px] bg-slate-900 border border-slate-750 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                            {topic.category}
+                          </span>
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isCompleted && (
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
+                          Completed on {completedDate}
+                        </span>
+                      )}
+                      {isExpanded ? <ChevronUp size={16} className="text-slate-450" /> : <ChevronDown size={16} className="text-slate-455" />}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-2 border-t border-slate-750/40 space-y-4 bg-slate-900/10">
+                      <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
+                        {topic.text}
+                      </p>
+
+                      {/* Complete Form panel */}
+                      <div className="border-t border-slate-750/60 pt-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                            <Calendar size={12} /> Completion Date
+                          </label>
+                          <input
+                            type="date"
+                            value={tempDates[topic.id] || new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setTempDates(prev => ({ ...prev, [topic.id]: e.target.value }))}
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          {!isCompleted ? (
+                            <button
+                              onClick={() => handleMarkComplete(topic.id)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1"
+                            >
+                              <CheckCircle2 size={12} /> Mark Completed
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleMarkIncomplete(topic.id)}
+                              className="bg-slate-700 hover:bg-slate-655 text-red-400 font-bold text-xs px-4 py-1.5 rounded-xl transition cursor-pointer"
+                            >
+                              Reset Status
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -3,6 +3,8 @@ import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award } from 'lucide-react';
+import RankIcon from './RankIcon';
+import ScoutProgressReport from './ScoutProgressReport';
 
 const RANK_COLORS = {
   emerald: {
@@ -82,6 +84,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
   const [allRanksProgress, setAllRanksProgress] = useState({});
   const [expandedReqs, setExpandedReqs] = useState({}); // { [reqId]: boolean }
   const [loading, setLoading] = useState(true);
+  const [showPrintReport, setShowPrintReport] = useState(false);
 
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
@@ -286,8 +289,41 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     );
   }
 
+  if (showPrintReport) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setShowPrintReport(false)}
+          className="bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer print-hide"
+        >
+          &larr; Back to Tracker
+        </button>
+        <ScoutProgressReport
+          scout={scoutData || { uid: currentUser.uid, fullName: currentUser.fullName, username: currentUser.username, rank: currentUser.rank || 'Scout' }}
+          currentUser={currentUser}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header Banner with PDF Print */}
+      <div className="flex justify-between items-center bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl print-hide">
+        <div>
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Advancement Tracker</h2>
+          <p className="text-xs text-slate-400">Track rank checklists and complete requirements.</p>
+        </div>
+        {scoutId && (
+          <button
+            onClick={() => setShowPrintReport(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/30"
+          >
+            Print Progress Report (PDF)
+          </button>
+        )}
+      </div>
+
       {/* Scout Selector for Leader/Owner viewing the tracker directly */}
       {isLeaderOrOwner && !customScoutId && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-wrap gap-4 items-center justify-between print-hide">
@@ -371,7 +407,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                   : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
               }`}
             >
-              <Award size={14} />
+              <RankIcon rankId={rank.id} size={14} />
               {rank.name}
               <span className={`text-[10px] px-1 rounded font-mono ${isActive ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'}`}>
                 {rPct}%
@@ -384,13 +420,13 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       {/* Selected Rank Header */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute right-4 top-4 opacity-5 pointer-events-none">
-          <Award size={120} className={colorTheme.text} />
+          <RankIcon rankId={selectedRankId} size={120} className={colorTheme.text} />
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2">
               <span className={`text-xs px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${colorTheme.badge}`}>
-                Rank {selectedRankData.order} of 7
+                Rank {selectedRankData.order} of 8
               </span>
               <h2 className="text-xl font-bold text-white">{selectedRankData.name}</h2>
             </div>

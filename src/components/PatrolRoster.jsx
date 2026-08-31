@@ -15,6 +15,8 @@ import {
 import AdvancementTracker from './AdvancementTracker';
 import MeritBadgeDashboard from './MeritBadgeDashboard';
 import VideoResources from './VideoResources';
+import ServiceLogs from './ServiceLogs';
+import IslamicBasics from './IslamicBasics';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2 } from 'lucide-react';
@@ -472,6 +474,26 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         >
           Resources
         </button>
+        <button
+          onClick={() => setDetailTab('service-logs')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition cursor-pointer ${
+            detailTab === 'service-logs'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Service & Volunteering
+        </button>
+        <button
+          onClick={() => setDetailTab('islamic')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition cursor-pointer ${
+            detailTab === 'islamic'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Islamic Basics
+        </button>
       </div>
 
       {/* Render selected tracker (Screen Only) */}
@@ -484,6 +506,12 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         )}
         {detailTab === 'resources' && (
           <VideoResources currentUser={currentUser} scoutId={scout.uid} scout={scout} />
+        )}
+        {detailTab === 'service-logs' && (
+          <ServiceLogs currentUser={currentUser} scoutId={scout.uid} />
+        )}
+        {detailTab === 'islamic' && (
+          <IslamicBasics currentUser={currentUser} scoutId={scout.uid} />
         )}
       </div>
 
@@ -517,7 +545,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               <p className="text-[10px] text-slate-500">Active Rank Progress ({activeRank})</p>
             </div>
             <div className="border border-slate-300 p-3 rounded text-center">
-              <p className="text-xl font-bold text-black">{completedRanksCount} / 7</p>
+              <p className="text-xl font-bold text-black">{completedRanksCount} / {RANKS_DATA.length}</p>
               <p className="text-[10px] text-slate-500">Ranks Fully Earned</p>
             </div>
             <div className="border border-slate-300 p-3 rounded text-center">
@@ -597,6 +625,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 
 export default function PatrolRoster({ currentUser }) {
   const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+  const [activeGroupTab, setActiveGroupTab] = useState('all');
   const [scouts, setScouts] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -730,6 +759,15 @@ export default function PatrolRoster({ currentUser }) {
       />
     );
   }
+
+  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
+  const visibleGroups = isOwner || isScoutmaster
+    ? groups
+    : groups.filter(g => g.leaderId === currentUser.uid || g.id === currentUser.groupId || scouts.some(s => s.groupId === g.id));
+
+  const filteredScouts = activeGroupTab === 'all'
+    ? scouts
+    : scouts.filter(s => s.groupId === activeGroupTab);
 
   return (
     <div className="space-y-6 print-hide">
@@ -907,14 +945,46 @@ export default function PatrolRoster({ currentUser }) {
         </div>
       )}
 
+      {/* Group Tabs selection */}
+      {visibleGroups.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none mb-4">
+          <button
+            onClick={() => setActiveGroupTab('all')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+              activeGroupTab === 'all'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            All Patrols ({scouts.length})
+          </button>
+          {visibleGroups.map((g) => {
+            const groupScoutsCount = scouts.filter(s => s.groupId === g.id).length;
+            return (
+              <button
+                key={g.id}
+                onClick={() => setActiveGroupTab(g.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
+                  activeGroupTab === g.id
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                    : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                {g.name} Patrol ({groupScoutsCount})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Scout list */}
       <div className="space-y-2">
-        {scouts.length === 0 ? (
+        {filteredScouts.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-            No scouts assigned yet. Add your first scout above.
+            No scouts found in this patrol.
           </div>
         ) : (
-          scouts.map((scout) => (
+          filteredScouts.map((scout) => (
             <div key={scout.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
               <button
                 className="w-full flex justify-between items-center px-5 py-4 text-left cursor-pointer hover:bg-slate-700/50 transition"

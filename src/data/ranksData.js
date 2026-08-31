@@ -1,8 +1,35 @@
 export const RANKS_DATA = [
   {
+    id: 'arrow_of_light',
+    name: 'Arrow of Light',
+    order: 1,
+    description: 'The highest rank in Cub Scouting, preparing youth for transition to a Scouts BSA Troop.',
+    color: 'yellow',
+    categories: [
+      {
+        name: 'AOL Core Requirements',
+        requirements: [
+          { id: '1', number: '1', text: 'Be active in your Webelos den for at least six months since completing the fourth grade.' },
+          { id: '2', number: '2', text: 'Complete the four required adventures: Building a Better World, Duty to God in Action, Outdoor Adventurer, and Personal Fitness.' },
+          { id: '3', number: '3', text: 'Complete at least one elective adventure of your choice.' },
+          { id: '4', number: '4', text: 'With your parent or guardian, complete the exercises in the pamphlet How to Protect Your Children From Child Abuse: A Parent\'s Guide.' }
+        ]
+      },
+      {
+        name: 'Transition & Scouts BSA Preparation',
+        requirements: [
+          { id: '5a', number: '5a', text: 'Repeat from memory the Scout Oath, Scout Law, Scout motto, and Scout slogan.' },
+          { id: '5b', number: '5b', text: 'Demonstrate the Scout sign, salute, and handshake.' },
+          { id: '5c', number: '5c', text: 'Describe the First Class Scout badge and tell what each part stands for.' },
+          { id: '5d', number: '5d', text: 'Participate in a Webelos den hike, campout, or outdoor activity to prepare for Scouts BSA outings.' }
+        ]
+      }
+    ]
+  },
+  {
     id: 'scout',
     name: 'Scout',
-    order: 1,
+    order: 2,
     description: 'Basic scouting ideals, nodes, safety, and joining requirement milestones.',
     color: 'emerald',
     categories: [
@@ -62,7 +89,7 @@ export const RANKS_DATA = [
   {
     id: 'tenderfoot',
     name: 'Tenderfoot',
-    order: 2,
+    order: 3,
     description: 'Basic outdoor survival, tool safety, flags, and physical fitness goals.',
     color: 'teal',
     categories: [
@@ -127,7 +154,7 @@ export const RANKS_DATA = [
   {
     id: 'second_class',
     name: 'Second Class',
-    order: 3,
+    order: 4,
     description: 'Map navigation, outdoor swimming, wildlife identification, and community service.',
     color: 'cyan',
     categories: [
@@ -188,7 +215,7 @@ export const RANKS_DATA = [
   {
     id: 'first_class',
     name: 'First Class',
-    order: 4,
+    order: 5,
     description: 'Pioneering lashings, plant identification, advanced CPR, and citizenship rights.',
     color: 'yellow',
     categories: [
@@ -249,7 +276,7 @@ export const RANKS_DATA = [
   {
     id: 'star',
     name: 'Star',
-    order: 5,
+    order: 6,
     description: 'Active leadership role, six merit badges, and service hours.',
     color: 'orange',
     categories: [
@@ -286,7 +313,7 @@ export const RANKS_DATA = [
   {
     id: 'life',
     name: 'Life',
-    order: 6,
+    order: 7,
     description: 'Mentorship of younger scouts, conservation work, and leadership responsibility.',
     color: 'red',
     categories: [
@@ -328,7 +355,7 @@ export const RANKS_DATA = [
   {
     id: 'eagle',
     name: 'Eagle Scout',
-    order: 7,
+    order: 8,
     description: 'The highest rank in Scouting. Requires 21 merit badges and an Eagle Service Project.',
     color: 'purple',
     categories: [

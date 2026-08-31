@@ -3,7 +3,9 @@ import { db } from '../firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
+import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import RankIcon from './RankIcon';
 
 const SAFETY_VIDEOS = [
   { id: 'parent_overview', title: '📹 Parent Overview Briefing' },
@@ -17,6 +19,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
   const [safetyVideosProgress, setSafetyVideosProgress] = useState({});
+  const [islamicProgress, setIslamicProgress] = useState({});
   const [notesList, setNotesList] = useState([]);
   const [newNoteText, setNewNoteText] = useState('');
   const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
@@ -65,10 +68,20 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
       }
     });
 
+    const islamicRef = doc(db, 'user_progress', scout.uid, 'islamic_basics', 'status');
+    const unsubIslamic = onSnapshot(islamicRef, (snap) => {
+      if (snap.exists()) {
+        setIslamicProgress(snap.data());
+      } else {
+        setIslamicProgress({});
+      }
+    });
+
     return () => {
       unsubRanks();
       unsubMerit();
       unsubSafety();
+      unsubIslamic();
     };
   }, [scout.uid]);
 
@@ -320,7 +333,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               <p className="text-xs text-slate-400 mt-1">{activeRankData.name} Progress</p>
             </div>
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-white">{completedRanksCount} / 7</p>
+              <p className="text-3xl font-black text-white">{completedRanksCount} / {RANKS_DATA.length}</p>
               <p className="text-xs text-slate-400 mt-1">Ranks Completed</p>
             </div>
             <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
@@ -513,6 +526,54 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                     </td>
                     <td className="px-3 py-2 text-slate-350 italic whitespace-pre-wrap">
                       {isWatched ? `"${lesson || 'No lesson entered.'}"` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Islamic Shia Basics Checklist */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Islamic Shia Basics Checklist
+          </h2>
+          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
+                <th className="px-3 py-2 border-r border-slate-700 w-1/3">Topic</th>
+                <th className="px-3 py-2 border-r border-slate-700 text-center w-28">Status</th>
+                <th className="px-3 py-2 border-r border-slate-700 w-32">Completion Date</th>
+                <th className="px-3 py-2">Signed off By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ISLAMIC_BASICS_TOPICS.map((topic) => {
+                const topicProg = islamicProgress[topic.id] || {};
+                const isCompleted = !!topicProg.completed;
+                const completedDate = topicProg.completedDate || '';
+                const signedBy = topicProg.updatedByName || '';
+
+                return (
+                  <tr key={topic.id} className="border-b border-slate-700 text-xs hover:bg-slate-900/10">
+                    <td className="px-3 py-2 border-r border-slate-700 font-medium text-slate-200">
+                      {topic.title}
+                    </td>
+                    <td className="px-3 py-2 border-r border-slate-700 text-center">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                        isCompleted
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-700/50 text-slate-400 border border-slate-600'
+                      }`}>
+                        {isCompleted ? 'COMPLETED' : 'INCOMPLETE'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 border-r border-slate-700 text-slate-300 font-mono">
+                      {completedDate || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-350 italic">
+                      {isCompleted ? (signedBy || 'Leader') : '—'}
                     </td>
                   </tr>
                 );

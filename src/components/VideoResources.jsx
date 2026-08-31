@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Shield, Play, CheckCircle2, Circle, Users, DoorOpen, PhoneCall, FileText, ExternalLink, Calendar, BookOpen, AlertCircle } from 'lucide-react';
+import { db, storage } from '../firebase';
+import { doc, onSnapshot, setDoc, collection, query, where, deleteDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Shield, Play, CheckCircle2, Circle, Users, DoorOpen, PhoneCall, FileText, ExternalLink, Calendar, BookOpen, AlertCircle, Plus, Trash2, Video, Link as LinkIcon, Download, Globe, X } from 'lucide-react';
 
 const SAFETY_VIDEOS = [
   {
@@ -129,7 +130,7 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
 
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState('videos'); // 'videos' | 'documents'
+  const [activeSubTab, setActiveSubTab] = useState('videos'); // 'videos' | 'documents' | 'group'
 
   // Input states for scouts completing videos
   const [tempCompletedDate, setTempCompletedDate] = useState({});
@@ -144,6 +145,70 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
   // Show progress tracking elements only if we are tracking a scout
   const showProgressUI = currentUser.role === 'scout' || isViewingScout;
 
+  // Group Resources States
+  const [groups, setGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [groupResources, setGroupResources] = useState([]);
+  const [groupLoading, setGroupLoading] = useState(true);
+  
+  // Group Resource Uploader states
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [resTitle, setResTitle] = useState('');
+  const [resDesc, setResDesc] = useState('');
+  const [resType, setResType] = useState('document'); // 'video' | 'document' | 'link'
+  const [resSourceType, setResSourceType] = useState('link'); // 'file' | 'link'
+  const [resUrl, setResUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [resSuccess, setResSuccess] = useState('');
+  const [resError, setResError] = useState('');
+
+  // 1. Fetch Group List for Owners
+  useEffect(() => {
+    if (isOwner) {
+      const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setGroups(list);
+        if (list.length > 0 && !selectedGroupId) {
+          setSelectedGroupId(list[0].id);
+        }
+      });
+      return () => unsub();
+    }
+  }, [isOwner]);
+
+  // Derive target group ID for resources
+  // If leader, use their own groupId. If scout, use their own groupId. If owner, use selectedGroupId.
+  // If leader is viewing a scout's roster detail, use the scout's groupId.
+  const targetGroupId = scout?.groupId || currentUser.groupId || (isOwner ? selectedGroupId : '');
+
+  // 2. Fetch Group Resources in real-time
+  useEffect(() => {
+    if (!targetGroupId) {
+      setGroupLoading(false);
+      return;
+    }
+    setGroupLoading(true);
+    const q = query(collection(db, 'group_resources'), where('groupId', '==', targetGroupId));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort by creation date descending
+      list.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      setGroupResources(list);
+      setGroupLoading(false);
+    }, (err) => {
+      console.error("Failed to load group resources:", err);
+      setGroupLoading(false);
+    });
+
+    return () => unsub();
+  }, [targetGroupId]);
+
+  // 3. Fetch Safety Videos Progress
   useEffect(() => {
     const docRef = doc(db, 'user_progress', targetScoutId, 'safety_videos', 'status');
     const unsub = onSnapshot(docRef, (snap) => {
@@ -179,7 +244,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
   const handleMarkComplete = async (videoId) => {
     if (!canEdit) return;
 
-    // Scouts must supply a date and a lesson learned
     const dateVal = tempCompletedDate[videoId] || new Date().toISOString().split('T')[0];
     const lessonVal = tempLessonLearned[videoId] || '';
 
@@ -201,7 +265,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
         }
       }, { merge: true });
 
-      // Clear temp states
       setTempLessonLearned(prev => ({ ...prev, [videoId]: '' }));
     } catch (err) {
       console.error("Failed to mark completed:", err);
@@ -227,9 +290,84 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
     }
   };
 
+  // Group resource save handler
+  const handleSaveGroupResource = async (e) => {
+    e.preventDefault();
+    setResSuccess('');
+    setResError('');
+
+    if (!resTitle.trim()) {
+      setResError("Please enter a title.");
+      return;
+    }
+
+    if (!targetGroupId) {
+      setResError("Group ID not identified. Ensure the leader is assigned to a patrol.");
+      return;
+    }
+
+    setUploadingFile(true);
+    let finalUrl = resUrl.trim();
+
+    try {
+      // 1. Handle File Upload if selected
+      if (resSourceType === 'file' && selectedFile) {
+        const fileRef = ref(storage, `group_resources/${targetGroupId}/${Date.now()}_${selectedFile.name}`);
+        await uploadBytes(fileRef, selectedFile);
+        finalUrl = await getDownloadURL(fileRef);
+      }
+
+      if (!finalUrl) {
+        throw new Error("Resource URL or uploaded file is required.");
+      }
+
+      // 2. Save metadata to Firestore
+      await addDoc(collection(db, 'group_resources'), {
+        title: resTitle.trim(),
+        description: resDesc.trim(),
+        type: resType,
+        url: finalUrl,
+        groupId: targetGroupId,
+        createdBy: currentUser.uid,
+        createdByName: currentUser.fullName || currentUser.username,
+        createdAt: serverTimestamp()
+      });
+
+      setResSuccess("Resource saved successfully!");
+      // Reset form
+      setResTitle('');
+      setResDesc('');
+      setResUrl('');
+      setSelectedFile(null);
+      setTimeout(() => {
+        setShowAddForm(false);
+        setResSuccess('');
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setResError("Upload failed: " + err.message);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDeleteGroupResource = async (resId) => {
+    if (!window.confirm("Are you sure you want to delete this resource?")) return;
+    try {
+      await deleteDoc(doc(db, 'group_resources', resId));
+    } catch (err) {
+      alert("Failed to delete resource: " + err.message);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-10 text-slate-400 text-sm">Loading resources...</div>;
   }
+
+  // Filter Group Resources by categories
+  const groupVideos = groupResources.filter(r => r.type === 'video');
+  const groupDocs = groupResources.filter(r => r.type === 'document');
+  const groupLinks = groupResources.filter(r => r.type === 'link');
 
   return (
     <div className="space-y-6">
@@ -250,7 +388,7 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
       </div>
 
       {/* Sub-tab selection */}
-      <div className="flex gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-750 max-w-xs">
+      <div className="flex gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-750 max-w-sm">
         <button
           onClick={() => setActiveSubTab('videos')}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
@@ -271,10 +409,20 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
         >
           Document Center
         </button>
+        <button
+          onClick={() => setActiveSubTab('group')}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
+            activeSubTab === 'group'
+              ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
+              : 'text-slate-455 hover:text-slate-200 border border-transparent'
+          }`}
+        >
+          Group Resources
+        </button>
       </div>
 
       {/* Rendering Content Center */}
-      {activeSubTab === 'videos' ? (
+      {activeSubTab === 'videos' && (
         <div className="space-y-6">
           {/* Safety Guidelines Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -312,8 +460,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
               const isAssigned = !!videoProgress.assigned;
               const watchedDate = videoProgress.completedDate || (videoProgress.watchedAt ? new Date(videoProgress.watchedAt).toLocaleDateString() : '');
               const lessonLearned = videoProgress.lessonLearned || '';
-
-              // Check validation for completion
               const hasLessonInput = (tempLessonLearned[video.id] || '').trim().length > 0;
               const canSubmit = isLeaderOrOwner || hasLessonInput;
 
@@ -339,7 +485,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
 
                     {showProgressUI && (
                       <div className="flex items-center gap-3">
-                        {/* Leader Assignment Button */}
                         {isLeaderOrOwner && isViewingScout && (
                           <button
                             onClick={() => toggleAssigned(video.id, isAssigned)}
@@ -353,7 +498,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
                           </button>
                         )}
 
-                        {/* Status Badge */}
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${
                           isWatched
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
@@ -362,7 +506,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
                           {isWatched ? 'COMPLETED' : 'INCOMPLETE'}
                         </span>
 
-                        {/* Mark Incomplete Toggle (For Authorized Users) */}
                         {isWatched && canEdit && (
                           <button
                             onClick={() => handleMarkIncomplete(video.id)}
@@ -375,7 +518,6 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
                     )}
                   </div>
 
-                  {/* Video Player */}
                   <div className="bg-slate-900 rounded-xl overflow-hidden shadow-inner max-w-2xl mx-auto">
                     {video.type === 'youtube' ? (
                       <div className="relative aspect-video">
@@ -393,14 +535,12 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
                         src={video.url}
                         controls
                         preload="metadata"
-                        onEnded={() => handleVideoEnded(video.id)}
                       >
                         Your browser does not support HTML5 video player.
                       </video>
                     )}
                   </div>
 
-                  {/* Watch Form for Incomplete (For Scouts, or Leaders completing for Scout) */}
                   {showProgressUI && !isWatched && canEdit && (
                     <div className="bg-slate-900/40 border border-slate-750 p-4 rounded-xl space-y-3 max-w-2xl mx-auto">
                       <h4 className="text-xs font-bold text-slate-350 flex items-center gap-1.5">
@@ -446,10 +586,9 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
                     </div>
                   )}
 
-                  {/* Watch Details metadata */}
                   {showProgressUI && isWatched && (
                     <div className="bg-slate-900/30 border border-slate-750/50 p-4 rounded-xl text-xs space-y-2 max-w-2xl mx-auto">
-                      <div className="flex justify-between items-center text-[10px] text-slate-450 border-b border-slate-750 pb-1.5">
+                      <div className="flex justify-between items-center text-[10px] text-slate-455 border-b border-slate-750 pb-1.5">
                         <span>Completed Date: <strong className="text-slate-300 font-semibold">{watchedDate}</strong></span>
                         {videoProgress.updatedByName && (
                           <span>Confirmed by: <strong className="text-slate-300 font-semibold">{videoProgress.updatedByName}</strong></span>
@@ -466,8 +605,9 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
             })}
           </div>
         </div>
-      ) : (
-        /* Document Center View */
+      )}
+
+      {activeSubTab === 'documents' && (
         <div className="space-y-4">
           {DOCUMENT_RESOURCES.map((docItem) => (
             <div key={docItem.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-600 transition">
@@ -488,6 +628,314 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
               </a>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Group Resources tab */}
+      {activeSubTab === 'group' && (
+        <div className="space-y-6">
+          {/* Controls header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700 pb-3">
+            <div>
+              <h3 className="font-bold text-white text-sm">Patrol Shared Resources</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Custom training documents, videos, and references shared within your group.</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Owner Select Group Dropdown */}
+              {isOwner && groups.length > 0 && (
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                  ))}
+                </select>
+              )}
+
+              {isLeaderOrOwner && !showAddForm && (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add Resource
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Leader upload form */}
+          {isLeaderOrOwner && showAddForm && (
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider">Upload / Save New Patrol Resource</h4>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveGroupResource} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Resource Title</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Knot Tying Practice Sheet"
+                      value={resTitle}
+                      onChange={(e) => setResTitle(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Type</label>
+                    <select
+                      value={resType}
+                      onChange={(e) => setResType(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="document">📄 Document File</option>
+                      <option value="video">🎥 Video Player</option>
+                      <option value="link">🔗 Web URL Link</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Short Description</label>
+                  <input
+                    type="text"
+                    placeholder="Provide a brief explanation of how this resource helps..."
+                    value={resDesc}
+                    onChange={(e) => setResDesc(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Source Selection for Documents or Videos */}
+                {resType !== 'link' && (
+                  <div className="flex gap-4 p-1 bg-slate-900/40 rounded-lg max-w-xs border border-slate-750">
+                    <button
+                      type="button"
+                      onClick={() => setResSourceType('file')}
+                      className={`flex-1 py-1 text-[10px] font-bold rounded transition cursor-pointer text-center ${
+                        resSourceType === 'file'
+                          ? 'bg-slate-700 text-white'
+                          : 'text-slate-450 hover:text-slate-200'
+                      }`}
+                    >
+                      Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResSourceType('link')}
+                      className={`flex-1 py-1 text-[10px] font-bold rounded transition cursor-pointer text-center ${
+                        resSourceType === 'link'
+                          ? 'bg-slate-700 text-white'
+                          : 'text-slate-450 hover:text-slate-200'
+                      }`}
+                    >
+                      Provide Web URL
+                    </button>
+                  </div>
+                )}
+
+                {/* File Upload Selector */}
+                {(resType === 'link' || resSourceType === 'link') ? (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Resource Web URL</label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://..."
+                      value={resUrl}
+                      onChange={(e) => setResUrl(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Choose File</label>
+                    <input
+                      type="file"
+                      required
+                      accept={resType === 'video' ? 'video/mp4,video/webm' : '*'}
+                      onChange={(e) => setSelectedFile(e.target.files[0])}
+                      className="w-full text-xs text-slate-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-700 file:text-emerald-400 hover:file:bg-slate-655 file:cursor-pointer"
+                    />
+                  </div>
+                )}
+
+                {resSuccess && <p className="text-xs text-emerald-400 font-semibold">{resSuccess}</p>}
+                {resError && <p className="text-xs text-red-400 font-semibold">{resError}</p>}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={uploadingFile}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    {uploadingFile ? 'Uploading...' : 'Save Resource'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Group Resources Columns Listing */}
+          {groupLoading ? (
+            <div className="text-center py-10 text-slate-500 text-xs">Loading group assets...</div>
+          ) : groupResources.length === 0 ? (
+            <div className="text-center py-12 bg-slate-800/40 border border-slate-750 rounded-2xl p-6 italic text-slate-455 text-xs">
+              No files or links have been shared for this patrol yet.
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* 1. Group Videos */}
+              {groupVideos.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-350 uppercase tracking-widest flex items-center gap-1.5">
+                    <Video size={14} className="text-emerald-400" /> Shared Videos
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {groupVideos.map(v => (
+                      <div key={v.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-md space-y-3 relative group">
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h5 className="font-bold text-xs text-white leading-snug">{v.title}</h5>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{v.description || 'No description provided.'}</p>
+                          </div>
+                          {isLeaderOrOwner && (
+                            <button
+                              onClick={() => handleDeleteGroupResource(v.id)}
+                              className="text-red-400 hover:text-red-300 transition p-1 rounded hover:bg-red-950/20 cursor-pointer"
+                              title="Delete Resource"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Player */}
+                        <div className="bg-slate-900 rounded-lg overflow-hidden aspect-video">
+                          {v.url.includes('youtube.com') || v.url.includes('youtu.be') ? (
+                            <iframe
+                              className="w-full h-full border-0"
+                              src={v.url.replace('watch?v=', 'embed/')}
+                              title={v.title}
+                              allowFullScreen
+                            ></iframe>
+                          ) : (
+                            <video className="w-full h-full" src={v.url} controls preload="metadata"></video>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Group Documents */}
+              {groupDocs.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-350 uppercase tracking-widest flex items-center gap-1.5">
+                    <FileText size={14} className="text-emerald-400" /> Shared Worksheets & Documents
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {groupDocs.map(d => (
+                      <div key={d.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center gap-4 hover:border-slate-600 transition">
+                        <div className="space-y-1">
+                          <h5 className="font-bold text-xs text-white flex items-center gap-1.5">
+                            <FileText size={13} className="text-emerald-400" />
+                            {d.title}
+                          </h5>
+                          <p className="text-[10px] text-slate-400">{d.description || 'No details provided.'}</p>
+                          <span className="text-[9px] text-slate-455 block">Uploaded by {d.createdByName || 'Leader'}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={d.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-700 hover:bg-slate-655 text-emerald-400 p-2 rounded-lg transition cursor-pointer"
+                            title="Download/View File"
+                          >
+                            <Download size={13} />
+                          </a>
+                          {isLeaderOrOwner && (
+                            <button
+                              onClick={() => handleDeleteGroupResource(d.id)}
+                              className="text-red-400 hover:text-red-300 transition p-2 rounded hover:bg-red-950/20 cursor-pointer"
+                              title="Delete Document"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Group Links */}
+              {groupLinks.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-350 uppercase tracking-widest flex items-center gap-1.5">
+                    <Globe size={14} className="text-emerald-400" /> External Web Links
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {groupLinks.map(l => (
+                      <div key={l.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center gap-4 hover:border-slate-600 transition">
+                        <div className="space-y-1">
+                          <h5 className="font-bold text-xs text-white flex items-center gap-1.5">
+                            <Globe size={13} className="text-emerald-400" />
+                            {l.title}
+                          </h5>
+                          <p className="text-[10px] text-slate-400">{l.description || 'No link details.'}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-slate-700 hover:bg-slate-655 text-slate-200 p-2 rounded-lg transition cursor-pointer"
+                            title="Open Link"
+                          >
+                            <LinkIcon size={13} />
+                          </a>
+                          {isLeaderOrOwner && (
+                            <button
+                              onClick={() => handleDeleteGroupResource(l.id)}
+                              className="text-red-400 hover:text-red-300 transition p-2 rounded hover:bg-red-950/20 cursor-pointer"
+                              title="Delete Link"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

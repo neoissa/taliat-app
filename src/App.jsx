@@ -12,6 +12,7 @@ import VideoResources from './components/VideoResources';
 import ScoutProfile from './components/ScoutProfile';
 import LessonPlans from './components/LessonPlans';
 import IslamicBasics from './components/IslamicBasics';
+import ServiceLogs from './components/ServiceLogs';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -417,6 +418,16 @@ export default function App() {
               >
                 Islamic Basics
               </button>
+              <button
+                onClick={() => setCurrentTab('service-log')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'service-log'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Service Log
+              </button>
             </>
           )}
         </div>
@@ -433,6 +444,7 @@ export default function App() {
         {currentTab === 'profile' && isScout && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && isScout && <IslamicBasics />}
+        {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && isLeader && <AdminPanel />}
