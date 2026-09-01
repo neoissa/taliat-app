@@ -4,7 +4,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, up
 import { db, firebaseConfig } from '../firebase';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
-import { Users, UserPlus, Shield, ShieldCheck, ShieldAlert, Award, Search, KeyRound, Lock, Trash2, Edit2, AlertTriangle, CheckCircle, RefreshCw, X, FolderTree, Camera, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Shield, ShieldCheck, ShieldAlert, Award, Search, KeyRound, Lock, Trash2, Edit2, Edit3, AlertTriangle, CheckCircle, RefreshCw, X, FolderTree, Camera, Loader2 } from 'lucide-react';
 
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',

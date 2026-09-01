@@ -46,6 +46,7 @@ export default function PatrolChat({ currentUser }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [groups, setGroups] = useState([]);
+  const [usersMap, setUsersMap] = useState({}); // { [uid]: userProfile }
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [fileData, setFileData] = useState(null); // { base64: string, name: string, type: string }
   const [uploading, setUploading] = useState(false);
@@ -64,6 +65,20 @@ export default function PatrolChat({ currentUser }) {
   // Determine chat room ID: Group / Patrol ID
   const defaultGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.leaderId || 'general-stream';
   const activeRoomId = isLeaderOrOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
+
+
+  // Listen to all users to resolve live profile pictures & names for chat
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      const map = {};
+      snap.docs.forEach(docSnap => {
+        map[docSnap.id] = { uid: docSnap.id, ...docSnap.data() };
+      });
+      setUsersMap(map);
+    }, (err) => console.warn("Users map snapshot error in chat:", err));
+
+    return () => unsub();
+  }, []);
 
   // 1. Fetch groups to populate room list for Leader/Owner
   useEffect(() => {
@@ -182,7 +197,7 @@ export default function PatrolChat({ currentUser }) {
         senderId: currentUser.uid,
         senderName: currentUser.fullName || currentUser.email?.split('@')[0] || 'Unknown',
         role: currentUser.role || 'scout',
-        senderPhotoURL: currentUser.photoURL || null,
+        senderPhotoURL: currentUser?.photoURL || usersMap[currentUser?.uid]?.photoURL || null,
         fileUrl: currentFile ? currentFile.base64 : null,
         fileName: currentFile ? currentFile.name : null,
         fileType: currentFile ? currentFile.type : null,
@@ -242,7 +257,7 @@ export default function PatrolChat({ currentUser }) {
       senderId: currentUser.uid,
       senderName: currentUser.fullName || currentUser.email?.split('@')[0] || 'Unknown',
       role: currentUser.role || 'scout',
-      senderPhotoURL: currentUser.photoURL || null,
+      senderPhotoURL: currentUser?.photoURL || usersMap[currentUser?.uid]?.photoURL || null,
       timestamp: serverTimestamp()
     };
 
@@ -408,23 +423,28 @@ export default function PatrolChat({ currentUser }) {
           <div className="text-center py-12 text-slate-500 text-xs">No messages yet. Start chatting or create a poll!</div>
         ) : (
           messages.map((m, i) => {
-            const isMe = m.senderId === currentUser.uid;
+            const isMe = m.senderId === currentUser?.uid;
             const prev = messages[i - 1];
             const isGrouped = prev && prev.senderId === m.senderId && prev.type !== 'poll' && m.type !== 'poll';
             const isPoll = m.type === 'poll' || !!m.poll;
 
+            // Live user profile data for sender
+            const senderUser = usersMap[m.senderId] || {};
+            const senderAvatar = senderUser.photoURL || (isMe ? currentUser?.photoURL : null) || m.senderPhotoURL;
+            const senderDisplayName = senderUser.fullName || m.senderName || senderUser.username || 'Scout';
+
             return (
               <div key={m.id} className={`flex gap-2.5 ${isMe ? 'flex-row-reverse items-end' : 'items-start'} ${isGrouped ? 'mt-0.5' : 'mt-3'} group relative`}>
                 {!isGrouped ? (
-                  m.senderPhotoURL ? (
+                  senderAvatar ? (
                     <img
-                      src={m.senderPhotoURL}
+                      src={senderAvatar}
                       alt="Avatar"
-                      className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0 mt-1"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500/50 shrink-0 mt-1 shadow-sm"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase mt-1">
-                      {m.senderName.charAt(0)}
+                    <div className="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shrink-0 uppercase mt-1">
+                      {senderDisplayName.charAt(0)}
                     </div>
                   )
                 ) : (
@@ -434,7 +454,7 @@ export default function PatrolChat({ currentUser }) {
                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} flex-1 min-w-0`}>
                   {!isGrouped && (
                     <div className={`flex items-center gap-1.5 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-xs font-semibold text-slate-300">{m.senderName}</span>
+                      <span className="text-xs font-semibold text-slate-300">{senderDisplayName}</span>
                       {m.role === 'owner' ? (
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30 leading-none font-bold uppercase">
                           Admin
