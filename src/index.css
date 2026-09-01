@@ -91,13 +91,11 @@
     background: #f3f4f6 !important;
   }
 
-  /* Leader notes box */
-  .leader-notes-box {
-    border: 1px solid #000 !important;
-    padding: 0.5rem !important;
-    min-height: 5rem;
-    background: #fff !important;
-    color: #000 !important;
+  /* Prevent awkward page splits */
+  .page-break-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
+
 

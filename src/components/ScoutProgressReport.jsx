@@ -4,11 +4,52 @@ import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
-import { Printer, ArrowLeft, Award, Star, BookOpen, Calendar, Clock, CheckCircle2, MapPin, CheckSquare, FileText, User, Shield, Video, Check } from 'lucide-react';
+import {
+  Printer,
+  ArrowLeft,
+  Award,
+  Star,
+  BookOpen,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  MapPin,
+  CheckSquare,
+  FileText,
+  User,
+  Shield,
+  Video,
+  Check,
+  Filter,
+  Layers,
+  CalendarRange,
+  History,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  Sparkles
+} from 'lucide-react';
 import RankIcon from './RankIcon';
 
 export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const scoutUid = scout?.uid || currentUser?.uid;
+
+  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
+  const isLeader = currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader';
+  const isLeaderOrOwner = isOwner || isLeader;
+  const isScout = !isLeaderOrOwner;
+
+  // Leader Export Modes: 'comprehensive' | 'window' | 'snapshot'
+  const [leaderReportMode, setLeaderReportMode] = useState(isScout ? 'scout_summary' : 'comprehensive');
+
+  // Date Range Filtering (Mode B: Window)
+  const defaultStartDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 90 days ago
+  const defaultEndDate = new Date().toISOString().split('T')[0];
+  const [windowStartDate, setWindowStartDate] = useState(defaultStartDate);
+  const [windowEndDate, setWindowEndDate] = useState(defaultEndDate);
+
+  // Cumulative Snapshot Date (Mode C: Snapshot)
+  const [snapshotDate, setSnapshotDate] = useState(defaultEndDate);
 
   // Real-time data states
   const [profileData, setProfileData] = useState(null);
@@ -19,13 +60,14 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [scoutSubmissions, setScoutSubmissions] = useState({});
   const [eventsList, setEventsList] = useState([]);
-  const [journalNotes, setJournalNotes] = useState([]);
+  const [leaderNotes, setLeaderNotes] = useState('');
+  const [eagleProjectRoadmap, setEagleProjectRoadmap] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const reportDate = new Date().toLocaleDateString('en-US', {
+  const reportPrintDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
   });
 
   // 1. Fetch Scout User Profile Info
@@ -85,7 +127,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return () => unsub();
   }, [scoutUid]);
 
-  // 6. Fetch Assignments & Scout Submissions
+  // 6. Fetch Assignments & Submissions
   useEffect(() => {
     if (!scoutUid) return;
     const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
@@ -102,497 +144,619 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     };
   }, [scoutUid]);
 
-  // 7. Fetch Upcoming/Attended Events
+  // 7. Fetch Events
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
       setEventsList(list);
-      setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // 8. Fetch Journal Notes
+  // 8. Fetch Leader Private Notes & Eagle Roadmap
   useEffect(() => {
     if (!scoutUid) return;
-    const unsub = onSnapshot(doc(db, 'user_progress', scoutUid, 'journal', 'entries'), (snap) => {
-      if (snap.exists() && Array.isArray(snap.data().notes)) {
-        setJournalNotes(snap.data().notes);
+    const unsubNotes = onSnapshot(doc(db, 'scout_notes', scoutUid), (snap) => {
+      if (snap.exists()) {
+        setLeaderNotes(snap.data().notes || snap.data().text || '');
       }
     });
-    return () => unsub();
+    const unsubRoadmap = onSnapshot(doc(db, 'user_progress', scoutUid, 'road_to_eagle', 'project_roadmap'), (snap) => {
+      if (snap.exists()) {
+        setEagleProjectRoadmap(snap.data());
+      }
+      setLoading(false);
+    });
+    return () => {
+      unsubNotes();
+      unsubRoadmap();
+    };
   }, [scoutUid]);
 
-  // Calculate totals
+  // Helper date filters
+  const isDateWithinWindow = (dateStr) => {
+    if (!dateStr) return false;
+    return dateStr >= windowStartDate && dateStr <= windowEndDate;
+  };
+
+  const isDateBeforeOrOnSnapshot = (dateStr) => {
+    if (!dateStr) return false;
+    return dateStr <= snapshotDate;
+  };
+
+  // Scout Info
   const scoutInfo = profileData || scout || currentUser || {};
   const scoutFullName = scoutInfo.fullName || scoutInfo.username || 'Scout Member';
   const scoutRank = scoutInfo.rank || 'Scout';
   const scoutPatrol = scoutInfo.patrolName || scoutInfo.patrolId || 'Taliʿa Patrol';
+  const leaderName = currentUser?.fullName || currentUser?.username || 'Unit Scoutmaster';
 
-  const totalServiceHours = serviceLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
-  const verifiedServiceHours = serviceLogs.filter(l => l.verified).reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+  // ── DATE FILTERING CALCULATIONS FOR FILTER MODES ──
+  // Mode A & Scout Summary: All
+  // Mode B: Window (Start to End)
+  // Mode C: Snapshot (Up to Snapshot Date)
 
-  const earnedMeritBadges = MERIT_BADGES.filter(b => {
-    const p = meritProgress[b.id];
+  const isItemActiveInMode = (itemDate) => {
+    if (leaderReportMode === 'window') return isDateWithinWindow(itemDate);
+    if (leaderReportMode === 'snapshot') return isDateBeforeOrOnSnapshot(itemDate);
+    return true; // comprehensive & scout_summary
+  };
+
+  // Service Hours
+  const filteredServiceLogs = serviceLogs.filter(l => isItemActiveInMode(l.date));
+  const totalFilteredServiceHours = filteredServiceLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+
+  // Merit Badges
+  const isBadgeEarnedInMode = (badge) => {
+    const p = meritProgress[badge.id];
     if (!p) return false;
-    const total = b.requirements.length;
-    const approved = b.requirements.filter(r => p.steps?.[r.id] === true || p.steps?.[r.id]?.completed === true).length;
-    return total > 0 && approved === total;
-  });
+    const isCompleted = p.completed === true || (badge.requirements && badge.requirements.every(r => p.steps?.[r.id] === true || p.steps?.[r.id]?.completed === true));
+    if (!isCompleted) return false;
+    const earnedDate = p.dateCompleted || p.completedDate || p.updatedAt?.split('T')[0] || '';
+    if (leaderReportMode === 'window') return isDateWithinWindow(earnedDate);
+    if (leaderReportMode === 'snapshot') return isDateBeforeOrOnSnapshot(earnedDate);
+    return true;
+  };
 
-  const plannedMeritBadges = MERIT_BADGES.filter(b => meritProgress[b.id]?.planned && !earnedMeritBadges.some(e => e.id === b.id));
+  const earnedBadgesInScope = MERIT_BADGES.filter(isBadgeEarnedInMode);
+  const eagleRequiredEarnedCount = earnedBadgesInScope.filter(b => b.eagleRequired).length;
+  const electiveEarnedCount = earnedBadgesInScope.filter(b => !b.eagleRequired).length;
+
+  // Islamic Knowledge
+  const isIslamicTopicCompletedInMode = (topicId) => {
+    const p = islamicProgress[topicId] || {};
+    if (!p.completed) return false;
+    const dateVal = p.completedDate || p.dateCompleted || '';
+    if (leaderReportMode === 'window') return isDateWithinWindow(dateVal);
+    if (leaderReportMode === 'snapshot') return isDateBeforeOrOnSnapshot(dateVal);
+    return true;
+  };
+
+  const completedIslamicTopics = ISLAMIC_BASICS_TOPICS.filter(t => isIslamicTopicCompletedInMode(t.id));
+  const islamicPercent = ISLAMIC_BASICS_TOPICS.length > 0 ? Math.round((completedIslamicTopics.length / ISLAMIC_BASICS_TOPICS.length) * 100) : 0;
+
+  // Current Rank Details (For Scout Mode & Focused views)
+  const currentRankObj = RANKS_DATA.find(r => r.name.toLowerCase() === scoutRank.toLowerCase()) || RANKS_DATA[0];
+  const currentRankProg = ranksProgress[currentRankObj?.id] || {};
+  const currentRankCompletedSteps = currentRankObj?.requirements ? currentRankObj.requirements.filter(req => {
+    const s = currentRankProg.steps?.[req.id];
+    const isDone = s === true || s?.completed === true;
+    if (!isDone) return false;
+    const d = s?.date || currentRankProg.completedDate || '';
+    return isItemActiveInMode(d);
+  }).length : 0;
+  const currentRankTotalSteps = currentRankObj?.requirements?.length || 1;
+  const currentRankPct = Math.round((currentRankCompletedSteps / currentRankTotalSteps) * 100);
+
+  // Past Ranks
+  const rankIndexMap = { scout: 0, tenderfoot: 1, secondclass: 2, firstclass: 3, star: 4, life: 5, eagle: 6 };
+  const currentRankIdx = rankIndexMap[currentRankObj?.id] || 0;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto font-sans pb-12 text-slate-900">
-      {/* Print / Back Toolbar (Screen Only) */}
-      <div className="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl print-hide">
-        <button
-          type="button"
-          onClick={onBack}
-          className="bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-        >
-          <ArrowLeft size={14} /> Back to Tracker
-        </button>
+    <div className="space-y-6 max-w-5xl mx-auto font-sans pb-16 text-slate-900">
+      {/* ── SCREEN-ONLY REPORT CONTROL TOOLBAR & MODE SELECTOR ── */}
+      <div className="bg-slate-850 border border-slate-700 p-5 rounded-3xl shadow-2xl space-y-4 print-hide">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="bg-slate-700 hover:bg-slate-650 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+            >
+              <ArrowLeft size={14} />
+              <span>Back</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40"
-        >
-          <Printer size={16} /> Print Full Official Report (PDF)
-        </button>
+            <div>
+              <h2 className="text-base font-black text-white flex items-center gap-2">
+                <Printer className="text-emerald-400" size={18} />
+                <span>Advancement & Progress Report Generator</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Generating printable record for <strong className="text-amber-300">{scoutFullName}</strong> ({scoutRank})
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02]"
+          >
+            <Printer size={16} />
+            <span>Print Official Report (PDF)</span>
+          </button>
+        </div>
+
+        {/* Leader Export Mode Selector (If Leader or Owner) */}
+        {isLeaderOrOwner && (
+          <div className="pt-3 border-t border-slate-750/70 space-y-3">
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                <Filter size={13} /> Select Report Format & Filter Mode:
+              </span>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLeaderReportMode('comprehensive')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    leaderReportMode === 'comprehensive'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <Layers size={13} />
+                  <span>Mode A: Full Comprehensive Audit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeaderReportMode('window')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    leaderReportMode === 'window'
+                      ? 'bg-amber-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <CalendarRange size={13} />
+                  <span>Mode B: Date Window Filter</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeaderReportMode('snapshot')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    leaderReportMode === 'snapshot'
+                      ? 'bg-sky-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <History size={13} />
+                  <span>Mode C: Historical Snapshot</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeaderReportMode('scout_summary')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    leaderReportMode === 'scout_summary'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                  }`}
+                >
+                  <User size={13} />
+                  <span>Scout Active Summary View</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-inputs for Mode B (Window) */}
+            {leaderReportMode === 'window' && (
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-amber-500/40 flex flex-wrap items-center gap-4 text-xs animate-fadeIn">
+                <span className="font-bold text-amber-300">Activity Window Filter:</span>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-400">Start Date:</label>
+                  <input
+                    type="date"
+                    value={windowStartDate}
+                    onChange={(e) => setWindowStartDate(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-white"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-400">End Date:</label>
+                  <input
+                    type="date"
+                    value={windowEndDate}
+                    onChange={(e) => setWindowEndDate(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-white"
+                  />
+                </div>
+                <span className="text-[11px] text-slate-400 italic">
+                  * Only shows requirements, badges, service hours, and logs earned between these dates.
+                </span>
+              </div>
+            )}
+
+            {/* Sub-inputs for Mode C (Snapshot) */}
+            {leaderReportMode === 'snapshot' && (
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-sky-500/40 flex flex-wrap items-center gap-4 text-xs animate-fadeIn">
+                <span className="font-bold text-sky-300">Cumulative Snapshot As-of:</span>
+                <div className="flex items-center gap-2">
+                  <label className="text-slate-400">As-of Date:</label>
+                  <input
+                    type="date"
+                    value={snapshotDate}
+                    onChange={(e) => setSnapshotDate(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-white"
+                  />
+                </div>
+                <span className="text-[11px] text-slate-400 italic">
+                  * Evaluates progress up to this exact date, ignoring future completions.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── PRINTABLE REPORT CONTAINER ── */}
+      {/* ──────────────── PRINTABLE DOCUMENT CONTAINER ──────────────── */}
       <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-2xl space-y-8 border border-slate-300 text-slate-900 print:p-0 print:border-none print:shadow-none print:m-0 print:rounded-none">
         
-        {/* 1. OFFICIAL HEADER */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-emerald-800 pb-5 gap-4">
+        {/* ── 1. OFFICIAL INK-FRIENDLY REPORT HEADER ── */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-slate-900 pb-5 gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-900 text-white flex items-center justify-center text-3xl font-black shrink-0 print:border print:border-emerald-950">
+            <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-3xl font-black shrink-0 print:border print:border-slate-900">
               ⚜️
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-emerald-950 uppercase">
+              <h1 className="text-2xl font-black tracking-tight text-slate-950 uppercase">
                 DHULFIQĀR SCOUTS BSA
               </h1>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-600 mt-0.5">
-                Official Comprehensive Advancement & Progress Record
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-700 mt-0.5">
+                {leaderReportMode === 'scout_summary'
+                  ? 'Official Scout Active Advancement Summary'
+                  : leaderReportMode === 'window'
+                  ? `Timed Activity Window Record (${windowStartDate} to ${windowEndDate})`
+                  : leaderReportMode === 'snapshot'
+                  ? `Historical Progress Snapshot (As of ${snapshotDate})`
+                  : 'Official Comprehensive Advancement & Audit Record'}
               </h2>
             </div>
           </div>
 
-          <div className="text-right text-xs text-slate-600 font-mono space-y-0.5">
-            <p><strong>Report Date:</strong> {reportDate}</p>
-            <p><strong>Troop Unit:</strong> Taliʿa Troop 110</p>
-            <p><strong>Status:</strong> Official Member Record</p>
+          <div className="text-right text-xs text-slate-700 font-mono space-y-0.5">
+            <p><strong>Print Date:</strong> {reportPrintDate}</p>
+            <p><strong>Unit:</strong> Taliʿa Troop 110</p>
+            <p><strong>Certifying Leader:</strong> {leaderName}</p>
           </div>
         </div>
 
-        {/* 2. SCOUT DEMOGRAPHICS & PROFILE BOX */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+        {/* ── 2. SCOUT DEMOGRAPHICS & PROFILE BOX ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-100/70 p-4 rounded-xl border border-slate-300 text-xs">
           <div>
-            <span className="text-slate-500 uppercase text-[10px] font-bold block">Scout Name</span>
-            <strong className="text-sm text-slate-900 font-black">{scoutFullName}</strong>
+            <span className="text-slate-600 uppercase text-[10px] font-bold block">Scout Name</span>
+            <strong className="text-sm text-slate-950 font-black">{scoutFullName}</strong>
           </div>
           <div>
-            <span className="text-slate-500 uppercase text-[10px] font-bold block">Active Rank</span>
-            <strong className="text-sm text-emerald-800 font-black capitalize">{scoutRank} Rank</strong>
+            <span className="text-slate-600 uppercase text-[10px] font-bold block">Active Rank</span>
+            <strong className="text-sm text-emerald-800 font-black uppercase">{scoutRank}</strong>
           </div>
           <div>
-            <span className="text-slate-500 uppercase text-[10px] font-bold block">Patrol Unit</span>
-            <strong className="text-sm text-slate-900 font-bold">{scoutPatrol}</strong>
+            <span className="text-slate-600 uppercase text-[10px] font-bold block">Patrol Unit</span>
+            <strong className="text-xs text-slate-900 font-bold">{scoutPatrol}</strong>
           </div>
           <div>
-            <span className="text-slate-500 uppercase text-[10px] font-bold block">BSA Member ID</span>
-            <strong className="text-sm text-slate-900 font-mono">{scoutInfo.bsaId || '—'}</strong>
+            <span className="text-slate-600 uppercase text-[10px] font-bold block">BSA Member ID</span>
+            <strong className="text-xs text-slate-900 font-mono">{scoutInfo.bsaId || '—'}</strong>
           </div>
         </div>
 
-        {/* 3. ADVANCEMENT & BSA 7 RANKS DETAILED BREAKDOWN */}
-        <div className="space-y-4">
-          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>⚜️ Section 1: BSA 7 Ranks Advancement Checklist</span>
-            </h3>
-            <span className="text-xs font-bold text-emerald-900">Official Sign-off Record</span>
-          </div>
-
-          <div className="space-y-4">
-            {RANKS_DATA.map(rank => {
-              const rProgress = ranksProgress[rank.id] || {};
-              const completedReqs = rProgress.completedRequirements || {};
-              const totalReqs = rank.categories.reduce((s, c) => s + c.requirements.length, 0);
-              const approvedCount = rank.categories.reduce((s, c) => s + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
-              const isRankComplete = totalReqs > 0 && approvedCount === totalReqs;
-
-              return (
-                <div key={rank.id} className="border border-slate-200 rounded-xl overflow-hidden break-inside-avoid bg-slate-50/50">
-                  <div className="bg-slate-100 p-3 flex items-center justify-between border-b border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-xs text-slate-900">{rank.name} Rank</span>
-                      {isRankComplete ? (
-                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2 py-0.2 rounded-full uppercase">
-                          ✓ Completed & Conferred
-                        </span>
-                      ) : (
-                        <span className="bg-slate-200 text-slate-700 text-[10px] font-semibold px-2 py-0.2 rounded-full">
-                          {approvedCount} / {totalReqs} Completed ({Math.round((approvedCount/totalReqs)*100)}%)
-                        </span>
-                      )}
-                    </div>
-                    {rProgress.approvedAt && (
-                      <span className="text-[11px] text-slate-600 font-mono">
-                        Conferred: {rProgress.approvedAt}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-3 text-xs space-y-1.5">
-                    {rank.categories.map(cat => (
-                      <div key={cat.name} className="space-y-1">
-                        <span className="font-bold text-[10px] uppercase text-slate-500 block">{cat.name}</span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {cat.requirements.map(req => {
-                            const reqData = completedReqs[req.id] || {};
-                            const isDone = !!reqData.completed;
-
-                            return (
-                              <div key={req.id} className={`p-1.5 rounded-lg border text-[11px] flex items-start gap-1.5 ${isDone ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-slate-200 text-slate-600'}`}>
-                                <span className="font-bold mt-0.5">{isDone ? '✓' : '○'}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="line-clamp-2 leading-tight">{req.text}</p>
-                                  {isDone && reqData.approvedAt && (
-                                    <span className="text-[9px] text-emerald-700 block mt-0.5 font-mono">
-                                      Signed: {reqData.approvedAt} {reqData.approvedByName ? `(${reqData.approvedByName})` : ''}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 4. ISLAMIC KNOWLEDGE & KARBALA CURRICULUM */}
-        <div className="space-y-3 break-inside-avoid">
-          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>🕌 Section 2: Islamic Knowledge, 14 Infallibles & Karbala Curriculum</span>
-            </h3>
-            <span className="text-xs font-bold text-emerald-900">Faith Modules</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-800 block">The 14 Infallibles (Ma'sumeen)</span>
-              <p className="text-[11px] text-slate-600">
-                Biographies, life lessons, virtues & teachings of Prophet Muhammad (S) and Ahl al-Bayt (A).
-              </p>
-              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
-                ✓ Curriculum Covered
-              </span>
+        {/* ── 3. TOP-LEVEL KPI OVERVIEW SUMMARY ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white border border-slate-300 p-3.5 rounded-xl">
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">{scoutRank} Rank Progress</span>
+            <div className="flex justify-between items-center mt-1">
+              <strong className="text-base font-black text-slate-950 font-mono">{currentRankPct}%</strong>
+              <span className="text-xs text-slate-600 font-mono">({currentRankCompletedSteps}/{currentRankTotalSteps})</span>
             </div>
+          </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-800 block">Karbala Heroes & Martyrs</span>
-              <p className="text-[11px] text-slate-600">
-                Imam Husayn, al-Abbas, Ali al-Akbar, Qasim, Muslim ibn Aqil, Habib ibn Madhahir & Karbala values.
-              </p>
-              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
-                ✓ Curriculum Covered
-              </span>
+          <div className="bg-white border border-slate-300 p-3.5 rounded-xl">
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Merit Badges Earned</span>
+            <div className="flex justify-between items-center mt-1">
+              <strong className="text-base font-black text-slate-950 font-mono">{earnedBadgesInScope.length} Badges</strong>
+              <span className="text-xs text-emerald-800 font-bold">({eagleRequiredEarnedCount} Eagle, {electiveEarnedCount} Elec)</span>
             </div>
+          </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-800 block">Daily Du'as & Post-Prayer Ta'qibat</span>
-              <p className="text-[11px] text-slate-600">
-                Ayat al-Kursi, Tasbih az-Zahra (SA), Du'a al-Faraj, Du'a al-Ahd & daily supplications.
-              </p>
-              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
-                ✓ Curriculum Covered
-              </span>
+          <div className="bg-white border border-slate-300 p-3.5 rounded-xl">
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Service Hours</span>
+            <div className="flex justify-between items-center mt-1">
+              <strong className="text-base font-black text-slate-950 font-mono">{totalFilteredServiceHours} Hours</strong>
+              <span className="text-xs text-slate-600">({filteredServiceLogs.length} logs)</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-300 p-3.5 rounded-xl">
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Islamic Knowledge</span>
+            <div className="flex justify-between items-center mt-1">
+              <strong className="text-base font-black text-slate-950 font-mono">{islamicPercent}%</strong>
+              <span className="text-xs text-slate-600">({completedIslamicTopics.length}/{ISLAMIC_BASICS_TOPICS.length})</span>
             </div>
           </div>
         </div>
 
-        {/* 5. MERIT BADGES & EAGLE ROADMAP */}
-        <div className="space-y-3 break-inside-avoid">
-          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>🏅 Section 3: Merit Badges & 21-Badge Eagle Roadmap</span>
-            </h3>
-            <span className="text-xs font-bold text-emerald-900">
-              {earnedMeritBadges.length} Earned • {plannedMeritBadges.length} Planned
-            </span>
-          </div>
+        {/* ── 4. RANK REQUIREMENTS SECTION ── */}
+        {/* If Scout Mode: Show ONLY current rank requirements + compact past ranks badge bar */}
+        {leaderReportMode === 'scout_summary' ? (
+          <div className="space-y-4 page-break-avoid">
+            <div className="border-b-2 border-slate-800 pb-2 flex justify-between items-center">
+              <h3 className="text-base font-black uppercase text-slate-950 flex items-center gap-2">
+                <span>Current Active Rank: {scoutRank} Requirements</span>
+              </h3>
+              <span className="text-xs font-mono font-bold text-slate-700">{currentRankCompletedSteps} of {currentRankTotalSteps} Completed</span>
+            </div>
 
-          {earnedMeritBadges.length === 0 && plannedMeritBadges.length === 0 ? (
-            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
-              No merit badges earned or planned yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              {earnedMeritBadges.map(b => (
-                <div key={b.id} className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-300 space-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-950 truncate">{b.name}</span>
-                    {b.eagleRequired && <span className="text-[9px] text-amber-700 font-black">★ EAGLE</span>}
-                  </div>
-                  <span className="text-[10px] text-emerald-700 font-semibold block">✓ Earned & Signed</span>
-                </div>
-              ))}
-
-              {plannedMeritBadges.map(b => (
-                <div key={b.id} className="p-2.5 bg-amber-50 rounded-xl border border-amber-300 space-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-950 truncate">{b.name}</span>
-                    {b.eagleRequired && <span className="text-[9px] text-amber-800 font-black">★ EAGLE</span>}
-                  </div>
-                  <span className="text-[10px] text-amber-800 font-semibold block">🎯 Planned for Eagle</span>
-                </div>
+            {/* Past Earned Ranks Badges */}
+            <div className="flex flex-wrap gap-2">
+              {RANKS_DATA.slice(0, currentRankIdx).map(pr => (
+                <span key={pr.id} className="text-xs bg-slate-100 border border-slate-300 text-slate-800 px-3 py-1 rounded-lg font-bold flex items-center gap-1">
+                  ✓ {pr.name} (Earned)
+                </span>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* 6. SERVICE & VOLUNTEERING HOURS LOG TABLE */}
-        <div className="space-y-3 break-inside-avoid">
-          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>⏱️ Section 4: Community Service & Volunteering Logs</span>
-            </h3>
-            <span className="text-xs font-bold text-emerald-900">
-              Total: {totalServiceHours} Hours ({verifiedServiceHours} Verified)
-            </span>
-          </div>
-
-          {serviceLogs.length === 0 ? (
-            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
-              No community service or volunteering hours logged yet.
-            </p>
-          ) : (
-            <table className="w-full text-xs text-left border-collapse border border-slate-200">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-300 text-[10px] uppercase font-bold text-slate-600">
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Type</th>
-                  <th className="p-2">Location / Organization</th>
-                  <th className="p-2">Hours</th>
-                  <th className="p-2">Status</th>
+            {/* Current Rank Checklist Table */}
+            <table className="w-full text-xs text-left border border-slate-300">
+              <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
+                <tr>
+                  <th className="p-2.5 w-16 text-center">Status</th>
+                  <th className="p-2.5 w-16">Req #</th>
+                  <th className="p-2.5">Requirement Description</th>
+                  <th className="p-2.5 w-28 text-right">Date Signed</th>
                 </tr>
               </thead>
-              <tbody>
-                {serviceLogs.map((log, idx) => (
-                  <tr key={log.id || idx} className="border-b border-slate-200">
-                    <td className="p-2 font-mono">{log.date}</td>
-                    <td className="p-2 capitalize">{log.type}</td>
-                    <td className="p-2">{log.location}</td>
-                    <td className="p-2 font-bold text-emerald-900">{log.hours} hrs</td>
-                    <td className="p-2">
-                      {log.verified ? (
-                        <span className="text-emerald-700 font-bold">✓ Verified</span>
-                      ) : (
-                        <span className="text-slate-500 italic">Pending</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-200">
+                {currentRankObj?.requirements?.map((req) => {
+                  const s = currentRankProg.steps?.[req.id];
+                  const isDone = s === true || s?.completed === true;
+                  const dateStr = s?.date || currentRankProg.completedDate || '';
+                  return (
+                    <tr key={req.id} className={isDone ? 'bg-emerald-50/40' : ''}>
+                      <td className="p-2.5 text-center font-bold">
+                        {isDone ? <span className="text-emerald-800">✓ Done</span> : <span className="text-slate-400">○ Open</span>}
+                      </td>
+                      <td className="p-2.5 font-bold font-mono text-slate-800">{req.id}</td>
+                      <td className="p-2.5 text-slate-850">{req.text}</td>
+                      <td className="p-2.5 text-right font-mono text-slate-700">{isDone ? (dateStr || 'Verified') : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          )}
-        </div>
-
-        {/* 7. ASSIGNMENTS & HOMEWORK TASKS */}
-        <div className="space-y-3 break-inside-avoid">
-          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>🎒 Section 5: Homework, Videos & Tasks Record</span>
-            </h3>
-            <span className="text-xs font-bold text-emerald-900">
-              {assignmentsList.length} Total Assigned
-            </span>
           </div>
+        ) : (
+          /* Comprehensive Leader View: All 7 Ranks */
+          <div className="space-y-6 page-break-avoid">
+            <div className="border-b-2 border-slate-800 pb-2">
+              <h3 className="text-base font-black uppercase text-slate-950">
+                BSA 7-Rank Advancement Audit Record
+              </h3>
+            </div>
 
-          {assignmentsList.length === 0 ? (
-            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
-              No homework tasks assigned yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {assignmentsList.map(item => {
-                const sub = scoutSubmissions[item.id] || {};
-                const isCompleted = sub.completed || false;
+            <div className="space-y-4">
+              {RANKS_DATA.map((r) => {
+                const rp = ranksProgress[r.id] || {};
+                const rSteps = r.requirements || [];
+                const completedSteps = rSteps.filter(req => {
+                  const s = rp.steps?.[req.id];
+                  const isDone = s === true || s?.completed === true;
+                  if (!isDone) return false;
+                  return isItemActiveInMode(s?.date || rp.completedDate || '');
+                }).length;
+                const isFullyEarned = rSteps.length > 0 && completedSteps === rSteps.length;
 
                 return (
-                  <div key={item.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
-                    <div>
-                      <span className="font-bold text-slate-900 block">{item.title}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Due: {item.dueDate || '—'}</span>
+                  <div key={r.id} className="border border-slate-300 rounded-xl p-4 space-y-2.5 page-break-avoid">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <div className="flex items-center gap-2">
+                        <strong className="text-sm font-black text-slate-950">{r.name} Rank</strong>
+                        {isFullyEarned && <span className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded">✓ Completed</span>}
+                      </div>
+                      <span className="text-xs font-mono text-slate-700">{completedSteps} / {rSteps.length} Steps</span>
                     </div>
-                    <div>
-                      {isCompleted ? (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                          ✓ Completed
-                        </span>
-                      ) : (
-                        <span className="text-[10px] bg-slate-200 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
-                          Pending
-                        </span>
-                      )}
-                    </div>
+
+                    <table className="w-full text-xs text-left">
+                      <tbody className="divide-y divide-slate-100">
+                        {rSteps.map(req => {
+                          const s = rp.steps?.[req.id];
+                          const isDone = s === true || s?.completed === true;
+                          const dateVal = s?.date || rp.completedDate || '';
+                          return (
+                            <tr key={req.id}>
+                              <td className="py-1.5 w-12 font-bold font-mono text-slate-700">{req.id}</td>
+                              <td className="py-1.5 text-slate-800">{req.text}</td>
+                              <td className="py-1.5 w-24 text-right font-mono font-semibold">
+                                {isDone ? (
+                                  <span className="text-emerald-800">✓ {dateVal || 'Passed'}</span>
+                                ) : (
+                                  <span className="text-slate-400">Needed</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 );
               })}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* ── 5. MERIT BADGES INVENTORY & COUNSELORS ── */}
+        <div className="space-y-3 page-break-avoid">
+          <div className="border-b-2 border-slate-800 pb-2 flex justify-between items-center">
+            <h3 className="text-base font-black uppercase text-slate-950">
+              Merit Badges Record ({earnedBadgesInScope.length} Earned)
+            </h3>
+            <span className="text-xs font-mono text-slate-700">14 Eagle Required Target</span>
+          </div>
+
+          <table className="w-full text-xs text-left border border-slate-300">
+            <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
+              <tr>
+                <th className="p-2.5">Badge Title</th>
+                <th className="p-2.5 w-32">Classification</th>
+                <th className="p-2.5 w-32">Date Completed</th>
+                <th className="p-2.5 w-40">Counselor / Signer</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {earnedBadgesInScope.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-slate-500 italic">No merit badges recorded in this timeframe.</td>
+                </tr>
+              ) : (
+                earnedBadgesInScope.map(b => {
+                  const p = meritProgress[b.id] || {};
+                  return (
+                    <tr key={b.id}>
+                      <td className="p-2.5 font-bold text-slate-950">{b.name}</td>
+                      <td className="p-2.5 font-semibold">
+                        {b.eagleRequired ? (
+                          <span className="text-emerald-800 font-black">Eagle-Required</span>
+                        ) : (
+                          <span className="text-slate-600">Elective</span>
+                        )}
+                      </td>
+                      <td className="p-2.5 font-mono text-slate-700">{p.dateCompleted || p.completedDate || 'Verified'}</td>
+                      <td className="p-2.5 text-slate-700">{p.counselorName || 'Troop Counselor'}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* 8. SCOUT STATEMENT & DATED JOURNAL REFLECTIONS */}
-        <div className="space-y-3 break-inside-avoid">
-          <div className="border-b-2 border-emerald-800 pb-1.5">
-            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950">
-              📝 Section 6: Scout Biography & Journal Notes ({journalNotes.length} Entries)
+        {/* ── 6. SERVICE & VOLUNTEERING LOGS ── */}
+        <div className="space-y-3 page-break-avoid">
+          <div className="border-b-2 border-slate-800 pb-2 flex justify-between items-center">
+            <h3 className="text-base font-black uppercase text-slate-950">
+              Community Service & Volunteering Record ({totalFilteredServiceHours} Total Hours)
             </h3>
           </div>
 
-          {scoutInfo.bio && (
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">About Me Statement</span>
-              <p className="text-slate-800 whitespace-pre-wrap">{scoutInfo.bio}</p>
-            </div>
-          )}
+          <table className="w-full text-xs text-left border border-slate-300">
+            <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
+              <tr>
+                <th className="p-2.5 w-24">Date</th>
+                <th className="p-2.5">Project / Activity Description</th>
+                <th className="p-2.5 w-28">Category</th>
+                <th className="p-2.5 w-20 text-right">Hours</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {filteredServiceLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-slate-500 italic">No service logs recorded in this period.</td>
+                </tr>
+              ) : (
+                filteredServiceLogs.map(l => (
+                  <tr key={l.id}>
+                    <td className="p-2.5 font-mono text-slate-700">{l.date}</td>
+                    <td className="p-2.5 font-bold text-slate-950">{l.description || l.title || 'Community Service'}</td>
+                    <td className="p-2.5 text-slate-600 capitalize">{l.category || 'General'}</td>
+                    <td className="p-2.5 text-right font-black font-mono text-slate-950">{l.hours} hrs</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {journalNotes.length > 0 && (
-            <div className="space-y-2">
-              {journalNotes.slice(0, 5).map((note, idx) => (
-                <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-                  <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
-                    <span>📅 {note.date} • {note.category || 'Note'}</span>
-                    <span>By: {note.authorName || scoutFullName}</span>
+        {/* ── 7. ASSIGNED HOMEWORK & TROOP EVENTS (Scout Mode & Comprehensive) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 page-break-avoid">
+          {/* Homework */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-300 pb-1">
+              Homework & Tasks Record
+            </h4>
+            <div className="space-y-1.5 text-xs">
+              {assignmentsList.slice(0, 5).map(a => {
+                const sub = scoutSubmissions[a.id];
+                const isSubmitted = !!sub?.completed || !!sub?.submittedDate;
+                return (
+                  <div key={a.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="font-semibold text-slate-900 truncate max-w-[200px]">{a.title}</span>
+                    <span className={`font-mono text-[10px] font-bold ${isSubmitted ? 'text-emerald-800' : 'text-slate-500'}`}>
+                      {isSubmitted ? '✓ Submitted' : 'Pending'}
+                    </span>
                   </div>
-                  <p className="text-slate-800">{note.text}</p>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Events */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-300 pb-1">
+              Troop Events & Campouts
+            </h4>
+            <div className="space-y-1.5 text-xs">
+              {eventsList.slice(0, 5).map(ev => (
+                <div key={ev.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50 border border-slate-200">
+                  <div>
+                    <strong className="text-slate-900 block truncate max-w-[180px]">{ev.title}</strong>
+                    <span className="text-[10px] text-slate-500 font-mono">{ev.date}</span>
+                  </div>
+                  <span className="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded">
+                    Scheduled
+                  </span>
                 </div>
               ))}
             </div>
-          )}
+          </div>
         </div>
 
-        
-        {/* ── SECTION 7: EAGLE SCOUT ADVANCEMENT & PALMS MILESTONE AUDIT ── */}
-        <div className="space-y-4 break-inside-avoid border-t-2 border-amber-600 pt-5 mt-4">
-          <div className="border-b-2 border-amber-600 pb-1.5 flex items-center justify-between">
-            <h3 className="font-black text-sm uppercase tracking-wider text-amber-950 flex items-center gap-2">
-              <span>🦅 Section 7: Eagle Scout Advancement & Eagle Palms Record</span>
+        {/* ── 8. LEADER PRIVATE NOTES & AUDIT COMMENTS (Comprehensive Leader View Only) ── */}
+        {isLeaderOrOwner && leaderReportMode === 'comprehensive' && (
+          <div className="space-y-3 page-break-avoid border-t-2 border-slate-800 pt-4">
+            <h3 className="text-base font-black uppercase text-slate-950 flex items-center gap-2">
+              <Lock size={16} className="text-slate-700" />
+              <span>Confidential Leader Notes & Scout Conference Log</span>
             </h3>
-            <span className="text-xs font-bold text-amber-900 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300">
-              Official BSA Eagle Milestones
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            {/* Gate 1: 21 Badges */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block">1. Merit Badges Audit</span>
-              <strong className="text-slate-900 text-sm block">
-                {earnedMeritBadges.length} Total Earned / 21 Target
-              </strong>
-              <p className="text-[11px] text-slate-600">
-                14 Eagle-Required + 7 Electives
-              </p>
-            </div>
-
-            {/* Gate 2: Tenure & Leadership */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block">2. Life Scout Leadership</span>
-              <strong className="text-slate-900 text-sm block">
-                {scoutInfo.positionOfResponsibility?.title || 'Active Leadership Role'}
-              </strong>
-              <p className="text-[11px] text-slate-600">
-                Duration: {scoutInfo.positionOfResponsibility?.durationMonths || 6} Months Served
-              </p>
-            </div>
-
-            {/* Gate 3: Eagle Palms */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase block">3. Eagle Palms Conferred</span>
-              <strong className="text-amber-700 text-sm block">
-                {scoutInfo.eaglePalms?.totalPalms || Math.max(0, Math.floor((earnedMeritBadges.length - 21) / 5))} Palms Total
-              </strong>
-              <p className="text-[11px] text-slate-600">
-                🥉 Bronze: {scoutInfo.eaglePalms?.bronze || 0} • 🥇 Gold: {scoutInfo.eaglePalms?.gold || 0} • 🥈 Silver: {scoutInfo.eaglePalms?.silver || 0}
-              </p>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-300 text-xs text-slate-800 leading-relaxed font-serif whitespace-pre-wrap">
+              {leaderNotes || 'No private leader notes recorded for this candidate.'}
             </div>
           </div>
+        )}
 
-          {/* Eagle Project Details */}
-          {scoutInfo.eagleProject && scoutInfo.eagleProject.title && (
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-              <div className="flex justify-between items-center border-b border-slate-200 pb-1">
-                <span className="font-bold text-slate-900 uppercase text-[11px]">
-                  Eagle Scout Service Project: {scoutInfo.eagleProject.title}
-                </span>
-                <span className="text-[10px] font-mono font-bold capitalize bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-                  Status: {scoutInfo.eagleProject.status || 'Planning'}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-700">
-                <div>Beneficiary: <strong>{scoutInfo.eagleProject.beneficiary || '—'}</strong></div>
-                <div>Candidate Hours: <strong>{scoutInfo.eagleProject.scoutHours || '—'} hrs</strong></div>
-                <div>Volunteer Hours: <strong>{scoutInfo.eagleProject.volunteerHours || '—'} hrs</strong></div>
-                <div>Workbook: <strong>{scoutInfo.eagleProject.workbookCompleted ? '✓ Completed' : 'In Progress'}</strong></div>
-              </div>
-            </div>
-          )}
-
-          {/* 6 References Checklist */}
-          {Array.isArray(scoutInfo.eagleReferences) && scoutInfo.eagleReferences.some(r => r.name) && (
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-              <span className="font-bold text-slate-900 uppercase text-[11px] block border-b border-slate-200 pb-1">
-                6 Official Character References Checklist
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-                {scoutInfo.eagleReferences.map((ref, idx) => (
-                  <div key={idx} className="p-2 bg-white rounded border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">{ref.type}</span>
-                    <strong className="text-slate-800 block truncate">{ref.name || '— Pending —'}</strong>
-                    <span className="text-[10px] text-slate-500 block truncate">{ref.phone || ref.email || ''}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 9. OFFICIAL SIGNATURES & TROOP ENDORSEMENT */}
-        <div className="pt-8 border-t-2 border-slate-300 text-xs break-inside-avoid space-y-8">
-          <div className="grid grid-cols-2 gap-12">
-            <div>
-              <div className="border-b-2 border-slate-400 h-10 mb-1.5"></div>
-              <p className="font-bold text-slate-800">Scout Member Signature</p>
-              <p className="text-[10px] text-slate-500 font-mono">Date: ________________________</p>
-            </div>
-
-            <div>
-              <div className="border-b-2 border-slate-400 h-10 mb-1.5"></div>
-              <p className="font-bold text-slate-800">Scoutmaster / Troop Leader Signature</p>
-              <p className="text-[10px] text-slate-500 font-mono">Date: ________________________</p>
-            </div>
+        {/* ── 9. OFFICIAL VERIFICATION & SIGNATURE BLOCK ── */}
+        <div className="pt-8 border-t-2 border-slate-900 grid grid-cols-2 sm:grid-cols-3 gap-6 text-xs page-break-avoid">
+          <div className="space-y-1">
+            <div className="border-b border-slate-900 h-10"></div>
+            <p className="font-bold text-slate-950">Scoutmaster Signature</p>
+            <p className="text-[10px] text-slate-600">Date: ________________________</p>
           </div>
 
-          <div className="text-center text-[10px] text-slate-400 font-mono pt-4 border-t border-slate-200">
-            Official Document of Taliʿa / Dhulfiqār Scouts BSA • Generated on {reportDate} • Valid with Leader Signature
+          <div className="space-y-1">
+            <div className="border-b border-slate-900 h-10"></div>
+            <p className="font-bold text-slate-950">Committee Chair Signature</p>
+            <p className="text-[10px] text-slate-600">Date: ________________________</p>
+          </div>
+
+          <div className="space-y-1 col-span-2 sm:col-span-1">
+            <div className="border-b border-slate-900 h-10"></div>
+            <p className="font-bold text-slate-950">Scout Candidate Signature</p>
+            <p className="text-[10px] text-slate-600">Date: ________________________</p>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -34,6 +34,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import RankIcon from './RankIcon';
+import EagleProjectRoadmap from './EagleProjectRoadmap';
 
 const QUALIFYING_LEADERSHIP_POSITIONS = [
   { title: 'Senior Patrol Leader (SPL)', troop: true, qualifies: true },
@@ -916,177 +917,27 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
 
       {/* ──────────────── MILESTONE 4: EAGLE SCOUT SERVICE PROJECT ROADMAP ──────────────── */}
       {activeMilestone === 'project' && (
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
-            <div>
-              <h2 className="text-base font-black text-white flex items-center gap-2">
-                <Award className="text-amber-400" size={20} />
-                <span>Milestone 4: Eagle Scout Service Project Roadmap</span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Requirement 5: Plan, develop, and give leadership to others in a service project helpful to a religious institution, school, or community.
-              </p>
-            </div>
-
-            <a
-              href="https://www.scouting.org/wp-content/uploads/2021/04/512-927_2021-Eagle-Project-Workbook.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md shrink-0"
-            >
-              <Download size={14} />
-              <span>Official BSA Workbook (512-927)</span>
-            </a>
-          </div>
-
-          {/* 5 Project Phases Stepper */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              { id: 'concept', step: 'Phase 1', title: 'Concept & Beneficiary' },
-              { id: 'proposal', step: 'Phase 2', title: 'Proposal & 4 Signatures' },
-              { id: 'fundraising', step: 'Phase 3', title: 'Fundraising App' },
-              { id: 'execution', step: 'Phase 4', title: 'Leadership & Execution' },
-              { id: 'report', step: 'Phase 5', title: 'Final Report & Sign-off' }
-            ].map(phase => (
-              <button
-                key={phase.id}
-                onClick={() => setProjectStage(phase.id)}
-                className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                  projectStage === phase.id
-                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 ring-1 ring-amber-400'
-                    : 'bg-slate-900/60 border-slate-750 text-slate-400'
-                }`}
-              >
-                <span className="text-[10px] font-bold uppercase block">{phase.step}</span>
-                <strong className="text-xs text-white block truncate">{phase.title}</strong>
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Project Details & Approvals */}
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Project Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mosque Courtyard Garden & Community Pavilion"
-                  value={projectTitle}
-                  onChange={(e) => setProjectTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Beneficiary Organization</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Islamic Center of America"
-                  value={projectBeneficiary}
-                  onChange={(e) => setProjectBeneficiary(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-slate-800">
-                <h4 className="text-xs font-bold text-amber-300 uppercase">4 Mandatory Signatures</h4>
-                <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={beneficiaryApproved}
-                    onChange={(e) => setBeneficiaryApproved(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>1. Beneficiary Representative Approval</span>
-                </label>
-                <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={smApproved}
-                    onChange={(e) => setSmApproved(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>2. Scoutmaster / Unit Leader Approval</span>
-                </label>
-                <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={committeeApproved}
-                    onChange={(e) => setCommitteeApproved(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>3. Unit Committee Chair Approval</span>
-                </label>
-                <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={districtApproved}
-                    onChange={(e) => setDistrictApproved(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>4. District / Council Advancement Committee Approval</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Volunteer Hours Logger Table */}
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Volunteer Hours Table ({totalVolunteerHours} Total Hrs)
-                </h3>
-              </div>
-
-              <form onSubmit={handleAddVolunteerLog} className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <input
-                  type="text"
-                  placeholder="Volunteer Name"
-                  value={newVolName}
-                  onChange={(e) => setNewVolName(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white"
-                />
-                <input
-                  type="number"
-                  placeholder="Hours"
-                  value={newVolHours}
-                  onChange={(e) => setNewVolHours(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white"
-                />
-                <button
-                  type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl cursor-pointer"
-                >
-                  + Add Log
-                </button>
-              </form>
-
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
-                {volunteerLogs.length === 0 ? (
-                  <p className="text-slate-500 text-xs italic text-center py-4">No volunteer hours logged yet.</p>
-                ) : (
-                  volunteerLogs.map(v => (
-                    <div key={v.id} className="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                      <div>
-                        <strong className="text-white block">{v.name}</strong>
-                        <span className="text-[10px] text-slate-400 font-mono">{v.date} • {v.category}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-amber-400">{v.hours} hrs</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteVolunteerLog(v.id)}
-                          className="text-slate-500 hover:text-red-400 p-1"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <EagleProjectRoadmap
+          scoutId={activeScoutId}
+          currentUser={currentUser}
+          onSyncParent={(projectSummary) => {
+            if (projectSummary) {
+              setProjectTitle(projectSummary.title || '');
+              setProjectBeneficiary(projectSummary.beneficiary || '');
+              setProjectBeneficiaryContact(projectSummary.beneficiaryContact || '');
+              setProjectStage(projectSummary.stage || 'proposal');
+              setBeneficiaryApproved(!!projectSummary.beneficiaryApproval);
+              setSmApproved(!!projectSummary.smApproval);
+              setCommitteeApproved(!!projectSummary.committeeApproval);
+              setDistrictApproved(!!projectSummary.districtApproval);
+              setWorkbookCompleted(!!projectSummary.workbookCompleted);
+              setFinalReportSigned(!!projectSummary.finalReportSigned);
+              if (Array.isArray(projectSummary.volunteerLogs)) {
+                setVolunteerLogs(projectSummary.volunteerLogs);
+              }
+            }
+          }}
+        />
       )}
 
       {/* ──────────────── MILESTONE 5: REFERENCES & STATEMENT OF AMBITIONS ──────────────── */}
