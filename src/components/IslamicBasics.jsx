@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
-import { BookOpen, Star, Sparkles, Heart, HelpCircle, Shield, Award, Calendar, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, Star, Sparkles, Heart, HelpCircle, Shield, Award, Calendar, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 const USUL_AL_DIN = [
   {
@@ -100,44 +100,77 @@ export default function IslamicBasics({ currentUser, scoutId }) {
     return () => unsub();
   }, [targetScoutId]);
 
-  const handleMarkComplete = async (topicId) => {
+  // Scout submits topic -> marks pending (yellow)
+  const handleToggleSubmitScout = async (topicId) => {
     if (!targetScoutId) return;
-    const dateVal = tempDates[topicId] || new Date().toISOString().split('T')[0];
-    try {
-      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-      await setDoc(docRef, {
-        [topicId]: {
-          completed: true,
-          completedDate: dateVal,
-          updatedBy: currentUser?.uid || 'system',
-          updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
-        }
-      }, { merge: true });
-    } catch (err) {
-      console.error("Failed to save topic completion:", err);
-    }
-  };
+    const existing = progress[topicId] || {};
+    if (existing.completed) return; // Scout cannot alter approved topic
 
-  const handleMarkIncomplete = async (topicId) => {
-    if (!targetScoutId) return;
-    if (!window.confirm("Are you sure you want to mark this topic as incomplete?")) return;
+    const isPending = !!existing.pending;
+    const newPending = !isPending;
+    const dateVal = tempDates[topicId] || new Date().toISOString().split('T')[0];
+
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
       await setDoc(docRef, {
         [topicId]: {
           completed: false,
-          completedDate: '',
-          updatedBy: currentUser?.uid || 'system',
+          pending: newPending,
+          submittedDate: newPending ? dateVal : '',
+          updatedBy: currentUser?.uid || 'scout',
           updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
         }
       }, { merge: true });
     } catch (err) {
-      console.error("Failed to clear topic completion:", err);
+      console.error("Failed to submit topic:", err);
+    }
+  };
+
+  // Leader approves topic -> marks complete & approved (green)
+  const handleApproveLeader = async (topicId) => {
+    if (!targetScoutId) return;
+    const existing = progress[topicId] || {};
+    const isCompleted = !!existing.completed;
+    const newCompleted = !isCompleted;
+    const dateVal = tempDates[topicId] || new Date().toISOString().split('T')[0];
+
+    try {
+      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+      await setDoc(docRef, {
+        [topicId]: {
+          completed: newCompleted,
+          pending: false,
+          completedDate: newCompleted ? dateVal : '',
+          approvedBy: newCompleted ? (currentUser?.uid || 'leader') : '',
+          approvedByName: newCompleted ? (currentUser?.fullName || currentUser?.username || 'Leader') : ''
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to approve topic:", err);
+    }
+  };
+
+  const handleResetTopic = async (topicId) => {
+    if (!targetScoutId) return;
+    if (!window.confirm("Are you sure you want to reset this topic status?")) return;
+    try {
+      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+      await setDoc(docRef, {
+        [topicId]: {
+          completed: false,
+          pending: false,
+          completedDate: '',
+          submittedDate: ''
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to reset topic:", err);
     }
   };
 
   const totalTopics = ISLAMIC_BASICS_TOPICS.length;
   const completedTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.completed).length;
+  const pendingTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.pending && !progress[t.id]?.completed).length;
   const percentage = Math.round((completedTopicsCount / totalTopics) * 100) || 0;
 
   return (
@@ -398,14 +431,21 @@ export default function IslamicBasics({ currentUser, scoutId }) {
             {ISLAMIC_BASICS_TOPICS.map((topic, index) => {
               const itemProg = progress[topic.id] || {};
               const isCompleted = !!itemProg.completed;
+              const isPending = !!itemProg.pending && !isCompleted;
               const isExpanded = expandedTopic === topic.id;
               const completedDate = itemProg.completedDate || '';
+              const submittedDate = itemProg.submittedDate || '';
+              const isScout = currentUser?.role === 'scout';
 
               return (
                 <div
                   key={topic.id}
                   className={`bg-slate-800 border rounded-2xl overflow-hidden transition ${
-                    isCompleted ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-slate-700'
+                    isCompleted
+                      ? 'border-emerald-500/30 bg-emerald-950/10'
+                      : isPending
+                      ? 'border-amber-500/40 bg-amber-950/15'
+                      : 'border-slate-700'
                   }`}
                 >
                   <div
@@ -415,6 +455,8 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                     <div className="flex items-center gap-3">
                       {isCompleted ? (
                         <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
+                      ) : isPending ? (
+                        <Clock className="text-amber-400 shrink-0 animate-pulse" size={20} />
                       ) : (
                         <Circle className="text-slate-500 hover:text-emerald-400 shrink-0" size={20} />
                       )}
@@ -428,10 +470,15 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isCompleted && (
-                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
-                          Completed on {completedDate}
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Approved on {completedDate}
+                        </span>
+                      )}
+                      {isPending && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
+                          <Clock size={11} /> Pending Approval ({submittedDate})
                         </span>
                       )}
                       {isExpanded ? <ChevronUp size={16} className="text-slate-450" /> : <ChevronDown size={16} className="text-slate-455" />}
@@ -448,7 +495,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                       <div className="border-t border-slate-750/60 pt-3 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                            <Calendar size={12} /> Completion Date
+                            <Calendar size={12} /> {isCompleted ? 'Approved Date' : 'Completion Date'}
                           </label>
                           <input
                             type="date"
@@ -459,20 +506,45 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                         </div>
 
                         <div className="flex gap-2">
-                          {!isCompleted ? (
+                          {isScout && (
                             <button
-                              onClick={() => handleMarkComplete(topic.id)}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1"
+                              onClick={() => handleToggleSubmitScout(topic.id)}
+                              className={`text-xs px-3.5 py-1.5 rounded-xl font-semibold transition cursor-pointer flex items-center gap-1 ${
+                                isPending
+                                  ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
+                                  : isCompleted
+                                  ? 'opacity-60 cursor-not-allowed bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                              }`}
+                              disabled={isCompleted}
                             >
-                              <CheckCircle2 size={12} /> Mark Completed
+                              {isPending ? 'Cancel Submission' : isCompleted ? 'Approved ✓' : 'Submit to Leader'}
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => handleMarkIncomplete(topic.id)}
-                              className="bg-slate-700 hover:bg-slate-655 text-red-400 font-bold text-xs px-4 py-1.5 rounded-xl transition cursor-pointer"
-                            >
-                              Reset Status
-                            </button>
+                          )}
+
+                          {isLeaderOrOwner && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleApproveLeader(topic.id)}
+                                className={`text-xs px-4 py-1.5 rounded-xl font-semibold transition cursor-pointer flex items-center gap-1 ${
+                                  isCompleted
+                                    ? 'bg-emerald-700/40 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-600/30'
+                                    : isPending
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30 animate-pulse'
+                                    : 'bg-slate-700 hover:bg-emerald-600 text-slate-200 hover:text-white'
+                                }`}
+                              >
+                                <CheckCircle2 size={12} /> {isCompleted ? 'Approved ✓' : isPending ? 'Approve Topic' : 'Mark Tested / Sign-off'}
+                              </button>
+                              {(isCompleted || isPending) && (
+                                <button
+                                  onClick={() => handleResetTopic(topic.id)}
+                                  className="bg-slate-700 hover:bg-slate-655 text-slate-300 text-xs px-3 py-1.5 rounded-xl transition cursor-pointer"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

@@ -19,6 +19,7 @@ import { RANKS_DATA } from '../data/ranksData';
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
   'Assistant Scoutmaster',
+  'Assistant Leader',
   'Committee Chair',
   'Committee Member',
   'Chartered Org Representative',

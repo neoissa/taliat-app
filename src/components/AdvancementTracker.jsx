@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 
@@ -183,22 +183,63 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
 
   const colorTheme = RANK_COLORS[selectedRankData.color] || RANK_COLORS.emerald;
 
-  // Calculate overall requirements count and completed count for selected rank
+  // Calculate overall requirements count and completed/pending count for selected rank
   const totalRequirements = selectedRankData.categories.reduce((sum, cat) => sum + cat.requirements.length, 0);
   const completedCount = selectedRankData.categories.reduce((sum, cat) => {
     return sum + cat.requirements.filter((r) => completedRequirements[r.id]?.completed).length;
   }, 0);
+  const pendingCount = selectedRankData.categories.reduce((sum, cat) => {
+    return sum + cat.requirements.filter((r) => completedRequirements[r.id]?.pending && !completedRequirements[r.id]?.completed).length;
+  }, 0);
   const percentage = totalRequirements > 0 ? Math.round((completedCount / totalRequirements) * 100) : 0;
 
-  const toggleRequirement = async (reqId) => {
+  // Scout toggles requirement -> submits to leader (yellow pending) or cancels submission
+  const handleToggleRequirementScout = async (reqId) => {
     if (readOnly) return;
     const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
     const existingReq = completedRequirements[reqId] || {};
-    const newCompleted = !existingReq.completed;
+    
+    // If already approved/completed, scout cannot modify it directly
+    if (existingReq.completed) return;
+
+    const isPending = !!existingReq.pending;
+    const newPending = !isPending;
+
+    const reqData = {
+      completed: false,
+      pending: newPending,
+      notes: existingReq.notes || '',
+      submittedAt: newPending ? new Date().toISOString().split('T')[0] : '',
+      completedAt: ''
+    };
+
+    try {
+      await setDoc(docRef, {
+        completedRequirements: {
+          [reqId]: reqData
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error submitting requirement status:', err);
+    }
+  };
+
+  // Leader approves requirement -> marks complete & approved (green) or resets
+  const handleApproveRequirementLeader = async (reqId) => {
+    if (readOnly) return;
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
+    const existingReq = completedRequirements[reqId] || {};
+    
+    const isCompleted = !!existingReq.completed;
+    const newCompleted = !isCompleted;
 
     const reqData = {
       completed: newCompleted,
+      pending: false,
       notes: existingReq.notes || '',
+      approvedAt: newCompleted ? new Date().toISOString().split('T')[0] : '',
+      approvedBy: newCompleted ? currentUser.uid : '',
+      approvedByName: newCompleted ? (currentUser.fullName || currentUser.username || 'Leader') : '',
       completedAt: newCompleted ? (existingReq.completedAt || new Date().toISOString().split('T')[0]) : ''
     };
 
@@ -209,7 +250,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
         }
       }, { merge: true });
     } catch (err) {
-      console.error('Error updating requirement status:', err);
+      console.error('Error approving requirement status:', err);
     }
   };
 
@@ -222,9 +263,8 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       await setDoc(docRef, {
         completedRequirements: {
           [reqId]: {
-            completed: !!existingReq.completed,
-            notes: noteText,
-            completedAt: existingReq.completedAt || ''
+            ...existingReq,
+            notes: noteText
           }
         }
       }, { merge: true });
@@ -242,8 +282,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       await setDoc(docRef, {
         completedRequirements: {
           [reqId]: {
-            completed: !!existingReq.completed,
-            notes: existingReq.notes || '',
+            ...existingReq,
             completedAt: dateString
           }
         }
@@ -458,63 +497,128 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
               {cat.requirements.map((req) => {
                 const reqProgress = completedRequirements[req.id] || {};
                 const isCompleted = !!reqProgress.completed;
+                const isPending = !!reqProgress.pending && !isCompleted;
                 const isExpanded = !!expandedReqs[req.id];
                 const noteValue = reqProgress.notes || '';
-                const dateValue = reqProgress.completedAt || '';
+                const dateValue = reqProgress.completedAt || reqProgress.submittedAt || '';
+                const isScout = currentUser.role === 'scout';
 
                 return (
                   <div
                     key={req.id}
                     className={`rounded-xl border transition overflow-hidden ${
                       isCompleted
-                        ? 'bg-emerald-950/10 border-emerald-800/30'
+                        ? 'bg-emerald-950/15 border-emerald-800/40'
+                        : isPending
+                        ? 'bg-amber-950/20 border-amber-500/50 shadow-sm shadow-amber-950/30'
                         : 'bg-slate-800 border-slate-700 hover:border-slate-600'
                     }`}
                   >
                     {/* Header bar */}
                     <div className="p-4 flex items-start gap-4">
-                      <button
-                        onClick={() => toggleRequirement(req.id)}
-                        disabled={readOnly}
-                        className={`mt-0.5 transition shrink-0 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                      >
+                      <div className="mt-0.5 shrink-0">
                         {isCompleted ? (
                           <CheckCircle2 className="text-emerald-400" size={20} />
+                        ) : isPending ? (
+                          <Clock className="text-amber-400 animate-pulse" size={20} />
                         ) : (
-                          <Circle className="text-slate-500 hover:text-emerald-400" size={20} />
+                          <Circle className="text-slate-500" size={20} />
                         )}
-                      </button>
+                      </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold text-slate-500">Requirement {req.number}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRequirement(req.id);
-                            }}
-                            disabled={readOnly}
-                            className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition leading-none cursor-pointer ${
-                              isCompleted
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-slate-700/50 text-slate-400 border border-slate-600'
-                            }`}
-                          >
-                            {isCompleted ? 'Completed' : 'Not Completed'}
-                          </button>
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono font-bold text-slate-400">Requirement {req.number}</span>
+                            {isCompleted && (
+                              <span className="text-[9px] px-2 py-0.5 rounded font-bold uppercase leading-none bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                <CheckCircle2 size={10} /> Approved & Completed
+                              </span>
+                            )}
+                            {isPending && (
+                              <span className="text-[9px] px-2 py-0.5 rounded font-bold uppercase leading-none bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                                <Clock size={10} /> Pending Leader Approval
+                              </span>
+                            )}
+                            {!isCompleted && !isPending && (
+                              <span className="text-[9px] px-2 py-0.5 rounded font-bold uppercase leading-none bg-slate-700/50 text-slate-400 border border-slate-600">
+                                Incomplete
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick action buttons */}
+                          {!readOnly && (
+                            <div className="flex items-center gap-1.5">
+                              {isScout && (
+                                <button
+                                  onClick={() => handleToggleRequirementScout(req.id)}
+                                  className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 ${
+                                    isPending
+                                      ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
+                                      : isCompleted
+                                      ? 'opacity-60 cursor-not-allowed bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  }`}
+                                  disabled={isCompleted}
+                                >
+                                  {isPending ? 'Cancel Submission' : isCompleted ? 'Approved' : 'Submit to Leader'}
+                                </button>
+                              )}
+
+                              {isLeaderOrOwner && (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleApproveRequirementLeader(req.id)}
+                                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 ${
+                                      isCompleted
+                                        ? 'bg-emerald-800/30 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-700/40'
+                                        : isPending
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 animate-pulse'
+                                        : 'bg-slate-700 hover:bg-emerald-600 text-white'
+                                    }`}
+                                  >
+                                    {isCompleted ? 'Approved ✓' : isPending ? 'Approve Requirement' : 'Mark Tested / Sign-off'}
+                                  </button>
+                                  {isPending && (
+                                    <button
+                                      onClick={() => handleToggleRequirementScout(req.id)}
+                                      className="text-xs px-2 py-1 rounded-lg font-semibold bg-slate-700 hover:bg-slate-600 text-slate-300 transition cursor-pointer"
+                                      title="Return for Revision"
+                                    >
+                                      Reset
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
+
                         <p className={`text-sm mt-1 leading-relaxed ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-200'}`}>
                           {req.text}
                         </p>
+
+                        {/* Sign-off Author details */}
+                        {isCompleted && reqProgress.approvedByName && (
+                          <p className="text-[10px] text-emerald-400/90 font-medium mt-1">
+                            Approved by: <strong className="text-emerald-300">{reqProgress.approvedByName}</strong> {reqProgress.approvedAt ? `on ${reqProgress.approvedAt}` : ''}
+                          </p>
+                        )}
+                        {isPending && reqProgress.submittedAt && (
+                          <p className="text-[10px] text-amber-400 font-medium mt-1">
+                            Submitted by Scout on <strong className="text-amber-300">{reqProgress.submittedAt}</strong> (Awaiting Leader Sign-off)
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Date and Notes (Visible at all times!) */}
+                    {/* Date and Notes */}
                     <div className="px-4 pb-4 pt-2 border-t border-slate-700/40 bg-slate-900/10 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Date Field */}
                       <div>
                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-                          <Calendar size={12} /> Completion Date
+                          <Calendar size={12} /> {isCompleted ? 'Approved Date' : 'Completion Date'}
                         </label>
                         <input
                           type="date"
@@ -528,7 +632,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                       {/* Reflections Field */}
                       <div>
                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-                          <MessageSquare size={12} /> Notes & Sign-off reflections
+                          <MessageSquare size={12} /> Notes & Leader Feedback
                         </label>
                         <input
                           type="text"

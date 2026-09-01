@@ -712,19 +712,25 @@ export default function PatrolRoster({ currentUser }) {
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState('');
   const [addError, setAddError] = useState('');
+  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
+  const isAssistantLeader = currentUser.role === 'leader' && (currentUser.leaderPosition === 'Assistant Scoutmaster' || currentUser.leaderPosition === 'Assistant Leader');
+  const canAddOrDeleteScouts = (isOwner || isScoutmaster || currentUser.role === 'leader') && !isAssistantLeader;
 
   useEffect(() => {
-    const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
-    const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
     const q = (isOwner || isScoutmaster)
       ? query(collection(db, 'users'), where('role', '==', 'scout'))
-      : query(collection(db, 'users'), where('role', '==', 'scout'), where('leaderId', '==', currentUser.uid));
+      : query(collection(db, 'users'), where('role', '==', 'scout'));
       
     const unsub = onSnapshot(q, (snap) => {
-      setScouts(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+      let list = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+      if (!isOwner && !isScoutmaster) {
+        // Filter by assigned leaderId OR matching patrol groupId
+        list = list.filter(s => s.leaderId === currentUser.uid || (currentUser.groupId && s.groupId === currentUser.groupId));
+      }
+      setScouts(list);
     });
     return () => unsub();
-  }, [currentUser.uid, currentUser.role, currentUser.email, currentUser.leaderPosition]);
+  }, [currentUser.uid, currentUser.role, currentUser.email, currentUser.leaderPosition, currentUser.groupId, isOwner, isScoutmaster]);
 
   useEffect(() => {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
@@ -744,6 +750,10 @@ export default function PatrolRoster({ currentUser }) {
 
   const handleAddScout = async (e) => {
     e.preventDefault();
+    if (!canAddOrDeleteScouts) {
+      setAddError('Assistant Leaders do not have permission to add or remove scouts.');
+      return;
+    }
     setAddError('');
     setAddMsg('');
     const username = newUsername.trim().toLowerCase();
@@ -826,7 +836,6 @@ export default function PatrolRoster({ currentUser }) {
     );
   }
 
-  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
   const visibleGroups = isOwner || isScoutmaster
     ? groups
     : groups.filter(g => g.leaderId === currentUser.uid || g.id === currentUser.groupId || scouts.some(s => s.groupId === g.id));
@@ -846,7 +855,7 @@ export default function PatrolRoster({ currentUser }) {
               : `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in the troop`}
           </p>
         </div>
-        {rosterSubTab === 'scouts' && (
+        {rosterSubTab === 'scouts' && canAddOrDeleteScouts && (
           <button
             onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer"

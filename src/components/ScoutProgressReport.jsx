@@ -368,10 +368,12 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             <tbody>
               {activeRankData.categories.map((category) => 
                 category.requirements.map((req) => {
-                  const isDone = !!completedReqs[req.id]?.completed;
-                  const completionDate = completedReqs[req.id]?.completedAt || '';
+                  const reqProg = completedReqs[req.id] || {};
+                  const isDone = !!reqProg.completed;
+                  const isPending = !!reqProg.pending && !isDone;
+                  const completionDate = reqProg.completedAt || reqProg.submittedAt || '';
                   return (
-                    <tr key={req.id} className={`border-t border-slate-700/50 ${isDone ? 'bg-emerald-950/10' : 'bg-slate-800/20'}`}>
+                    <tr key={req.id} className={`border-t border-slate-700/50 ${isDone ? 'bg-emerald-950/10' : isPending ? 'bg-amber-950/15' : 'bg-slate-800/20'}`}>
                       <td className="px-3 py-2 border-r border-slate-700 font-mono font-bold text-slate-400 text-xs">
                         {req.number}
                       </td>
@@ -386,24 +388,26 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                           {canEdit ? (
                             <button
                               onClick={() => toggleRequirement(req.id)}
-                              className={`text-[10px] px-2 py-1 rounded font-bold uppercase transition leading-none cursor-pointer border ${
+                              className={`text-[9px] px-2 py-1 rounded font-bold uppercase transition leading-none cursor-pointer border ${
                                 isDone
                                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                  : isPending
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                   : 'bg-slate-700/50 text-slate-400 border-slate-600'
                               }`}
                             >
-                              {isDone ? 'COMPLETED' : 'INCOMPLETE'}
+                              {isDone ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
                             </button>
                           ) : (
-                            <span className={isDone ? 'text-emerald-400 font-semibold text-xs' : 'text-slate-500 text-xs'}>
-                              {isDone ? 'COMPLETED' : 'INCOMPLETE'}
+                            <span className={isDone ? 'text-emerald-400 font-semibold text-xs' : isPending ? 'text-amber-400 font-semibold text-xs' : 'text-slate-500 text-xs'}>
+                              {isDone ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
                             </span>
                           )}
                         </div>
                         {/* Print View */}
                         <div className="print-only">
-                          <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
-                            {isDone ? 'COMPLETED' : 'INCOMPLETE'}
+                          <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : isPending ? 'text-amber-600 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
+                            {isDone ? 'APPROVED' : isPending ? 'PENDING APPROVAL' : 'INCOMPLETE'}
                           </span>
                         </div>
                       </td>
@@ -552,11 +556,12 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               {ISLAMIC_BASICS_TOPICS.map((topic) => {
                 const topicProg = islamicProgress[topic.id] || {};
                 const isCompleted = !!topicProg.completed;
-                const completedDate = topicProg.completedDate || '';
-                const signedBy = topicProg.updatedByName || '';
+                const isPending = !!topicProg.pending && !isCompleted;
+                const completedDate = topicProg.completedDate || topicProg.submittedDate || '';
+                const signedBy = topicProg.approvedByName || topicProg.updatedByName || '';
 
                 return (
-                  <tr key={topic.id} className="border-b border-slate-700 text-xs hover:bg-slate-900/10">
+                  <tr key={topic.id} className={`border-b border-slate-700 text-xs ${isCompleted ? 'bg-emerald-950/10' : isPending ? 'bg-amber-950/15' : 'hover:bg-slate-900/10'}`}>
                     <td className="px-3 py-2 border-r border-slate-700 font-medium text-slate-200">
                       {topic.title}
                     </td>
@@ -564,16 +569,18 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                         isCompleted
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : isPending
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                           : 'bg-slate-700/50 text-slate-400 border border-slate-600'
                       }`}>
-                        {isCompleted ? 'COMPLETED' : 'INCOMPLETE'}
+                        {isCompleted ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
                       </span>
                     </td>
                     <td className="px-3 py-2 border-r border-slate-700 text-slate-300 font-mono">
                       {completedDate || '—'}
                     </td>
                     <td className="px-3 py-2 text-slate-350 italic">
-                      {isCompleted ? (signedBy || 'Leader') : '—'}
+                      {isCompleted ? (signedBy || 'Leader') : isPending ? 'Awaiting Sign-off' : '—'}
                     </td>
                   </tr>
                 );
