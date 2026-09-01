@@ -448,18 +448,20 @@ export default function ScoutProfile({ currentUser }) {
           <span>👤 Personal Info</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveProfileTab('eagle')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'eagle'
-              ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-          }`}
-        >
-          <span className="text-base">🦅</span>
-          <span>Road to Eagle & Palms</span>
-        </button>
+        {currentUser.role === 'scout' && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('eagle')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'eagle'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <span className="text-base">🦅</span>
+            <span>Road to Eagle & Palms</span>
+          </button>
+        )}
 
         {currentUser.role === 'scout' && (
           <button
@@ -505,7 +507,7 @@ export default function ScoutProfile({ currentUser }) {
 
       
       {/* ── TAB 1: ROAD TO EAGLE & PALMS ── */}
-      {activeProfileTab === 'eagle' && (
+      {activeProfileTab === 'eagle' && currentUser.role === 'scout' && (
         <RoadToEagleTracker currentUser={currentUser} scoutId={currentUser.uid} />
       )}
 

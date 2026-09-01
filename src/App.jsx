@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import StudentHome from './components/StudentHome';
+import LeaderHome from './components/LeaderHome';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
@@ -164,9 +165,9 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       if (isOwner) {
-        setCurrentTab('global-admin');
+        setCurrentTab('home');
       } else if (isLeader) {
-        setCurrentTab('roster');
+        setCurrentTab('home');
       } else {
         setCurrentTab('home');
       }
@@ -249,6 +250,16 @@ export default function App() {
           {isOwner && (
             <>
               <button
+                onClick={() => setCurrentTab('home')}
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  currentTab === 'home'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🏠 Home Hub</span>
+              </button>
+              <button
                 onClick={() => setCurrentTab('global-admin')}
                 className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'global-admin'
@@ -258,16 +269,7 @@ export default function App() {
               >
                 <span>⚡ Global Admin</span>
               </button>
-              <button
-                onClick={() => setCurrentTab('road-to-eagle')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'road-to-eagle'
-                    ? 'border-amber-500 text-amber-400 font-extrabold shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🦅 Road to Eagle</span>
-              </button>
+              
               <button
                 onClick={() => setCurrentTab('group-manager')}
                 className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
@@ -390,14 +392,14 @@ export default function App() {
           {isLeader && (
             <>
               <button
-                onClick={() => setCurrentTab('road-to-eagle')}
+                onClick={() => setCurrentTab('home')}
                 className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'road-to-eagle'
-                    ? 'border-amber-500 text-amber-400 font-extrabold shadow-sm'
+                  currentTab === 'home'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>🦅 Road to Eagle</span>
+                <span>🏠 Leader Hub</span>
               </button>
               <button
                 onClick={() => setCurrentTab('roster')}
@@ -626,7 +628,13 @@ export default function App() {
         <RoadToEagleGuide currentUser={currentUser} onNavigate={setCurrentTab} />
       )}
 
-      {currentTab === 'home' && isScout && (
+      {currentTab === 'home' && (isLeader || isOwner) && (
+          <LeaderHome 
+            currentUser={currentUser} 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+          />
+        )}
+        {currentTab === 'home' && isScout && (
           <StudentHome 
             currentUser={currentUser} 
             unreadChatCount={unreadChatCount} 

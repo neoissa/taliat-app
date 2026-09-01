@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, storage } from '../firebase';
 import { doc, onSnapshot, setDoc, collection, query, where, deleteDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import RoadToEagleGuide from './RoadToEagleGuide';
 import { Shield, Play, CheckCircle2, Circle, Users, DoorOpen, PhoneCall, FileText, ExternalLink, Calendar, BookOpen, AlertCircle, Plus, Trash2, Video, Link as LinkIcon, Download, Globe, X } from 'lucide-react';
 
 const SAFETY_VIDEOS = [
@@ -540,9 +541,33 @@ export default function VideoResources({ currentUser, scoutId, scout }) {
         >
           Group Resources
         </button>
+        <button
+          onClick={() => setActiveSubTab('eagle-reference')}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer text-center ${
+            activeSubTab === 'eagle-reference'
+              ? 'bg-slate-800 text-amber-400 border border-slate-700/50 font-bold'
+              : 'text-slate-455 hover:text-slate-200 border border-transparent'
+          }`}
+        >
+          🦅 Road to Eagle Reference Guide
+        </button>
       </div>
 
       {/* Rendering Content Center */}
+      {activeSubTab === 'eagle-reference' && (
+        <div className="space-y-4">
+          <div className="bg-slate-850 p-4 rounded-2xl border border-amber-500/40 text-xs text-amber-200 flex items-center justify-between gap-3 shadow-md">
+            <div>
+              <strong className="text-amber-300 font-bold block text-sm">🦅 Leader & Scout Road to Eagle Reference Guide</strong>
+              <p className="text-[11px] text-slate-350">
+                Official instructional reference outlining the 7 milestones, 5-phase project guidelines, 21-badge audit, and Eagle Palms requirements.
+              </p>
+            </div>
+          </div>
+          <RoadToEagleGuide currentUser={currentUser} onNavigate={null} />
+        </div>
+      )}
+
       {activeSubTab === 'videos' && (
         <div className="space-y-6">
           {/* Safety Guidelines Cards */}
