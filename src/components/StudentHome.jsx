@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
+import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 
@@ -42,6 +43,8 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
+  const [islamicProgress, setIslamicProgress] = useState({});
+  const [showPendingModal, setShowPendingModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const scoutUid = currentUser?.uid;
@@ -108,6 +111,17 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     return () => unsub();
   }, [scoutUid]);
 
+  // 4.5. Subscribe to Islamic Knowledge progress
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(doc(db, 'user_progress', scoutUid, 'islamic_basics', 'status'), (snap) => {
+      if (snap.exists()) {
+        setIslamicProgress(snap.data() || {});
+      }
+    }, (err) => console.warn("Islamic progress fallback:", err));
+    return () => unsub();
+  }, [scoutUid]);
+
   // 5. Subscribe to Road to Eagle data
   useEffect(() => {
     if (!scoutUid) return;
@@ -120,6 +134,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   }, [scoutUid]);
 
   const activeRank = currentUser?.rank || 'Scout';
+
+  // Real-time pending items count
+  const pendingIslamicCount = Object.values(islamicProgress).filter(p => p?.pending && !p?.completed).length;
+  const pendingRanksCount = Object.values(ranksProgress).reduce((acc, rank) => {
+    const steps = rank?.steps || {};
+    return acc + Object.values(steps).filter(s => s?.pending === true && !s?.completed).length;
+  }, 0);
+  const totalPendingPortalItems = pendingIslamicCount + pendingRanksCount;
 
   // Calculate Eagle progress quick metrics
   const eagleRequiredCount = eagleData?.meritBadgesSummary?.eagleRequiredCount || 0;
@@ -167,6 +189,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
 
           <div className="flex flex-wrap gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowPendingModal(true)}
+              className="bg-gradient-to-r from-amber-500/30 to-amber-600/20 hover:bg-amber-500/40 text-amber-300 border-2 border-amber-500/60 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
+            >
+              <Clock size={15} className="animate-pulse" />
+              <span>⏳ Pending Items ({totalPendingPortalItems})</span>
+            </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
               className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
@@ -455,6 +485,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
         </div>
       </div>
+      {/* Universal Pending Items Modal */}
+      <UniversalPendingQueueModal
+        isOpen={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
+        scoutId={scoutUid}
+        currentUser={currentUser}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

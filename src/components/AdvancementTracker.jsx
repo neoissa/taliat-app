@@ -6,6 +6,7 @@ import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar,
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import RoadToEagleTracker from './RoadToEagleTracker';
+import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 
 const RANK_COLORS = {
   emerald: {
@@ -110,6 +111,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [loading, setLoading] = useState(true);
   const [showPrintReport, setShowPrintReport] = useState(false);
   const [showEaglePortal, setShowEaglePortal] = useState(false);
+  const [showUniversalPendingModal, setShowUniversalPendingModal] = useState(false);
   const [showNotesPrintReport, setShowNotesPrintReport] = useState(false);
 
 
@@ -1311,6 +1313,14 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       </div>
     </>
       )}
+      {/* Universal Pending Queue Modal */}
+      <UniversalPendingQueueModal
+        isOpen={showUniversalPendingModal}
+        onClose={() => setShowUniversalPendingModal(false)}
+        scoutId={scoutId}
+        currentUser={currentUser}
+        onNavigate={null}
+      />
     </div>
   );
 }
