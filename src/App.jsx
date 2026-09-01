@@ -8,6 +8,7 @@ import ScoutList from './components/ScoutList';
 import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import RoadToEagleGuide from './components/RoadToEagleGuide';
+import LeaderReportsCenter from './components/LeaderReportsCenter';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import VideoResources from './components/VideoResources';
@@ -296,6 +297,16 @@ export default function App() {
                 }`}
               >
                 <span>📊 Advancement Tracker</span>
+              </button>
+              <button
+                onClick={() => setCurrentTab('reports')}
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  currentTab === 'reports'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>📈 Reports Center</span>
               </button>
               <button
                 onClick={() => setCurrentTab('assignments')}
@@ -637,6 +648,7 @@ export default function App() {
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && (isLeader || isOwner) && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
+        {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={setCurrentTab} />}
       </main>
     </div>
   );

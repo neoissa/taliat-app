@@ -55,6 +55,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
   // Real-time data states
   const [profileData, setProfileData] = useState(null);
+  const [groupData, setGroupData] = useState(null);
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
@@ -90,6 +91,23 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     });
     return () => unsub();
   }, [scoutUid]);
+
+  // 1.5. Fetch Scout Group / Tali'a Info
+  useEffect(() => {
+    const gId = profileData?.groupId || profileData?.patrolId || scout?.groupId || scout?.patrolId || currentUser?.groupId;
+    if (!gId) {
+      setGroupData(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'groups', gId), (snap) => {
+      if (snap.exists()) {
+        setGroupData(snap.data());
+      } else {
+        setGroupData(null);
+      }
+    }, (err) => console.warn('Group listener fallback:', err));
+    return () => unsub();
+  }, [profileData?.groupId, profileData?.patrolId, scout?.groupId, scout?.patrolId, currentUser?.groupId]);
 
   // 2. Fetch 7 Ranks Progress
   useEffect(() => {
@@ -217,7 +235,16 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const scoutInfo = profileData || scout || currentUser || {};
   const scoutFullName = scoutInfo.fullName || scoutInfo.username || 'Scout Member';
   const scoutRank = (scoutInfo.rank || 'Scout').toLowerCase();
-  const scoutPatrol = scoutInfo.patrolName || scoutInfo.patrolId || 'Taliʿa Patrol';
+  const rawPatrolName = groupData?.name || profileData?.patrolName || profileData?.groupName || scout?.patrolName || scout?.groupName || currentUser?.patrolName || profileData?.groupId || scout?.groupId || 'Al-Huda';
+  const formattedTaliaName = (() => {
+    if (!rawPatrolName) return 'Taliʿat Al-Huda';
+    const lower = String(rawPatrolName).toLowerCase().trim();
+    if (lower.startsWith('taliat') || lower.startsWith('talia') || lower.startsWith('taliʿa') || lower.startsWith('taliʿat') || lower.startsWith('tali\'at')) {
+      return rawPatrolName;
+    }
+    return `Taliʿat ${rawPatrolName}`;
+  })();
+  const scoutPatrol = formattedTaliaName;
   const scoutBsaId = scoutInfo.bsaId || 'BSA-110-' + (scoutUid ? scoutUid.substring(0, 5).toUpperCase() : '0000');
   const assignedLeaderName = currentUser?.fullName || currentUser?.username || 'Unit Scoutmaster';
 
@@ -515,7 +542,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
           <div className="text-right text-xs text-slate-700 font-mono space-y-0.5">
             <p><strong>Generation Date:</strong> {generationDate}</p>
-            <p><strong>Unit / Troop:</strong> Taliʿa Troop 110</p>
+            <p><strong>Taliʿa:</strong> {formattedTaliaName}</p>
             <p><strong>Reporting Period:</strong> {reportMode === 'cumulative' ? 'All-Time Cumulative' : `${startDate} to ${endDate}`}</p>
           </div>
         </div>
@@ -531,8 +558,8 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             <strong className="text-sm text-emerald-850 font-black uppercase">{currentRankData.name}</strong>
           </div>
           <div>
-            <span className="text-slate-600 uppercase text-[10px] font-bold block">Patrol Unit</span>
-            <strong className="text-xs text-slate-900 font-bold">{scoutPatrol}</strong>
+            <span className="text-slate-600 uppercase text-[10px] font-bold block">Taliʿa</span>
+            <strong className="text-xs text-slate-900 font-bold">{formattedTaliaName}</strong>
           </div>
           <div>
             <span className="text-slate-600 uppercase text-[10px] font-bold block">BSA Member ID</span>
