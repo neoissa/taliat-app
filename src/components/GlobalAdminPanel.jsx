@@ -2,19 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { db, firebaseConfig } from '../firebase';
-import {
-  collection,
-  query,
-  onSnapshot,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { UserPlus, Shield, UserMinus, Search, Edit3, Trash2 } from 'lucide-react';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
+import { Users, UserPlus, Shield, ShieldCheck, ShieldAlert, Award, Search, KeyRound, Lock, Trash2, Edit2, AlertTriangle, CheckCircle, RefreshCw, X, FolderTree, Camera, Loader2 } from 'lucide-react';
 
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
@@ -30,6 +20,41 @@ const BSA_LEADER_POSITIONS = [
   'Patrol Advisor',
   'Unit College Scouter Reserve'
 ];
+
+
+function compressImage(file, maxWidth = 500, maxHeight = 500, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
 
 export default function GlobalAdminPanel({ currentUser }) {
   const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
@@ -70,6 +95,8 @@ export default function GlobalAdminPanel({ currentUser }) {
   // Editing User Modal State
   const [editingUser, setEditingUser] = useState(null);
   const [editFullName, setEditFullName] = useState('');
+  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [uploadingUserPhoto, setUploadingUserPhoto] = useState(false);
   const [editRole, setEditRole] = useState('');
   const [editGroup, setEditGroup] = useState('');
   const [editLeader, setEditLeader] = useState('');
@@ -275,6 +302,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const openEditModal = (user) => {
     setEditingUser(user);
     setEditFullName(user.fullName || '');
+    setEditPhotoUrl(user.photoURL || '');
     setEditRole(user.role || 'scout');
     setEditGroup(user.groupId || '');
     setEditLeader(user.leaderId || '');
@@ -299,6 +327,7 @@ export default function GlobalAdminPanel({ currentUser }) {
       const ref = doc(db, 'users', editingUser.uid);
       const updates = {
         fullName: editFullName.trim(),
+        photoURL: editPhotoUrl || null,
         role: editRole,
         groupId: editGroup || null,
         patrolId: editGroup || null,
@@ -834,6 +863,56 @@ export default function GlobalAdminPanel({ currentUser }) {
             <h3 className="font-bold text-white text-base">Edit User Profile</h3>
             
             <form onSubmit={handleSaveEditUser} className="space-y-4">
+            <div className="flex items-center gap-4 p-3 bg-slate-900/60 rounded-xl border border-slate-750">
+              <div className="relative shrink-0">
+                {editPhotoUrl ? (
+                  <img src={editPhotoUrl} alt="Avatar" className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold text-slate-200 text-lg uppercase">
+                    {(editFullName || 'U').charAt(0)}
+                  </div>
+                )}
+                {uploadingUserPhoto && (
+                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white">
+                    <Loader2 size={16} className="animate-spin text-emerald-400" />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition inline-flex items-center gap-1.5 border border-slate-700">
+                  <Camera size={12} className="text-emerald-400" />
+                  <span>{uploadingUserPhoto ? 'Processing...' : (editPhotoUrl ? 'Change Photo' : 'Upload Photo')}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingUserPhoto}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      setUploadingUserPhoto(true);
+                      try {
+                        const compressed = await compressImage(file, 400, 400, 0.8);
+                        setEditPhotoUrl(compressed);
+                      } catch (err) {
+                        alert("Failed to process photo: " + err.message);
+                      } finally {
+                        setUploadingUserPhoto(false);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                {editPhotoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setEditPhotoUrl('')}
+                    className="text-[10px] text-red-400 hover:underline block cursor-pointer ml-1"
+                  >
+                    Remove photo
+                  </button>
+                )}
+              </div>
+            </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
                 <input
