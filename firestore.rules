@@ -3,9 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper: check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
     // Helper: check if user document exists
     function hasUserDoc() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     // Helper: fetch the calling user's Firestore profile
@@ -15,102 +20,81 @@ service cloud.firestore {
 
     // Helper: check if owner (super admin) using token email or document role
     function isOwner() {
-      return request.auth != null && 
+      return isAuthenticated() && 
         (request.auth.token.email == 'neoissa@gmail.com' ||
          (hasUserDoc() && (userDoc().role == 'owner' || userDoc().isOwner == true)));
     }
 
-    // Helper: check if scoutmaster
-    function isScoutmaster() {
-      return request.auth != null && 
-        hasUserDoc() &&
-        userDoc().role == 'leader' && 
-        userDoc().leaderPosition == 'Scoutmaster';
+    // Helper: check if leader
+    function isLeader() {
+      return isAuthenticated() && 
+        (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
     }
 
-    // Helper: check if assistant leader
-    function isAssistantLeader() {
-      return hasUserDoc() && 
-        userDoc().role == 'leader' && 
-        (userDoc().leaderPosition == 'Assistant Scoutmaster' || userDoc().leaderPosition == 'Assistant Leader');
-    }
-
-    // Users collection
+    // 1. Users collection
     match /users/{userId} {
-      allow read: if request.auth != null
-                  && (request.auth.uid == userId
-                      || isOwner()
-                      || isScoutmaster()
-                      || (hasUserDoc() && (
-                          userDoc().role == 'leader'
-                          || (userDoc().role == 'scout' && userId == userDoc().leaderId)
-                         )));
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isOwner();
 
-      allow create: if request.auth != null
-                    && (isOwner()
-                        || isScoutmaster()
-                        || (hasUserDoc() && userDoc().role == 'leader'
-                            && !isAssistantLeader()
-                            && request.resource.data.role == 'scout'
-                            && request.resource.data.leaderId == request.auth.uid));
-
-      allow update: if request.auth != null
-                    && (request.auth.uid == userId || isOwner() || isScoutmaster());
-
-      allow delete: if request.auth != null && isOwner();
-
-      match /private/secrets {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isOwner());
+      match /private/{docId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isOwner());
       }
     }
 
-    // Groups collection
+    // 2. Groups collection (Patrols)
     match /groups/{groupId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isOwner();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
-    // Scout progress: generic progress categories (ranks, merit badges, safety videos, etc.)
-    match /user_progress/{scoutId}/{progressType}/{docId} {
-      allow read, write: if request.auth != null
-                         && (request.auth.uid == scoutId
-                             || isOwner()
-                             || isScoutmaster()
-                             || (hasUserDoc() && userDoc().role == 'leader'
-                                 && exists(/databases/$(database)/documents/users/$(scoutId))
-                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
+    // 3. Scout progress & requirements (ranks, merit badges, islamic basics, assignments, etc.)
+    match /user_progress/{scoutId}/{document=**} {
+      allow read, write: if isAuthenticated();
     }
 
-    // Private leader notes
-    match /scout_notes/{scoutId} {
-      allow read, write: if request.auth != null
-                         && (isOwner()
-                             || isScoutmaster()
-                             || (hasUserDoc() && userDoc().role == 'leader'
-                                 && exists(/databases/$(database)/documents/users/$(scoutId))
-                                 && get(/databases/$(database)/documents/users/$(scoutId)).data.leaderId == request.auth.uid));
-    }
-
-    // Chat room messages scoped by roomId (GroupId or Tali3a)
-    match /chats/{roomId}/messages/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null 
-                    && request.resource.data.senderId == request.auth.uid;
-      allow delete: if request.auth != null 
-                    && (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
-      allow update: if false;
-    }
-
-    // Weekly Lesson Plans
+    // 4. Weekly Lesson Plans
     match /lesson_plans/{planId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
-    // Group Resources
+    // 5. Homework & Task Assignments
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 6. Planned Events & Troop Calendar
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 7. Group Resources & Video Links
     match /group_resources/{resourceId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 8. Private leader notes & logs
+    match /scout_notes/{scoutId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 9. Chat room messages (Patrol Messenger)
+    match /chats/{roomId}/messages/{messageId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 10. Service hours logs
+    match /service_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Fallback rule for any custom collections
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -39,6 +39,10 @@ export default function ScoutProfile({ currentUser }) {
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
+    if (!currentUser || !currentUser.uid) {
+      setLoading(false);
+      return;
+    }
     const loadProfile = async () => {
       try {
         const userRef = doc(db, 'users', currentUser.uid);

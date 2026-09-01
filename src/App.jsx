@@ -40,11 +40,11 @@ export default function App() {
               ...snap.data()
             });
           } else {
-            // Profile document doesn't exist yet (e.g. fresh admin login)
+            // Profile document doesn't exist yet
             const tempProfile = {
               uid: user.uid,
               email: user.email,
-              role: user.email === 'neoissa@gmail.com' ? 'owner' : 'leader',
+              role: user.email === 'neoissa@gmail.com' ? 'owner' : 'scout',
               isOwner: user.email === 'neoissa@gmail.com'
             };
             setCurrentUser(tempProfile);
@@ -72,7 +72,7 @@ export default function App() {
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = !isOwner && currentUser?.role === 'leader';
-  const isScout = !isOwner && (currentUser?.role === 'scout' || (!isOwner && !isLeader));
+  const isScout = !isOwner && !isLeader;
 
   // 2. Proactively promote neoissa@gmail.com to owner in the database on load
   useEffect(() => {
@@ -119,226 +119,102 @@ export default function App() {
     }
   }, [currentUser?.role, currentUser?.uid]);
 
-  const compressAndResizeImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 120;
-          const MAX_HEIGHT = 120;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const compressedBase64 = await compressAndResizeImage(file);
-      const userRef = doc(db, 'users', currentUser.uid);
-      await setDoc(userRef, { photoURL: compressedBase64 }, { merge: true });
-      console.log("Avatar updated successfully!");
-    } catch (err) {
-      console.error("Failed to upload profile picture:", err);
-      alert("Failed to update profile picture: " + err.message);
-    }
-  };
-
   const handleLogout = async () => {
-    await signOut(auth);
-    setCurrentUser(null);
+    try {
+      await signOut(auth);
+      setCurrentTab('');
+    } catch (err) {
+      console.error("Failed to sign out:", err);
+    }
   };
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
-        Signing in to Taliʿa Portal...
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-emerald-400 font-semibold text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading Dhulfiqār Scouts Portal...</span>
+        </div>
       </div>
     );
   }
 
   if (!currentUser) {
-    return <Login onUserAuthenticated={(user) => setCurrentUser(user)} />;
+    return <Login onLoginSuccess={(u) => setCurrentUser(u)} />;
   }
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col font-sans">
-      {/* Top Navbar */}
-      <header className="bg-slate-800/90 backdrop-blur border-b border-slate-700 px-6 py-4 sticky top-0 z-50 flex justify-between items-center print-hide">
-        <div>
-          <h1 className="text-xl font-bold text-emerald-400 font-sans tracking-wide">Taliʿa Scouting Portal</h1>
-          <p className="text-xs text-slate-400">
-            Logged in as <span className="text-white font-semibold">{currentUser.fullName || currentUser.email}</span>
-            {isOwner && (
-              <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 uppercase font-bold border border-amber-500/30">
-                Owner
-              </span>
-            )}
-            {isLeader && (
-              <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 uppercase font-bold border border-emerald-500/30">
-                Leader
-              </span>
-            )}
-            {isScout && (
-              <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300 uppercase font-bold border border-slate-600">
-                Scout
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Avatar with click-to-upload */}
-          <label className="relative group cursor-pointer shrink-0" title="Click to upload profile picture">
-            {currentUser.photoURL ? (
-              <img
-                src={currentUser.photoURL}
-                alt="Avatar"
-                className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/50 group-hover:border-emerald-400 transition"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold text-slate-200 group-hover:bg-slate-650 transition text-sm">
-                {(currentUser.fullName || currentUser.email || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
-            {/* Edit overlay */}
-            <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[9px] font-bold text-white leading-none text-center">
-              Edit
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          </label>
+  const roleLabel = isOwner ? 'Troop Owner / Superadmin' : isLeader ? (currentUser?.leaderPosition || 'Troop Leader') : 'Scout';
 
-          <button
-            onClick={handleLogout}
-            className="bg-slate-700 hover:bg-slate-600 text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
-          >
-            Sign Out
-          </button>
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+      {/* Top App Header */}
+      <header className="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-50 print-hide">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-950/40">
+              ⚜️
+            </div>
+            <div>
+              <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
+                <span>Dhulfiqār Scouts</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-semibold uppercase">
+                  v3.0
+                </span>
+              </h1>
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="text-emerald-400 font-semibold">{currentUser.fullName || currentUser.username || currentUser.email}</span>
+                <span>•</span>
+                <span className="capitalize text-slate-350">{roleLabel}</span>
+                {userGroupName && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-300 font-medium">{userGroupName} Patrol</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLogout}
+              className="text-xs bg-slate-700 hover:bg-red-600/80 hover:text-white text-slate-300 font-semibold px-3 py-1.5 rounded-xl border border-slate-650 transition cursor-pointer"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Navigation Sub-header */}
-      <div className="bg-slate-800/40 border-b border-slate-700/60 px-6 print-hide">
-        <div className="max-w-4xl mx-auto flex flex-wrap gap-x-6 gap-y-1">
+      {/* Navigation Tab Bar */}
+      <div className="bg-slate-850 border-b border-slate-750 overflow-x-auto print-hide scrollbar-none">
+        <div className="max-w-6xl mx-auto px-4 flex gap-1 sm:gap-2">
+          {/* ── OWNER NAVIGATION ── */}
           {isOwner && (
             <>
               <button
                 onClick={() => setCurrentTab('global-admin')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'global-admin'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Global Admin Panel
+                Global Admin
               </button>
               <button
                 onClick={() => setCurrentTab('group-manager')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'group-manager'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Group Manager
+                Organization Hub
               </button>
               <button
                 onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'roster'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Patrol Roster
-              </button>
-              <button
-                onClick={() => setCurrentTab('advancement')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'advancement'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Advancement Tracker
-              </button>
-              <button
-                onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
-              </button>
-              <button
-                onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Resources
-              </button>
-              <button
-                onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Islamic Knowledge
-              </button>
-              <button
-                onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                My Profile
-              </button>
-            </>
-          )}
-
-          {isLeader && (
-            <>
-              <button
-                onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'roster'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -348,7 +224,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('scouts')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'scouts'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -357,38 +233,28 @@ export default function App() {
                 Advancement Overview
               </button>
               <button
-                onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'chat'
+                onClick={() => setCurrentTab('assignments')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'assignments'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+                🎒 Homework & Tasks
               </button>
               <button
-                onClick={() => setCurrentTab('admin')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'admin'
+                onClick={() => setCurrentTab('events')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'events'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Add Requirement
-              </button>
-              <button
-                onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Resources
+                📅 Planned Events
               </button>
               <button
                 onClick={() => setCurrentTab('lesson-plans')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'lesson-plans'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -398,7 +264,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'islamic'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -407,53 +273,18 @@ export default function App() {
                 Islamic Knowledge
               </button>
               <button
-                onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                My Profile
-              </button>
-            </>
-          )}
-
-          {isScout && (
-            <>
-              <button
-                onClick={() => setCurrentTab('advancement')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'advancement'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                My 7 Ranks
-              </button>
-              <button
-                onClick={() => setCurrentTab('merit-badges')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
-                  currentTab === 'merit-badges'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                My Merit Badges
-              </button>
-              <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'chat'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+                Patrol Messenger
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'resources'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -463,7 +294,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'profile'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -471,9 +302,161 @@ export default function App() {
               >
                 My Profile
               </button>
+            </>
+          )}
+
+          {/* ── LEADER NAVIGATION ── */}
+          {isLeader && (
+            <>
+              <button
+                onClick={() => setCurrentTab('roster')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'roster'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Patrol Roster
+              </button>
+              <button
+                onClick={() => setCurrentTab('scouts')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'scouts'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Advancement Overview
+              </button>
+              <button
+                onClick={() => setCurrentTab('assignments')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'assignments'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🎒 Homework & Tasks
+              </button>
+              <button
+                onClick={() => setCurrentTab('events')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'events'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📅 Planned Events
+              </button>
+              <button
+                onClick={() => setCurrentTab('lesson-plans')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'lesson-plans'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Lesson Plans
+              </button>
               <button
                 onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'islamic'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Islamic Knowledge
+              </button>
+              <button
+                onClick={() => setCurrentTab('admin')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'admin'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Add Requirement
+              </button>
+              <button
+                onClick={() => setCurrentTab('chat')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'chat'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+              </button>
+              <button
+                onClick={() => setCurrentTab('resources')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'resources'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Resources
+              </button>
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'profile'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Profile
+              </button>
+            </>
+          )}
+
+          {/* ── SCOUT NAVIGATION ── */}
+          {isScout && (
+            <>
+              <button
+                onClick={() => setCurrentTab('advancement')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'advancement'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My 7 Ranks
+              </button>
+              <button
+                onClick={() => setCurrentTab('assignments')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'assignments'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🎒 My Homework
+              </button>
+              <button
+                onClick={() => setCurrentTab('merit-badges')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'merit-badges'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Merit Badges
+              </button>
+              <button
+                onClick={() => setCurrentTab('events')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'events'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📅 Upcoming Events
+              </button>
+              <button
+                onClick={() => setCurrentTab('islamic')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'islamic'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -483,7 +466,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('service-log')}
-                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'service-log'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -491,28 +474,58 @@ export default function App() {
               >
                 Service Log
               </button>
+              <button
+                onClick={() => setCurrentTab('chat')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'chat'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+              </button>
+              <button
+                onClick={() => setCurrentTab('resources')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'resources'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Resources
+              </button>
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'profile'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                My Profile
+              </button>
             </>
           )}
         </div>
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
         {currentTab === 'global-admin' && isOwner && <GlobalAdminPanel currentUser={currentUser} />}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
-        {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
-        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
-        {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
-        {currentTab === 'events' && <EventsManager currentUser={currentUser} />}
         {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
+        {currentTab === 'events' && <EventsManager currentUser={currentUser} />}
+        {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
+        {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
+        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-        {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
-        {currentTab === 'admin' && isLeader && <AdminPanel />}
+        {currentTab === 'scouts' && (isLeader || isOwner) && <ScoutList currentUser={currentUser} />}
+        {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
       </main>
     </div>
   );

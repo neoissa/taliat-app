@@ -137,8 +137,8 @@ export default function LessonPlans({ currentUser }) {
       content: planContent.trim(),
       islamicPrep: islamicPrep.trim(),
       resources: cleanResources,
-      updatedBy: currentUser.uid,
-      updatedByName: currentUser.fullName || currentUser.username,
+      updatedBy: currentUser?.uid || 'leader',
+      updatedByName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
       updatedAt: serverTimestamp()
     };
 
