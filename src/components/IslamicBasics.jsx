@@ -35,7 +35,11 @@ import {
   Send,
   RotateCcw,
   AlertCircle,
-  Zap
+  Zap,
+  ExternalLink,
+  ArrowRight,
+  Filter,
+  CheckCheck
 } from 'lucide-react';
 
 const USUL_AL_DIN = [
@@ -247,7 +251,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
   // Determine active target scout ID
   const targetScoutId = propScoutId || (isLeaderOrOwner ? (selectedLeaderScoutId || currentUser?.uid) : currentUser?.uid);
   
-  // Navigation tabs: 'karbala' | 'duas' | 'infallibles' | 'tracker' | 'roots' | 'branches'
+  // Navigation tabs: 'karbala' | 'duas' | 'infallibles' | 'roots' | 'branches' | 'tracker' | 'pending_tests'
   const [activeTab, setActiveTab] = useState('karbala');
   
   // Search & filter states
@@ -396,11 +400,109 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
     }
   };
 
-  // Total calculation across curriculum
+  // ── BUILD MASTER REGISTRY OF ALL ISLAMIC MODULE ITEMS ──
+  const allCurriculumRegistry = [
+    ...KARBALA_CHARACTERS_DATA.map(c => ({
+      id: `karbala_${c.id}`,
+      rawId: c.id,
+      title: c.name,
+      subtitle: c.title,
+      category: '⚔️ Karbala Heroes',
+      sectionTab: 'karbala',
+      testPrompt: `Ask scout about ${c.name}'s key heroic stand at Karbala and 2 character lessons for scouts.`,
+      summary: c.summary
+    })),
+    ...TAQIBAT_AND_DUAS_DATA.map(d => ({
+      id: `dua_${d.id}`,
+      rawId: d.id,
+      title: d.name,
+      subtitle: d.timing,
+      category: '🤲 Sacred Du\'as & Ta\'qibat',
+      sectionTab: 'duas',
+      testPrompt: `Listen to scout's oral recitation of ${d.name} and verify understanding of key meanings.`,
+      summary: d.significance
+    })),
+    ...INFALLIBLES_FULL_BIOGRAPHIES.map(inf => ({
+      id: `infallible_${inf.id}`,
+      rawId: inf.id,
+      title: inf.name,
+      subtitle: `${inf.arabic} (${inf.title})`,
+      category: '👑 14 Infallibles Biographies',
+      sectionTab: 'infallibles',
+      testPrompt: `Ask scout: When and where was ${inf.name} born, who was their mother, and what was their primary historic contribution?`,
+      summary: inf.lifeSummary
+    })),
+    ...USUL_AL_DIN.map(r => ({
+      id: r.id,
+      rawId: r.id,
+      title: r.name,
+      subtitle: r.arabic,
+      category: '🌳 Usul al-Din (Roots of Faith)',
+      sectionTab: 'roots',
+      testPrompt: r.testPrompt,
+      summary: r.description
+    })),
+    ...FURU_AL_DIN.map(b => ({
+      id: b.id,
+      rawId: b.id,
+      title: b.name,
+      subtitle: b.arabic,
+      category: '🌿 Furu\' al-Din (Branches of Practice)',
+      sectionTab: 'branches',
+      testPrompt: b.testPrompt,
+      summary: b.details
+    })),
+    ...ISLAMIC_BASICS_TOPICS.map(t => ({
+      id: t.id,
+      rawId: t.id,
+      title: t.title,
+      subtitle: t.category,
+      category: `📜 ${t.category}`,
+      sectionTab: 'tracker',
+      testPrompt: `Test scout on the core definitions and practical application of ${t.title}.`,
+      summary: t.text
+    }))
+  ];
+
+  // Calculate pending items specifically for this active scout
+  const pendingItemsForScout = allCurriculumRegistry.filter(item => {
+    const p = progress[item.id] || progress[item.rawId] || {};
+    return p.pending && !p.completed;
+  });
+
   const totalTopics = ISLAMIC_BASICS_TOPICS.length;
   const completedTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.completed).length;
-  const pendingTopicsCount = Object.values(progress).filter(p => p.pending && !p.completed).length;
+  const pendingCount = pendingItemsForScout.length;
   const progressPercent = totalTopics > 0 ? Math.round((completedTopicsCount / totalTopics) * 100) : 0;
+
+  // Batch approve all pending for leader
+  const handleBatchApproveAllPending = async () => {
+    if (!targetScoutId || pendingItemsForScout.length === 0) return;
+    if (!window.confirm(`Approve and sign off all ${pendingItemsForScout.length} pending tests for this scout?`)) return;
+
+    const dateVal = new Date().toISOString().split('T')[0];
+    const updateMap = {};
+
+    pendingItemsForScout.forEach(item => {
+      updateMap[item.id] = {
+        completed: true,
+        pending: false,
+        completedDate: dateVal,
+        approvedBy: currentUser?.uid || 'leader',
+        approvedByName: currentUser?.fullName || currentUser?.username || 'Troop Leader'
+      };
+    });
+
+    setProgress(prev => ({ ...prev, ...updateMap }));
+    showFeedback(`✓ Approved all ${pendingItemsForScout.length} pending tests!`);
+
+    try {
+      const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
+      await setDoc(docRef, updateMap, { merge: true });
+    } catch (err) {
+      console.error("Batch approve error:", err);
+    }
+  };
 
   // Filtered lists
   const filteredTopics = ISLAMIC_BASICS_TOPICS.filter(topic => {
@@ -431,6 +533,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
   });
 
   const selectedScoutObj = allScouts.find(s => s.uid === targetScoutId);
+  const targetScoutName = selectedScoutObj ? (selectedScoutObj.fullName || selectedScoutObj.username) : (currentUser?.fullName || currentUser?.username || 'Scout');
 
   return (
     <div className="space-y-6">
@@ -450,21 +553,43 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
               <span>Islamic Knowledge & Karbala Testing Portal</span>
             </h2>
             <p className="text-slate-300 text-xs mt-1 max-w-2xl leading-relaxed">
-              Every section is an interactive test module. Scouts study and confirm their mastery, submit to troop leaders/assistants, and undergo oral/knowledge testing to earn sign-offs!
+              Every section is an interactive test module. Scouts study and confirm mastery, submit to leaders/assistants, and undergo testing. Click <strong>"Pending Tests"</strong> to jump directly to this scout's testing queue!
             </p>
           </div>
 
-          {/* Quick Progress Badge */}
-          <div className="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 shrink-0 flex items-center gap-4">
-            <div className="text-center">
-              <span className="text-xs text-slate-400 font-semibold block uppercase">Mastered</span>
-              <span className="text-2xl font-black text-emerald-400">{completedTopicsCount}/{totalTopics}</span>
-            </div>
+          {/* Interactive Quick Progress Badge */}
+          <div className="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-4 shrink-0 flex items-center gap-4 shadow-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab('tracker')}
+              className="text-center group cursor-pointer p-1.5 rounded-xl hover:bg-slate-800 transition"
+              title="Click to view full curriculum tracker"
+            >
+              <span className="text-xs text-slate-400 font-semibold block uppercase group-hover:text-emerald-300">Mastered</span>
+              <span className="text-2xl font-black text-emerald-400 group-hover:scale-105 transition">{completedTopicsCount}/{totalTopics}</span>
+            </button>
+
             <div className="h-10 w-[1px] bg-slate-750"></div>
-            <div className="text-center">
-              <span className="text-xs text-slate-400 font-semibold block uppercase">Pending Tests</span>
-              <span className="text-2xl font-black text-amber-400">{pendingTopicsCount}</span>
-            </div>
+
+            {/* ── CLICKABLE PENDING TESTS BADGE ── */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('pending_tests')}
+              className={`text-center group cursor-pointer p-2 rounded-xl transition ${
+                activeTab === 'pending_tests'
+                  ? 'bg-amber-500/20 border border-amber-500/50 shadow-md ring-1 ring-amber-400'
+                  : 'hover:bg-slate-800'
+              }`}
+              title="Click to view and maneuver to all pending tests for this scout"
+            >
+              <span className="text-xs text-amber-300 font-bold block uppercase group-hover:underline flex items-center gap-1 justify-center">
+                <span>Pending Tests</span>
+                {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>}
+              </span>
+              <span className={`text-2xl font-black block ${pendingCount > 0 ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`}>
+                {pendingCount}
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -481,7 +606,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                 Testing & Reviewing Scout Knowledge
               </label>
               <span className="text-sm font-extrabold text-white">
-                {selectedScoutObj ? (selectedScoutObj.fullName || selectedScoutObj.username) : 'Select Scout'}
+                {targetScoutName}
               </span>
             </div>
           </div>
@@ -513,6 +638,21 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
 
       {/* Main Navigation Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-750 pb-2">
+        {/* Pending Tests Queue Tab */}
+        <button
+          onClick={() => setActiveTab('pending_tests')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            activeTab === 'pending_tests'
+              ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-950/40 font-black ring-2 ring-amber-400'
+              : pendingCount > 0
+              ? 'bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/40'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Clock size={15} className={activeTab === 'pending_tests' ? 'text-slate-950' : 'text-amber-400'} />
+          <span>⏳ Pending Tests Queue ({pendingCount})</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('karbala')}
           className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
@@ -585,6 +725,134 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           <span>📊 Master Curriculum Tracker</span>
         </button>
       </div>
+
+      {/* ──────────────── TAB 0: PENDING TESTS REVIEW QUEUE ──────────────── */}
+      {activeTab === 'pending_tests' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-gradient-to-r from-amber-950/60 via-slate-800 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 shadow-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Testing Review Queue
+                  </span>
+                  <span className="text-xs text-amber-300 font-bold">
+                    Scout: {targetScoutName}
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-white flex items-center gap-2">
+                  <Clock className="text-amber-400" size={22} />
+                  <span>Pending Tests for {targetScoutName} ({pendingCount})</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Showing all topics that this scout has studied, confirmed, and submitted for testing. Review oral testing prompts, conduct exams, or maneuver directly to the source module for full study notes!
+                </p>
+              </div>
+
+              {isLeaderOrOwner && pendingCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBatchApproveAllPending}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 shrink-0"
+                >
+                  <CheckCheck size={16} />
+                  <span>1-Click Approve All Pending ({pendingCount})</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Pending Items List */}
+          {pendingCount === 0 ? (
+            <div className="bg-slate-800/60 border border-slate-700 rounded-3xl p-12 text-center space-y-3">
+              <CheckCircle2 size={48} className="mx-auto text-emerald-400 opacity-60" />
+              <h4 className="text-base font-extrabold text-white">All Caught Up! No Pending Tests</h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                {targetScoutName} does not have any pending test submissions right now. Browse other curriculum sections or pick another scout to review.
+              </p>
+              <div className="pt-3 flex justify-center gap-2">
+                <button
+                  onClick={() => setActiveTab('karbala')}
+                  className="bg-slate-700 hover:bg-slate-650 text-amber-300 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+                >
+                  Explore Karbala Heroes
+                </button>
+                <button
+                  onClick={() => setActiveTab('duas')}
+                  className="bg-slate-700 hover:bg-slate-650 text-emerald-300 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+                >
+                  Explore Sacred Du'as
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingItemsForScout.map((item) => {
+                const prog = progress[item.id] || progress[item.rawId] || {};
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-slate-800 border-2 border-amber-500/40 rounded-3xl p-5 shadow-xl space-y-3 transition hover:border-amber-400"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full">
+                            {item.category}
+                          </span>
+                          {prog.submittedDate && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Submitted: {prog.submittedDate}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-base font-black text-white flex items-center gap-2">
+                          <span>{item.title}</span>
+                          {item.subtitle && <span className="text-xs text-slate-400 font-serif italic">{item.subtitle}</span>}
+                        </h4>
+                      </div>
+
+                      {/* Maneuver to Section Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(item.sectionTab);
+                          if (item.sectionTab === 'karbala') setSelectedKarbalaChar(item.rawId);
+                          if (item.sectionTab === 'infallibles') setSelectedInfallible(item.rawId);
+                          if (item.sectionTab === 'tracker') setExpandedTopic(item.rawId);
+                        }}
+                        className="bg-slate-700/80 hover:bg-slate-700 text-amber-300 hover:text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-slate-600 shrink-0 cursor-pointer"
+                      >
+                        <span>Open Full Section & Notes</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+
+                    {item.summary && (
+                      <p className="text-xs text-slate-300 leading-relaxed font-sans bg-slate-900/40 p-3 rounded-xl border border-slate-750">
+                        {item.summary}
+                      </p>
+                    )}
+
+                    {/* Integrated Testing Bar */}
+                    <IslamicTestingBar
+                      itemId={item.id}
+                      itemTitle={item.title}
+                      progressEntry={prog}
+                      onToggleSubmitScout={handleToggleSubmitScout}
+                      onApproveLeader={handleApproveLeader}
+                      onReset={handleReset}
+                      isLeaderOrOwner={isLeaderOrOwner}
+                      isScout={isScout}
+                      testPrompt={item.testPrompt}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ──────────────── TAB 1: KARBALA HEROES & CHARACTERS ──────────────── */}
       {activeTab === 'karbala' && (

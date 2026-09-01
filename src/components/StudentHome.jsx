@@ -27,17 +27,21 @@ import {
   Compass,
   Heart,
   MapPin,
-  Check
+  Check,
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
 import { RANKS_DATA } from '../data/ranksData';
+import { MERIT_BADGES } from '../data/meritBadges';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
   const [serviceHours, setServiceHours] = useState(0);
+  const [eagleData, setEagleData] = useState({});
   const [loading, setLoading] = useState(true);
 
   const scoutUid = currentUser?.uid;
@@ -104,10 +108,27 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     return () => unsub();
   }, [scoutUid]);
 
+  // 5. Subscribe to Road to Eagle data
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(doc(db, 'user_progress', scoutUid, 'road_to_eagle', 'data'), (snap) => {
+      if (snap.exists()) {
+        setEagleData(snap.data());
+      }
+    }, (err) => console.warn("Eagle progress listener fallback:", err));
+    return () => unsub();
+  }, [scoutUid]);
+
   const activeRank = currentUser?.rank || 'Scout';
 
+  // Calculate Eagle progress quick metrics
+  const eagleRequiredCount = eagleData?.meritBadgesSummary?.eagleRequiredCount || 0;
+  const projectStage = eagleData?.eagleProject?.stage || 'proposal';
+  const projectDone = !!(eagleData?.eagleProject?.workbookCompleted && eagleData?.eagleProject?.districtApproval);
+  const totalPalms = eagleData?.eaglePalms?.totalPalms || 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* ── 1. WELCOME HERO CARD ── */}
       <div className="bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border border-emerald-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
         {/* Background decorative watermark */}
@@ -140,17 +161,23 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <span className="text-amber-400">⚜️</span>
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Welcome to your official Dhulfiqār scouting headquarters. Complete missions, earn merit badges, log service hours, and advance your rank!
+                Welcome to your official Dhulfiqār scouting headquarters. Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle!
               </p>
             </div>
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-wrap gap-2.5 shrink-0">
+            <button
+              onClick={() => onNavigate && onNavigate('road-to-eagle')}
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+            >
+              <span>🦅 Road to Eagle Portal</span>
+            </button>
             <button
               onClick={() => onNavigate && onNavigate('advancement')}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02]"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5"
             >
-              <Award size={16} />
+              <Award size={15} />
               <span>⚜️ My 7 Ranks</span>
             </button>
           </div>
@@ -179,7 +206,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             <div>
               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Merit Badges</span>
               <strong className="text-sm font-black text-amber-400 block">
-                {meritBadgesCount} Earned
+                {meritBadgesCount} / 21 Earned
               </strong>
             </div>
           </div>
@@ -197,25 +224,63 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
 
-          {/* BSA ID */}
-          <div className="bg-slate-900/70 border border-slate-700/70 p-3.5 rounded-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
-              <Shield size={20} />
+          {/* Road to Eagle Quick Stat */}
+          <div 
+            onClick={() => onNavigate && onNavigate('road-to-eagle')}
+            className="bg-slate-900/70 border border-amber-500/40 p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-amber-400 transition"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 text-xl">
+              🦅
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">BSA Member ID</span>
-              <strong className="text-xs font-mono text-slate-200 block truncate">
-                {currentUser?.bsaId || '—'}
+              <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Road to Eagle</span>
+              <strong className="text-xs font-bold text-slate-200 block truncate">
+                {projectDone ? '✓ Project Done' : 'Open Portal ➔'}
               </strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── 2. SCOUT HOMEWORK & DUE TASKS (VIDEOS & WORKSHEETS) ── */}
+      {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl shrink-0 shadow-md">
+              🦅
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Eagle Scout Portal
+                </span>
+                <span className="text-xs text-amber-300 font-bold">
+                  BSA Milestone Journey
+                </span>
+              </div>
+              <h3 className="text-base font-black text-white">
+                Road to Eagle Scout & Eagle Palms Portal
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Track your 6-month Life tenure, qualifying leadership, 21 merit badges, Eagle project, 6 references, and Eagle Palms.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate && onNavigate('road-to-eagle')}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shrink-0 self-start sm:self-center"
+          >
+            <span>Launch Eagle Portal</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── 3. SCOUT HOMEWORK & DUE TASKS (VIDEOS & WORKSHEETS) ── */}
       <AssignmentsManager currentUser={currentUser} scoutId={currentUser?.uid} isEmbeddedInProfile={false} />
 
-      {/* ── 3. UPCOMING PLANNED EVENTS & ACTIONS ── */}
+      {/* ── 4. UPCOMING PLANNED EVENTS & ACTIONS ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left: Upcoming Events */}
         <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
@@ -283,7 +348,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           )}
         </div>
 
-        {/* Right: Quick Action Hub */}
+        {/* Right: Quick Action Hub with Road to Eagle as top standalone card */}
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3">
           <h3 className="font-extrabold text-white text-sm border-b border-slate-750 pb-3 flex items-center gap-2">
             <Sparkles className="text-emerald-400" size={16} />
@@ -291,6 +356,26 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </h3>
 
           <div className="space-y-2">
+            {/* ── STANDALONE ROAD TO EAGLE HUB TAB ── */}
+            <button
+              onClick={() => onNavigate && onNavigate('road-to-eagle')}
+              className="w-full text-left p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 hover:from-amber-900/60 border-2 border-amber-500/60 hover:border-amber-400 transition flex items-center justify-between cursor-pointer group shadow-lg shadow-amber-950/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl group-hover:scale-110 transition shrink-0">
+                  🦅
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-black text-xs text-amber-300 group-hover:text-amber-200 transition">Road to Eagle & Palms</h4>
+                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded-full font-black uppercase">Top Goal</span>
+                  </div>
+                  <p className="text-[10px] text-slate-350">Life tenure, leadership, 21 badges, project & palms</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-amber-400 group-hover:translate-x-1 transition" />
+            </button>
+
             <button
               onClick={() => onNavigate && onNavigate('advancement')}
               className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-emerald-500/50 transition flex items-center justify-between cursor-pointer group"
