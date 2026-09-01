@@ -72,13 +72,17 @@ const RANK_COLORS = {
   },
 };
 
-export default function AdvancementTracker({ currentUser, scoutId: customScoutId, readOnly = false }) {
+export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false }) {
   const [selectedScoutId, setSelectedScoutId] = useState('');
   const [scoutsList, setScoutsList] = useState([]);
   
-  const isLeaderOrOwner = currentUser.role === 'leader' || currentUser.role === 'owner';
-  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
-  const scoutId = customScoutId || (isLeaderOrOwner ? selectedScoutId : currentUser.uid);
+  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
+  const isLeader = currentUser?.role === 'leader';
+  const isLeaderOrOwner = isOwner || isLeader;
+  const isScoutmaster = isLeader && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantLeader = isLeader && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
+  const isScout = currentUser?.role === 'scout' || (!isLeaderOrOwner && currentUser?.uid);
+  const scoutId = customScoutId || (isLeaderOrOwner ? (selectedScoutId || currentUser?.uid) : currentUser?.uid);
 
   const [selectedRankId, setSelectedRankId] = useState('scout');
   const [allRanksProgress, setAllRanksProgress] = useState({});
@@ -170,9 +174,9 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       date: newNoteDate || new Date().toISOString().split('T')[0],
       category: newNoteCategory || 'General Note',
       text: newNoteText.trim(),
-      authorId: currentUser.uid,
-      authorName: currentUser.fullName || currentUser.username || currentUser.email || 'Scout',
-      authorRole: currentUser.role || 'scout',
+      authorId: currentUser?.uid || '',
+      authorName: currentUser?.fullName || currentUser?.username || currentUser?.email || 'Scout',
+      authorRole: currentUser?.role || 'scout',
       createdAt: new Date().toISOString()
     };
 
@@ -212,8 +216,8 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       const scouts = allUsers.filter(u => {
         if (u.role !== 'scout') return false;
-        if (currentUser.role === 'owner' || isScoutmaster) return true;
-        return u.leaderId === currentUser.uid;
+        if (isOwner || isScoutmaster) return true;
+        return u.leaderId === currentUser?.uid || (currentUser?.groupId && u.groupId === currentUser?.groupId);
       });
       setScoutsList(scouts);
       if (scouts.length > 0 && !selectedScoutId) {
@@ -224,7 +228,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, customScoutId, currentUser.role, currentUser.uid, isScoutmaster]);
+  }, [isLeaderOrOwner, customScoutId, currentUser?.role, currentUser?.uid, currentUser?.groupId, isOwner, isScoutmaster]);
 
   // Listen to all rank progress documents in real-time
   useEffect(() => {
@@ -266,6 +270,12 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     return sum + cat.requirements.filter((r) => completedRequirements[r.id]?.pending && !completedRequirements[r.id]?.completed).length;
   }, 0);
   const percentage = totalRequirements > 0 ? Math.round((completedCount / totalRequirements) * 100) : 0;
+
+  // Total pending approvals across ALL 8 ranks for this scout
+  const totalPendingAcrossAllRanks = Object.values(allRanksProgress).reduce((acc, rankDoc) => {
+    const reqs = rankDoc?.completedRequirements || {};
+    return acc + Object.values(reqs).filter(r => r?.pending && !r?.completed).length;
+  }, 0);
 
   // Scout toggles requirement -> submits to leader (yellow pending) or cancels submission
   const handleToggleRequirementScout = async (reqId) => {
@@ -698,6 +708,25 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
         </div>
       )}
 
+      {/* Approvals Notification Banner for Leader */}
+      {isLeaderOrOwner && totalPendingAcrossAllRanks > 0 && (
+        <div className="bg-amber-950/40 border border-amber-500/50 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-lg shadow-amber-950/20 print-hide">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Clock size={16} className="animate-pulse" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-amber-300">
+                {totalPendingAcrossAllRanks} Requirement{totalPendingAcrossAllRanks !== 1 ? 's' : ''} Awaiting Sign-off for {scoutData?.fullName || scoutData?.username || 'this scout'}
+              </h4>
+              <p className="text-[11px] text-amber-200/80">
+                Rank tabs with pending submissions are highlighted with amber badges below.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ranks Tabs Bar */}
       <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-700/60 print-hide">
         {RANKS_DATA.map((rank) => {
@@ -709,6 +738,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
           const rComp = rProg.completedRequirements || {};
           const rTotal = rank.categories.reduce((sum, c) => sum + c.requirements.length, 0);
           const rDone = rank.categories.reduce((sum, c) => sum + c.requirements.filter((r) => rComp[r.id]?.completed).length, 0);
+          const rPending = rank.categories.reduce((sum, c) => sum + c.requirements.filter((r) => rComp[r.id]?.pending && !rComp[r.id]?.completed).length, 0);
           const rPct = rTotal > 0 ? Math.round((rDone / rTotal) * 100) : 0;
 
           return (
@@ -718,6 +748,8 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                 isActive
                   ? rankColor.active
+                  : rPending > 0
+                  ? 'bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/40'
                   : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
               }`}
             >
@@ -726,6 +758,11 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
               <span className={`text-[10px] px-1 rounded font-mono ${isActive ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'}`}>
                 {rPct}%
               </span>
+              {rPending > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500 text-slate-950 flex items-center gap-0.5 animate-pulse" title={`${rPending} pending approval`}>
+                  <Clock size={9} /> {rPending}
+                </span>
+              )}
             </button>
           );
         })}

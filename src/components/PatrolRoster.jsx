@@ -19,7 +19,7 @@ import ServiceLogs from './ServiceLogs';
 import IslamicBasics from './IslamicBasics';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2 } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell } from 'lucide-react';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -688,8 +688,8 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   );
 }
 
-export default function PatrolRoster({ currentUser }) {
-  const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
+export default function PatrolRoster({ currentUser = {} }) {
+  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const [activeGroupTab, setActiveGroupTab] = useState('all');
   const [rosterSubTab, setRosterSubTab] = useState('scouts');
   const [scouts, setScouts] = useState([]);
@@ -712,9 +712,11 @@ export default function PatrolRoster({ currentUser }) {
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState('');
   const [addError, setAddError] = useState('');
-  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
-  const isAssistantLeader = currentUser.role === 'leader' && (currentUser.leaderPosition === 'Assistant Scoutmaster' || currentUser.leaderPosition === 'Assistant Leader');
-  const canAddOrDeleteScouts = (isOwner || isScoutmaster || currentUser.role === 'leader') && !isAssistantLeader;
+  const [pendingApprovalsMap, setPendingApprovalsMap] = useState({}); // { [scoutUid]: { ranks: number, merit: number, total: number } }
+
+  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantLeader = currentUser?.role === 'leader' && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
+  const canAddOrDeleteScouts = (isOwner || isScoutmaster || currentUser?.role === 'leader') && !isAssistantLeader;
 
   useEffect(() => {
     const q = (isOwner || isScoutmaster)
@@ -725,12 +727,81 @@ export default function PatrolRoster({ currentUser }) {
       let list = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
       if (!isOwner && !isScoutmaster) {
         // Filter by assigned leaderId OR matching patrol groupId
-        list = list.filter(s => s.leaderId === currentUser.uid || (currentUser.groupId && s.groupId === currentUser.groupId));
+        list = list.filter(s => s.leaderId === currentUser?.uid || (currentUser?.groupId && s.groupId === currentUser?.groupId));
       }
       setScouts(list);
+    }, (err) => {
+      console.error("Error listening to scouts in roster:", err);
     });
     return () => unsub();
-  }, [currentUser.uid, currentUser.role, currentUser.email, currentUser.leaderPosition, currentUser.groupId, isOwner, isScoutmaster]);
+  }, [currentUser?.uid, currentUser?.role, currentUser?.email, currentUser?.leaderPosition, currentUser?.groupId, isOwner, isScoutmaster]);
+
+  // Subscribe to real-time pending approvals count for all visible scouts
+  useEffect(() => {
+    if (scouts.length === 0) {
+      setPendingApprovalsMap({});
+      return;
+    }
+
+    const unsubs = [];
+    scouts.forEach((scout) => {
+      // 1. Listen to ranks progress
+      const ranksRef = collection(db, 'user_progress', scout.uid, 'ranks');
+      const unsubRanks = onSnapshot(ranksRef, (snap) => {
+        let count = 0;
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const reqs = data.completedRequirements || {};
+          Object.values(reqs).forEach((r) => {
+            if (r?.pending && !r?.completed) count++;
+          });
+        });
+        setPendingApprovalsMap((prev) => {
+          const prevScout = prev[scout.uid] || { merit: 0 };
+          return {
+            ...prev,
+            [scout.uid]: {
+              ...prevScout,
+              ranks: count,
+              total: count + (prevScout.merit || 0)
+            }
+          };
+        });
+      }, (err) => console.error("Error loading scout ranks pending:", err));
+      unsubs.push(unsubRanks);
+
+      // 2. Listen to merit badges progress
+      const meritRef = collection(db, 'user_progress', scout.uid, 'merit_badges');
+      const unsubMerit = onSnapshot(meritRef, (snap) => {
+        let count = 0;
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const steps = data.completedSteps || {};
+          Object.values(steps).forEach((s) => {
+            if (s?.pending && !s?.approved) count++;
+          });
+        });
+        setPendingApprovalsMap((prev) => {
+          const prevScout = prev[scout.uid] || { ranks: 0 };
+          return {
+            ...prev,
+            [scout.uid]: {
+              ...prevScout,
+              merit: count,
+              total: (prevScout.ranks || 0) + count
+            }
+          };
+        });
+      }, (err) => console.error("Error loading scout merit pending:", err));
+      unsubs.push(unsubMerit);
+    });
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [scouts]);
+
+  const totalApprovalsNeeded = Object.values(pendingApprovalsMap).reduce((sum, item) => sum + (item?.total || 0), 0);
 
   useEffect(() => {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
@@ -865,15 +936,42 @@ export default function PatrolRoster({ currentUser }) {
         )}
       </div>
 
+      {/* Approvals Needed Notification Banner */}
+      {totalApprovalsNeeded > 0 && (
+        <div className="bg-amber-950/40 border border-amber-500/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold shrink-0">
+              <Bell size={20} className="animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                <span>{totalApprovalsNeeded} Approval{totalApprovalsNeeded !== 1 ? 's' : ''} Needed</span>
+                <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+                  Action Required
+                </span>
+              </h4>
+              <p className="text-xs text-amber-200/80">
+                Scouts in your patrol have submitted rank requirements or merit badges awaiting leader review.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Directory Sub-tabs */}
       <div className="flex gap-4 border-b border-slate-700/60 pb-1">
         <button
           onClick={() => setRosterSubTab('scouts')}
-          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer ${
+          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer flex items-center gap-2 ${
             rosterSubTab === 'scouts' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Scouts Roster
+          <span>Scouts Roster</span>
+          {totalApprovalsNeeded > 0 && (
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-500 text-slate-950 animate-pulse">
+              {totalApprovalsNeeded}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setRosterSubTab('leaders')}
@@ -1108,7 +1206,14 @@ export default function PatrolRoster({ currentUser }) {
                         <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
                       </div>
                     </div>
-                    <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
+                    <div className="flex items-center gap-3">
+                      {pendingApprovalsMap[scout.uid]?.total > 0 && (
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                          <Clock size={11} /> {pendingApprovalsMap[scout.uid].total} Needs Approval
+                        </span>
+                      )}
+                      <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
+                    </div>
                   </button>
 
                   {expanded === scout.uid && (
@@ -1137,7 +1242,7 @@ export default function PatrolRoster({ currentUser }) {
                             {scout.parentPhone && (
                               <button
                                 onClick={(e) => {
-                                  e.preventDefault();
+                                  e.stopPropagation();
                                   setActiveWhatsappPhone(scout.parentPhone);
                                   setActiveWhatsappName(`${scout.fullName || scout.username}'s Parent`);
                                 }}
@@ -1155,9 +1260,14 @@ export default function PatrolRoster({ currentUser }) {
 
                       <button
                         onClick={() => setSelected(scout)}
-                        className="mt-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                        className="mt-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
                       >
-                        Open Granular Portal & Notes &rarr;
+                        <span>Open Granular Portal & Notes &rarr;</span>
+                        {pendingApprovalsMap[scout.uid]?.total > 0 && (
+                          <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] font-black">
+                            {pendingApprovalsMap[scout.uid].total} Pending
+                          </span>
+                        )}
                       </button>
                     </div>
                   )}
@@ -1196,7 +1306,7 @@ export default function PatrolRoster({ currentUser }) {
                 </div>
 
                 <div className="px-5 pb-4 border-t border-slate-700/60 pt-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-355 col-span-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300 col-span-full">
                     <div>
                       <span className="text-slate-500 block uppercase text-[9px] font-bold">Email Address</span>
                       <span className="font-semibold text-slate-200 truncate block max-w-[200px]" title={lead.scoutEmail || lead.email}>
@@ -1204,24 +1314,9 @@ export default function PatrolRoster({ currentUser }) {
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-555 block uppercase text-[9px] font-bold text-slate-500">Phone Number</span>
+                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Phone Number</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="font-semibold text-slate-200">{lead.scoutPhone || '—'}</span>
-                        {lead.scoutPhone && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setActiveWhatsappPhone(lead.scoutPhone);
-                              setActiveWhatsappName(lead.fullName || lead.username);
-                            }}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
-                            title="Chat on WhatsApp"
-                          >
-                            <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
-                            </svg>
-                          </button>
-                        )}
                       </div>
                     </div>
                     <div>
@@ -1230,16 +1325,6 @@ export default function PatrolRoster({ currentUser }) {
                         <span className="font-semibold text-slate-200">
                           {lead.spt ? `Done: ${lead.spt}` : '—'}
                         </span>
-                        {lead.sptFileUrl && (
-                          <a
-                            href={lead.sptFileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded transition cursor-pointer"
-                          >
-                            View Cert
-                          </a>
-                        )}
                       </div>
                     </div>
                   </div>
