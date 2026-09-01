@@ -5,6 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { User, Mail, Phone, Lock, Shield, Image as ImageIcon, Check, Trash2, ExternalLink, Camera, Loader2 } from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
+import RoadToEagleTracker from './RoadToEagleTracker';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -62,6 +63,7 @@ export default function ScoutProfile({ currentUser }) {
   const [sptFileName, setSptFileName] = useState('');
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
+  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'eagle' | 'homework' | 'spt' | 'security'
   
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -430,221 +432,303 @@ export default function ScoutProfile({ currentUser }) {
         </div>
       </div>
 
-      {/* ── SCOUT HOMEWORK & ASSIGNED TASKS (Scout view only) ── */}
-      {currentUser.role === 'scout' && (
-        <AssignmentsManager currentUser={currentUser} scoutId={currentUser.uid} isEmbeddedInProfile={true} />
+      
+      {/* ── PROFILE SUB-NAVIGATION TABS ── */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-750 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('personal')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'personal'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <User size={15} />
+          <span>👤 Personal Info</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('eagle')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'eagle'
+              ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <span className="text-base">🦅</span>
+          <span>Road to Eagle & Palms</span>
+        </button>
+
+        {currentUser.role === 'scout' && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('homework')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'homework'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <span className="text-base">🎒</span>
+            <span>My Homework & Quests</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('spt')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'spt'
+              ? 'bg-teal-600 text-white shadow-lg shadow-teal-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Shield size={15} />
+          <span>SPT Certificate</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('security')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'security'
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Lock size={15} />
+          <span>Security & Password</span>
+        </button>
+      </div>
+
+      
+      {/* ── TAB 1: ROAD TO EAGLE & PALMS ── */}
+      {activeProfileTab === 'eagle' && (
+        <RoadToEagleTracker currentUser={currentUser} scoutId={currentUser.uid} />
       )}
 
-      {/* Feedback Alerts */}
-      {profileSuccess && (
-        <div className="bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs font-bold p-3 rounded-xl shadow-lg animate-fadeIn">
-          {profileSuccess}
-        </div>
-      )}
-      {profileError && (
-        <div className="bg-red-950/80 border border-red-500 text-red-300 text-xs font-bold p-3 rounded-xl shadow-lg animate-fadeIn">
-          {profileError}
-        </div>
+      {/* ── TAB 2: SCOUT HOMEWORK & ASSIGNED TASKS ── */}
+      {activeProfileTab === 'homework' && currentUser.role === 'scout' && (
+        <AssignmentsManager currentUser={currentUser} scoutId={currentUser.uid} isEmbeddedInProfile={false} />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Personal Details Form */}
-        <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
-          <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
-            <User size={16} className="text-emerald-400" /> Personal Information
-          </h3>
+      {/* ── TAB 3: PERSONAL INFORMATION ── */}
+      {activeProfileTab === 'personal' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+              <User size={16} className="text-emerald-400" /> Personal Information
+            </h3>
 
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
-                <input
-                  type="text"
-                  disabled={currentUser.role === 'scout'}
-                  value={bsaId}
-                  onChange={(e) => setBsaId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
-                </label>
-                <input
-                  type="email"
-                  value={scoutEmail}
-                  onChange={(e) => setScoutEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                  <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
-                </label>
-                <input
-                  type="tel"
-                  value={scoutPhone}
-                  onChange={(e) => setScoutPhone(e.target.value)}
-                  placeholder="e.g. +1234567890"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {currentUser.role === 'scout' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                      <Mail size={12} /> Parent Email
-                    </label>
-                    <input
-                      type="email"
-                      value={parentEmail}
-                      onChange={(e) => setParentEmail(e.target.value)}
-                      placeholder="parent@example.com"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                      <Phone size={12} /> Parent Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={parentPhone}
-                      onChange={(e) => setParentPhone(e.target.value)}
-                      placeholder="e.g. +1234567890"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* ── SAFETY / PROTECTION TRAINING (SPT) FOR LEADERS & STAFF ── */}
-            {currentUser.role !== 'scout' && (
-              <div className="space-y-4 pt-3 border-t border-slate-700/60">
-                <h4 className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} /> Safety/Protection Training (SPT)
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                      SPT Training Completion Date
-                    </label>
-                    <input
-                      type="date"
-                      value={spt}
-                      onChange={(e) => setSpt(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                      Upload Certificate (PDF / Image)
-                    </label>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={handleSptFileChange}
-                        disabled={uploadingSpt}
-                        className="hidden"
-                        id="spt-file-upload"
-                      />
-                      <label
-                        htmlFor="spt-file-upload"
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl cursor-pointer transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
-                      >
-                        <ImageIcon size={14} /> 
-                        <span>{uploadingSpt ? 'Saving...' : (sptFileUrl ? 'Replace Certificate' : 'Upload Certificate')}</span>
-                      </label>
-
-                      {sptFileUrl && (
-                        <>
-                          <a
-                            href={sptFileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-slate-900 border border-slate-750 hover:border-emerald-500 text-emerald-400 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
-                          >
-                            <span>View Cert</span>
-                            <ExternalLink size={11} />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={handleRemoveSptFile}
-                            className="text-xs text-red-400 hover:text-red-300 bg-slate-900 border border-slate-750 px-2.5 py-2 rounded-xl cursor-pointer"
-                            title="Remove Certificate"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
                 </div>
 
-                {spt && (
-                  <div className="pt-2">
-                    <span className="block text-[11px] font-semibold text-slate-400 uppercase mb-2">Share Completion Status</span>
-                    <div className="flex flex-wrap gap-2">
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(`Salam! Sharing that I have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate: ${sptFileUrl}` : ''}`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-4 py-2 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold shadow-md"
-                        title="Share on WhatsApp"
-                      >
-                        <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
-                        </svg>
-                        <span>Share on WhatsApp</span>
-                      </a>
-                      <a
-                        href={`mailto:?subject=${encodeURIComponent("Safety/Protection Training (SPT) Completion")}&body=${encodeURIComponent(`Salam,\n\nI have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate here: ${sptFileUrl}` : ''}\n\nShukran.`)}`}
-                        className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-4 py-2 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold"
-                        title="Share via Email"
-                      >
-                        <Mail size={14} />
-                        <span>Share via Email</span>
-                      </a>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                  <input
+                    type="text"
+                    disabled={currentUser.role === 'scout'}
+                    value={bsaId}
+                    onChange={(e) => setBsaId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                    <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
+                  </label>
+                  <input
+                    type="email"
+                    value={scoutEmail}
+                    onChange={(e) => setScoutEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                    <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
+                  </label>
+                  <input
+                    type="tel"
+                    value={scoutPhone}
+                    onChange={(e) => setScoutPhone(e.target.value)}
+                    placeholder="e.g. +1234567890"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {currentUser.role === 'scout' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Mail size={12} /> Parent Email
+                      </label>
+                      <input
+                        type="email"
+                        value={parentEmail}
+                        onChange={(e) => setParentEmail(e.target.value)}
+                        placeholder="parent@example.com"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
                     </div>
-                  </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Phone size={12} /> Parent Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={parentPhone}
+                        onChange={(e) => setParentPhone(e.target.value)}
+                        placeholder="e.g. +1234567890"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </>
                 )}
               </div>
-            )}
 
-            <div className="flex justify-end border-t border-slate-700/60 pt-3">
-              <button
-                type="submit"
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
-              >
-                {updating ? 'Saving Changes...' : 'Save Profile Changes'}
-              </button>
+              <div className="flex justify-end border-t border-slate-700/60 pt-3">
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
+                >
+                  {updating ? 'Saving Changes...' : 'Save Profile Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+              <Shield size={16} className="text-emerald-400" /> Troop Affiliation
+            </h3>
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
+                <strong className="text-white text-sm">{patrolName} Patrol</strong>
+              </div>
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
+                <strong className="text-emerald-400 text-sm">{rankName}</strong>
+              </div>
             </div>
-          </form>
+          </div>
         </div>
+      )}
 
-        {/* Change Password Form */}
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+      {/* ── TAB 4: SPT CERTIFICATE ── */}
+      {activeProfileTab === 'spt' && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4 max-w-2xl">
+          <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+            <Shield size={16} className="text-emerald-400" /> Safety/Protection Training (SPT)
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                SPT Training Completion Date
+              </label>
+              <input
+                type="date"
+                value={spt}
+                onChange={(e) => setSpt(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                Upload Certificate (PDF / Image)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleSptFileChange}
+                  disabled={uploadingSpt}
+                  className="hidden"
+                  id="spt-file-upload"
+                />
+                <label
+                  htmlFor="spt-file-upload"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl cursor-pointer transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
+                >
+                  <ImageIcon size={14} /> 
+                  <span>{uploadingSpt ? 'Saving...' : (sptFileUrl ? 'Replace Certificate' : 'Upload Certificate')}</span>
+                </label>
+
+                {sptFileUrl && (
+                  <>
+                    <a
+                      href={sptFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-slate-900 border border-slate-750 hover:border-emerald-500 text-emerald-400 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
+                    >
+                      <span>View Cert</span>
+                      <ExternalLink size={11} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleRemoveSptFile}
+                      className="text-xs text-red-400 hover:text-red-300 bg-slate-900 border border-slate-750 px-2.5 py-2 rounded-xl cursor-pointer"
+                      title="Remove Certificate"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {spt && (
+              <div className="pt-2 border-t border-slate-700/60">
+                <span className="block text-[11px] font-semibold text-slate-400 uppercase mb-2">Share Completion Status</span>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Salam! Sharing that I have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate: ${sptFileUrl}` : ''}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-4 py-2 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold shadow-md"
+                    title="Share on WhatsApp"
+                  >
+                    <span>Share on WhatsApp</span>
+                  </a>
+                  <a
+                    href={`mailto:?subject=${encodeURIComponent("Safety/Protection Training (SPT) Completion")}&body=${encodeURIComponent(`Salam,\n\nI have completed my Safety/Protection Training (SPT) on ${spt}.${sptFileUrl ? ` View my certificate here: ${sptFileUrl}` : ''}\n\nShukran.`)}`}
+                    className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-4 py-2 flex items-center justify-center gap-2 transition cursor-pointer text-xs font-bold"
+                    title="Share via Email"
+                  >
+                    <Mail size={14} />
+                    <span>Share via Email</span>
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 5: SECURITY & PASSWORD ── */}
+      {activeProfileTab === 'security' && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4 max-w-md">
           <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
             <Lock size={16} className="text-emerald-400" /> Security Settings
           </h3>
@@ -698,7 +782,8 @@ export default function ScoutProfile({ currentUser }) {
             </button>
           </form>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }

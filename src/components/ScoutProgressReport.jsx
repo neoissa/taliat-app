@@ -486,6 +486,92 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           )}
         </div>
 
+        
+        {/* ── SECTION 7: EAGLE SCOUT ADVANCEMENT & PALMS MILESTONE AUDIT ── */}
+        <div className="space-y-4 break-inside-avoid border-t-2 border-amber-600 pt-5 mt-4">
+          <div className="border-b-2 border-amber-600 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-amber-950 flex items-center gap-2">
+              <span>🦅 Section 7: Eagle Scout Advancement & Eagle Palms Record</span>
+            </h3>
+            <span className="text-xs font-bold text-amber-900 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300">
+              Official BSA Eagle Milestones
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            {/* Gate 1: 21 Badges */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase block">1. Merit Badges Audit</span>
+              <strong className="text-slate-900 text-sm block">
+                {earnedMeritBadges.length} Total Earned / 21 Target
+              </strong>
+              <p className="text-[11px] text-slate-600">
+                14 Eagle-Required + 7 Electives
+              </p>
+            </div>
+
+            {/* Gate 2: Tenure & Leadership */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase block">2. Life Scout Leadership</span>
+              <strong className="text-slate-900 text-sm block">
+                {scoutInfo.positionOfResponsibility?.title || 'Active Leadership Role'}
+              </strong>
+              <p className="text-[11px] text-slate-600">
+                Duration: {scoutInfo.positionOfResponsibility?.durationMonths || 6} Months Served
+              </p>
+            </div>
+
+            {/* Gate 3: Eagle Palms */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase block">3. Eagle Palms Conferred</span>
+              <strong className="text-amber-700 text-sm block">
+                {scoutInfo.eaglePalms?.totalPalms || Math.max(0, Math.floor((earnedMeritBadges.length - 21) / 5))} Palms Total
+              </strong>
+              <p className="text-[11px] text-slate-600">
+                🥉 Bronze: {scoutInfo.eaglePalms?.bronze || 0} • 🥇 Gold: {scoutInfo.eaglePalms?.gold || 0} • 🥈 Silver: {scoutInfo.eaglePalms?.silver || 0}
+              </p>
+            </div>
+          </div>
+
+          {/* Eagle Project Details */}
+          {scoutInfo.eagleProject && scoutInfo.eagleProject.title && (
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                <span className="font-bold text-slate-900 uppercase text-[11px]">
+                  Eagle Scout Service Project: {scoutInfo.eagleProject.title}
+                </span>
+                <span className="text-[10px] font-mono font-bold capitalize bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                  Status: {scoutInfo.eagleProject.status || 'Planning'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-700">
+                <div>Beneficiary: <strong>{scoutInfo.eagleProject.beneficiary || '—'}</strong></div>
+                <div>Candidate Hours: <strong>{scoutInfo.eagleProject.scoutHours || '—'} hrs</strong></div>
+                <div>Volunteer Hours: <strong>{scoutInfo.eagleProject.volunteerHours || '—'} hrs</strong></div>
+                <div>Workbook: <strong>{scoutInfo.eagleProject.workbookCompleted ? '✓ Completed' : 'In Progress'}</strong></div>
+              </div>
+            </div>
+          )}
+
+          {/* 6 References Checklist */}
+          {Array.isArray(scoutInfo.eagleReferences) && scoutInfo.eagleReferences.some(r => r.name) && (
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+              <span className="font-bold text-slate-900 uppercase text-[11px] block border-b border-slate-200 pb-1">
+                6 Official Character References Checklist
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                {scoutInfo.eagleReferences.map((ref, idx) => (
+                  <div key={idx} className="p-2 bg-white rounded border border-slate-200">
+                    <span className="text-[10px] text-slate-500 font-bold block">{ref.type}</span>
+                    <strong className="text-slate-800 block truncate">{ref.name || '— Pending —'}</strong>
+                    <span className="text-[10px] text-slate-500 block truncate">{ref.phone || ref.email || ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* 9. OFFICIAL SIGNATURES & TROOP ENDORSEMENT */}
         <div className="pt-8 border-t-2 border-slate-300 text-xs break-inside-avoid space-y-8">
           <div className="grid grid-cols-2 gap-12">

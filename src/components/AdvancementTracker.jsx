@@ -5,6 +5,7 @@ import { RANKS_DATA } from '../data/ranksData';
 import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
+import RoadToEagleTracker from './RoadToEagleTracker';
 
 const RANK_COLORS = {
   emerald: {
@@ -108,6 +109,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [expandedReqs, setExpandedReqs] = useState({}); // { [reqId]: boolean }
   const [loading, setLoading] = useState(true);
   const [showPrintReport, setShowPrintReport] = useState(false);
+  const [showEaglePortal, setShowEaglePortal] = useState(false);
   const [showNotesPrintReport, setShowNotesPrintReport] = useState(false);
 
 
@@ -687,6 +689,18 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowEaglePortal(!showEaglePortal)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md ${
+              showEaglePortal
+                ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
+                : 'bg-amber-600/80 hover:bg-amber-600 text-white border border-amber-400/40'
+            }`}
+          >
+            <span className="text-base">🦅</span>
+            <span>{showEaglePortal ? 'Back to Ranks Checklist' : 'Road to Eagle & Palms'}</span>
+          </button>
                 <h3 className="font-extrabold text-white text-sm">
                   Patrol Batch Sign-off Active: {batchPatrolName}
                 </h3>
@@ -971,7 +985,13 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
         })}
       </div>
 
-      {/* Selected Rank Header */}
+      
+      {/* Eagle Advancement Workflow Portal */}
+      {showEaglePortal ? (
+        <RoadToEagleTracker currentUser={currentUser} scoutId={scoutId} readOnly={readOnly} />
+      ) : (
+        <>
+{/* Selected Rank Header */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute right-4 top-4 opacity-5 pointer-events-none">
           <RankIcon rankId={selectedRankId} size={120} className={colorTheme.text} />
@@ -1289,6 +1309,8 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
           </div>
         </div>
       </div>
+    </>
+      )}
     </div>
   );
 }
