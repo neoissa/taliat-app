@@ -1,6 +1,8 @@
-// Merit badge definitions with Eagle-required flag, packet download URLs, and granular requirements
-// Official source: http://usscouts.org/meritbadges.asp
-// Eagle Scout requires 21 merit badges: 14 Eagle-required + 7 elective
+// Official Scouting America Merit Badges Dataset with Complete Requirements, Workbooks, and Official Links
+// Sources: http://usscouts.org/meritbadges.asp & https://www.scouting.org/
+
+export const TOTAL_EAGLE_REQUIRED_FOR_RANK = 14;
+export const TOTAL_MERIT_BADGES_FOR_EAGLE = 21;
 
 export const MERIT_BADGES = [
   {
@@ -64,7 +66,14 @@ export const MERIT_BADGES = [
         "id": "9",
         "text": "Survey your patrol to determine individual camping skills and plan improvements"
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "20 Days and 20 Nights Campout Log",
+    "timeAlert": "Requires 20 days and nights of camping (including one long-term campout of up to 6 consecutive nights).",
+    "eagleTip": "Log every troop campout and summer camp in your scout handbook or app journal.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/camping/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb001.asp"
   },
   {
     "id": "citizenship-in-the-community",
@@ -103,7 +112,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Complete a service project for your community"
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Community Research & Meeting Attendance",
+    "timeAlert": "Requires attending a public city/town council meeting or interview with a government official.",
+    "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-community/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb002.asp"
   },
   {
     "id": "citizenship-in-the-nation",
@@ -146,7 +162,14 @@ export const MERIT_BADGES = [
         "id": "8",
         "text": "Do TWO of the following: visit a national monument, write a letter to a public official, vote in a school election"
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Community Research & Meeting Attendance",
+    "timeAlert": "Requires attending a public city/town council meeting or interview with a government official.",
+    "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-nation/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb003.asp"
   },
   {
     "id": "citizenship-in-the-world",
@@ -185,7 +208,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Interview someone from another country; discuss similarities and differences"
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Community Research & Meeting Attendance",
+    "timeAlert": "Requires attending a public city/town council meeting or interview with a government official.",
+    "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-world/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb004.asp"
   },
   {
     "id": "communication",
@@ -228,7 +258,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Keep a daily journal for 30 days and share excerpts with your counselor"
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Speeches, Presentations & Interviews",
+    "timeAlert": "Requires giving a speech, conducting an interview, and attending a public meeting.",
+    "eagleTip": "Lead a troop campfire program or patrol presentation to complete speaking requirements.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/communication/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb005.asp"
   },
   {
     "id": "cooking",
@@ -271,7 +308,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Explain how to reduce kitchen waste and properly dispose of it"
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Multi-Campout & Home Meal Planning",
+    "timeAlert": "Requires planning and cooking 10+ meals (campout, backpacking, and home meals with family).",
+    "eagleTip": "Coordinate with your patrol leader to serve as head cook during your next 2 troop campouts.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/cooking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb038.asp"
   },
   {
     "id": "cycling",
@@ -302,7 +346,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Long Distance Bike Rides (150+ Miles Total)",
+    "timeAlert": "Requires multiple 10, 15, and 25-mile rides, culminating in a 50-mile road ride!",
+    "eagleTip": "Inspect bicycle safety gear and train stamina gradually on paved trails.",
+    "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/cycling/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb039.asp"
   },
   {
     "id": "emergency-preparedness",
@@ -345,7 +396,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Discuss the role of technology in emergencies"
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Emergency Plan & Troop Drill",
+    "timeAlert": "Prerequisite: Must have earned First Aid Merit Badge first.",
+    "eagleTip": "Complete First Aid first. Build a home emergency disaster kit with non-perishable supplies.",
+    "eagleGroup": "Choice: Emergency Prep OR Lifesaving",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/emergency-preparedness/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb006.asp"
   },
   {
     "id": "environmental-science",
@@ -384,7 +442,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Do an environmental project approved by your counselor"
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Field Observations & Experiments",
+    "timeAlert": "Requires multiple field observation sessions and written environmental reports.",
+    "eagleTip": "Conduct 7-day ecosystem observations in a local park or reserve.",
+    "eagleGroup": "Choice: Environmental Science OR Sustainability",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/environmental-science/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb007.asp"
   },
   {
     "id": "family-life",
@@ -419,7 +484,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Keep a log of your daily household chores for 90 days"
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "90-Day Household Chores & Project Log",
+    "timeAlert": "⚠️ Requires 90 days of tracking chores and leading a family project. Start early!",
+    "eagleTip": "Hold a family meeting with your parents to agree on 5 regular chores and plan your family service project.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/family-life/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb129.asp"
   },
   {
     "id": "first-aid",
@@ -458,7 +530,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Tell what precautions you must take when performing first aid"
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "CPR & Emergency First Aid Mastery",
+    "timeAlert": "Foundational Eagle-required badge. Prerequisite for Emergency Preparedness.",
+    "eagleTip": "Master bandage wraps, shock treatment, and CPR hands-on drills during troop meetings.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/first-aid/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb008.asp"
   },
   {
     "id": "hiking",
@@ -489,7 +568,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Continuous Distance Hikes (70+ Miles Total)",
+    "timeAlert": "Requires one 5-mile, three 10-mile, one 15-mile, and one 20-mile hike!",
+    "eagleTip": "Plan day hikes with your patrol over several months. Maintain detailed trail logs.",
+    "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/hiking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb061.asp"
   },
   {
     "id": "lifesaving",
@@ -528,7 +614,14 @@ export const MERIT_BADGES = [
         "id": "7",
         "text": "Demonstrate CPR and explain when to use it"
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Aquatics Practical Drills",
+    "timeAlert": "Prerequisite: Must pass BSA Swimmer Test and earn Swimming Merit Badge first.",
+    "eagleTip": "Best completed during summer camp under a certified BSA Aquatics Director.",
+    "eagleGroup": "Choice: Emergency Prep OR Lifesaving",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/lifesaving/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb009.asp"
   },
   {
     "id": "personal-fitness",
@@ -563,7 +656,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Show improvement on fitness tests after your 12-week program"
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "12-Week Physical Training Log",
+    "timeAlert": "⚠️ Requires 12 consecutive weeks (84 days) of logging physical exercise and fitness tests. Start early!",
+    "eagleTip": "Schedule your initial fitness baseline test right away. Track workouts 3+ times weekly with your counselor.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/personal-fitness/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb010.asp"
   },
   {
     "id": "personal-management",
@@ -598,7 +698,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Explain the basics of borrowing money, including interest and credit scores"
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "13-Week Financial Budget Log",
+    "timeAlert": "⚠️ Requires 13 consecutive weeks (90 days) of budget tracking and expense logs. Cannot be rushed!",
+    "eagleTip": "Set up a spreadsheet on day 1 to track all income and expenses. Discuss household project plans with family.",
+    "eagleGroup": "Required",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/personal-management/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb011.asp"
   },
   {
     "id": "sustainability",
@@ -629,7 +736,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Household Energy & Waste Audits",
+    "timeAlert": "Requires 14-day tracking of household water, electricity, and waste production.",
+    "eagleTip": "Conduct an energy and food waste audit in your home with family cooperation.",
+    "eagleGroup": "Choice: Environmental Science OR Sustainability",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sustainability/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb152.asp"
   },
   {
     "id": "swimming",
@@ -664,7 +778,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Demonstrate survival floating for 5 minutes"
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Swimming Stroke Proficiency & Rescue",
+    "timeAlert": "Requires strong swimming stroke skills and water rescue demonstrations.",
+    "eagleTip": "Practice the crawl, backstroke, breaststroke, and sidestroke at troop pool sessions.",
+    "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/swimming/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb014.asp"
   },
   {
     "id": "american-business",
@@ -695,7 +816,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-business/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb015.asp"
   },
   {
     "id": "american-cultures",
@@ -726,7 +854,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-cultures/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb017.asp"
   },
   {
     "id": "american-heritage",
@@ -757,7 +892,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-heritage/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb016.asp"
   },
   {
     "id": "american-labor",
@@ -788,7 +930,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-labor/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb121.asp"
   },
   {
     "id": "animal-science",
@@ -819,7 +968,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/animal-science/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb018.asp"
   },
   {
     "id": "animation",
@@ -850,7 +1006,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/animation/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb158.asp"
   },
   {
     "id": "archaeology",
@@ -881,7 +1044,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/archaeology/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb132.asp"
   },
   {
     "id": "archery",
@@ -912,7 +1082,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Shoot a NFAA single spot target at 20 yards achieving a required score"
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/archery/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb019.asp"
   },
   {
     "id": "architecture",
@@ -943,7 +1120,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/architecture/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb020.asp"
   },
   {
     "id": "art",
@@ -974,7 +1158,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/art/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb021.asp"
   },
   {
     "id": "astronomy",
@@ -1009,7 +1200,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Do ONE of the following: discuss the history of astronomy, visit a planetarium, or view the moon through a telescope"
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/astronomy/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb022.asp"
   },
   {
     "id": "athletics",
@@ -1040,7 +1238,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/athletics/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb023.asp"
   },
   {
     "id": "automotive-maintenance",
@@ -1071,7 +1276,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/automotive-maintenance/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb127.asp"
   },
   {
     "id": "aviation",
@@ -1106,7 +1318,14 @@ export const MERIT_BADGES = [
         "id": "6",
         "text": "Do ONE of the following: take a flight lesson, visit an airport control tower, or build and fly a model airplane"
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/aviation/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb025.asp"
   },
   {
     "id": "backpacking",
@@ -1137,7 +1356,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/backpacking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb026.asp"
   },
   {
     "id": "basketry",
@@ -1168,7 +1394,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/basketry/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb027.asp"
   },
   {
     "id": "bird-study",
@@ -1199,7 +1432,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/bird-study/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb029.asp"
   },
   {
     "id": "bugling",
@@ -1230,7 +1470,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/bugling/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb032.asp"
   },
   {
     "id": "canoeing",
@@ -1261,7 +1508,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/canoeing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb033.asp"
   },
   {
     "id": "chemistry",
@@ -1292,7 +1546,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/chemistry/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb034.asp"
   },
   {
     "id": "chess",
@@ -1323,7 +1584,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Compete in a chess tournament or play 5 rated games"
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/chess/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb147.asp"
   },
   {
     "id": "climbing",
@@ -1354,7 +1622,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Demonstrate proper rappelling technique"
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/climbing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb133.asp"
   },
   {
     "id": "coin-collecting",
@@ -1385,7 +1660,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/coin-collecting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb035.asp"
   },
   {
     "id": "collections",
@@ -1416,7 +1698,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/collections/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb128.asp"
   },
   {
     "id": "composite-materials",
@@ -1447,7 +1736,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/composite-materials/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb137.asp"
   },
   {
     "id": "crime-prevention",
@@ -1478,7 +1774,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/crime-prevention/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb131.asp"
   },
   {
     "id": "dentistry",
@@ -1509,7 +1812,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/dentistry/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb040.asp"
   },
   {
     "id": "digital-technology",
@@ -1540,7 +1850,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Discuss careers in digital technology"
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/digital-technology/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb154.asp"
   },
   {
     "id": "disabilities-awareness",
@@ -1571,7 +1888,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/disabilities-awareness/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb060.asp"
   },
   {
     "id": "dog-care",
@@ -1602,7 +1926,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/dog-care/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb041.asp"
   },
   {
     "id": "drafting",
@@ -1633,7 +1964,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/drafting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb042.asp"
   },
   {
     "id": "electricity",
@@ -1664,7 +2002,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/electricity/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb043.asp"
   },
   {
     "id": "electronics",
@@ -1695,7 +2040,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/electronics/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb044.asp"
   },
   {
     "id": "energy",
@@ -1726,7 +2078,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/energy/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb045.asp"
   },
   {
     "id": "engineering",
@@ -1757,7 +2116,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/engineering/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb046.asp"
   },
   {
     "id": "entrepreneurship",
@@ -1788,7 +2154,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/entrepreneurship/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb134.asp"
   },
   {
     "id": "exploration",
@@ -1819,7 +2192,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/exploration/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb159.asp"
   },
   {
     "id": "farm-mechanics",
@@ -1850,7 +2230,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/farm-mechanics/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb048.asp"
   },
   {
     "id": "fingerprinting",
@@ -1881,7 +2268,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fingerprinting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb049.asp"
   },
   {
     "id": "fire-safety",
@@ -1912,7 +2306,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fire-safety/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb050.asp"
   },
   {
     "id": "fish-and-wildlife-management",
@@ -1943,7 +2344,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fish-and-wildlife-management/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb051.asp"
   },
   {
     "id": "fishing",
@@ -1974,7 +2382,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fishing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb052.asp"
   },
   {
     "id": "fly-fishing",
@@ -2005,7 +2420,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fly-fishing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb136.asp"
   },
   {
     "id": "forestry",
@@ -2036,7 +2458,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/forestry/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb054.asp"
   },
   {
     "id": "game-design",
@@ -2067,7 +2496,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/game-design/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb151.asp"
   },
   {
     "id": "gardening",
@@ -2098,7 +2534,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/gardening/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb055.asp"
   },
   {
     "id": "genealogy",
@@ -2129,7 +2572,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/genealogy/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb056.asp"
   },
   {
     "id": "geocaching",
@@ -2160,7 +2610,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/geocaching/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb145.asp"
   },
   {
     "id": "geology",
@@ -2191,7 +2648,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/geology/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb058.asp"
   },
   {
     "id": "golf",
@@ -2222,7 +2686,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/golf/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb059.asp"
   },
   {
     "id": "graphic-arts",
@@ -2253,7 +2724,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/graphic-arts/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb122.asp"
   },
   {
     "id": "home-repairs",
@@ -2284,7 +2762,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/home-repairs/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb062.asp"
   },
   {
     "id": "horsemanship",
@@ -2315,7 +2800,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/horsemanship/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb063.asp"
   },
   {
     "id": "indian-lore",
@@ -2346,7 +2838,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/indian-lore/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb064.asp"
   },
   {
     "id": "insect-study",
@@ -2377,7 +2876,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/insect-study/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb065.asp"
   },
   {
     "id": "inventing",
@@ -2408,7 +2914,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/inventing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb144.asp"
   },
   {
     "id": "journalism",
@@ -2439,7 +2952,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/journalism/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb066.asp"
   },
   {
     "id": "kayaking",
@@ -2470,7 +2990,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/kayaking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb149.asp"
   },
   {
     "id": "landscape-architecture",
@@ -2501,7 +3028,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/landscape-architecture/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb067.asp"
   },
   {
     "id": "law",
@@ -2532,7 +3066,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/law/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb068.asp"
   },
   {
     "id": "leatherwork",
@@ -2563,7 +3104,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/leatherwork/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb069.asp"
   },
   {
     "id": "mammal-study",
@@ -2594,7 +3142,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/mammal-study/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb071.asp"
   },
   {
     "id": "medicine",
@@ -2625,7 +3180,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/medicine/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb130.asp"
   },
   {
     "id": "metalwork",
@@ -2656,7 +3218,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/metalwork/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb074.asp"
   },
   {
     "id": "mining-in-society",
@@ -2687,7 +3256,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/mining-in-society/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb155.asp"
   },
   {
     "id": "model-design-and-building",
@@ -2718,7 +3294,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/model-design-and-building/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb075.asp"
   },
   {
     "id": "motorboating",
@@ -2749,7 +3332,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/motorboating/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb076.asp"
   },
   {
     "id": "moviemaking",
@@ -2780,7 +3370,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/moviemaking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb156.asp"
   },
   {
     "id": "music",
@@ -2811,7 +3408,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/music/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb077.asp"
   },
   {
     "id": "nature",
@@ -2842,7 +3446,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/nature/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb078.asp"
   },
   {
     "id": "nuclear-science",
@@ -2873,7 +3484,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/nuclear-science/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb024.asp"
   },
   {
     "id": "oceanography",
@@ -2904,7 +3522,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/oceanography/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb079.asp"
   },
   {
     "id": "orienteering",
@@ -2935,7 +3560,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/orienteering/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb080.asp"
   },
   {
     "id": "painting",
@@ -2966,7 +3598,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/painting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb081.asp"
   },
   {
     "id": "pets",
@@ -2997,7 +3636,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pets/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb082.asp"
   },
   {
     "id": "photography",
@@ -3028,7 +3674,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/photography/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb083.asp"
   },
   {
     "id": "pioneering",
@@ -3059,7 +3712,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pioneering/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb084.asp"
   },
   {
     "id": "plant-science",
@@ -3090,7 +3750,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/plant-science/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb085.asp"
   },
   {
     "id": "plumbing",
@@ -3121,7 +3788,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/plumbing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb086.asp"
   },
   {
     "id": "pottery",
@@ -3152,7 +3826,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pottery/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb087.asp"
   },
   {
     "id": "programming",
@@ -3183,7 +3864,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/programming/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb153.asp"
   },
   {
     "id": "public-health",
@@ -3214,7 +3902,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/public-health/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb089.asp"
   },
   {
     "id": "public-speaking",
@@ -3245,7 +3940,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/public-speaking/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb090.asp"
   },
   {
     "id": "pulp-and-paper",
@@ -3276,7 +3978,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pulp-and-paper/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb091.asp"
   },
   {
     "id": "radio",
@@ -3307,7 +4016,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/radio/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb093.asp"
   },
   {
     "id": "railroading",
@@ -3338,7 +4054,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/railroading/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb094.asp"
   },
   {
     "id": "reading",
@@ -3369,7 +4092,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/reading/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb095.asp"
   },
   {
     "id": "reptile-and-amphibian-study",
@@ -3400,7 +4130,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/reptile-and-amphibian-study/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb096.asp"
   },
   {
     "id": "rifle-shooting",
@@ -3431,7 +4168,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/rifle-shooting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb123.asp"
   },
   {
     "id": "robotics",
@@ -3462,7 +4206,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/robotics/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb146.asp"
   },
   {
     "id": "rowing",
@@ -3493,7 +4244,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/rowing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb098.asp"
   },
   {
     "id": "safety",
@@ -3524,7 +4282,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/safety/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb012.asp"
   },
   {
     "id": "salesmanship",
@@ -3555,7 +4320,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/salesmanship/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb099.asp"
   },
   {
     "id": "scholarship",
@@ -3586,7 +4358,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scholarship/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb100.asp"
   },
   {
     "id": "scouting-heritage",
@@ -3617,7 +4396,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Civics & Citizenship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scouting-heritage/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb143.asp"
   },
   {
     "id": "scuba-diving",
@@ -3648,7 +4434,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scuba-diving/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb138.asp"
   },
   {
     "id": "sculpture",
@@ -3679,7 +4472,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sculpture/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb101.asp"
   },
   {
     "id": "search-and-rescue",
@@ -3710,7 +4510,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/search-and-rescue/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb150.asp"
   },
   {
     "id": "shotgun-shooting",
@@ -3741,7 +4548,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/shotgun-shooting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb124.asp"
   },
   {
     "id": "signs-signals-and-codes",
@@ -3772,7 +4586,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/signs-signals-and-codes/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb157.asp"
   },
   {
     "id": "skating",
@@ -3803,7 +4624,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/skating/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb103.asp"
   },
   {
     "id": "small-boat-sailing",
@@ -3834,7 +4662,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/small-boat-sailing/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb105.asp"
   },
   {
     "id": "snow-sports",
@@ -3865,7 +4700,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/snow-sports/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb135.asp"
   },
   {
     "id": "soil-and-water-conservation",
@@ -3896,7 +4738,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/soil-and-water-conservation/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb106.asp"
   },
   {
     "id": "space-exploration",
@@ -3927,7 +4776,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "STEM & Technology",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/space-exploration/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb107.asp"
   },
   {
     "id": "sports",
@@ -3958,7 +4814,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sports/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb013.asp"
   },
   {
     "id": "stamp-collecting",
@@ -3989,7 +4852,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/stamp-collecting/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb108.asp"
   },
   {
     "id": "surveying",
@@ -4020,7 +4890,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/surveying/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb109.asp"
   },
   {
     "id": "textile",
@@ -4051,7 +4928,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/textile/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb110.asp"
   },
   {
     "id": "theater",
@@ -4082,7 +4966,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Arts & Hobbies",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/theater/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb111.asp"
   },
   {
     "id": "traffic-safety",
@@ -4113,7 +5004,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Health & Safety",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/traffic-safety/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb112.asp"
   },
   {
     "id": "truck-transportation",
@@ -4144,7 +5042,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/truck-transportation/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb113.asp"
   },
   {
     "id": "veterinary-medicine",
@@ -4175,7 +5080,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/veterinary-medicine/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb114.asp"
   },
   {
     "id": "water-sports",
@@ -4206,7 +5118,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Life Skills & Fitness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/water-sports/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb115.asp"
   },
   {
     "id": "weather",
@@ -4237,7 +5156,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Nature & Science (STEM)",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/weather/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb116.asp"
   },
   {
     "id": "welding",
@@ -4268,7 +5194,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/welding/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb148.asp"
   },
   {
     "id": "whitewater",
@@ -4299,7 +5232,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/whitewater/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb125.asp"
   },
   {
     "id": "wilderness-survival",
@@ -4330,7 +5270,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Outdoor & Wilderness",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/wilderness-survival/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb117.asp"
   },
   {
     "id": "wood-carving",
@@ -4361,7 +5308,14 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Careers & Electives",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/wood-carving/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb118.asp"
   },
   {
     "id": "woodwork",
@@ -4392,8 +5346,13 @@ export const MERIT_BADGES = [
         "id": "5",
         "text": "Participate in a counselor review and summarize what you have learned."
       }
-    ]
+    ],
+    "category": "Trades & Craftsmanship",
+    "timeCommitment": "Standard (1–3 Sessions / Workshop)",
+    "timeAlert": "",
+    "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
+    "eagleGroup": "Elective",
+    "scoutingOrgUrl": "https://www.scouting.org/merit-badges/woodwork/",
+    "usScoutsUrl": "http://usscouts.org/mb/mb119.asp"
   }
 ];
-
-export const TOTAL_EAGLE_REQUIRED_FOR_RANK = 14; // BSA Eagle Scout requires 14 specific merit badges

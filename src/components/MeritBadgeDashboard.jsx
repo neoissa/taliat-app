@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
+import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK, TOTAL_MERIT_BADGES_FOR_EAGLE } from '../data/meritBadges';
 import {
   Award, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp,
-  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass
+  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -42,6 +42,17 @@ function stepsPending(badge, progress) {
   return badge.requirements.filter(r => getStepState(p.steps?.[r.id]) === 'pending').length;
 }
 
+function getCategoryIcon(catName = '') {
+  if (catName.includes('Outdoor')) return '🏕️';
+  if (catName.includes('Civics')) return '🤝';
+  if (catName.includes('Health')) return '🩹';
+  if (catName.includes('Fitness')) return '🏃';
+  if (catName.includes('Nature') || catName.includes('STEM')) return '🔬';
+  if (catName.includes('Trades')) return '🛠️';
+  if (catName.includes('Arts')) return '🎨';
+  return '🏅';
+}
+
 // ── KPI Header ────────────────────────────────────────────────────────────────
 
 function KPIHeader({ progress, activeTab, onSelectTab }) {
@@ -61,19 +72,29 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-5 print-hide">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-black text-xl shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-2xl shadow-lg shrink-0">
             🏅
           </div>
           <div>
-            <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
-              <span>Merit Badge Dashboard & Eagle Roadmap</span>
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                Official BSA & USScouts Database
+              </span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                137 Official Badges
+              </span>
+            </div>
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <span>Merit Badge Dashboard & Eagle Fast-Track</span>
             </h2>
-            <p className="text-xs text-slate-400">Plan your 21 Eagle Merit Badges (14 Required + 7 Electives) and track requirements.</p>
+            <p className="text-xs text-slate-350">
+              Download official worksheets, view requirements from Scouting America & USScouts, and plan your 21 Eagle Merit Badges.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {totalPending > 0 && (
             <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1.5 animate-pulse">
               <Clock size={13} /> {totalPending} Pending Approval
@@ -81,7 +102,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
           )}
           <button
             onClick={() => onSelectTab('planned')}
-            className={`text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md ${
+            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md ${
               activeTab === 'planned'
                 ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
                 : 'bg-slate-700 hover:bg-slate-650 text-amber-300 border border-amber-500/30'
@@ -194,11 +215,11 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl my-8 overflow-hidden">
+      <div className="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl my-8 overflow-hidden">
         {/* Modal header */}
-        <div className="flex items-start justify-between p-5 border-b border-slate-700 bg-slate-850">
+        <div className="flex items-start justify-between p-6 border-b border-slate-700 bg-slate-850">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               {badge.eagleRequired ? (
                 <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-1">
                   <Star size={11} /> Eagle Required
@@ -206,6 +227,12 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
               ) : (
                 <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-bold uppercase">
                   Elective Badge
+                </span>
+              )}
+
+              {badge.category && (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                  <span>{getCategoryIcon(badge.category)}</span> {badge.category}
                 </span>
               )}
 
@@ -221,68 +248,136 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 </span>
               )}
             </div>
-            <h3 className="text-lg font-black text-white">{badge.name}</h3>
-            <p className="text-xs text-slate-350 mt-1 leading-relaxed">{badge.description}</p>
+            <h3 className="text-xl font-black text-white">{badge.name}</h3>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">{badge.description}</p>
           </div>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white transition p-1 cursor-pointer"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
-        <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
-          {/* Quick Plan Toggle Bar */}
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-750 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <Target className={isPlanned ? "text-amber-400" : "text-slate-500"} size={20} />
-              <div>
-                <strong className="text-xs font-bold text-white block">
-                  {isPlanned ? "Included in My Planned Badges" : "Add to My Planned Badges"}
-                </strong>
-                <span className="text-[10px] text-slate-400">
-                  {isPlanned ? "Part of your 21-badge Eagle roadmap" : "Add to plan and track requirements"}
-                </span>
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Quick Action Bar: Plan toggle + Official Downloads & Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-750">
+            {/* Left: Plan toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className={isPlanned ? "text-amber-400" : "text-slate-500"} size={18} />
+                <div>
+                  <strong className="text-xs font-bold text-white block">
+                    {isPlanned ? "In Your Plan" : "Add to Roadmap"}
+                  </strong>
+                  <span className="text-[10px] text-slate-400">
+                    {isPlanned ? "21-badge Eagle path" : "Track towards Eagle"}
+                  </span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => onTogglePlanned(badge.id, isPlanned)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                  isPlanned
+                    ? 'bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-800/40'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                }`}
+              >
+                {isPlanned ? (
+                  <>
+                    <Trash2 size={12} /> Remove
+                  </>
+                ) : (
+                  <>
+                    <Plus size={13} /> Add to Plan
+                  </>
+                )}
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onTogglePlanned(badge.id, isPlanned)}
-              className={`text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm ${
-                isPlanned
-                  ? 'bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-800/40'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
-              }`}
-            >
-              {isPlanned ? (
-                <>
-                  <Trash2 size={12} /> Remove from Plan
-                </>
-              ) : (
-                <>
-                  <Plus size={13} /> Add to Plan
-                </>
+            {/* Right: Official Worksheet Downloads & Links */}
+            <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+              {badge.packetPdfUrl && (
+                <a
+                  href={badge.packetPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm"
+                  title="Download Printable USScouts PDF Workbook"
+                >
+                  <FileDown size={13} />
+                  <span>PDF Workbook</span>
+                </a>
               )}
-            </button>
+
+              {badge.packetDocxUrl && (
+                <a
+                  href={badge.packetDocxUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-slate-700 hover:bg-slate-650 text-slate-200 hover:text-white font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-600"
+                  title="Download Editable Word DOCX Workbook"
+                >
+                  <FileText size={13} />
+                  <span>DOCX</span>
+                </a>
+              )}
+
+              {badge.scoutingOrgUrl && (
+                <a
+                  href={badge.scoutingOrgUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-slate-800 hover:bg-slate-750 text-sky-400 hover:text-sky-300 font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-700"
+                  title="View on Official Scouting.org"
+                >
+                  <Globe size={13} />
+                  <span>Scouting.org</span>
+                </a>
+              )}
+            </div>
           </div>
+
+          {/* Time Alert Banner if Badge has special tracking or prerequisite */}
+          {badge.timeAlert && (
+            <div className="bg-amber-950/40 border border-amber-500/50 p-3.5 rounded-2xl flex items-start gap-2.5 shadow-sm">
+              <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={16} />
+              <div className="text-xs">
+                <strong className="text-amber-300 block mb-0.5">Time-Commitment / Prerequisite Alert:</strong>
+                <p className="text-amber-200/90 leading-relaxed">{badge.timeAlert}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Eagle Pro-Tip Banner */}
+          {badge.eagleTip && (
+            <div className="bg-slate-900/60 border border-slate-750 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs">
+              <Zap className="text-emerald-400 shrink-0 mt-0.5" size={16} />
+              <div>
+                <strong className="text-emerald-400 block mb-0.5">⚡ Eagle Scout Strategy Tip:</strong>
+                <p className="text-slate-300 leading-relaxed">{badge.eagleTip}</p>
+              </div>
+            </div>
+          )}
 
           {/* Progress bar */}
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-slate-400">
-              <span>Progress ({approvedCount} / {steps.length} requirements approved)</span>
+            <div className="flex justify-between text-xs text-slate-400 font-semibold">
+              <span>Requirements Progress ({approvedCount} / {steps.length} approved)</span>
               <span className="font-bold text-emerald-400">{pct}%</span>
             </div>
-            <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-700">
-              <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
+            <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-700">
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
             </div>
           </div>
 
           {/* Requirements Checklist */}
           <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Badge Requirements ({steps.length})
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <CheckSquare size={14} className="text-emerald-400" />
+              <span>Badge Requirements Checklist ({steps.length})</span>
             </h4>
             <div className="space-y-2">
               {steps.map((req, idx) => {
@@ -293,7 +388,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 return (
                   <div
                     key={req.id}
-                    className={`p-3 rounded-xl border transition flex items-start gap-3 ${
+                    className={`p-3.5 rounded-xl border transition flex items-start gap-3 ${
                       isApproved
                         ? 'bg-emerald-950/30 border-emerald-500/40'
                         : isPending
@@ -323,7 +418,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                     </button>
 
                     <div className="flex-1 text-xs">
-                      <span className="font-bold text-slate-400 block mb-0.5">Requirement {idx + 1}</span>
+                      <span className="font-bold text-slate-400 block mb-0.5">Requirement {req.id || idx + 1}</span>
                       <p className="text-slate-200 leading-relaxed">{req.text}</p>
                     </div>
 
@@ -356,7 +451,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 value={plannedTarget}
                 onChange={handleMetaChange(setPlannedTarget)}
                 placeholder="e.g. Summer Camp 2026"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -369,7 +464,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 value={counselor}
                 onChange={handleMetaChange(setCounselor)}
                 placeholder="e.g. Br. Tariq / Leader"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -379,7 +474,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
               <button
                 type="button"
                 onClick={handleSave}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
               >
                 Save Planning Notes
               </button>
@@ -404,7 +499,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
   const total = badge.requirements.length;
 
   return (
-    <div className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-3 ${
+    <div className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-3 shadow-md ${
       isEarned
         ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-400'
         : isPlanned
@@ -413,15 +508,23 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
     }`}>
       <div>
         <div className="flex items-center justify-between gap-1 mb-2">
-          {badge.eagleRequired ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-1">
-              <Star size={10} /> Eagle
-            </span>
-          ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 font-semibold uppercase">
-              Elective
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {badge.eagleRequired ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-1">
+                <Star size={10} /> Eagle
+              </span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 font-semibold uppercase">
+                Elective
+              </span>
+            )}
+
+            {badge.category && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-medium">
+                {getCategoryIcon(badge.category)} {badge.category.split('&')[0].trim()}
+              </span>
+            )}
+          </div>
 
           {isEarned ? (
             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
@@ -440,6 +543,13 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
 
         <h4 className="font-extrabold text-sm text-white mb-1">{badge.name}</h4>
         <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{badge.description}</p>
+        
+        {badge.timeAlert && (
+          <div className="mt-2 text-[10px] text-amber-300/90 font-medium bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 flex items-center gap-1">
+            <Clock size={10} className="shrink-0 text-amber-400" />
+            <span className="truncate">{badge.timeCommitment}</span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2 pt-2 border-t border-slate-700/50">
@@ -455,6 +565,18 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
           >
             Requirements
           </button>
+
+          {badge.packetPdfUrl && (
+            <a
+              href={badge.packetPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 bg-slate-900/60 hover:bg-emerald-600 text-slate-400 hover:text-white border border-slate-750 hover:border-emerald-500/40 rounded-xl transition cursor-pointer"
+              title="Download Printable PDF Workbook"
+            >
+              <FileDown size={14} />
+            </a>
+          )}
           
           <button
             onClick={() => onTogglePlanned(badge.id, isPlanned)}
@@ -484,7 +606,8 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   const scoutId = customScoutId || currentUser?.uid;
 
   const [progress, setProgress] = useState({});
-  const [filter, setFilter] = useState('planned'); // Default to 'planned' so scouts immediately see their Eagle path!
+  const [filter, setFilter] = useState('planned');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -582,12 +705,22 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   const filteredBadges = MERIT_BADGES.filter(b => {
     const status = badgeStatus(b, progress);
     const isPlanned = !!progress[b.id]?.planned;
-    const matchesSearch = !search || b.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = !search || 
+      b.name.toLowerCase().includes(search.toLowerCase()) || 
+      b.description.toLowerCase().includes(search.toLowerCase()) ||
+      b.requirements.some(r => r.text.toLowerCase().includes(search.toLowerCase()));
+
     if (!matchesSearch) return false;
+
+    // Category filter
+    if (categoryFilter !== 'all' && b.category !== categoryFilter) {
+      return false;
+    }
 
     if (filter === 'planned') return isPlanned || status === 'earned';
     if (filter === 'eagle') return b.eagleRequired;
     if (filter === 'elective') return !b.eagleRequired;
+    if (filter === 'long-duration') return !!b.timeAlert;
     if (filter === 'earned') return status === 'earned';
     if (filter === 'pending') return stepsPending(b, progress) > 0;
     if (filter === 'in-progress') return status === 'in-progress' || status === 'pending';
@@ -597,10 +730,24 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   const filterTabs = [
     { key: 'planned', label: '🎯 My Planned Badges' },
     { key: 'all', label: `All Badges (${MERIT_BADGES.length})` },
-    { key: 'eagle', label: 'Eagle Required (14)' },
-    { key: 'elective', label: 'Elective Badges' },
-    { key: 'pending', label: 'Pending Approval' },
-    { key: 'earned', label: 'Earned' },
+    { key: 'eagle', label: '⭐ Eagle Required (14)' },
+    { key: 'long-duration', label: '⏳ 90-Day Tracking Badges' },
+    { key: 'elective', label: '🎨 Electives' },
+    { key: 'pending', label: '⏳ Pending Approval' },
+    { key: 'earned', label: '✓ Earned' },
+  ];
+
+  const categoriesList = [
+    { id: 'all', label: 'All Categories' },
+    { id: 'Outdoor & Wilderness', label: '🏕️ Outdoor & Wilderness' },
+    { id: 'Civics & Citizenship', label: '🤝 Civics & Citizenship' },
+    { id: 'Health & Safety', label: '🩹 Health & Safety' },
+    { id: 'Life Skills & Fitness', label: '🏃 Life Skills & Fitness' },
+    { id: 'Nature & Science (STEM)', label: '🔬 Nature & Science' },
+    { id: 'STEM & Technology', label: '💻 STEM & Technology' },
+    { id: 'Trades & Craftsmanship', label: '🛠️ Trades & Craftsmanship' },
+    { id: 'Arts & Hobbies', label: '🎨 Arts & Hobbies' },
+    { id: 'Careers & Electives', label: '👔 Careers & Electives' },
   ];
 
   if (loading) {
@@ -612,13 +759,13 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
       <KPIHeader progress={progress} activeTab={filter} onSelectTab={setFilter} />
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center print-hide">
+      <div className="flex flex-col gap-3 justify-between print-hide">
         <div className="flex flex-wrap gap-1.5">
           {filterTabs.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                 filter === key
                   ? 'bg-emerald-600 text-white shadow-md font-bold'
                   : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
@@ -629,14 +776,41 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
           ))}
         </div>
 
-        <input
-          type="text"
-          placeholder="Search 137+ merit badges..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-64"
-        />
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+          {/* Category Dropdown */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 cursor-pointer sm:w-60"
+          >
+            {categoriesList.map(c => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search badges, skills or requirements..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-72"
+          />
+        </div>
       </div>
+
+      {/* Fast-Track 90-Day Badges Alert Banner if on 'long-duration' tab */}
+      {filter === 'long-duration' && (
+        <div className="bg-gradient-to-r from-amber-950/60 via-slate-800 to-amber-950/60 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-2 print-hide">
+          <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
+            <Zap size={18} className="text-amber-400" />
+            <span>Eagle Scout Fast-Track: 90-Day & Multi-Week Tracking Badges</span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            These merit badges (such as <strong>Personal Fitness</strong>, <strong>Personal Management</strong>, <strong>Family Life</strong>, and <strong>Camping</strong>) have mandatory multi-week tracking logs that cannot be finished in a single weekend. <strong>Start these early in your scouting journey to avoid delays on your path to Eagle!</strong>
+          </p>
+        </div>
+      )}
 
       {/* Planned Badges Roadmap Guide if on 'planned' tab */}
       {filter === 'planned' && (
@@ -674,7 +848,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
           {filteredBadges.map(badge => (
             <BadgeCard
               key={badge.id}
