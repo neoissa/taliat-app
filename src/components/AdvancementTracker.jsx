@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
+import { CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 
@@ -75,14 +75,17 @@ const RANK_COLORS = {
 export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false }) {
   const [selectedScoutId, setSelectedScoutId] = useState('');
   const [scoutsList, setScoutsList] = useState([]);
-  
+  const [groups, setGroups] = useState([]);
+  const [batchUpdatesMsg, setBatchUpdatesMsg] = useState('');
+
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader';
   const isLeaderOrOwner = isOwner || isLeader;
   const isScoutmaster = isLeader && currentUser?.leaderPosition === 'Scoutmaster';
   const isAssistantLeader = isLeader && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
   const isScout = currentUser?.role === 'scout' || (!isLeaderOrOwner && currentUser?.uid);
-  const scoutId = customScoutId || (isLeaderOrOwner ? (selectedScoutId || currentUser?.uid) : currentUser?.uid);
+  const isBatchMode = isLeaderOrOwner && String(selectedScoutId).startsWith('patrol:');
+  const scoutId = customScoutId || (isLeaderOrOwner ? (isBatchMode ? (scoutsList[0]?.uid || currentUser?.uid) : (selectedScoutId || currentUser?.uid)) : currentUser?.uid);
 
   const [selectedRankId, setSelectedRankId] = useState('scout');
   const [allRanksProgress, setAllRanksProgress] = useState({});
@@ -90,6 +93,16 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [loading, setLoading] = useState(true);
   const [showPrintReport, setShowPrintReport] = useState(false);
   const [showNotesPrintReport, setShowNotesPrintReport] = useState(false);
+
+
+  // Fetch groups for patrol batch completion
+  useEffect(() => {
+    if (!isLeaderOrOwner) return;
+    const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    }, (err) => console.warn("Failed to load groups for batch advancement:", err));
+    return () => unsub();
+  }, [isLeaderOrOwner]);
 
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
@@ -253,6 +266,14 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
     return () => unsubscribe();
   }, [scoutId]);
+
+
+  const batchPatrolId = isBatchMode ? selectedScoutId.replace('patrol:', '') : null;
+  const targetBatchScouts = isBatchMode
+    ? scoutsList.filter(s => batchPatrolId === 'all' || s.groupId === batchPatrolId || s.patrolId === batchPatrolId)
+    : [];
+  const selectedPatrolGroup = groups.find(g => g.id === batchPatrolId);
+  const batchPatrolName = batchPatrolId === 'all' ? 'All Scouts in Troop' : (selectedPatrolGroup?.name ? `${selectedPatrolGroup.name} Patrol` : 'Patrol');
 
   const selectedRankData = RANKS_DATA.find((r) => r.id === selectedRankId) || RANKS_DATA[0];
   const activeProgress = allRanksProgress[selectedRankId] || { completedRequirements: {} };
@@ -648,6 +669,45 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
           </select>
         </div>
       )}
+      
+      {/* ── BATCH MODE ACTIVE NOTIFICATION BANNER ── */}
+      {isBatchMode && (
+        <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border border-emerald-500/40 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-hide">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+              <Users size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-white text-sm">
+                  Patrol Batch Sign-off Active: {batchPatrolName}
+                </h3>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full">
+                  {targetBatchScouts.length} Scouts Selected
+                </span>
+              </div>
+              <p className="text-xs text-slate-350 mt-0.5">
+                Clicking any requirement below will complete and sign it off for all {targetBatchScouts.length} scouts simultaneously.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleBatchApproveLeader}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 shrink-0"
+          >
+            <CheckCheck size={14} />
+            <span>Complete All {selectedRankData.name} for Patrol</span>
+          </button>
+        </div>
+      )}
+
+      {batchUpdatesMsg && (
+        <div className="bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs font-bold p-3 rounded-xl text-center shadow-lg animate-pulse print-hide">
+          {batchUpdatesMsg}
+        </div>
+      )}
+
       {/* ── SEPARATE SECTION 1: ABOUT ME (SCOUT BIO) ── */}
       {scoutId && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3 print-hide">

@@ -27,13 +27,15 @@ import {
   Sparkles,
   Tent,
   Users,
-  Compass
+  Compass,
+  Hourglass
 } from 'lucide-react';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration } from '../utils/kashafVoice';
 
 export default function EventsManager({ currentUser }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader' || isOwner;
+  const isScout = !isLeader;
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,12 +90,12 @@ export default function EventsManager({ currentUser }) {
     }
   }, [isLeader]);
 
-  // Update WhatsApp text when selected event changes
+  // Update WhatsApp text when selected event changes (leaders only)
   useEffect(() => {
-    if (selectedEvent) {
+    if (selectedEvent && isLeader) {
       setCustomWhatsAppMsg(formatKashafEventWhatsApp(selectedEvent));
     }
-  }, [selectedEvent]);
+  }, [selectedEvent, isLeader]);
 
   const handleOpenNew = () => {
     setEditingId(null);
@@ -188,18 +190,26 @@ export default function EventsManager({ currentUser }) {
 
   // Helper for countdown
   const getEventCountdown = (dateStr) => {
-    if (!dateStr) return '';
+    if (!dateStr) return { label: 'Scheduled', color: 'bg-slate-800 text-slate-400', days: 0 };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const evDate = new Date(dateStr);
     evDate.setHours(0, 0, 0, 0);
     const diffDays = Math.round((evDate - today) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return { label: 'Today!', color: 'bg-red-500 text-white font-black animate-pulse' };
-    if (diffDays === 1) return { label: 'Tomorrow', color: 'bg-amber-500 text-slate-950 font-bold' };
-    if (diffDays > 1) return { label: `In ${diffDays} days`, color: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' };
-    return { label: 'Past Event', color: 'bg-slate-800 text-slate-400' };
+    if (diffDays < 0) {
+      return { label: `Past Event (${Math.abs(diffDays)}d ago)`, color: 'bg-slate-800 text-slate-400', days: diffDays };
+    }
+    if (diffDays === 0) {
+      return { label: '🎯 Event is Today!', color: 'bg-red-500 text-white font-black animate-pulse', days: 0 };
+    }
+    if (diffDays === 1) {
+      return { label: '⏰ Tomorrow!', color: 'bg-amber-500 text-slate-950 font-bold', days: 1 };
+    }
+    return { label: `⏳ In ${diffDays} Days`, color: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold', days: diffDays };
   };
+
+  const selectedCountdown = selectedEvent ? getEventCountdown(selectedEvent.date) : null;
 
   return (
     <div className="space-y-6">
@@ -207,16 +217,24 @@ export default function EventsManager({ currentUser }) {
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles size={12} /> KashafVoice v3.0 Enabled
-            </span>
+            {isLeader ? (
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={12} /> KashafVoice v3.0 Enabled
+              </span>
+            ) : (
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                ⚜️ Dhulfiqār Troop Calendar
+              </span>
+            )}
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
             <Calendar className="text-emerald-400" size={24} />
-            <span>Planned Events & Troop Calendar</span>
+            <span>{isLeader ? 'Planned Events & Troop Calendar' : 'Upcoming Troop Events & Campouts'}</span>
           </h2>
           <p className="text-xs text-slate-350 mt-1 leading-relaxed max-w-2xl">
-            Schedule campouts, meetings, ceremonies, and service projects, and share instant faith-rooted WhatsApp announcements with parents.
+            {isLeader 
+              ? 'Schedule campouts, meetings, ceremonies, and service projects, and share instant faith-rooted WhatsApp announcements with parents.'
+              : 'Explore upcoming campouts, meetings, itineraries, and required packing lists with real-time day countdowns.'}
           </p>
         </div>
 
@@ -230,7 +248,7 @@ export default function EventsManager({ currentUser }) {
         )}
       </div>
 
-      {/* Event Creator Form Modal/Panel */}
+      {/* Event Creator Form Modal/Panel (Leader Only) */}
       {showForm && isLeader && (
         <div className="bg-slate-800 border border-emerald-500/40 rounded-2xl p-6 shadow-2xl space-y-5 animate-fadeIn">
           <div className="flex justify-between items-center border-b border-slate-700 pb-3">
@@ -422,7 +440,7 @@ export default function EventsManager({ currentUser }) {
           )}
         </div>
 
-        {/* Right Panel: Event Details + KashafVoice v3.0 WhatsApp Messenger */}
+        {/* Right Panel: Event Details */}
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl md:col-span-2 min-h-[400px]">
           {selectedEvent ? (
             <div className="space-y-6">
@@ -468,65 +486,119 @@ export default function EventsManager({ currentUser }) {
                 )}
               </div>
 
-              {/* ── KASHAFVOICE V3.0 WHATSAPP ANNOUNCEMENT CARD ── */}
-              <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/40 rounded-2xl p-5 shadow-lg space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-750 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                      <MessageSquare size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
-                        <span>WhatsApp Parent Announcement</span>
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
-                          KashafVoice v3.0
+              {/* ── SCOUT VIEW: EVENT COUNTDOWN & LOGISTICS HERO ── */}
+              {isScout && selectedCountdown && (
+                <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/40 rounded-2xl p-5 shadow-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-lg shadow-emerald-950/40">
+                        <Clock size={24} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          Days Remaining
                         </span>
-                      </h4>
-                      <p className="text-[11px] text-slate-400">Pre-formatted event message ready to share with parents.</p>
+                        <h4 className="text-lg font-black text-white flex items-center gap-2">
+                          <span>{selectedCountdown.label}</span>
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="bg-slate-800/90 border border-slate-700 px-3.5 py-2 rounded-xl text-center">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold">Date</span>
+                        <strong className="text-xs font-mono text-emerald-400">{selectedEvent.date}</strong>
+                      </div>
+                      {selectedEvent.time && (
+                        <div className="bg-slate-800/90 border border-slate-700 px-3.5 py-2 rounded-xl text-center">
+                          <span className="text-[10px] text-slate-400 block uppercase font-bold">Time</span>
+                          <strong className="text-xs font-mono text-slate-200">{selectedEvent.time}</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => handleCopyWhatsApp(customWhatsAppMsg)}
-                      className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                    >
-                      {copiedSuccess ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                      <span>{copiedSuccess ? 'Copied!' : 'Copy Text'}</span>
-                    </button>
+                  {selectedEvent.location && (
+                    <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-300 flex items-center gap-1.5 truncate">
+                        <MapPin size={14} className="text-emerald-400 shrink-0" />
+                        <span>{selectedEvent.location}</span>
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 hover:text-emerald-300 font-bold shrink-0 flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Open in Maps</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
 
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(customWhatsAppMsg)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
-                    >
-                      <Send size={13} />
-                      <span>Share on WhatsApp</span>
-                    </a>
+              {/* ── LEADER VIEW ONLY: KASHAFVOICE V3.0 WHATSAPP PARENT MESSENGER CARD ── */}
+              {isLeader && (
+                <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/40 rounded-2xl p-5 shadow-lg space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-750 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                        <MessageSquare size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                          <span>WhatsApp Parent Announcement</span>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                            KashafVoice v3.0
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400">Pre-formatted event message ready to share with parents.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => handleCopyWhatsApp(customWhatsAppMsg)}
+                        className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      >
+                        {copiedSuccess ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                        <span>{copiedSuccess ? 'Copied!' : 'Copy Text'}</span>
+                      </button>
+
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(customWhatsAppMsg)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
+                      >
+                        <Send size={13} />
+                        <span>Share on WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Message Editor / Preview */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-[10px] text-slate-400">
+                      <span>Live Message Preview (Editable):</span>
+                      <button
+                        onClick={() => setCustomWhatsAppMsg(formatKashafEventWhatsApp(selectedEvent))}
+                        className="text-emerald-400 hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Sparkles size={11} /> Reset to Default Template
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={9}
+                      value={customWhatsAppMsg}
+                      onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
+                      className="w-full bg-[#0b141a] border border-[#222e35] text-[#e9edef] rounded-xl p-3.5 text-xs font-sans leading-relaxed focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
-
-                {/* Message Editor / Preview */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-[10px] text-slate-400">
-                    <span>Live Message Preview (Editable):</span>
-                    <button
-                      onClick={() => setCustomWhatsAppMsg(formatKashafEventWhatsApp(selectedEvent))}
-                      className="text-emerald-400 hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Sparkles size={11} /> Reset to Default Template
-                    </button>
-                  </div>
-
-                  <textarea
-                    rows={9}
-                    value={customWhatsAppMsg}
-                    onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
-                    className="w-full bg-[#0b141a] border border-[#222e35] text-[#e9edef] rounded-xl p-3.5 text-xs font-sans leading-relaxed focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Event Description */}
               {selectedEvent.description && (
