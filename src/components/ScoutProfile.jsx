@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { User, Mail, Phone, Lock, Shield, Image as ImageIcon } from 'lucide-react';
+import AssignmentsManager from './AssignmentsManager';
 
 export default function ScoutProfile({ currentUser }) {
   // Profile information states
@@ -253,6 +254,9 @@ export default function ScoutProfile({ currentUser }) {
           </p>
         </div>
       </div>
+
+      {/* ── SCOUT HOMEWORK & ASSIGNED TASKS (Videos to Watch & Documents to Complete) ── */}
+      <AssignmentsManager currentUser={currentUser} scoutId={currentUser.uid} isEmbeddedInProfile={true} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Personal Details Form */}

@@ -653,7 +653,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
                 { label: "General Chat", text: "" },
                 { label: "Meeting Reminder", text: "Salam! This is a reminder about our upcoming Taliʿa Troop meeting. Please be prepared and on time. Shukran!" },
                 { label: "Safeguarding Video Reminder", text: "Salam! Please make sure to watch the required safeguarding / youth protection standard videos under your Taliʿa profile. This is an essential requirement. Shukran!" },
-                { label: "Islamic Basics Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Basics checklist under your Taliʿa profile. Shukran!" },
+                { label: "Islamic Knowledge Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Knowledge curriculum checklist under your Taliʿa profile. Shukran!" },
                 { label: "Service Hours Reminder", text: "Salam! Please remember to log your volunteering and community service hours in the Taliʿa Service Log. Shukran!" }
               ].map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
@@ -1144,137 +1144,277 @@ export default function PatrolRoster({ currentUser = {} }) {
             </div>
           )}
 
-          {/* Group Tabs selection */}
-          {visibleGroups.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none mb-4">
-              <button
-                onClick={() => setActiveGroupTab('all')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
-                  activeGroupTab === 'all'
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
-                    : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
-                }`}
-              >
-                All Patrols ({scouts.length})
-              </button>
-              {visibleGroups.map((g) => {
-                const groupScoutsCount = scouts.filter(s => s.groupId === g.id).length;
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => setActiveGroupTab(g.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 ${
-                      activeGroupTab === g.id
-                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
-                        : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {g.name} Patrol ({groupScoutsCount})
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Group / Patrol Tabs Selector */}
+          <div className="flex gap-2 overflow-x-auto pb-2 border-b border-slate-700/60 scrollbar-none mb-4">
+            <button
+              onClick={() => setActiveGroupTab('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                activeGroupTab === 'all'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                  : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>All Patrols</span>
+              <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.2 rounded-full font-mono">
+                {scouts.length}
+              </span>
+            </button>
+            {visibleGroups.map((g) => {
+              const groupScouts = scouts.filter(s => s.groupId === g.id);
+              const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => setActiveGroupTab(g.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                    activeGroupTab === g.id
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                      : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🛡️ {g.name} Patrol</span>
+                  <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.2 rounded-full font-mono">
+                    {groupScouts.length}
+                  </span>
+                  {groupApprovals > 0 && (
+                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full font-black">
+                      {groupApprovals}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Scout list */}
-          <div className="space-y-2">
-            {filteredScouts.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-                No scouts found in this patrol.
-              </div>
-            ) : (
-              filteredScouts.map((scout) => (
-                <div key={scout.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
-                  <button
-                    className="w-full flex justify-between items-center px-5 py-4 text-left cursor-pointer hover:bg-slate-700/50 transition"
-                    onClick={() => setExpanded((v) => (v === scout.uid ? null : scout.uid))}
-                  >
-                    <div className="flex items-center gap-3">
-                      {scout.photoURL ? (
-                        <img
-                          src={scout.photoURL}
-                          alt="Scout Avatar"
-                          className="w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
-                          {(scout.fullName || scout.username).charAt(0)}
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-semibold text-white text-sm">{scout.fullName || scout.username}</p>
-                        <p className="text-xs text-slate-400">@{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {pendingApprovalsMap[scout.uid]?.total > 0 && (
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
-                          <Clock size={11} /> {pendingApprovalsMap[scout.uid].total} Needs Approval
-                        </span>
-                      )}
-                      <span className="text-slate-400 text-lg">{expanded === scout.uid ? '▲' : '▼'}</span>
-                    </div>
-                  </button>
+          {/* ── SEPARATED PATROLS VIEW ── */}
+          {(() => {
+            // Build list of patrols to render
+            const patrolSections = [];
+            if (activeGroupTab === 'all') {
+              visibleGroups.forEach(g => {
+                const groupScouts = scouts.filter(s => s.groupId === g.id);
+                const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
+                patrolSections.push({
+                  id: g.id,
+                  name: g.name,
+                  description: g.description || 'Active Troop Patrol',
+                  leaderId: g.leaderId,
+                  scouts: groupScouts,
+                  approvals: groupApprovals
+                });
+              });
+              const unassigned = scouts.filter(s => !s.groupId || !visibleGroups.some(g => g.id === s.groupId));
+              if (unassigned.length > 0) {
+                const unassignedApprovals = unassigned.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
+                patrolSections.push({
+                  id: 'unassigned',
+                  name: 'Unassigned Scouts',
+                  description: 'Scouts pending assignment to a specific patrol',
+                  leaderId: null,
+                  scouts: unassigned,
+                  approvals: unassignedApprovals
+                });
+              }
+            } else {
+              const selectedGroup = visibleGroups.find(g => g.id === activeGroupTab);
+              const groupScouts = scouts.filter(s => s.groupId === activeGroupTab);
+              const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
+              patrolSections.push({
+                id: activeGroupTab,
+                name: selectedGroup ? selectedGroup.name : 'Selected Patrol',
+                description: selectedGroup?.description || 'Active Troop Patrol',
+                leaderId: selectedGroup?.leaderId,
+                scouts: groupScouts,
+                approvals: groupApprovals
+              });
+            }
 
-                  {expanded === scout.uid && (
-                    <div className="px-5 pb-4 border-t border-slate-700/60 pt-3 space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
-                        <div>
-                          <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
-                          <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Personal Email</span>
-                          <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Scout Phone</span>
-                          <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Email</span>
-                          <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Parent Phone</span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-semibold text-slate-200">{scout.parentPhone || '—'}</span>
-                            {scout.parentPhone && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveWhatsappPhone(scout.parentPhone);
-                                  setActiveWhatsappName(`${scout.fullName || scout.username}'s Parent`);
-                                }}
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
-                                title="Chat with parent on WhatsApp"
-                              >
-                                <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
-                                </svg>
-                              </button>
-                            )}
+            if (patrolSections.length === 0 || scouts.length === 0) {
+              return (
+                <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
+                  No scouts found. Click "+ Add Scout" to register troop members.
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-6">
+                {patrolSections.map((patrol) => {
+                  const assignedLeader = leaders.find(l => l.uid === patrol.leaderId);
+                  return (
+                    <div
+                      key={patrol.id}
+                      className="bg-slate-850/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg space-y-4"
+                    >
+                      {/* Patrol Header Card */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-extrabold text-lg shrink-0">
+                            🛡️
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-base font-extrabold text-white">
+                                {patrol.name.toLowerCase().includes('patrol') ? patrol.name : `${patrol.name} Patrol`}
+                              </h4>
+                              <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 font-mono px-2 py-0.5 rounded-full font-bold">
+                                {patrol.scouts.length} {patrol.scouts.length === 1 ? 'Scout' : 'Scouts'}
+                              </span>
+                              {patrol.approvals > 0 && (
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse">
+                                  <Clock size={11} /> {patrol.approvals} Needs Review
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {assignedLeader ? (
+                                <span>Leader: <strong className="text-slate-200">{assignedLeader.fullName || assignedLeader.username}</strong></span>
+                              ) : (
+                                <span>{patrol.description}</span>
+                              )}
+                            </p>
                           </div>
                         </div>
+
+                        {/* Patrol Quick Actions */}
+                        <div className="flex items-center gap-2">
+                          {patrol.scouts.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const parentPhones = patrol.scouts.map(s => s.parentPhone).filter(Boolean);
+                                if (parentPhones.length > 0) {
+                                  setActiveWhatsappPhone(parentPhones[0]);
+                                  setActiveWhatsappName(`${patrol.name} Parents`);
+                                } else {
+                                  alert('No phone numbers recorded for scouts in this patrol.');
+                                }
+                              }}
+                              className="bg-emerald-700/40 hover:bg-emerald-600 text-emerald-200 hover:text-white border border-emerald-600/30 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                              </svg>
+                              <span>WhatsApp Patrol</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => setSelected(scout)}
-                        className="mt-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
-                      >
-                        <span>Open Granular Portal & Notes &rarr;</span>
-                        {pendingApprovalsMap[scout.uid]?.total > 0 && (
-                          <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] font-black">
-                            {pendingApprovalsMap[scout.uid].total} Pending
-                          </span>
+                      {/* Patrol Scouts List */}
+                      <div className="space-y-2.5">
+                        {patrol.scouts.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic py-3 text-center">
+                            No scouts currently assigned to this patrol.
+                          </p>
+                        ) : (
+                          patrol.scouts.map((scout) => {
+                            const scoutApprovals = pendingApprovalsMap[scout.uid]?.total || 0;
+                            return (
+                              <div
+                                key={scout.uid}
+                                className="bg-slate-800 border border-slate-700/80 rounded-xl overflow-hidden shadow-sm"
+                              >
+                                <button
+                                  className="w-full flex justify-between items-center px-4 py-3 text-left cursor-pointer hover:bg-slate-750/50 transition"
+                                  onClick={() => setExpanded((v) => (v === scout.uid ? null : scout.uid))}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {scout.photoURL ? (
+                                      <img
+                                        src={scout.photoURL}
+                                        alt="Scout Avatar"
+                                        className="w-8 h-8 rounded-full object-cover border border-slate-600 shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 uppercase">
+                                        {(scout.fullName || scout.username).charAt(0)}
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-semibold text-white text-xs sm:text-sm">
+                                        {scout.fullName || scout.username}
+                                      </p>
+                                      <p className="text-[11px] text-slate-400">
+                                        @{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    {scoutApprovals > 0 && (
+                                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                                        <Clock size={11} /> {scoutApprovals} Needs Review
+                                      </span>
+                                    )}
+                                    <span className="text-slate-400 text-sm">{expanded === scout.uid ? '▲' : '▼'}</span>
+                                  </div>
+                                </button>
+
+                                {expanded === scout.uid && (
+                                  <div className="px-4 pb-4 border-t border-slate-750 pt-3 space-y-3 bg-slate-900/30">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
+                                      <div>
+                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
+                                        <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">Personal Email</span>
+                                        <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">Scout Phone</span>
+                                        <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Email</span>
+                                        <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Phone</span>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="font-semibold text-slate-200">{scout.parentPhone || '—'}</span>
+                                          {scout.parentPhone && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveWhatsappPhone(scout.parentPhone);
+                                                setActiveWhatsappName(`${scout.fullName || scout.username}'s Parent`);
+                                              }}
+                                              className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
+                                              title="Chat with parent on WhatsApp"
+                                            >
+                                              <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24">
+                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                                              </svg>
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      onClick={() => setSelected(scout)}
+                                      className="mt-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
+                                    >
+                                      <span>Open Granular Portal & Notes &rarr;</span>
+                                      {scoutApprovals > 0 && (
+                                        <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] font-black">
+                                          {scoutApprovals} Pending
+                                        </span>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
                         )}
-                      </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </>
       ) : (
         <div className="space-y-3">

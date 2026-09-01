@@ -89,6 +89,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [expandedReqs, setExpandedReqs] = useState({}); // { [reqId]: boolean }
   const [loading, setLoading] = useState(true);
   const [showPrintReport, setShowPrintReport] = useState(false);
+  const [showNotesPrintReport, setShowNotesPrintReport] = useState(false);
 
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
@@ -488,6 +489,129 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     );
   }
 
+  if (showNotesPrintReport) {
+    const currentScout = scoutData || { uid: currentUser.uid, fullName: currentUser.fullName, username: currentUser.username, rank: currentUser.rank || 'Scout', bsaId: currentUser.bsaId };
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl print-hide">
+          <button
+            onClick={() => setShowNotesPrintReport(false)}
+            className="bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+          >
+            &larr; Back to Tracker
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg"
+          >
+            <Printer size={14} />
+            <span>Print to PDF / Printer</span>
+          </button>
+        </div>
+
+        {/* Clean printable notes sheet */}
+        <div className="bg-white text-slate-900 p-8 rounded-2xl shadow-xl space-y-6 border border-slate-300 font-sans print:p-0 print:border-none print:shadow-none">
+          {/* Header */}
+          <div className="flex justify-between items-start border-b-2 border-emerald-700 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚜️</span>
+                <h1 className="text-2xl font-black tracking-tight text-emerald-900">TALIʿA SCOUTS BSA</h1>
+              </div>
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-1">Official Scout Notes & Personal Journal</h2>
+            </div>
+            <div className="text-right text-xs text-slate-600">
+              <p><strong>Date Generated:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p><strong>Troop:</strong> Taliʿa Troop</p>
+            </div>
+          </div>
+
+          {/* Scout Info Box */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+            <div>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Scout Name</span>
+              <strong className="text-slate-900 text-sm">{currentScout.fullName || currentScout.username || 'Scout'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Current Rank</span>
+              <strong className="text-emerald-800 text-sm">{currentScout.rank || 'Scout'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">BSA Member ID</span>
+              <strong className="text-slate-900">{currentScout.bsaId || '—'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Total Journal Notes</span>
+              <strong className="text-slate-900">{journalNotes.length} entries</strong>
+            </div>
+          </div>
+
+          {/* About Me / Biography */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-900 border-b border-slate-200 pb-1">
+              About Me & Personal Scouting Statement
+            </h3>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed min-h-[50px]">
+              {currentScout.bio ? (
+                <p className="whitespace-pre-wrap">{currentScout.bio}</p>
+              ) : (
+                <span className="italic text-slate-400">No personal bio added yet.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Dated Journal Entries */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-900 border-b border-slate-200 pb-1">
+              Dated Journal Entries, Meeting Notes & Reflections ({journalNotes.length})
+            </h3>
+
+            {journalNotes.length === 0 ? (
+              <p className="text-xs text-slate-500 italic p-4 bg-slate-50 rounded-xl text-center">
+                No dated notes recorded yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {journalNotes.map((note, idx) => (
+                  <div key={note.id || idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5 break-inside-avoid">
+                    <div className="flex justify-between items-center text-xs border-b border-slate-200 pb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded text-[11px] font-mono">
+                          📅 {note.date}
+                        </span>
+                        <span className="font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded text-[10px]">
+                          {note.category || 'General Note'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500">
+                        Author: <strong>{note.authorName || 'Scout'}</strong>
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
+                      {note.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Signatures Footer */}
+          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs">
+            <div>
+              <div className="border-b border-slate-400 h-10 mb-1"></div>
+              <p className="font-bold text-slate-700">Scout Signature</p>
+            </div>
+            <div>
+              <div className="border-b border-slate-400 h-10 mb-1"></div>
+              <p className="font-bold text-slate-700">Scoutmaster / Leader Signature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Banner with PDF Print */}
@@ -594,7 +718,18 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
                 <p className="text-[11px] text-slate-400">Log meeting notes, campout reflections, and advancement goals by date.</p>
               </div>
             </div>
-            {journalMsg && <span className="text-xs text-emerald-400 font-semibold">{journalMsg}</span>}
+            <div className="flex items-center gap-2">
+              {journalMsg && <span className="text-xs text-emerald-400 font-semibold">{journalMsg}</span>}
+              <button
+                type="button"
+                onClick={() => setShowNotesPrintReport(true)}
+                className="bg-slate-700 hover:bg-slate-650 text-slate-200 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-600 shadow-sm"
+                title="Print your bio and notes to PDF"
+              >
+                <Printer size={13} className="text-amber-400" />
+                <span>Print Notes (PDF)</span>
+              </button>
+            </div>
           </div>
 
           {/* Add New Dated Note Form */}

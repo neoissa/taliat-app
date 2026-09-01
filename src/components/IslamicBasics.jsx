@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, collection, onSnapshot, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { 
   ISLAMIC_BASICS_TOPICS, 
   KARBALA_CHARACTERS_DATA, 
@@ -27,7 +27,10 @@ import {
   UserCheck, 
   Compass, 
   MapPin, 
-  Quote 
+  Quote,
+  User,
+  Users,
+  Check
 } from 'lucide-react';
 
 const USUL_AL_DIN = [
@@ -76,14 +79,20 @@ const FURU_AL_DIN = [
   { name: 'Tabarra', arabic: 'التبري', meaning: 'Dissociating from Enemies of Ahlul Bayt', details: 'Distancing oneself from and rejecting the cruelty of tyrants and oppressors throughout history.' }
 ];
 
-export default function IslamicBasics({ currentUser, scoutId }) {
-  const targetScoutId = scoutId || currentUser?.uid;
+export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition;
   const isLeaderOrOwner = isOwner || isLeader;
   const isScout = !isLeaderOrOwner;
+
+  // Scouts list for Leader dropdown selector
+  const [allScouts, setAllScouts] = useState([]);
+  const [selectedLeaderScoutId, setSelectedLeaderScoutId] = useState('');
+
+  // Determine active target scout ID
+  const targetScoutId = propScoutId || (isLeaderOrOwner ? (selectedLeaderScoutId || currentUser?.uid) : currentUser?.uid);
   
-  // Navigation tabs: 'roots' | 'branches' | 'infallibles' | 'karbala' | 'duas' | 'tracker'
+  // Navigation tabs: 'karbala' | 'duas' | 'infallibles' | 'tracker' | 'roots' | 'branches'
   const [activeTab, setActiveTab] = useState('karbala');
   
   // Search & filter states
@@ -99,8 +108,24 @@ export default function IslamicBasics({ currentUser, scoutId }) {
   const [loading, setLoading] = useState(true);
   const [expandedTopic, setExpandedTopic] = useState(null);
   const [tempDates, setTempDates] = useState({});
+  const [actionFeedback, setActionFeedback] = useState('');
 
-  // Real-time subscription to scout's islamic progress
+  // 1. Fetch scouts list if viewing as leader without propScoutId
+  useEffect(() => {
+    if (isLeaderOrOwner && !propScoutId) {
+      const q = query(collection(db, 'users'), where('role', '==', 'scout'));
+      const unsub = onSnapshot(q, (snap) => {
+        const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        setAllScouts(list);
+        if (list.length > 0 && !selectedLeaderScoutId) {
+          setSelectedLeaderScoutId(list[0].uid);
+        }
+      }, (err) => console.error("Failed to load scouts for Islamic Knowledge:", err));
+      return () => unsub();
+    }
+  }, [isLeaderOrOwner, propScoutId, selectedLeaderScoutId]);
+
+  // 2. Real-time subscription to scout's islamic progress
   useEffect(() => {
     if (!targetScoutId) {
       setLoading(false);
@@ -115,13 +140,19 @@ export default function IslamicBasics({ currentUser, scoutId }) {
       }
       setLoading(false);
     }, (err) => {
-      console.error("Failed to load Islamic progress:", err);
+      console.error("Failed to load Islamic Knowledge progress:", err);
       setLoading(false);
     });
     return () => unsub();
   }, [targetScoutId]);
 
-  // Toggle handler for circular checkbox with optimistic update
+  // Show transient feedback message
+  const showFeedback = (msg) => {
+    setActionFeedback(msg);
+    setTimeout(() => setActionFeedback(''), 4000);
+  };
+
+  // Direct toggle handler for circular checkbox with optimistic update
   const handleToggleTopic = async (topicId) => {
     if (!targetScoutId) return;
     const existing = progress[topicId] || {};
@@ -146,10 +177,17 @@ export default function IslamicBasics({ currentUser, scoutId }) {
           updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
         };
 
+    // Optimistic UI update
     setProgress(prev => ({
       ...prev,
       [topicId]: { ...prev[topicId], ...updatedData }
     }));
+
+    if (newCompleted) {
+      showFeedback("✓ Topic Marked as Completed & Approved!");
+    } else {
+      showFeedback("Status updated.");
+    }
 
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
@@ -157,8 +195,9 @@ export default function IslamicBasics({ currentUser, scoutId }) {
         [topicId]: updatedData
       }, { merge: true });
     } catch (err) {
-      console.error("Failed to toggle topic status:", err);
+      console.error("Failed to toggle topic status in Firestore:", err);
       setProgress(prev => ({ ...prev, [topicId]: existing }));
+      showFeedback("⚠️ Error saving to database. Please check connection.");
     }
   };
 
@@ -186,14 +225,21 @@ export default function IslamicBasics({ currentUser, scoutId }) {
       [topicId]: { ...prev[topicId], ...updatedData }
     }));
 
+    if (newCompleted) {
+      showFeedback("✓ Confirmed & Marked Tested/Completed!");
+    } else {
+      showFeedback("Topic unmarked.");
+    }
+
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
       await setDoc(docRef, {
         [topicId]: updatedData
       }, { merge: true });
     } catch (err) {
-      console.error("Failed to approve topic:", err);
+      console.error("Failed to approve topic in Firestore:", err);
       setProgress(prev => ({ ...prev, [topicId]: existing }));
+      showFeedback("⚠️ Error saving to database.");
     }
   };
 
@@ -215,13 +261,15 @@ export default function IslamicBasics({ currentUser, scoutId }) {
       [topicId]: resetData
     }));
 
+    showFeedback("Topic status reset.");
+
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
       await setDoc(docRef, {
         [topicId]: resetData
       }, { merge: true });
     } catch (err) {
-      console.error("Failed to reset topic:", err);
+      console.error("Failed to reset topic in Firestore:", err);
       setProgress(prev => ({ ...prev, [topicId]: existing }));
     }
   };
@@ -262,22 +310,24 @@ export default function IslamicBasics({ currentUser, scoutId }) {
     return true;
   });
 
+  const selectedScoutObj = allScouts.find(s => s.uid === targetScoutId);
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-emerald-900/60 via-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl p-6 relative overflow-hidden shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                🕌 Shia Islamic Comprehensive Curriculum
+                🕌 Shia Islamic Knowledge Curriculum
               </span>
               <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
                 🏴 Karbala Youth Theme
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              <span>Islamic Shia Basics & Karbala Library</span>
+              <span>Islamic Knowledge & Karbala Library</span>
             </h2>
             <p className="text-slate-300 text-sm mt-1 max-w-2xl leading-relaxed">
               Explore authentic biographies of the 14 Infallibles, hero profiles from the Tragedy of Karbala, post-Salat Ta'qibat & sacred supplications, and test scout knowledge in real-time.
@@ -298,6 +348,48 @@ export default function IslamicBasics({ currentUser, scoutId }) {
           </div>
         </div>
       </div>
+
+      {/* Leader Scout Selector (If viewed directly in leader mode without propScoutId) */}
+      {isLeaderOrOwner && !propScoutId && allScouts.length > 0 && (
+        <div className="bg-slate-850 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+              <Users size={18} />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                Testing Scout Knowledge
+              </label>
+              <span className="text-sm font-extrabold text-white">
+                {selectedScoutObj ? (selectedScoutObj.fullName || selectedScoutObj.username) : 'Select Scout'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-semibold hidden md:inline">Reviewing:</span>
+            <select
+              value={targetScoutId}
+              onChange={(e) => setSelectedLeaderScoutId(e.target.value)}
+              className="bg-slate-900 border border-emerald-500/50 rounded-xl px-4 py-2 text-xs font-bold text-white focus:outline-none focus:border-emerald-400 cursor-pointer shadow-inner"
+            >
+              {allScouts.map((scout) => (
+                <option key={scout.uid} value={scout.uid}>
+                  {scout.fullName || scout.username} ({scout.rank || 'Scout'})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Action Feedback Notification */}
+      {actionFeedback && (
+        <div className="p-3 bg-emerald-950/80 border border-emerald-500 text-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn shadow-lg">
+          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+          <span>{actionFeedback}</span>
+        </div>
+      )}
 
       {/* Main Navigation Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-750 pb-2">
@@ -572,7 +664,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                 </div>
 
                 {/* Transliteration */}
-                <div className="bg-slate-850/60 border border-slate-750 rounded-xl p-3.5">
+                <div className="bg-slate-850/60 border border-slate-755 rounded-xl p-3.5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                     Phonetic Transliteration
                   </span>
@@ -726,7 +818,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <CheckCircle2 className="text-emerald-400" size={20} />
-                  <span>Curriculum Topics & Knowledge Check Tracker</span>
+                  <span>Islamic Knowledge Curriculum & Progress Tracker</span>
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
                   Test, check off, and verify scout knowledge across all Shia Islamic curriculum modules.
@@ -984,3 +1076,5 @@ export default function IslamicBasics({ currentUser, scoutId }) {
     </div>
   );
 }
+
+export const IslamicBasics = IslamicKnowledge;

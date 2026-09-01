@@ -13,6 +13,8 @@ import ScoutProfile from './components/ScoutProfile';
 import LessonPlans from './components/LessonPlans';
 import IslamicBasics from './components/IslamicBasics';
 import ServiceLogs from './components/ServiceLogs';
+import AssignmentsManager from './components/AssignmentsManager';
+import EventsManager from './components/EventsManager';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -317,7 +319,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Basics
+                Islamic Knowledge
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
@@ -402,7 +404,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Basics
+                Islamic Knowledge
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
@@ -477,7 +479,7 @@ export default function App() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Basics
+                Islamic Knowledge
               </button>
               <button
                 onClick={() => setCurrentTab('service-log')}
@@ -504,6 +506,8 @@ export default function App() {
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
+        {currentTab === 'events' && <EventsManager currentUser={currentUser} />}
+        {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
