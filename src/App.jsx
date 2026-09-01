@@ -310,6 +310,16 @@ export default function App() {
                 Resources
               </button>
               <button
+                onClick={() => setCurrentTab('islamic')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'islamic'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Islamic Basics
+              </button>
+              <button
                 onClick={() => setCurrentTab('profile')}
                 className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'profile'
@@ -383,6 +393,16 @@ export default function App() {
                 }`}
               >
                 Lesson Plans
+              </button>
+              <button
+                onClick={() => setCurrentTab('islamic')}
+                className={`py-3 text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'islamic'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Islamic Basics
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
@@ -484,7 +504,7 @@ export default function App() {
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
-        {currentTab === 'islamic' && isScout && <IslamicBasics currentUser={currentUser} />}
+        {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}
