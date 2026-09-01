@@ -7,6 +7,7 @@ import AdminPanel from './components/AdminPanel';
 import ScoutList from './components/ScoutList';
 import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
+import RoadToEagleGuide from './components/RoadToEagleGuide';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import VideoResources from './components/VideoResources';
@@ -257,6 +258,16 @@ export default function App() {
                 <span>⚡ Global Admin</span>
               </button>
               <button
+                onClick={() => setCurrentTab('road-to-eagle')}
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  currentTab === 'road-to-eagle'
+                    ? 'border-amber-500 text-amber-400 font-extrabold shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🦅 Road to Eagle</span>
+              </button>
+              <button
                 onClick={() => setCurrentTab('group-manager')}
                 className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'group-manager'
@@ -367,6 +378,16 @@ export default function App() {
           {/* ── LEADER NAVIGATION ── */}
           {isLeader && (
             <>
+              <button
+                onClick={() => setCurrentTab('road-to-eagle')}
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  currentTab === 'road-to-eagle'
+                    ? 'border-amber-500 text-amber-400 font-extrabold shadow-sm'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🦅 Road to Eagle</span>
+              </button>
               <button
                 onClick={() => setCurrentTab('roster')}
                 className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
@@ -590,7 +611,11 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
-        {currentTab === 'home' && isScout && (
+        {currentTab === 'road-to-eagle' && (
+        <RoadToEagleGuide currentUser={currentUser} onNavigate={setCurrentTab} />
+      )}
+
+      {currentTab === 'home' && isScout && (
           <StudentHome 
             currentUser={currentUser} 
             unreadChatCount={unreadChatCount} 
