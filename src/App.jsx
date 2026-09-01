@@ -248,93 +248,93 @@ export default function App() {
             <>
               <button
                 onClick={() => setCurrentTab('global-admin')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'global-admin'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Global Admin
+                <span>⚡ Global Admin</span>
               </button>
               <button
                 onClick={() => setCurrentTab('group-manager')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'group-manager'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Organization Hub
+                <span>🏢 Organization Hub</span>
               </button>
               <button
                 onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'roster'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Patrol Roster
+                <span>👥 Patrol Roster</span>
               </button>
               <button
                 onClick={() => setCurrentTab('scouts')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'scouts'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Advancement Overview
+                <span>📊 Advancement Tracker</span>
               </button>
               <button
                 onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🎒 Homework & Tasks
+                <span>🎒 Homework & Tasks</span>
               </button>
               <button
                 onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                📅 Planned Events
+                <span>📅 Planned Events</span>
               </button>
               <button
                 onClick={() => setCurrentTab('lesson-plans')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'lesson-plans'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Lesson Plans
+                <span>📋 Lesson Plans</span>
               </button>
               <button
                 onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Knowledge
+                <span>🕌 Islamic Knowledge</span>
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>Patrol Messenger</span>
+                <span>💬 Patrol Messenger</span>
                 {unreadChatCount > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
                     {unreadChatCount > 99 ? '99+' : unreadChatCount}
@@ -343,23 +343,23 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Resources
+                <span>📚 Resources</span>
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My Profile
+                <span>👤 My Profile</span>
               </button>
             </>
           )}
@@ -369,83 +369,83 @@ export default function App() {
             <>
               <button
                 onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'roster'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Patrol Roster
+                <span>👥 Patrol Roster</span>
               </button>
               <button
                 onClick={() => setCurrentTab('scouts')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'scouts'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Advancement Overview
+                <span>📊 Advancement Tracker</span>
               </button>
               <button
                 onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🎒 Homework & Tasks
+                <span>🎒 Homework & Tasks</span>
               </button>
               <button
                 onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                📅 Planned Events
+                <span>📅 Planned Events</span>
               </button>
               <button
                 onClick={() => setCurrentTab('lesson-plans')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'lesson-plans'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Lesson Plans
+                <span>📋 Lesson Plans</span>
               </button>
               <button
                 onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Knowledge
+                <span>🕌 Islamic Knowledge</span>
               </button>
               <button
                 onClick={() => setCurrentTab('admin')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'admin'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Add Requirement
+                <span>➕ Add Requirement</span>
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>{userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
+                <span>💬 {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
                 {unreadChatCount > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
                     {unreadChatCount > 99 ? '99+' : unreadChatCount}
@@ -454,23 +454,23 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Resources
+                <span>📚 Resources</span>
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My Profile
+                <span>👤 My Profile</span>
               </button>
             </>
           )}
@@ -480,83 +480,83 @@ export default function App() {
             <>
               <button
                 onClick={() => setCurrentTab('home')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'home'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🏠 Home
+                <span>🏠 Home</span>
               </button>
               <button
                 onClick={() => setCurrentTab('advancement')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'advancement'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My 7 Ranks
+                <span>⚜️ My 7 Ranks</span>
               </button>
               <button
                 onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🎒 My Homework
+                <span>🎒 My Homework</span>
               </button>
               <button
                 onClick={() => setCurrentTab('merit-badges')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'merit-badges'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My Merit Badges
+                <span>🏅 My Merit Badges</span>
               </button>
               <button
                 onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                📅 Upcoming Events
+                <span>📅 Upcoming Events</span>
               </button>
               <button
                 onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Islamic Knowledge
+                <span>🕌 Islamic Knowledge</span>
               </button>
               <button
                 onClick={() => setCurrentTab('service-log')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'service-log'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Service Log
+                <span>⏱️ Service Log</span>
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>{userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
+                <span>💬 {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
                 {unreadChatCount > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
                     {unreadChatCount > 99 ? '99+' : unreadChatCount}
@@ -565,23 +565,23 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Resources
+                <span>📚 Resources</span>
               </button>
               <button
                 onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400'
+                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My Profile
+                <span>👤 My Profile</span>
               </button>
             </>
           )}

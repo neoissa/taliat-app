@@ -72,6 +72,22 @@ const RANK_COLORS = {
   },
 };
 
+
+function getCategoryThematicIcon(catName = '') {
+  const c = catName.toLowerCase();
+  if (c.includes('camping') || c.includes('outdoor')) return '🏕️';
+  if (c.includes('first aid') || c.includes('safety') || c.includes('emergency')) return '🩹';
+  if (c.includes('navigation') || c.includes('hiking') || c.includes('orienteering')) return '🧭';
+  if (c.includes('cooking') || c.includes('fire') || c.includes('meal')) return '🍳';
+  if (c.includes('fitness') || c.includes('athletics') || c.includes('physical')) return '🏃';
+  if (c.includes('nature') || c.includes('plant') || c.includes('conservation') || c.includes('leave no trace')) return '🌲';
+  if (c.includes('citizenship') || c.includes('duty to god') || c.includes('service') || c.includes('flag')) return '🤝';
+  if (c.includes('leadership') || c.includes('scout spirit') || c.includes('patrol')) return '⚜️';
+  if (c.includes('swimming') || c.includes('aquatic') || c.includes('water')) return '🏊';
+  if (c.includes('tool') || c.includes('knot') || c.includes('rope') || c.includes('wood')) return '🪢';
+  return '📜';
+}
+
 export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false }) {
   const [selectedScoutId, setSelectedScoutId] = useState('');
   const [scoutsList, setScoutsList] = useState([]);
@@ -1031,8 +1047,9 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       <div className="space-y-6">
         {selectedRankData.categories.map((cat, catIdx) => (
           <div key={catIdx} className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700/50 pb-2">
-              {cat.name}
+            <h3 className="text-sm font-black text-white uppercase tracking-wider border-b border-slate-700/50 pb-2.5 flex items-center gap-2">
+              <span className="text-base">{getCategoryThematicIcon(cat.name)}</span>
+              <span>{cat.name}</span>
             </h3>
             <div className="space-y-3">
               {cat.requirements.map((req) => {
