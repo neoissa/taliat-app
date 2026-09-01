@@ -136,10 +136,10 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const activeRank = currentUser?.rank || 'Scout';
 
   // Real-time pending items count
-  const pendingIslamicCount = Object.values(islamicProgress).filter(p => p?.pending && !p?.completed).length;
+  const pendingIslamicCount = Object.values(islamicProgress).filter(p => (p?.pending && !p?.completed) || p === 'pending').length;
   const pendingRanksCount = Object.values(ranksProgress).reduce((acc, rank) => {
-    const steps = rank?.steps || {};
-    return acc + Object.values(steps).filter(s => s?.pending === true && !s?.completed).length;
+    const steps = rank?.completedRequirements || rank?.steps || {};
+    return acc + Object.values(steps).filter(s => (s?.pending === true || s === 'pending') && !s?.completed).length;
   }, 0);
   const totalPendingPortalItems = pendingIslamicCount + pendingRanksCount;
 
@@ -404,6 +404,29 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 </div>
               </div>
               <ChevronRight size={16} className="text-amber-400 group-hover:translate-x-1 transition" />
+            </button>
+
+            {/* ── UNIVERSAL PENDING QUEUE HUB TAB ── */}
+            <button
+              type="button"
+              onClick={() => setShowPendingModal(true)}
+              className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-amber-500/40 hover:border-amber-400 transition flex items-center justify-between cursor-pointer group shadow-md"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl group-hover:scale-110 transition animate-pulse">⏳</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-xs text-amber-300 group-hover:text-amber-200 transition">Pending Submissions & Tests</h4>
+                    {totalPendingPortalItems > 0 && (
+                      <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                        {totalPendingPortalItems} Pending
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400">All Islamic tests, rank steps & badge tasks</p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-amber-400 group-hover:translate-x-0.5 transition" />
             </button>
 
             <button
