@@ -30,54 +30,209 @@ import {
   Quote,
   User,
   Users,
-  Check
+  Check,
+  CheckSquare,
+  Send,
+  RotateCcw,
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 
 const USUL_AL_DIN = [
   {
+    id: 'usul_tawhid',
     name: 'Tawhid (Monotheism)',
     arabic: 'التوحيد',
     meaning: 'Belief in the Absolute Oneness of God',
-    description: 'There is only one God (Allah) who is the Creator, Sustainer, and Ruler of the universe. He has no partners, equals, physical form, or children. He is Eternal, All-Powerful, All-Knowing, and beyond human imagination.'
+    description: 'There is only one God (Allah) who is the Creator, Sustainer, and Ruler of the universe. He has no partners, equals, physical form, or children. He is Eternal, All-Powerful, All-Knowing, and beyond human imagination.',
+    testPrompt: 'Explain why Allah cannot have partners or a physical body, and recite Surah al-Ikhlas with meaning.'
   },
   {
+    id: 'usul_adl',
     name: 'Adl (Divine Justice)',
     arabic: 'العدل',
     meaning: 'Belief in the Justice of God',
-    description: 'Allah is completely just and fair. He does not commit injustice, evil, or oppression against anyone. He rewards righteous deeds and holds accountable wrongful actions based on intention, free will, and capacity.'
+    description: 'Allah is completely just and fair. He does not commit injustice, evil, or oppression against anyone. He rewards righteous deeds and holds accountable wrongful actions based on intention, free will, and capacity.',
+    testPrompt: 'Explain how human free will relates to divine justice and accountability on the Day of Judgement.'
   },
   {
+    id: 'usul_nubuwwah',
     name: 'Nubuwwah (Prophethood)',
     arabic: 'النبوة',
     meaning: 'Belief in the 124,000 Infallible Prophets',
-    description: 'Allah sent 124,000 prophets to guide humanity, starting with Prophet Adam (A.S.) and culminating with the Seal of Prophets, Prophet Muhammad (S.A.W.). All prophets were infallible, noble role models protected from sin and error.'
+    description: 'Allah sent 124,000 prophets to guide humanity, starting with Prophet Adam (A.S.) and culminating with the Seal of Prophets, Prophet Muhammad (S.A.W.). All prophets were infallible, noble role models protected from sin and error.',
+    testPrompt: 'Name the 5 Ulul Azm (Arch-Prophets) and explain what Ismah (infallibility) means.'
   },
   {
+    id: 'usul_imamah',
     name: 'Imamah (Divine Leadership)',
     arabic: 'الإمامة',
     meaning: 'Belief in the 12 Infallible Imams of Ahlul Bayt',
-    description: 'After Prophet Muhammad (S.A.W.), Allah appointed 12 infallible leaders (Imams) from the Prophet\'s purified household (Ahlul Bayt) to guide and preserve the religion, starting with Imam Ali (A.S.) and concluding with the living 12th Imam, Imam al-Mahdi (A.T.F.S.).'
+    description: 'After Prophet Muhammad (S.A.W.), Allah appointed 12 infallible leaders (Imams) from the Prophet\'s purified household (Ahlul Bayt) to guide and preserve the religion, starting with Imam Ali (A.S.) and concluding with the living 12th Imam, Imam al-Mahdi (A.T.F.S.).',
+    testPrompt: 'Recite the names of the 12 Imams in order and explain the event of Ghadir Khumm.'
   },
   {
+    id: 'usul_maad',
     name: 'Ma\'ad (Resurrection & Afterlife)',
     arabic: 'المعاد',
     meaning: 'Belief in the Day of Judgement & Accountability',
-    description: 'All human beings will be physically and spiritually resurrected on the Day of Judgement (Yawm al-Qiyamah) to face justice. Those who nurtured righteous faith and deeds will enter eternal Paradise (Jannah).'
+    description: 'All human beings will be physically and spiritually resurrected on the Day of Judgement (Yawm al-Qiyamah) to face justice. Those who nurtured righteous faith and deeds will enter eternal Paradise (Jannah).',
+    testPrompt: 'Describe the stages of Barzakh, physical resurrection, the Scale (Mizan), and Sirat.'
   }
 ];
 
 const FURU_AL_DIN = [
-  { name: 'Salah', arabic: 'الصلاة', meaning: 'The 5 Daily Obligatory Prayers', details: 'Performing 17 daily rak\'ahs to connect with Allah and purify the soul (Fajr, Dhuhr, Asr, Maghrib, Isha).' },
-  { name: 'Sawm', arabic: 'الصوم', meaning: 'Fasting in Holy Ramadan', details: 'Abstaining from food, drink, and spiritual sins from true dawn until Maghrib to develop Taqwa (God-consciousness).' },
-  { name: 'Hajj', arabic: 'الحج', meaning: 'Pilgrimage to the Holy Ka\'bah', details: 'Performing the pilgrimage to Makkah once in a lifetime for those with financial, physical, and security capability.' },
-  { name: 'Zakah', arabic: 'الزكاة', meaning: 'Almsgiving on Specific Assets', details: 'Purifying wealth by giving a prescribed portion on grains, cattle, and precious metals to the poor.' },
-  { name: 'Khums', arabic: 'الخمس', meaning: 'The One-Fifth (20%) Annual Obligation', details: 'Giving 20% of annual surplus savings after living expenses, supporting religious education (Sahm al-Imam) and needy descendants (Sahm al-Sadat).' },
-  { name: 'Jihad', arabic: 'الجهاد', meaning: 'Striving in the Path of Allah', details: 'The greater struggle is against one\'s base ego and desires (Jihad al-Nafs); the lesser is defending faith and oppressed humans against tyranny.' },
-  { name: 'Amr bil-Ma\'ruf', arabic: 'الأمر بالمعروف', meaning: 'Enjoining the Good', details: 'Encouraging society, family, and friends toward virtue, kindness, truth, and righteous deeds.' },
-  { name: 'Nahi \'anil-Munkar', arabic: 'النهي عن المنكر', meaning: 'Forbidding Evil', details: 'Standing against injustice, oppression, dishonesty, and sinful practices with wisdom.' },
-  { name: 'Tawalla', arabic: 'التولي', meaning: 'Loving the Prophet & Ahlul Bayt', details: 'Showing active love, allegiance, and devotion to Prophet Muhammad (S.A.W.) and his purified progeny.' },
-  { name: 'Tabarra', arabic: 'التبري', meaning: 'Dissociating from Enemies of Ahlul Bayt', details: 'Distancing oneself from and rejecting the cruelty of tyrants and oppressors throughout history.' }
+  { id: 'furu_salah', name: 'Salah', arabic: 'الصلاة', meaning: 'The 5 Daily Obligatory Prayers', details: 'Performing 17 daily rak\'ahs to connect with Allah and purify the soul (Fajr, Dhuhr, Asr, Maghrib, Isha).', testPrompt: 'Demonstrate proper Wudu and demonstrate the 11 obligatory acts of Salat (Rukn & Non-Rukn).' },
+  { id: 'furu_sawm', name: 'Sawm', arabic: 'الصوم', meaning: 'Fasting in Holy Ramadan', details: 'Abstaining from food, drink, and spiritual sins from true dawn until Maghrib to develop Taqwa (God-consciousness).', testPrompt: 'List the 9 things that break fasting (Mubtilat al-Sawm) and the spiritual goal of Taqwa.' },
+  { id: 'furu_hajj', name: 'Hajj', arabic: 'الحج', meaning: 'Pilgrimage to the Holy Ka\'bah', details: 'Performing the pilgrimage to Makkah once in a lifetime for those with financial, physical, and security capability.', testPrompt: 'Explain the difference between Umrah and Hajj al-Tamattu, and what Ihram represents.' },
+  { id: 'furu_zakah', name: 'Zakah', arabic: 'الزكاة', meaning: 'Almsgiving on Specific Assets', details: 'Purifying wealth by giving a prescribed portion on grains, cattle, and precious metals to the poor.', testPrompt: 'Explain the items subject to Zakah and who is eligible to receive it.' },
+  { id: 'furu_khums', name: 'Khums', arabic: 'الخمس', meaning: 'The One-Fifth (20%) Annual Obligation', details: 'Giving 20% of annual surplus savings after living expenses, supporting religious education (Sahm al-Imam) and needy descendants (Sahm al-Sadat).', testPrompt: 'Calculate Khums on annual surplus savings and explain Sahm al-Imam vs Sahm al-Sadat.' },
+  { id: 'furu_jihad', name: 'Jihad', arabic: 'الجهاد', meaning: 'Striving in the Path of Allah', details: 'The greater struggle is against one\'s base ego and desires (Jihad al-Nafs); the lesser is defending faith and oppressed humans against tyranny.', testPrompt: 'Contrast Jihad al-Akbar (struggle against ego) with defensive military Jihad in Islamic law.' },
+  { id: 'furu_amr', name: 'Amr bil-Ma\'ruf', arabic: 'الأمر بالمعروف', meaning: 'Enjoining the Good', details: 'Encouraging society, family, and friends toward virtue, kindness, truth, and righteous deeds.', testPrompt: 'Explain the 4 conditions required before enjoining good on someone else.' },
+  { id: 'furu_nahi', name: 'Nahi \'anil-Munkar', arabic: 'النهي عن المنكر', meaning: 'Forbidding Evil', details: 'Standing against injustice, oppression, dishonesty, and sinful practices with wisdom.', testPrompt: 'Explain the 3 progressive stages of forbidding evil (heart/disapproval, verbal, action).' },
+  { id: 'furu_tawalla', name: 'Tawalla', arabic: 'التولي', meaning: 'Loving the Prophet & Ahlul Bayt', details: 'Showing active love, allegiance, and devotion to Prophet Muhammad (S.A.W.) and his purified progeny.', testPrompt: 'Recite Ayah al-Mawaddah (42:23) and explain how a scout expresses active Tawalla daily.' },
+  { id: 'furu_tabarra', name: 'Tabarra', arabic: 'التبري', meaning: 'Dissociating from Enemies of Ahlul Bayt', details: 'Distancing oneself from and rejecting the cruelty of tyrants and oppressors throughout history.', testPrompt: 'Explain the moral duty to disassociate from oppression, tyranny, and enemies of truth.' }
 ];
+
+// ── REUSABLE SCOUT CONFIRMATION & LEADER TESTING SIGN-OFF BAR ──
+function IslamicTestingBar({
+  itemId,
+  itemTitle,
+  progressEntry = {},
+  onToggleSubmitScout,
+  onApproveLeader,
+  onReset,
+  isLeaderOrOwner,
+  isScout,
+  testPrompt
+}) {
+  const isCompleted = !!progressEntry.completed;
+  const isPending = !!progressEntry.pending && !isCompleted;
+  const completedDate = progressEntry.completedDate || '';
+  const submittedDate = progressEntry.submittedDate || '';
+  const approvedByName = progressEntry.approvedByName || 'Leader / Assistant';
+
+  return (
+    <div className={`p-3.5 rounded-2xl border transition-all mt-3 ${
+      isCompleted
+        ? 'bg-emerald-950/30 border-emerald-500/40'
+        : isPending
+        ? 'bg-amber-950/30 border-amber-500/50 shadow-md shadow-amber-950/20'
+        : 'bg-slate-900/60 border-slate-750'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Left: Status & Metadata */}
+        <div className="flex items-center gap-2.5">
+          <div className="shrink-0">
+            {isCompleted ? (
+              <CheckCircle2 className="text-emerald-400" size={20} />
+            ) : isPending ? (
+              <Clock className="text-amber-400 animate-pulse" size={20} />
+            ) : (
+              <Circle className="text-slate-500" size={20} />
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Knowledge Testing Status:
+              </span>
+              {isCompleted && (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  ✓ Tested & Approved by {approvedByName} {completedDate ? `(${completedDate})` : ''}
+                </span>
+              )}
+              {isPending && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse">
+                  <Clock size={10} /> Submitted on {submittedDate || 'today'} • Ready for Leader Oral/Written Test
+                </span>
+              )}
+              {!isCompleted && !isPending && (
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-medium">
+                  Study in progress • Not yet submitted
+                </span>
+              )}
+            </div>
+
+            {testPrompt && (
+              <p className="text-[11px] text-slate-350 mt-1 leading-snug">
+                <strong className="text-emerald-400/90 font-semibold">Leader Test Prompt:</strong> {testPrompt}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Interactive Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          {/* Scout Confirmation Button */}
+          {isScout && (
+            <button
+              type="button"
+              onClick={() => onToggleSubmitScout(itemId)}
+              disabled={isCompleted}
+              className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                isPending
+                  ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/50'
+                  : isCompleted
+                  ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 cursor-default opacity-80'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md hover:scale-[1.02]'
+              }`}
+            >
+              {isPending ? (
+                <>
+                  <Clock size={13} className="animate-pulse" />
+                  <span>Pending Test (Cancel)</span>
+                </>
+              ) : isCompleted ? (
+                <>
+                  <Check size={13} />
+                  <span>Mastered & Signed</span>
+                </>
+              ) : (
+                <>
+                  <Send size={13} />
+                  <span>✋ I Know This — Submit for Testing</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Leader Testing & Sign-off Controls */}
+          {isLeaderOrOwner && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onApproveLeader(itemId)}
+                className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md ${
+                  isCompleted
+                    ? 'bg-emerald-800/40 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-600/30'
+                    : isPending
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/40 animate-pulse'
+                    : 'bg-slate-700 hover:bg-emerald-600 text-slate-200 hover:text-white'
+                }`}
+              >
+                <CheckCircle2 size={13} />
+                <span>{isCompleted ? '✓ Signed (Click to Re-test)' : isPending ? 'Conduct Test & Sign-off ✓' : 'Mark Tested & Sign-off'}</span>
+              </button>
+
+              {(isCompleted || isPending) && (
+                <button
+                  type="button"
+                  onClick={() => onReset(itemId)}
+                  className="p-1.5 bg-slate-800 hover:bg-red-900/40 hover:text-red-400 text-slate-400 rounded-xl transition cursor-pointer"
+                  title="Reset topic status"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
@@ -98,155 +253,128 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
   // Search & filter states
   const [karbalaSearch, setKarbalaSearch] = useState('');
   const [infallibleSearch, setInfallibleSearch] = useState('');
-  const [selectedInfallible, setSelectedInfallible] = useState(null);
-  const [selectedKarbalaChar, setSelectedKarbalaChar] = useState(null);
   const [duaFilter, setDuaFilter] = useState('all');
   const [trackerCategory, setTrackerCategory] = useState('all');
-  
-  // Progress tracker states
+
+  // Selected item modal / expanded cards
+  const [selectedKarbalaChar, setSelectedKarbalaChar] = useState(null);
+  const [selectedInfallible, setSelectedInfallible] = useState(null);
+  const [expandedTopic, setExpandedTopic] = useState(null);
+
+  // Real-time progress map
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
-  const [expandedTopic, setExpandedTopic] = useState(null);
-  const [tempDates, setTempDates] = useState({});
   const [actionFeedback, setActionFeedback] = useState('');
+  const [tempDates, setTempDates] = useState({});
 
-  // 1. Fetch scouts list if viewing as leader without propScoutId
+  // 1. Fetch all scouts if Leader/Owner
   useEffect(() => {
-    if (isLeaderOrOwner && !propScoutId) {
-      const q = query(collection(db, 'users'), where('role', '==', 'scout'));
-      const unsub = onSnapshot(q, (snap) => {
+    if (!isLeaderOrOwner) return;
+    const fetchScouts = async () => {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'scout'));
+        const snap = await getDocs(q);
         const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
         setAllScouts(list);
-        if (list.length > 0 && !selectedLeaderScoutId) {
+        if (list.length > 0 && !selectedLeaderScoutId && !propScoutId) {
           setSelectedLeaderScoutId(list[0].uid);
         }
-      }, (err) => console.error("Failed to load scouts for Islamic Knowledge:", err));
-      return () => unsub();
-    }
-  }, [isLeaderOrOwner, propScoutId, selectedLeaderScoutId]);
+      } catch (err) {
+        console.warn("Fallback fetching scouts:", err);
+      }
+    };
+    fetchScouts();
+  }, [isLeaderOrOwner]);
 
-  // 2. Real-time subscription to scout's islamic progress
+  // 2. Real-time Subscription to Scout's Islamic Progress
   useEffect(() => {
     if (!targetScoutId) {
       setLoading(false);
       return;
     }
+
     const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-    const unsub = onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        setProgress(snap.data() || {});
+    const unsub = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setProgress(docSnap.data() || {});
       } else {
         setProgress({});
       }
       setLoading(false);
     }, (err) => {
-      console.error("Failed to load Islamic Knowledge progress:", err);
+      console.warn("Islamic progress listener error:", err);
       setLoading(false);
     });
+
     return () => unsub();
   }, [targetScoutId]);
 
-  // Show transient feedback message
   const showFeedback = (msg) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(''), 4000);
   };
 
-  // Direct toggle handler for circular checkbox with optimistic update
-  const handleToggleTopic = async (topicId) => {
+  // Toggle submit for scout
+  const handleToggleSubmitScout = async (itemId) => {
     if (!targetScoutId) return;
-    const existing = progress[topicId] || {};
+    const existing = progress[itemId] || {};
     const isCompleted = !!existing.completed;
     const isPending = !!existing.pending && !isCompleted;
-    const dateVal = tempDates[topicId] || existing.completedDate || existing.submittedDate || new Date().toISOString().split('T')[0];
+    const dateVal = new Date().toISOString().split('T')[0];
 
-    const newCompleted = !isCompleted;
-    const updatedData = isLeaderOrOwner
-      ? {
-          completed: newCompleted,
-          pending: false,
-          completedDate: newCompleted ? dateVal : '',
-          approvedBy: newCompleted ? (currentUser?.uid || 'leader') : '',
-          approvedByName: newCompleted ? (currentUser?.fullName || currentUser?.username || 'Leader') : ''
-        }
-      : {
-          completed: false,
-          pending: !isPending,
-          submittedDate: !isPending ? dateVal : '',
-          updatedBy: currentUser?.uid || 'scout',
-          updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
-        };
+    const updatedData = {
+      completed: false,
+      pending: !isPending,
+      submittedDate: !isPending ? dateVal : '',
+      scoutUid: currentUser?.uid || 'scout',
+      scoutName: currentUser?.fullName || currentUser?.username || 'Scout'
+    };
 
-    // Optimistic UI update
-    setProgress(prev => ({
-      ...prev,
-      [topicId]: { ...prev[topicId], ...updatedData }
-    }));
-
-    if (newCompleted) {
-      showFeedback("✓ Topic Marked as Completed & Approved!");
-    } else {
-      showFeedback("Status updated.");
-    }
+    setProgress(prev => ({ ...prev, [itemId]: { ...prev[itemId], ...updatedData } }));
+    showFeedback(!isPending ? "✓ Submitted to Leader/Assistant for testing!" : "Submission cancelled.");
 
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-      await setDoc(docRef, {
-        [topicId]: updatedData
-      }, { merge: true });
+      await setDoc(docRef, { [itemId]: updatedData }, { merge: true });
     } catch (err) {
-      console.error("Failed to toggle topic status in Firestore:", err);
-      setProgress(prev => ({ ...prev, [topicId]: existing }));
-      showFeedback("⚠️ Error saving to database. Please check connection.");
+      console.error("Firestore save error:", err);
+      setProgress(prev => ({ ...prev, [itemId]: existing }));
     }
   };
 
-  const handleToggleSubmitScout = async (topicId) => {
-    await handleToggleTopic(topicId);
-  };
-
-  const handleApproveLeader = async (topicId) => {
+  // Approve & Test for Leader / Assistant
+  const handleApproveLeader = async (itemId) => {
     if (!targetScoutId) return;
-    const existing = progress[topicId] || {};
+    const existing = progress[itemId] || {};
     const isCompleted = !!existing.completed;
     const newCompleted = !isCompleted;
-    const dateVal = tempDates[topicId] || existing.completedDate || new Date().toISOString().split('T')[0];
+    const dateVal = new Date().toISOString().split('T')[0];
 
     const updatedData = {
       completed: newCompleted,
       pending: false,
       completedDate: newCompleted ? dateVal : '',
       approvedBy: newCompleted ? (currentUser?.uid || 'leader') : '',
-      approvedByName: newCompleted ? (currentUser?.fullName || currentUser?.username || 'Leader') : ''
+      approvedByName: newCompleted ? (currentUser?.fullName || currentUser?.username || currentUser?.leaderPosition || 'Troop Leader') : ''
     };
 
-    setProgress(prev => ({
-      ...prev,
-      [topicId]: { ...prev[topicId], ...updatedData }
-    }));
-
-    if (newCompleted) {
-      showFeedback("✓ Confirmed & Marked Tested/Completed!");
-    } else {
-      showFeedback("Topic unmarked.");
-    }
+    setProgress(prev => ({ ...prev, [itemId]: { ...prev[itemId], ...updatedData } }));
+    showFeedback(newCompleted ? "✓ Scout Tested & Signed-off!" : "Sign-off removed.");
 
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-      await setDoc(docRef, {
-        [topicId]: updatedData
-      }, { merge: true });
+      await setDoc(docRef, { [itemId]: updatedData }, { merge: true });
     } catch (err) {
-      console.error("Failed to approve topic in Firestore:", err);
-      setProgress(prev => ({ ...prev, [topicId]: existing }));
-      showFeedback("⚠️ Error saving to database.");
+      console.error("Firestore approve error:", err);
+      setProgress(prev => ({ ...prev, [itemId]: existing }));
     }
   };
 
-  const handleResetTopic = async (topicId) => {
+  // Reset item status
+  const handleReset = async (itemId) => {
     if (!targetScoutId) return;
-    if (!window.confirm("Are you sure you want to reset this topic status?")) return;
-    const existing = progress[topicId] || {};
+    if (!window.confirm("Reset this item\'s testing and submission status?")) return;
+    const existing = progress[itemId] || {};
     const resetData = {
       completed: false,
       pending: false,
@@ -256,30 +384,25 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
       approvedByName: ''
     };
 
-    setProgress(prev => ({
-      ...prev,
-      [topicId]: resetData
-    }));
-
-    showFeedback("Topic status reset.");
+    setProgress(prev => ({ ...prev, [itemId]: resetData }));
+    showFeedback("Status reset.");
 
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-      await setDoc(docRef, {
-        [topicId]: resetData
-      }, { merge: true });
+      await setDoc(docRef, { [itemId]: resetData }, { merge: true });
     } catch (err) {
-      console.error("Failed to reset topic in Firestore:", err);
-      setProgress(prev => ({ ...prev, [topicId]: existing }));
+      console.error("Firestore reset error:", err);
+      setProgress(prev => ({ ...prev, [itemId]: existing }));
     }
   };
 
+  // Total calculation across curriculum
   const totalTopics = ISLAMIC_BASICS_TOPICS.length;
   const completedTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.completed).length;
-  const pendingTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.pending && !progress[t.id]?.completed).length;
+  const pendingTopicsCount = Object.values(progress).filter(p => p.pending && !p.completed).length;
   const progressPercent = totalTopics > 0 ? Math.round((completedTopicsCount / totalTopics) * 100) : 0;
 
-  // Filtered topics for Curriculum Tracker
+  // Filtered lists
   const filteredTopics = ISLAMIC_BASICS_TOPICS.filter(topic => {
     if (trackerCategory === 'all') return true;
     if (trackerCategory === 'belief') return topic.category === 'Belief & Practice';
@@ -290,19 +413,16 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
     return true;
   });
 
-  // Filtered Karbala Characters
   const filteredKarbala = KARBALA_CHARACTERS_DATA.filter(c => {
     const q = karbalaSearch.toLowerCase();
     return c.name.toLowerCase().includes(q) || c.title.toLowerCase().includes(q) || c.role.toLowerCase().includes(q) || c.summary.toLowerCase().includes(q);
   });
 
-  // Filtered Infallibles
   const filteredInfallibles = INFALLIBLES_FULL_BIOGRAPHIES.filter(inf => {
     const q = infallibleSearch.toLowerCase();
     return inf.name.toLowerCase().includes(q) || inf.title.toLowerCase().includes(q) || inf.kunya.toLowerCase().includes(q) || inf.arabic.includes(q);
   });
 
-  // Filtered Duas & Ta'qibat
   const filteredDuas = TAQIBAT_AND_DUAS_DATA.filter(dua => {
     if (duaFilter === 'all') return true;
     if (duaFilter === 'taqibat') return dua.category.includes('Post-Salat');
@@ -323,33 +443,33 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                 🕌 Shia Islamic Knowledge Curriculum
               </span>
               <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-                🏴 Karbala Youth Theme
+                ✋ Scout Submissions & Leader Testing
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              <span>Islamic Knowledge & Karbala Library</span>
+              <span>Islamic Knowledge & Karbala Testing Portal</span>
             </h2>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl leading-relaxed">
-              Explore authentic biographies of the 14 Infallibles, hero profiles from the Tragedy of Karbala, post-Salat Ta'qibat & sacred supplications, and test scout knowledge in real-time.
+            <p className="text-slate-300 text-xs mt-1 max-w-2xl leading-relaxed">
+              Every section is an interactive test module. Scouts study and confirm their mastery, submit to troop leaders/assistants, and undergo oral/knowledge testing to earn sign-offs!
             </p>
           </div>
 
           {/* Quick Progress Badge */}
           <div className="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 shrink-0 flex items-center gap-4">
             <div className="text-center">
-              <span className="text-xs text-slate-400 font-semibold block uppercase">Curriculum</span>
+              <span className="text-xs text-slate-400 font-semibold block uppercase">Mastered</span>
               <span className="text-2xl font-black text-emerald-400">{completedTopicsCount}/{totalTopics}</span>
             </div>
             <div className="h-10 w-[1px] bg-slate-750"></div>
             <div className="text-center">
-              <span className="text-xs text-slate-400 font-semibold block uppercase">Mastery</span>
-              <span className="text-2xl font-black text-amber-400">{progressPercent}%</span>
+              <span className="text-xs text-slate-400 font-semibold block uppercase">Pending Tests</span>
+              <span className="text-2xl font-black text-amber-400">{pendingTopicsCount}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Leader Scout Selector (If viewed directly in leader mode without propScoutId) */}
+      {/* Leader Scout Selector */}
       {isLeaderOrOwner && !propScoutId && allScouts.length > 0 && (
         <div className="bg-slate-850 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
           <div className="flex items-center gap-2.5">
@@ -358,7 +478,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
             </div>
             <div>
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Testing Scout Knowledge
+                Testing & Reviewing Scout Knowledge
               </label>
               <span className="text-sm font-extrabold text-white">
                 {selectedScoutObj ? (selectedScoutObj.fullName || selectedScoutObj.username) : 'Select Scout'}
@@ -402,7 +522,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           }`}
         >
           <Flame size={15} className="text-amber-300" />
-          <span>⚔️ Karbala Heroes & Personalities ({KARBALA_CHARACTERS_DATA.length})</span>
+          <span>⚔️ Karbala Heroes ({KARBALA_CHARACTERS_DATA.length})</span>
         </button>
 
         <button
@@ -414,7 +534,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           }`}
         >
           <Heart size={15} className="text-emerald-300" />
-          <span>🤲 Duas & Post-Salat Ta'qibat ({TAQIBAT_AND_DUAS_DATA.length})</span>
+          <span>🤲 Duas & Ta'qibat ({TAQIBAT_AND_DUAS_DATA.length})</span>
         </button>
 
         <button
@@ -426,24 +546,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           }`}
         >
           <Sparkles size={15} className="text-indigo-300" />
-          <span>👑 14 Infallibles Biographies ({INFALLIBLES_FULL_BIOGRAPHIES.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('tracker')}
-          className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
-            activeTab === 'tracker'
-              ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/40 border border-sky-400/30'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-          }`}
-        >
-          <CheckCircle2 size={15} className="text-sky-300" />
-          <span>📊 Knowledge Check & Tracker ({totalTopics})</span>
-          {pendingTopicsCount > 0 && (
-            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full">
-              {pendingTopicsCount}
-            </span>
-          )}
+          <span>👑 14 Infallibles ({INFALLIBLES_FULL_BIOGRAPHIES.length})</span>
         </button>
 
         <button
@@ -455,19 +558,31 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           }`}
         >
           <Star size={15} className="text-emerald-400" />
-          <span>Usul al-Din (Roots)</span>
+          <span>🌳 Usul al-Din (5 Roots)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('branches')}
           className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'branches'
-              ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-950/40 border border-emerald-500/30'
+              ? 'bg-teal-700 text-white shadow-lg shadow-teal-950/40 border border-teal-500/30'
               : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
           }`}
         >
-          <BookOpen size={15} className="text-emerald-400" />
-          <span>Furu al-Din (Branches)</span>
+          <BookOpen size={15} className="text-teal-400" />
+          <span>🌿 Furu al-Din (10 Branches)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tracker')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            activeTab === 'tracker'
+              ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/40 border border-sky-400/30'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <CheckCircle2 size={15} className="text-sky-300" />
+          <span>📊 Master Curriculum Tracker</span>
         </button>
       </div>
 
@@ -482,7 +597,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                   <span>Personalities & Heroes of Karbala (شخصيات كربلاء)</span>
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  Authentic Shia historical records of the martyrs, companions, women, and youth who stood with Imam Husayn (A.S.) in 61 AH.
+                  Read authentic Shia historical records of Karbala martyrs, submit your study completion, and complete leader oral testing.
                 </p>
               </div>
 
@@ -502,6 +617,9 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredKarbala.map((char) => {
               const isSelected = selectedKarbalaChar === char.id;
+              const itemId = `karbala_${char.id}`;
+              const prog = progress[itemId] || progress[char.id] || {};
+
               return (
                 <div
                   key={char.id}
@@ -567,27 +685,32 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                     )}
                   </div>
 
-                  <div className="pt-4 mt-2 border-t border-slate-750/60 flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedKarbalaChar(isSelected ? null : char.id)}
-                      className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition"
-                    >
-                      {isSelected ? (
-                        <><span>Show Less</span> <ChevronUp size={14} /></>
-                      ) : (
-                        <><span>Read Full Biography & Lessons</span> <ChevronDown size={14} /></>
-                      )}
-                    </button>
+                  <div>
+                    <div className="pt-3 flex items-center justify-between border-t border-slate-750/60 mt-3">
+                      <button
+                        onClick={() => setSelectedKarbalaChar(isSelected ? null : char.id)}
+                        className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition"
+                      >
+                        {isSelected ? (
+                          <><span>Show Less</span> <ChevronUp size={14} /></>
+                        ) : (
+                          <><span>Read Biography & Lessons</span> <ChevronDown size={14} /></>
+                        )}
+                      </button>
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        setActiveTab('tracker');
-                        setTrackerCategory('karbala');
-                      }}
-                      className="text-[11px] bg-slate-700 hover:bg-emerald-600 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <UserCheck size={12} /> Test Knowledge
-                    </button>
+                    {/* Interactive Scout Submit & Leader Testing Bar */}
+                    <IslamicTestingBar
+                      itemId={itemId}
+                      itemTitle={char.name}
+                      progressEntry={prog}
+                      onToggleSubmitScout={handleToggleSubmitScout}
+                      onApproveLeader={handleApproveLeader}
+                      onReset={handleReset}
+                      isLeaderOrOwner={isLeaderOrOwner}
+                      isScout={isScout}
+                      testPrompt={`Ask scout about ${char.name}'s key heroic stand at Karbala and 2 character lessons for scouts.`}
+                    />
                   </div>
                 </div>
               );
@@ -607,7 +730,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                   <span>Post-Prayer Ta'qibat & Sacred Duas (تعقيبات الصلاة والأدعية)</span>
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  Authentic supplications from Mafatih al-Jinan with full Arabic text, transliteration, and English translation.
+                  Practice Arabic recitation and English translation. Submit to leaders for oral recitation testing!
                 </p>
               </div>
 
@@ -641,55 +764,73 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           </div>
 
           <div className="space-y-4">
-            {filteredDuas.map((dua) => (
-              <div key={dua.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
-                  <div>
-                    <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
-                      {dua.category}
+            {filteredDuas.map((dua) => {
+              const itemId = `dua_${dua.id}`;
+              const prog = progress[itemId] || progress[dua.id] || {};
+
+              return (
+                <div key={dua.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
+                    <div>
+                      <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                        {dua.category}
+                      </span>
+                      <h4 className="text-base font-bold text-white mt-1">{dua.name}</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/30 border border-amber-500/30 px-3 py-1 rounded-lg">
+                      <Clock size={13} />
+                      <span>{dua.timing}</span>
+                    </div>
+                  </div>
+
+                  {/* Arabic Text Block */}
+                  <div className="bg-slate-900 border border-slate-750 rounded-xl p-4 text-right">
+                    <p className="text-lg md:text-xl font-serif text-emerald-300 leading-loose tracking-wide dir-rtl" style={{ direction: 'rtl' }}>
+                      {dua.arabic}
+                    </p>
+                  </div>
+
+                  {/* Transliteration */}
+                  <div className="bg-slate-850/60 border border-slate-755 rounded-xl p-3.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Phonetic Transliteration
                     </span>
-                    <h4 className="text-base font-bold text-white mt-1">{dua.name}</h4>
+                    <p className="text-xs text-amber-200/90 font-mono leading-relaxed">
+                      {dua.transliteration}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-950/30 border border-amber-500/30 px-3 py-1 rounded-lg">
-                    <Clock size={13} />
-                    <span>{dua.timing}</span>
+
+                  {/* English Translation */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      English Translation
+                    </span>
+                    <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                      {dua.translation}
+                    </p>
                   </div>
-                </div>
 
-                {/* Arabic Text Block */}
-                <div className="bg-slate-900 border border-slate-750 rounded-xl p-4 text-right">
-                  <p className="text-lg md:text-xl font-serif text-emerald-300 leading-loose tracking-wide dir-rtl" style={{ direction: 'rtl' }}>
-                    {dua.arabic}
-                  </p>
-                </div>
+                  {/* Merits */}
+                  <div className="bg-emerald-950/20 border-l-2 border-emerald-500 p-3 rounded-r-xl text-xs text-slate-300 flex items-start gap-2">
+                    <Sparkles size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong>Merits & Hadith:</strong> {dua.significance}</span>
+                  </div>
 
-                {/* Transliteration */}
-                <div className="bg-slate-850/60 border border-slate-755 rounded-xl p-3.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                    Phonetic Transliteration
-                  </span>
-                  <p className="text-xs text-amber-200/90 font-mono leading-relaxed">
-                    {dua.transliteration}
-                  </p>
+                  {/* Interactive Scout Submit & Leader Testing Bar */}
+                  <IslamicTestingBar
+                    itemId={itemId}
+                    itemTitle={dua.name}
+                    progressEntry={prog}
+                    onToggleSubmitScout={handleToggleSubmitScout}
+                    onApproveLeader={handleApproveLeader}
+                    onReset={handleReset}
+                    isLeaderOrOwner={isLeaderOrOwner}
+                    isScout={isScout}
+                    testPrompt={`Listen to scout's oral recitation of ${dua.name} and verify understanding of key meanings.`}
+                  />
                 </div>
-
-                {/* English Translation */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    English Translation
-                  </span>
-                  <p className="text-xs text-slate-200 leading-relaxed font-sans">
-                    {dua.translation}
-                  </p>
-                </div>
-
-                {/* Spiritual Significance */}
-                <div className="bg-emerald-950/20 border-l-2 border-emerald-500 p-3 rounded-r-xl text-xs text-slate-300 flex items-start gap-2">
-                  <Sparkles size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>Merits & Hadith:</strong> {dua.significance}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -705,7 +846,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                   <span>The 14 Infallibles (Al-Ma'sumeen A.S. - المعصومون الأربعة عشر)</span>
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  Comprehensive Shia biographies from Kitab al-Irshad, Al-Kafi, and authentic historical Hadith.
+                  Study the life, historic roles, and hadiths of the 14 Infallibles, and submit for leader testing.
                 </p>
               </div>
 
@@ -725,6 +866,9 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredInfallibles.map((inf) => {
               const isSelected = selectedInfallible === inf.id;
+              const itemId = `infallible_${inf.id}`;
+              const prog = progress[itemId] || progress[inf.id] || {};
+
               return (
                 <div
                   key={inf.id}
@@ -790,17 +934,32 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                     )}
                   </div>
 
-                  <div className="pt-4 mt-2 border-t border-slate-750/60 flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedInfallible(isSelected ? null : inf.id)}
-                      className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition"
-                    >
-                      {isSelected ? (
-                        <><span>Show Less</span> <ChevronUp size={14} /></>
-                      ) : (
-                        <><span>Read Full Biography & Sayings</span> <ChevronDown size={14} /></>
-                      )}
-                    </button>
+                  <div>
+                    <div className="pt-3 flex items-center justify-between border-t border-slate-750/60 mt-3">
+                      <button
+                        onClick={() => setSelectedInfallible(isSelected ? null : inf.id)}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition"
+                      >
+                        {isSelected ? (
+                          <><span>Show Less</span> <ChevronUp size={14} /></>
+                        ) : (
+                          <><span>Read Full Biography & Sayings</span> <ChevronDown size={14} /></>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Interactive Scout Submit & Leader Testing Bar */}
+                    <IslamicTestingBar
+                      itemId={itemId}
+                      itemTitle={inf.name}
+                      progressEntry={prog}
+                      onToggleSubmitScout={handleToggleSubmitScout}
+                      onApproveLeader={handleApproveLeader}
+                      onReset={handleReset}
+                      isLeaderOrOwner={isLeaderOrOwner}
+                      isScout={isScout}
+                      testPrompt={`Ask scout: When and where was ${inf.name} born, who was their mother, and what was their primary contribution?`}
+                    />
                   </div>
                 </div>
               );
@@ -809,7 +968,97 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
         </div>
       )}
 
-      {/* ──────────────── TAB 4: CURRICULUM & KNOWLEDGE CHECK TRACKER ──────────────── */}
+      {/* ──────────────── TAB 4: USUL AL-DIN (5 ROOTS) ──────────────── */}
+      {activeTab === 'roots' && (
+        <div className="space-y-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
+              <Star className="text-emerald-400" size={20} />
+              <span>Usul al-Din (أصول الدين - The 5 Roots of Religion)</span>
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Foundational theological pillars. Scouts must understand and demonstrate personal conviction through reason before leader sign-off.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {USUL_AL_DIN.map((root) => {
+              const prog = progress[root.id] || {};
+              return (
+                <div key={root.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-sm text-white">{root.name}</h4>
+                      <span className="text-sm font-serif text-emerald-400 font-bold">{root.arabic}</span>
+                    </div>
+                    <p className="text-xs text-amber-300 font-semibold">{root.meaning}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{root.description}</p>
+                  </div>
+
+                  <IslamicTestingBar
+                    itemId={root.id}
+                    itemTitle={root.name}
+                    progressEntry={prog}
+                    onToggleSubmitScout={handleToggleSubmitScout}
+                    onApproveLeader={handleApproveLeader}
+                    onReset={handleReset}
+                    isLeaderOrOwner={isLeaderOrOwner}
+                    isScout={isScout}
+                    testPrompt={root.testPrompt}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── TAB 5: FURU AL-DIN (10 BRANCHES) ──────────────── */}
+      {activeTab === 'branches' && (
+        <div className="space-y-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
+              <BookOpen className="text-teal-400" size={20} />
+              <span>Furu al-Din (فروع الدين - The 10 Branches of Practice)</span>
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Practical obligations and acts of worship. Scouts confirm their practical understanding and undergo demonstration testing with unit leaders.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FURU_AL_DIN.map((branch, idx) => {
+              const prog = progress[branch.id] || {};
+              return (
+                <div key={branch.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-sm text-white">{idx + 1}. {branch.name}</h4>
+                      <span className="text-sm font-serif text-emerald-400 font-bold">{branch.arabic}</span>
+                    </div>
+                    <p className="text-xs text-amber-300 font-semibold">{branch.meaning}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{branch.details}</p>
+                  </div>
+
+                  <IslamicTestingBar
+                    itemId={branch.id}
+                    itemTitle={branch.name}
+                    progressEntry={prog}
+                    onToggleSubmitScout={handleToggleSubmitScout}
+                    onApproveLeader={handleApproveLeader}
+                    onReset={handleReset}
+                    isLeaderOrOwner={isLeaderOrOwner}
+                    isScout={isScout}
+                    testPrompt={branch.testPrompt}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── TAB 6: CURRICULUM & KNOWLEDGE CHECK TRACKER ──────────────── */}
       {activeTab === 'tracker' && (
         <div className="space-y-6">
           {/* Tracker Header & Filters */}
@@ -818,16 +1067,16 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <CheckCircle2 className="text-emerald-400" size={20} />
-                  <span>Islamic Knowledge Curriculum & Progress Tracker</span>
+                  <span>Master Islamic Knowledge Curriculum Tracker</span>
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  Test, check off, and verify scout knowledge across all Shia Islamic curriculum modules.
+                  Comprehensive checklist across all Fiqh, Akhlaq, Belief, Karbala, and Du'as modules.
                 </p>
               </div>
 
               {/* Progress Summary */}
               <div className="bg-slate-900 border border-slate-750 rounded-xl px-4 py-2 flex items-center gap-3">
-                <span className="text-xs text-slate-400 font-bold uppercase">Progress</span>
+                <span className="text-xs text-slate-400 font-bold uppercase">Mastery</span>
                 <span className="text-sm font-extrabold text-emerald-400">{completedTopicsCount} / {totalTopics} Completed</span>
               </div>
             </div>
@@ -844,7 +1093,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
             <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-750/60">
               {[
                 { id: 'all', label: 'All Topics', count: totalTopics },
-                { id: 'karbala', label: '⚔️ Karbala Heroes Check', count: ISLAMIC_BASICS_TOPICS.filter(t => t.category === 'Karbala Heroes & Personalities').length },
+                { id: 'karbala', label: '⚔️ Karbala Heroes', count: ISLAMIC_BASICS_TOPICS.filter(t => t.category === 'Karbala Heroes & Personalities').length },
                 { id: 'duas', label: '🤲 Duas & Ta\'qibat', count: ISLAMIC_BASICS_TOPICS.filter(t => t.category === 'Post-Prayer Ta\'qibat & Duas').length },
                 { id: 'belief', label: 'Belief & Practice', count: ISLAMIC_BASICS_TOPICS.filter(t => t.category === 'Belief & Practice').length },
                 { id: 'fiqh', label: 'Ritual Law (Fiqh)', count: ISLAMIC_BASICS_TOPICS.filter(t => t.category === 'Ritual Law (Fiqh)').length },
@@ -894,32 +1143,15 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                     className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-750/30 transition"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      {/* Circular Toggle Button with e.stopPropagation() */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleTopic(topic.id);
-                        }}
-                        className="shrink-0 p-1 hover:scale-110 transition cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                        title={
-                          isCompleted
-                            ? 'Approved & Completed (Click to reset)'
-                            : isPending
-                            ? 'Pending Leader Approval (Click to cancel)'
-                            : isLeaderOrOwner
-                            ? 'Click to Approve / Mark Complete'
-                            : 'Click to Submit to Leader'
-                        }
-                      >
+                      <div className="shrink-0">
                         {isCompleted ? (
                           <CheckCircle2 className="text-emerald-400" size={22} />
                         ) : isPending ? (
                           <Clock className="text-amber-400 animate-pulse" size={22} />
                         ) : (
-                          <Circle className="text-slate-500 hover:text-emerald-400" size={22} />
+                          <Circle className="text-slate-500" size={22} />
                         )}
-                      </button>
+                      </div>
 
                       <div className="min-w-0">
                         <h4 className="font-bold text-xs text-white flex items-center gap-2 flex-wrap">
@@ -939,7 +1171,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                       )}
                       {isPending && (
                         <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                          <Clock size={11} /> Pending {submittedDate ? `(${submittedDate})` : ''}
+                          <Clock size={11} /> Pending Test {submittedDate ? `(${submittedDate})` : ''}
                         </span>
                       )}
                       {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
@@ -952,124 +1184,22 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                         {topic.text}
                       </p>
 
-                      {/* Complete Form panel */}
-                      <div className="border-t border-slate-750/60 pt-3 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                            <Calendar size={12} /> {isCompleted ? 'Approved Date' : 'Completion Date'}
-                          </label>
-                          <input
-                            type="date"
-                            value={tempDates[topic.id] || completedDate || submittedDate || new Date().toISOString().split('T')[0]}
-                            onChange={(e) => setTempDates(prev => ({ ...prev, [topic.id]: e.target.value }))}
-                            className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                          />
-                        </div>
-
-                        <div className="flex gap-2">
-                          {isScout && (
-                            <button
-                              onClick={() => handleToggleSubmitScout(topic.id)}
-                              className={`text-xs px-3.5 py-1.5 rounded-xl font-semibold transition cursor-pointer flex items-center gap-1 ${
-                                isPending
-                                  ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
-                                  : isCompleted
-                                  ? 'opacity-60 cursor-not-allowed bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
-                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                              }`}
-                              disabled={isCompleted}
-                            >
-                              {isPending ? 'Cancel Submission' : isCompleted ? 'Approved ✓' : 'Submit to Leader'}
-                            </button>
-                          )}
-
-                          {isLeaderOrOwner && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleApproveLeader(topic.id)}
-                                className={`text-xs px-4 py-1.5 rounded-xl font-semibold transition cursor-pointer flex items-center gap-1 ${
-                                  isCompleted
-                                    ? 'bg-emerald-700/40 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-600/30'
-                                    : isPending
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30 animate-pulse'
-                                    : 'bg-slate-700 hover:bg-emerald-600 text-slate-200 hover:text-white'
-                                }`}
-                              >
-                                <CheckCircle2 size={12} /> {isCompleted ? 'Approved ✓' : isPending ? 'Approve Topic' : 'Mark Tested / Sign-off'}
-                              </button>
-                              {(isCompleted || isPending) && (
-                                <button
-                                  onClick={() => handleResetTopic(topic.id)}
-                                  className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-3 py-1.5 rounded-xl transition cursor-pointer"
-                                >
-                                  Reset
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <IslamicTestingBar
+                        itemId={topic.id}
+                        itemTitle={topic.title}
+                        progressEntry={topicProg}
+                        onToggleSubmitScout={handleToggleSubmitScout}
+                        onApproveLeader={handleApproveLeader}
+                        onReset={handleReset}
+                        isLeaderOrOwner={isLeaderOrOwner}
+                        isScout={isScout}
+                        testPrompt={`Test scout on the key definitions and practical application of ${topic.title}.`}
+                      />
                     </div>
                   )}
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* ──────────────── TAB 5: USUL AL-DIN (ROOTS) ──────────────── */}
-      {activeTab === 'roots' && (
-        <div className="space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-              <Star className="text-emerald-400" size={20} />
-              <span>Usul al-Din (أصول الدين - The 5 Roots of Religion)</span>
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              These are the foundational theological beliefs every Muslim must understand and accept through personal reason and reflection (Tafakkur). Taqleed (blind following) is not permitted in Usul al-Din.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {USUL_AL_DIN.map((root, idx) => (
-              <div key={idx} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-extrabold text-sm text-white">{root.name}</h4>
-                  <span className="text-sm font-serif text-emerald-400 font-bold">{root.arabic}</span>
-                </div>
-                <p className="text-xs text-amber-300 font-semibold">{root.meaning}</p>
-                <p className="text-xs text-slate-300 leading-relaxed">{root.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ──────────────── TAB 6: FURU AL-DIN (BRANCHES) ──────────────── */}
-      {activeTab === 'branches' && (
-        <div className="space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-              <BookOpen className="text-emerald-400" size={20} />
-              <span>Furu al-Din (فروع الدين - The 10 Branches of Practice)</span>
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              These are the essential practical obligations and acts of worship in Shia Islam. Believers follow the practical rulings (Fatwas) of their chosen Marja' al-Taqlid.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FURU_AL_DIN.map((branch, idx) => (
-              <div key={idx} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-extrabold text-sm text-white">{idx + 1}. {branch.name}</h4>
-                  <span className="text-sm font-serif text-emerald-400 font-bold">{branch.arabic}</span>
-                </div>
-                <p className="text-xs text-amber-300 font-semibold">{branch.meaning}</p>
-                <p className="text-xs text-slate-300 leading-relaxed">{branch.details}</p>
-              </div>
-            ))}
           </div>
         </div>
       )}
