@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
+import StudentHome from './components/StudentHome';
 import AdvancementTracker from './components/AdvancementTracker';
 import PatrolChat from './components/PatrolChat';
 import AdminPanel from './components/AdminPanel';
@@ -112,7 +113,8 @@ export default function App() {
       } else if (isLeader) {
         setCurrentTab('roster');
       } else {
-        setCurrentTab('advancement');
+        // Students land directly on their personalized Home Dashboard
+        setCurrentTab('home');
       }
     } else {
       setCurrentTab('');
@@ -415,6 +417,16 @@ export default function App() {
           {isScout && (
             <>
               <button
+                onClick={() => setCurrentTab('home')}
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                  currentTab === 'home'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🏠 Home
+              </button>
+              <button
                 onClick={() => setCurrentTab('advancement')}
                 className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
                   currentTab === 'advancement'
@@ -511,6 +523,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
+        {currentTab === 'home' && isScout && <StudentHome currentUser={currentUser} onNavigate={(tab) => setCurrentTab(tab)} />}
         {currentTab === 'global-admin' && isOwner && <GlobalAdminPanel currentUser={currentUser} />}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
