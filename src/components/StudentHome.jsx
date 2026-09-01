@@ -27,7 +27,7 @@ import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
 import { RANKS_DATA } from '../data/ranksData';
 
-export default function StudentHome({ currentUser, onNavigate }) {
+export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
@@ -289,7 +289,14 @@ export default function StudentHome({ currentUser, onNavigate }) {
               <div className="flex items-center gap-2.5">
                 <span className="text-base">💬</span>
                 <div>
-                  <h4 className="font-bold text-xs text-white">Patrol Messenger</h4>
+                  <h4 className="font-bold text-xs text-white flex items-center gap-1.5">
+                    <span>Patrol Messenger</span>
+                    {unreadChatCount > 0 && (
+                      <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                        {unreadChatCount > 99 ? '99+' : unreadChatCount} new
+                      </span>
+                    )}
+                  </h4>
                   <p className="text-[10px] text-slate-400">Chat with patrol scouts & leaders</p>
                 </div>
               </div>

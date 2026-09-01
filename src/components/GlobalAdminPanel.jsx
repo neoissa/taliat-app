@@ -82,6 +82,9 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editLeadPosition, setEditLeadPosition] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editSpt, setEditSpt] = useState('');
+  const [editSptFileUrl, setEditSptFileUrl] = useState('');
+  const [editSptFileName, setEditSptFileName] = useState('');
+  const [uploadingAdminSpt, setUploadingAdminSpt] = useState(false);
   const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
   const [activeWhatsappName, setActiveWhatsappName] = useState('');
 
@@ -283,6 +286,8 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditParentPhone(user.parentPhone || '');
     setEditLeadPosition(user.leaderPosition || 'Scoutmaster');
     setEditSpt(user.spt || '');
+    setEditSptFileUrl(user.sptFileUrl || '');
+    setEditSptFileName(user.sptFileName || '');
     setEditPassword('');
   };
 
@@ -306,7 +311,9 @@ export default function GlobalAdminPanel({ currentUser }) {
         scoutPhone: editScoutPhone.trim() || null,
         parentPhone: editRole === 'scout' ? editParentPhone.trim() : null,
         leaderPosition: editRole === 'leader' ? editLeadPosition : null,
-        spt: editRole !== 'scout' ? (editSpt.trim() || null) : null
+        spt: editSpt.trim() || null,
+        sptFileUrl: editSptFileUrl || null,
+        sptFileName: editSptFileName || null
       };
 
       if (editPassword.trim()) {

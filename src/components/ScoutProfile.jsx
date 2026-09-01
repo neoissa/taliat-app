@@ -124,20 +124,19 @@ export default function ScoutProfile({ currentUser }) {
         fullName: fullName.trim(),
         scoutEmail: scoutEmail.trim(),
         scoutPhone: scoutPhone.trim(),
-        photoURL: photoUrl || null
+        photoURL: photoUrl || null,
+        spt: spt.trim() || null,
+        sptFileUrl: sptFileUrl || null,
+        sptFileName: sptFileName || null
       };
 
       if (isScout) {
         updates.parentEmail = parentEmail.trim();
         updates.parentPhone = parentPhone.trim();
-      } else {
-        updates.spt = spt.trim();
-        updates.sptFileUrl = sptFileUrl || null;
-        updates.sptFileName = sptFileName || null;
       }
 
-      await updateDoc(userRef, updates);
-      setProfileSuccess("Profile updated successfully!");
+      await setDoc(userRef, updates, { merge: true });
+      setProfileSuccess("✓ Profile updated successfully!");
       setTimeout(() => setProfileSuccess(''), 3000);
     } catch (err) {
       console.error(err);
@@ -151,23 +150,75 @@ export default function ScoutProfile({ currentUser }) {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError("File size exceeds 5MB limit. Please upload a smaller file or PDF.");
+      return;
+    }
+
     setUploadingSpt(true);
     setProfileError('');
     setProfileSuccess('');
 
-    try {
-      const storageRef = ref(storage, `leader_spt/${currentUser.uid}/${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+    let finalUrl = '';
+    const fileName = file.name;
+
+    // Helper to persist in Firestore
+    const persistCert = async (url) => {
       setSptFileUrl(url);
-      setSptFileName(file.name);
-      setProfileSuccess("Certificate uploaded! Click 'Save Profile Changes' to save.");
-      setTimeout(() => setProfileSuccess(''), 4000);
-    } catch (err) {
-      console.error(err);
-      setProfileError("Failed to upload certificate: " + err.message);
+      setSptFileName(fileName);
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userRef, {
+          spt: spt || new Date().toISOString().split('T')[0],
+          sptFileUrl: url,
+          sptFileName: fileName
+        }, { merge: true });
+        setProfileSuccess("✓ SPT Certificate uploaded and saved successfully!");
+        setTimeout(() => setProfileSuccess(''), 4000);
+      } catch (dbErr) {
+        console.error("Failed to auto-save certificate in database:", dbErr);
+        setProfileError("Certificate uploaded but failed to save in database: " + dbErr.message);
+      }
+    };
+
+    try {
+      // 1. Try Firebase Storage upload first
+      const storageRef = ref(storage, `leader_spt/${currentUser.uid}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      finalUrl = await getDownloadURL(snapshot.ref);
+      await persistCert(finalUrl);
+    } catch (storageErr) {
+      console.warn("Storage upload failed, falling back to Base64 data URL:", storageErr);
+      
+      // 2. Base64 fallback (works 100% even without Storage bucket setup)
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        finalUrl = reader.result;
+        await persistCert(finalUrl);
+      };
+      reader.onerror = () => {
+        setProfileError("Failed to read certificate file.");
+      };
+      reader.readAsDataURL(file);
     } finally {
       setUploadingSpt(false);
+    }
+  };
+
+  const handleRemoveSptFile = async () => {
+    if (!window.confirm("Remove your current SPT certificate file?")) return;
+    setSptFileUrl('');
+    setSptFileName('');
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userRef, {
+        sptFileUrl: null,
+        sptFileName: null
+      }, { merge: true });
+      setProfileSuccess("Certificate removed.");
+      setTimeout(() => setProfileSuccess(''), 3000);
+    } catch (err) {
+      setProfileError("Failed to remove certificate: " + err.message);
     }
   };
 
@@ -381,14 +432,23 @@ export default function ScoutProfile({ currentUser }) {
                         <ImageIcon size={14} /> {uploadingSpt ? 'Uploading...' : (sptFileName ? 'Replace Certificate' : 'Upload Certificate')}
                       </label>
                       {sptFileUrl && (
-                        <a
-                          href={sptFileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-slate-900/50 hover:bg-slate-900 border border-slate-800 text-emerald-400 hover:text-emerald-350 text-xs font-semibold px-3 py-2 rounded-xl transition truncate max-w-[200px]"
-                        >
-                          View Uploaded File
-                        </a>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <a
+                            href={sptFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold px-3 py-2 rounded-xl transition truncate max-w-[220px] flex items-center gap-1.5 shadow-sm"
+                          >
+                            📄 View Certificate {sptFileName ? `(${sptFileName})` : ''}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={handleRemoveSptFile}
+                            className="text-xs text-red-400 hover:text-red-300 hover:underline bg-slate-900 border border-slate-750 px-2.5 py-2 rounded-xl cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

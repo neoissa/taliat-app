@@ -1461,10 +1461,20 @@ export default function PatrolRoster({ currentUser = {} }) {
                     </div>
                     <div>
                       <span className="text-slate-500 block uppercase text-[9px] font-bold">Safety Training (SPT)</span>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="font-semibold text-slate-200">
                           {lead.spt ? `Done: ${lead.spt}` : '—'}
                         </span>
+                        {lead.sptFileUrl && (
+                          <a
+                            href={lead.sptFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1"
+                          >
+                            📄 View Cert
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

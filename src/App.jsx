@@ -18,13 +18,14 @@ import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentTab, setCurrentTab] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
   const [userGroupName, setUserGroupName] = useState('');
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   // 1. Real-time Firebase Auth & User Profile Listener
   useEffect(() => {
@@ -41,7 +42,6 @@ export default function App() {
               ...snap.data()
             });
           } else {
-            // Profile document doesn't exist yet
             const tempProfile = {
               uid: user.uid,
               email: user.email,
@@ -105,7 +105,60 @@ export default function App() {
     }
   }, [currentUser?.groupId, currentUser?.patrolId]);
 
-  // 3. Automatically set default tab when user logs in or role changes
+  // 3. Real-time Unread Chat Messages Listener
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    const roomId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
+    const lastReadStorageKey = `last_read_chat_${currentUser.uid}_${roomId}`;
+
+    const q = query(
+      collection(db, 'chats', roomId, 'messages'),
+      orderBy('timestamp', 'desc'),
+      limit(40)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const lastReadTimeStr = localStorage.getItem(lastReadStorageKey);
+      const lastReadTime = lastReadTimeStr ? Number(lastReadTimeStr) : 0;
+
+      // If user is actively on the chat tab, auto-mark as read
+      if (currentTab === 'chat') {
+        localStorage.setItem(lastReadStorageKey, Date.now().toString());
+        setUnreadChatCount(0);
+        return;
+      }
+
+      let count = 0;
+      snap.docs.forEach(docSnap => {
+        const m = docSnap.data();
+        if (m.senderId !== currentUser.uid) {
+          const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : Date.now());
+          if (msgTime > lastReadTime) {
+            count++;
+          }
+        }
+      });
+      setUnreadChatCount(count);
+    }, (err) => console.warn("Unread chat listener error:", err));
+
+    return () => unsub();
+  }, [currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, currentTab]);
+
+  // Reset unread count when switching to chat tab
+  useEffect(() => {
+    if (currentTab === 'chat' && currentUser?.uid) {
+      const roomId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
+      const lastReadStorageKey = `last_read_chat_${currentUser.uid}_${roomId}`;
+      localStorage.setItem(lastReadStorageKey, Date.now().toString());
+      setUnreadChatCount(0);
+    }
+  }, [currentTab, currentUser?.uid]);
+
+  // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
     if (currentUser) {
       if (isOwner) {
@@ -113,7 +166,6 @@ export default function App() {
       } else if (isLeader) {
         setCurrentTab('roster');
       } else {
-        // Students land directly on their personalized Home Dashboard
         setCurrentTab('home');
       }
     } else {
@@ -180,7 +232,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}
-              className="text-xs bg-slate-700 hover:bg-red-600/80 hover:text-white text-slate-300 font-semibold px-3 py-1.5 rounded-xl border border-slate-650 transition cursor-pointer"
+              className="text-xs bg-slate-700 hover:bg-red-600/80 hover:text-white text-slate-300 font-semibold px-3 py-1.5 rounded-xl border border-slate-655 transition cursor-pointer"
             >
               Sign Out
             </button>
@@ -276,13 +328,18 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Patrol Messenger
+                <span>Patrol Messenger</span>
+                {unreadChatCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
+                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
@@ -382,13 +439,18 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+                <span>{userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
+                {unreadChatCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
+                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
@@ -488,13 +550,18 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   currentTab === 'chat'
                     ? 'border-emerald-500 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}
+                <span>{userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
+                {unreadChatCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
+                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setCurrentTab('resources')}
@@ -523,7 +590,13 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
-        {currentTab === 'home' && isScout && <StudentHome currentUser={currentUser} onNavigate={(tab) => setCurrentTab(tab)} />}
+        {currentTab === 'home' && isScout && (
+          <StudentHome 
+            currentUser={currentUser} 
+            unreadChatCount={unreadChatCount} 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+          />
+        )}
         {currentTab === 'global-admin' && isOwner && <GlobalAdminPanel currentUser={currentUser} />}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
