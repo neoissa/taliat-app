@@ -72,6 +72,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
   const isLeaderOrOwner = currentUser?.role === 'leader' || currentUser?.role === 'owner';
   
   const [activeTab, setActiveTab] = useState('roots'); // 'roots' | 'branches' | 'infallibles' | 'duas' | 'tracker'
+  const [trackerCategory, setTrackerCategory] = useState('all');
   
   // Progress tracker states
   const [progress, setProgress] = useState({});
@@ -79,7 +80,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
   const [expandedTopic, setExpandedTopic] = useState(null);
   const [tempDates, setTempDates] = useState({});
 
-  // 1. Subscribe to scout's islamic progress
+  // 1. Real-time subscription to scout's islamic progress
   useEffect(() => {
     if (!targetScoutId) {
       setLoading(false);
@@ -88,7 +89,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
     const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
     const unsub = onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
-        setProgress(snap.data());
+        setProgress(snap.data() || {});
       } else {
         setProgress({});
       }
@@ -100,30 +101,51 @@ export default function IslamicBasics({ currentUser, scoutId }) {
     return () => unsub();
   }, [targetScoutId]);
 
-  // Scout submits topic -> marks pending (yellow)
-  const handleToggleSubmitScout = async (topicId) => {
+  // Direct toggle handler for circular checkbox
+  const handleToggleTopic = async (topicId) => {
     if (!targetScoutId) return;
     const existing = progress[topicId] || {};
-    if (existing.completed) return; // Scout cannot alter approved topic
-
-    const isPending = !!existing.pending;
-    const newPending = !isPending;
+    const isCompleted = !!existing.completed;
+    const isPending = !!existing.pending && !isCompleted;
     const dateVal = tempDates[topicId] || new Date().toISOString().split('T')[0];
 
     try {
       const docRef = doc(db, 'user_progress', targetScoutId, 'islamic_basics', 'status');
-      await setDoc(docRef, {
-        [topicId]: {
-          completed: false,
-          pending: newPending,
-          submittedDate: newPending ? dateVal : '',
-          updatedBy: currentUser?.uid || 'scout',
-          updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
-        }
-      }, { merge: true });
+      
+      if (isLeaderOrOwner) {
+        // Leaders toggle between Approved & Completed (Green) vs Incomplete
+        const newCompleted = !isCompleted;
+        await setDoc(docRef, {
+          [topicId]: {
+            completed: newCompleted,
+            pending: false,
+            completedDate: newCompleted ? dateVal : '',
+            approvedBy: newCompleted ? (currentUser?.uid || 'leader') : '',
+            approvedByName: newCompleted ? (currentUser?.fullName || currentUser?.username || 'Leader') : ''
+          }
+        }, { merge: true });
+      } else {
+        // Scouts toggle between Submitted/Pending (Yellow) vs Incomplete
+        if (isCompleted) return; // Approved topics cannot be altered directly by scouts
+        const newPending = !isPending;
+        await setDoc(docRef, {
+          [topicId]: {
+            completed: false,
+            pending: newPending,
+            submittedDate: newPending ? dateVal : '',
+            updatedBy: currentUser?.uid || 'scout',
+            updatedByName: currentUser?.fullName || currentUser?.username || 'Scout'
+          }
+        }, { merge: true });
+      }
     } catch (err) {
-      console.error("Failed to submit topic:", err);
+      console.error("Failed to toggle topic status:", err);
     }
+  };
+
+  // Scout submits topic -> marks pending (yellow)
+  const handleToggleSubmitScout = async (topicId) => {
+    await handleToggleTopic(topicId);
   };
 
   // Leader approves topic -> marks complete & approved (green)
@@ -171,7 +193,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
   const totalTopics = ISLAMIC_BASICS_TOPICS.length;
   const completedTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.completed).length;
   const pendingTopicsCount = ISLAMIC_BASICS_TOPICS.filter(t => progress[t.id]?.pending && !progress[t.id]?.completed).length;
-  const percentage = Math.round((completedTopicsCount / totalTopics) * 100) || 0;
+  const percentage = totalTopics > 0 ? Math.round((completedTopicsCount / totalTopics) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -405,6 +427,7 @@ export default function IslamicBasics({ currentUser, scoutId }) {
       {/* Topics Tracker & Progress Tab */}
       {activeTab === 'tracker' && (
         <div className="space-y-4">
+          {/* Topics Tracker Header & Metrics */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-3">
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -419,16 +442,47 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                 <span className="font-extrabold text-white">{completedTopicsCount} / {totalTopics}</span>
                 <span className="text-slate-400 block text-[9px] uppercase">Completed</span>
               </div>
-              <div className="w-16 bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-750">
+              <div className="w-20 bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-750">
                 <div className="bg-emerald-500 h-full rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
               </div>
               <span className="font-black text-emerald-400">{percentage}%</span>
             </div>
           </div>
 
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-1.5 pb-1">
+            {[
+              { id: 'all', label: 'All Topics' },
+              { id: 'Belief & Practice', label: 'Belief & Practice' },
+              { id: 'Ritual Law (Fiqh)', label: 'Ritual Law (Fiqh)' },
+              { id: 'Ethics & Character (Akhlaq)', label: 'Ethics & Character' },
+              { id: 'Remembrance & History (Tarikh & Duas)', label: 'Remembrance & History' }
+            ].map(cat => {
+              const count = cat.id === 'all' 
+                ? ISLAMIC_BASICS_TOPICS.length 
+                : ISLAMIC_BASICS_TOPICS.filter(t => t.category === cat.id).length;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setTrackerCategory(cat.id)}
+                  className={`text-[11px] font-semibold px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                    trackerCategory === cat.id
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
+                      : 'bg-slate-800/80 hover:bg-slate-750 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                  <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${trackerCategory === cat.id ? 'bg-black/30 text-white' : 'bg-slate-900 text-slate-400'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* List of topics */}
           <div className="space-y-3">
-            {ISLAMIC_BASICS_TOPICS.map((topic, index) => {
+            {ISLAMIC_BASICS_TOPICS.filter(t => trackerCategory === 'all' || t.category === trackerCategory).map((topic, index) => {
               const itemProg = progress[topic.id] || {};
               const isCompleted = !!itemProg.completed;
               const isPending = !!itemProg.pending && !isCompleted;
@@ -452,17 +506,37 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                     onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
                     className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-750/30 transition"
                   >
-                    <div className="flex items-center gap-3">
-                      {isCompleted ? (
-                        <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />
-                      ) : isPending ? (
-                        <Clock className="text-amber-400 shrink-0 animate-pulse" size={20} />
-                      ) : (
-                        <Circle className="text-slate-500 hover:text-emerald-400 shrink-0" size={20} />
-                      )}
-                      <div>
-                        <h4 className="font-bold text-xs text-white flex items-center gap-2">
-                          <span>{index + 1}. {topic.title}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Circular Toggle Button with e.stopPropagation() */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleTopic(topic.id);
+                        }}
+                        className="shrink-0 p-1 hover:scale-110 transition cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        title={
+                          isCompleted
+                            ? 'Approved & Completed (Click to reset)'
+                            : isPending
+                            ? 'Pending Leader Approval (Click to cancel)'
+                            : isLeaderOrOwner
+                            ? 'Click to Approve / Mark Complete'
+                            : 'Click to Submit to Leader'
+                        }
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="text-emerald-400" size={22} />
+                        ) : isPending ? (
+                          <Clock className="text-amber-400 animate-pulse" size={22} />
+                        ) : (
+                          <Circle className="text-slate-500 hover:text-emerald-400" size={22} />
+                        )}
+                      </button>
+
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-xs text-white flex items-center gap-2 flex-wrap">
+                          <span>{topic.title}</span>
                           <span className="text-[9px] bg-slate-900 border border-slate-750 text-slate-400 px-1.5 py-0.5 rounded font-mono">
                             {topic.category}
                           </span>
@@ -470,15 +544,15 @@ export default function IslamicBasics({ currentUser, scoutId }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {isCompleted && (
                         <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                          <CheckCircle2 size={11} /> Approved on {completedDate}
+                          <CheckCircle2 size={11} /> Approved {completedDate ? `(${completedDate})` : ''}
                         </span>
                       )}
                       {isPending && (
                         <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-                          <Clock size={11} /> Pending Approval ({submittedDate})
+                          <Clock size={11} /> Pending {submittedDate ? `(${submittedDate})` : ''}
                         </span>
                       )}
                       {isExpanded ? <ChevronUp size={16} className="text-slate-450" /> : <ChevronDown size={16} className="text-slate-455" />}

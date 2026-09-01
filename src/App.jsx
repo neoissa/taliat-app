@@ -484,7 +484,7 @@ export default function App() {
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
-        {currentTab === 'islamic' && isScout && <IslamicBasics />}
+        {currentTab === 'islamic' && isScout && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeader && <ScoutList currentUser={currentUser} />}

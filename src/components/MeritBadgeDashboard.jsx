@@ -280,15 +280,27 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 }`}
               >
                 <div className="flex items-start gap-3 flex-1">
-                  <div className="shrink-0 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isScout) {
+                        onToggleStep(badge.id, req.id, state);
+                      } else if (isLeaderOrOwner) {
+                        onApproveStep(badge.id, req.id, state);
+                      }
+                    }}
+                    disabled={readOnly || (isScout && isApproved)}
+                    className="shrink-0 mt-0.5 p-1 rounded-full hover:scale-110 transition cursor-pointer"
+                    title={isApproved ? 'Approved & Completed' : isPending ? 'Pending Leader Approval (Click to cancel)' : isScout ? 'Click to Submit for Leader Approval' : 'Click to Approve'}
+                  >
                     {isApproved ? (
-                      <CheckCircle2 className="text-emerald-400" size={18} />
+                      <CheckCircle2 className="text-emerald-400" size={20} />
                     ) : isPending ? (
-                      <Clock className="text-amber-400 animate-pulse" size={18} />
+                      <Clock className="text-amber-400 animate-pulse" size={20} />
                     ) : (
-                      <Circle className="text-slate-500" size={18} />
+                      <Circle className="text-slate-500 hover:text-emerald-400" size={20} />
                     )}
-                  </div>
+                  </button>
                   <div className="space-y-1">
                     <p className={`text-xs ${isApproved ? 'line-through text-slate-400' : 'text-slate-200'}`}>
                       <span className="font-bold text-slate-350 mr-1.5">{req.id}.</span>
@@ -296,12 +308,12 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                     </p>
                     <div className="flex items-center gap-2">
                       {isApproved && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">
-                          Approved
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase flex items-center gap-1">
+                          <CheckCircle2 size={10} /> Approved & Completed
                         </span>
                       )}
                       {isPending && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase flex items-center gap-1">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase flex items-center gap-1">
                           <Clock size={10} /> Pending Leader Approval
                         </span>
                       )}
@@ -315,23 +327,23 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                     {isScout && (
                       <button
                         onClick={() => onToggleStep(badge.id, req.id, state)}
-                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1 ${
                           isPending
-                            ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
+                            ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-950/30'
                             : isApproved
-                            ? 'opacity-50 cursor-not-allowed bg-emerald-950/30 text-emerald-400'
-                            : 'bg-slate-700 hover:bg-emerald-600 text-white'
+                            ? 'opacity-60 cursor-not-allowed bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/40'
                         }`}
                         disabled={isApproved}
                       >
-                        {isPending ? 'Cancel' : isApproved ? 'Approved' : 'Submit'}
+                        {isPending ? 'Pending (Cancel)' : isApproved ? 'Approved ✓' : 'Submit for Approval'}
                       </button>
                     )}
 
                     {isLeaderOrOwner && (
                       <button
                         onClick={() => onApproveStep(badge.id, req.id, state)}
-                        className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 ${
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1 ${
                           isApproved
                             ? 'bg-emerald-700/40 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-600/30'
                             : isPending

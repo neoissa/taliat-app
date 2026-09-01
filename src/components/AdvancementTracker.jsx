@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 
@@ -92,6 +92,14 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
   const [savingBio, setSavingBio] = useState(false);
   const [bioMsg, setBioMsg] = useState('');
 
+  // Scout Journal & Dated Notes states
+  const [journalNotes, setJournalNotes] = useState([]);
+  const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newNoteCategory, setNewNoteCategory] = useState('General Note');
+  const [newNoteText, setNewNoteText] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+  const [journalMsg, setJournalMsg] = useState('');
+
   // 1. Subscribe to scout's specific profile info (including bio)
   useEffect(() => {
     if (!scoutId) {
@@ -114,19 +122,85 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
     return () => unsub();
   }, [scoutId]);
 
+  // 2. Subscribe to scout's dated journal notes
+  useEffect(() => {
+    if (!scoutId) {
+      setJournalNotes([]);
+      return;
+    }
+    const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (snap.exists() && Array.isArray(snap.data().notes)) {
+        // Sort notes by date descending
+        const sorted = [...snap.data().notes].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        setJournalNotes(sorted);
+      } else {
+        setJournalNotes([]);
+      }
+    }, (err) => {
+      console.error("Failed to load scout journal notes:", err);
+    });
+    return () => unsub();
+  }, [scoutId]);
+
   const handleSaveBio = async () => {
     if (!scoutId) return;
     setSavingBio(true);
     setBioMsg('');
     try {
       await setDoc(doc(db, 'users', scoutId), { bio: bioInput }, { merge: true });
-      setBioMsg('Biography updated successfully!');
+      setBioMsg('About Me updated successfully!');
       setTimeout(() => setBioMsg(''), 3000);
     } catch (err) {
-      console.error("Failed to update bio notes:", err);
-      setBioMsg('Failed to update bio notes.');
+      console.error("Failed to update bio:", err);
+      setBioMsg('Failed to update About Me.');
     } finally {
       setSavingBio(false);
+    }
+  };
+
+  const handleAddJournalNote = async (e) => {
+    e.preventDefault();
+    if (!scoutId || !newNoteText.trim()) return;
+    setAddingNote(true);
+    setJournalMsg('');
+
+    const newEntry = {
+      id: Date.now().toString(),
+      date: newNoteDate || new Date().toISOString().split('T')[0],
+      category: newNoteCategory || 'General Note',
+      text: newNoteText.trim(),
+      authorId: currentUser.uid,
+      authorName: currentUser.fullName || currentUser.username || currentUser.email || 'Scout',
+      authorRole: currentUser.role || 'scout',
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = [newEntry, ...journalNotes];
+
+    try {
+      const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
+      await setDoc(docRef, { notes: updated }, { merge: true });
+      setNewNoteText('');
+      setJournalMsg('Note added successfully!');
+      setTimeout(() => setJournalMsg(''), 3000);
+    } catch (err) {
+      console.error("Failed to add journal note:", err);
+      setJournalMsg('Failed to add note.');
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const handleDeleteJournalNote = async (noteId) => {
+    if (!scoutId || !noteId) return;
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
+    const updated = journalNotes.filter(n => n.id !== noteId);
+    try {
+      const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
+      await setDoc(docRef, { notes: updated }, { merge: true });
+    } catch (err) {
+      console.error("Failed to delete journal note:", err);
     }
   };
 
@@ -251,6 +325,65 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
       }, { merge: true });
     } catch (err) {
       console.error('Error approving requirement status:', err);
+    }
+  };
+
+  // Batch submit all incomplete requirements in active rank (for scouts)
+  const handleBatchSubmitScout = async () => {
+    if (readOnly) return;
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
+    const today = new Date().toISOString().split('T')[0];
+    const updates = { ...completedRequirements };
+
+    selectedRankData.categories.forEach(cat => {
+      cat.requirements.forEach(req => {
+        const existing = updates[req.id] || {};
+        if (!existing.completed && !existing.pending) {
+          updates[req.id] = {
+            ...existing,
+            completed: false,
+            pending: true,
+            submittedAt: today
+          };
+        }
+      });
+    });
+
+    try {
+      await setDoc(docRef, { completedRequirements: updates }, { merge: true });
+    } catch (err) {
+      console.error("Failed to batch submit requirements:", err);
+    }
+  };
+
+  // Batch approve all pending requirements in active rank (for leaders)
+  const handleBatchApproveLeader = async () => {
+    if (readOnly) return;
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
+    const today = new Date().toISOString().split('T')[0];
+    const updates = { ...completedRequirements };
+
+    selectedRankData.categories.forEach(cat => {
+      cat.requirements.forEach(req => {
+        const existing = updates[req.id] || {};
+        if (existing.pending && !existing.completed) {
+          updates[req.id] = {
+            ...existing,
+            completed: true,
+            pending: false,
+            approvedAt: today,
+            approvedBy: currentUser.uid,
+            approvedByName: currentUser.fullName || currentUser.username || 'Leader',
+            completedAt: existing.completedAt || today
+          };
+        }
+      });
+    });
+
+    try {
+      await setDoc(docRef, { completedRequirements: updates }, { merge: true });
+    } catch (err) {
+      console.error("Failed to batch approve requirements:", err);
     }
   };
 
@@ -381,17 +514,22 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
           </select>
         </div>
       )}
-      {/* Scout Biography & Profile Notes */}
+      {/* ── SEPARATE SECTION 1: ABOUT ME (SCOUT BIO) ── */}
       {scoutId && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
           <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">About Me & Scout Notes</h2>
-              <p className="text-[11px] text-slate-400">
-                {currentUser.uid === scoutId
-                  ? 'Share facts about yourself, interests, advancement goals, or troop notes.'
-                  : `Read biography notes for ${scoutData?.fullName || scoutData?.username || 'this scout'}.`}
-              </p>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <User size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">About Me</h2>
+                <p className="text-[11px] text-slate-400">
+                  {currentUser.uid === scoutId
+                    ? 'Share facts about yourself, your hobbies, interests, and scouting goals.'
+                    : `Personal biography and introduction for ${scoutData?.fullName || scoutData?.username || 'this scout'}.`}
+                </p>
+              </div>
             </div>
             {bioMsg && <span className="text-xs text-emerald-400 font-semibold">{bioMsg}</span>}
           </div>
@@ -401,7 +539,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
               <textarea
                 value={bioInput}
                 onChange={(e) => setBioInput(e.target.value)}
-                placeholder="Write something about yourself, your interests, goals, or message to leaders..."
+                placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
                 rows={3}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
@@ -409,17 +547,154 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                 <button
                   onClick={handleSaveBio}
                   disabled={savingBio}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
                 >
-                  {savingBio ? 'Saving...' : 'Save Notes'}
+                  <Sparkles size={13} />
+                  {savingBio ? 'Saving...' : 'Save About Me'}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="bg-slate-900/50 border border-slate-750 p-3 rounded-xl min-h-[50px] text-xs text-slate-300 leading-relaxed italic">
-              {scoutData?.bio ? scoutData.bio : "This scout hasn't added biography notes yet."}
+            <div className="bg-slate-900/50 border border-slate-750 p-4 rounded-xl min-h-[50px] text-xs text-slate-200 leading-relaxed">
+              {scoutData?.bio ? (
+                <p className="whitespace-pre-wrap">{scoutData.bio}</p>
+              ) : (
+                <span className="text-slate-400 italic">This scout has not added an About Me bio yet.</span>
+              )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── SEPARATE SECTION 2: SCOUT JOURNAL & DATED NOTES ── */}
+      {scoutId && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4 print-hide">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Calendar size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <span>Scout Journal & Dated Notes</span>
+                  <span className="text-[10px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full font-mono text-slate-300">
+                    {journalNotes.length} {journalNotes.length === 1 ? 'entry' : 'entries'}
+                  </span>
+                </h2>
+                <p className="text-[11px] text-slate-400">Log meeting notes, campout reflections, and advancement goals by date.</p>
+              </div>
+            </div>
+            {journalMsg && <span className="text-xs text-emerald-400 font-semibold">{journalMsg}</span>}
+          </div>
+
+          {/* Add New Dated Note Form */}
+          <form onSubmit={handleAddJournalNote} className="bg-slate-900/40 border border-slate-750 p-4 rounded-xl space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Date Selector */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Calendar size={12} className="text-amber-400" /> Note Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={newNoteDate}
+                  onChange={(e) => setNewNoteDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Category / Type Selector */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Tag size={12} className="text-emerald-400" /> Category / Topic
+                </label>
+                <select
+                  value={newNoteCategory}
+                  onChange={(e) => setNewNoteCategory(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="General Note">General Note</option>
+                  <option value="Troop Meeting">Troop Meeting</option>
+                  <option value="Campout & Outdoors">Campout & Outdoors</option>
+                  <option value="Advancement Goal">Advancement Goal</option>
+                  <option value="Service Project">Service Project</option>
+                  <option value="Personal Reflection">Personal Reflection</option>
+                  <option value="Leader Feedback">Leader Feedback</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Note Text */}
+            <div>
+              <textarea
+                required
+                rows={2}
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder="Write your dated note, activity recap, reflection, or goal here..."
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={addingNote || !newNoteText.trim()}
+                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                {addingNote ? 'Adding...' : 'Add Note to Journal'}
+              </button>
+            </div>
+          </form>
+
+          {/* List of Dated Notes (Chronological Feed) */}
+          <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+            {journalNotes.length > 0 ? (
+              journalNotes.map((note) => {
+                const canDelete = currentUser.uid === note.authorId || currentUser.uid === scoutId || currentUser.role === 'owner';
+                return (
+                  <div
+                    key={note.id}
+                    className="bg-slate-900 border border-slate-750 hover:border-slate-700 p-3.5 rounded-xl space-y-2 transition"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
+                          <Calendar size={11} /> {note.date}
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md font-sans">
+                          {note.category}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          by <strong className="text-slate-300">{note.authorName}</strong>
+                        </span>
+                      </div>
+
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDeleteJournalNote(note.id)}
+                          className="text-slate-500 hover:text-red-400 transition cursor-pointer p-1 rounded hover:bg-slate-800"
+                          title="Delete note"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
+                      {note.text}
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-slate-900/30 border border-slate-800 p-5 rounded-xl text-center text-xs text-slate-400 italic">
+                No dated notes logged yet. Use the form above to record your first journal entry!
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -486,6 +761,48 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
         </div>
       </div>
 
+      {/* Rank Progress & Batch Submission Banner */}
+      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg print-hide">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Requirements Status:</span>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+            <CheckCircle2 size={13} className="text-emerald-400" /> {completedCount} Approved
+          </span>
+          {pendingCount > 0 && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center gap-1.5 animate-pulse">
+              <Clock size={13} className="text-amber-400" /> {pendingCount} Pending Approval
+            </span>
+          )}
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-700/60 text-slate-300">
+            {totalRequirements - completedCount - pendingCount} Incomplete
+          </span>
+        </div>
+
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {isScout && (totalRequirements - completedCount - pendingCount > 0) && (
+              <button
+                onClick={handleBatchSubmitScout}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-md shadow-emerald-950/40 flex items-center gap-1.5"
+              >
+                <Send size={13} />
+                Submit Incomplete for Approval
+              </button>
+            )}
+
+            {isLeaderOrOwner && pendingCount > 0 && (
+              <button
+                onClick={handleBatchApproveLeader}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 animate-pulse"
+              >
+                <CheckCheck size={14} />
+                1-Click Approve All Pending ({pendingCount})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Categories & Requirements Checklist */}
       <div className="space-y-6">
         {selectedRankData.categories.map((cat, catIdx) => (
@@ -501,7 +818,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                 const isExpanded = !!expandedReqs[req.id];
                 const noteValue = reqProgress.notes || '';
                 const dateValue = reqProgress.completedAt || reqProgress.submittedAt || '';
-                const isScout = currentUser.role === 'scout';
+                const isScout = currentUser?.role === 'scout' || (!isLeaderOrOwner && currentUser?.uid === scoutId);
 
                 return (
                   <div
@@ -516,15 +833,42 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                   >
                     {/* Header bar */}
                     <div className="p-4 flex items-start gap-4">
-                      <div className="mt-0.5 shrink-0">
+                      {/* Interactive Circular Checkbox Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isScout) {
+                            handleToggleRequirementScout(req.id);
+                          } else if (isLeaderOrOwner) {
+                            handleApproveRequirementLeader(req.id);
+                          }
+                        }}
+                        disabled={readOnly || (isScout && isCompleted)}
+                        className={`mt-0.5 shrink-0 p-1 rounded-full transition cursor-pointer ${
+                          isCompleted
+                            ? 'text-emerald-400 hover:scale-110'
+                            : isPending
+                            ? 'text-amber-400 hover:scale-110 animate-pulse'
+                            : 'text-slate-500 hover:text-emerald-400 hover:scale-110'
+                        }`}
+                        title={
+                          isCompleted
+                            ? 'Approved & Completed'
+                            : isPending
+                            ? 'Submitted - Pending Leader Approval (Click to cancel)'
+                            : isScout
+                            ? 'Click to Submit for Leader Approval'
+                            : 'Click to Sign-off / Approve'
+                        }
+                      >
                         {isCompleted ? (
-                          <CheckCircle2 className="text-emerald-400" size={20} />
+                          <CheckCircle2 className="text-emerald-400" size={22} />
                         ) : isPending ? (
-                          <Clock className="text-amber-400 animate-pulse" size={20} />
+                          <Clock className="text-amber-400 animate-pulse" size={22} />
                         ) : (
-                          <Circle className="text-slate-500" size={20} />
+                          <Circle className="text-slate-500 hover:text-emerald-400" size={22} />
                         )}
-                      </div>
+                      </button>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
@@ -549,20 +893,35 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
 
                           {/* Quick action buttons */}
                           {!readOnly && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               {isScout && (
                                 <button
                                   onClick={() => handleToggleRequirementScout(req.id)}
-                                  className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 ${
-                                    isPending
-                                      ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
-                                      : isCompleted
-                                      ? 'opacity-60 cursor-not-allowed bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
-                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                  }`}
                                   disabled={isCompleted}
+                                  className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                    isPending
+                                      ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/50 shadow-md shadow-amber-950/30'
+                                      : isCompleted
+                                      ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 cursor-default opacity-80'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/40 hover:scale-[1.02]'
+                                  }`}
                                 >
-                                  {isPending ? 'Cancel Submission' : isCompleted ? 'Approved' : 'Submit to Leader'}
+                                  {isPending ? (
+                                    <>
+                                      <Clock size={13} className="animate-pulse" />
+                                      <span>Pending Approval (Cancel)</span>
+                                    </>
+                                  ) : isCompleted ? (
+                                    <>
+                                      <CheckCircle2 size={13} />
+                                      <span>Approved & Signed</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send size={13} />
+                                      <span>Submit for Approval</span>
+                                    </>
+                                  )}
                                 </button>
                               )}
 
@@ -570,11 +929,11 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                                 <div className="flex items-center gap-1.5">
                                   <button
                                     onClick={() => handleApproveRequirementLeader(req.id)}
-                                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 ${
+                                    className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5 ${
                                       isCompleted
                                         ? 'bg-emerald-800/30 text-emerald-300 hover:bg-red-900/40 hover:text-red-300 border border-emerald-700/40'
                                         : isPending
-                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 animate-pulse'
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/40 animate-pulse'
                                         : 'bg-slate-700 hover:bg-emerald-600 text-white'
                                     }`}
                                   >
@@ -583,7 +942,7 @@ export default function AdvancementTracker({ currentUser, scoutId: customScoutId
                                   {isPending && (
                                     <button
                                       onClick={() => handleToggleRequirementScout(req.id)}
-                                      className="text-xs px-2 py-1 rounded-lg font-semibold bg-slate-700 hover:bg-slate-600 text-slate-300 transition cursor-pointer"
+                                      className="text-xs px-2.5 py-1.5 rounded-xl font-semibold bg-slate-700 hover:bg-slate-600 text-slate-300 transition cursor-pointer"
                                       title="Return for Revision"
                                     >
                                       Reset
