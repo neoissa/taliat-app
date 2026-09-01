@@ -495,29 +495,22 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
   if (showPrintReport) {
     return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setShowPrintReport(false)}
-          className="bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer print-hide"
-        >
-          &larr; Back to Tracker
-        </button>
-        <ScoutProgressReport
-          scout={scoutData || { uid: currentUser.uid, fullName: currentUser.fullName, username: currentUser.username, rank: currentUser.rank || 'Scout' }}
-          currentUser={currentUser}
-        />
-      </div>
+      <ScoutProgressReport
+        scout={scoutData || { uid: scoutId || currentUser?.uid, fullName: currentUser?.fullName, username: currentUser?.username, rank: currentUser?.rank || "Scout" }}
+        currentUser={currentUser}
+        onBack={() => setShowPrintReport(false)}
+      />
     );
   }
 
   if (showNotesPrintReport) {
-    const currentScout = scoutData || { uid: currentUser.uid, fullName: currentUser.fullName, username: currentUser.username, rank: currentUser.rank || 'Scout', bsaId: currentUser.bsaId };
+    const currentScout = scoutData || { uid: currentUser?.uid, fullName: currentUser?.fullName, username: currentUser?.username, rank: currentUser?.rank || "Scout", bsaId: currentUser?.bsaId };
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl print-hide">
           <button
             onClick={() => setShowNotesPrintReport(false)}
-            className="bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+            className="bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
           >
             &larr; Back to Tracker
           </button>
@@ -529,7 +522,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             <span>Print to PDF / Printer</span>
           </button>
         </div>
-
         {/* Clean printable notes sheet */}
         <div className="bg-white text-slate-900 p-8 rounded-2xl shadow-xl space-y-6 border border-slate-300 font-sans print:p-0 print:border-none print:shadow-none">
           {/* Header */}

@@ -1,41 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Printer, ArrowLeft, Award, Star, BookOpen, Calendar, Clock, CheckCircle2, MapPin, CheckSquare, FileText, User, Shield, Video, Check } from 'lucide-react';
 import RankIcon from './RankIcon';
 
-const SAFETY_VIDEOS = [
-  { id: 'parent_overview', title: '📹 Parent Overview Briefing' },
-  { id: 'mod1', title: '🛡️ Module 1: Barriers to Abuse' },
-  { id: 'mod2', title: '🚩 Module 2: Awareness & Red Flags' },
-  { id: 'mod3', title: '💻 Module 3: Digital Safety & Privacy' },
-  { id: 'mod4', title: '📞 Module 4: Reporting Protocols' }
-];
-
 export default function ScoutProgressReport({ scout, currentUser, onBack }) {
+  const scoutUid = scout?.uid || currentUser?.uid;
+
+  // Real-time data states
+  const [profileData, setProfileData] = useState(null);
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
-  const [safetyVideosProgress, setSafetyVideosProgress] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
-  const [notesList, setNotesList] = useState([]);
-  const [newNoteText, setNewNoteText] = useState('');
-  const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notesLoading, setNotesLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
-
-  // Authorization checks
-  const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
-  const isScoutmaster = currentUser.role === 'leader' && currentUser.leaderPosition === 'Scoutmaster';
-  const isAssignedLeader = currentUser.role === 'leader' && scout.leaderId === currentUser.uid;
-  const canEdit = isOwner || isScoutmaster || isAssignedLeader;
-
-  // Normalize selected rank ID (lowercase, with underscores)
-  const initialRankId = (scout.rank || 'Scout').toLowerCase().replace(' ', '_');
-  const [selectedRankId, setSelectedRankId] = useState(initialRankId);
+  const [serviceLogs, setServiceLogs] = useState([]);
+  const [assignmentsList, setAssignmentsList] = useState([]);
+  const [scoutSubmissions, setScoutSubmissions] = useState({});
+  const [eventsList, setEventsList] = useState([]);
+  const [journalNotes, setJournalNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const reportDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -43,654 +28,482 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     day: 'numeric',
   });
 
-  // 1. Fetch Ranks, Merit Badges, & Safety Videos progress in real-time
+  // 1. Fetch Scout User Profile Info
   useEffect(() => {
-    const ranksRef = collection(db, 'user_progress', scout.uid, 'ranks');
-    const unsubRanks = onSnapshot(ranksRef, (snap) => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(doc(db, 'users', scoutUid), (snap) => {
+      if (snap.exists()) {
+        setProfileData(snap.data());
+      }
+    });
+    return () => unsub();
+  }, [scoutUid]);
+
+  // 2. Fetch 7 Ranks Progress
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(collection(db, 'user_progress', scoutUid, 'ranks'), (snap) => {
       const map = {};
       snap.docs.forEach(d => { map[d.id] = d.data(); });
       setRanksProgress(map);
     });
+    return () => unsub();
+  }, [scoutUid]);
 
-    const meritRef = collection(db, 'user_progress', scout.uid, 'merit_badges');
-    const unsubMerit = onSnapshot(meritRef, (snap) => {
+  // 3. Fetch Merit Badges Progress
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(collection(db, 'user_progress', scoutUid, 'merit_badges'), (snap) => {
       const map = {};
       snap.docs.forEach(d => { map[d.id] = d.data(); });
       setMeritProgress(map);
     });
+    return () => unsub();
+  }, [scoutUid]);
 
-    const safetyRef = doc(db, 'user_progress', scout.uid, 'safety_videos', 'status');
-    const unsubSafety = onSnapshot(safetyRef, (snap) => {
-      if (snap.exists()) {
-        setSafetyVideosProgress(snap.data());
-      } else {
-        setSafetyVideosProgress({});
-      }
-    });
-
-    const islamicRef = doc(db, 'user_progress', scout.uid, 'islamic_basics', 'status');
-    const unsubIslamic = onSnapshot(islamicRef, (snap) => {
+  // 4. Fetch Islamic Knowledge Progress
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(doc(db, 'user_progress', scoutUid, 'islamic_basics', 'status'), (snap) => {
       if (snap.exists()) {
         setIslamicProgress(snap.data());
-      } else {
-        setIslamicProgress({});
       }
     });
+    return () => unsub();
+  }, [scoutUid]);
 
-    return () => {
-      unsubRanks();
-      unsubMerit();
-      unsubSafety();
-      unsubIslamic();
-    };
-  }, [scout.uid]);
-
-  // 2. Fetch leader notes from /scout_notes/{scoutId}
+  // 5. Fetch Service & Volunteering Logs
   useEffect(() => {
-    const loadNotes = async () => {
-      const noteRef = doc(db, 'scout_notes', scout.uid);
-      try {
-        const snap = await getDoc(noteRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (Array.isArray(data.notes)) {
-            setNotesList(data.notes);
-          } else if (data.note) {
-            // Migrate legacy note
-            const legacyNote = {
-              id: 'legacy',
-              text: data.note,
-              date: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-              authorName: 'Leader',
-              authorPosition: 'Leader',
-              createdAt: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toISOString() : new Date().toISOString()
-            };
-            setNotesList([legacyNote]);
-          } else {
-            setNotesList([]);
-          }
-        } else {
-          setNotesList([]);
-        }
-      } catch (err) {
-        console.error('Failed to load leader notes:', err);
-      } finally {
-        setNotesLoading(false);
+    if (!scoutUid) return;
+    const unsub = onSnapshot(collection(db, 'service_logs'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(l => l.scoutId === scoutUid || l.userId === scoutUid);
+      list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
+      setServiceLogs(list);
+    });
+    return () => unsub();
+  }, [scoutUid]);
+
+  // 6. Fetch Assignments & Scout Submissions
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
+      setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    const unsubSub = onSnapshot(collection(db, 'user_progress', scoutUid, 'assignments'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setScoutSubmissions(map);
+    });
+    return () => {
+      unsubAssign();
+      unsubSub();
+    };
+  }, [scoutUid]);
+
+  // 7. Fetch Upcoming/Attended Events
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'events'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
+      setEventsList(list);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // 8. Fetch Journal Notes
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(doc(db, 'user_progress', scoutUid, 'journal', 'entries'), (snap) => {
+      if (snap.exists() && Array.isArray(snap.data().notes)) {
+        setJournalNotes(snap.data().notes);
       }
-    };
-    loadNotes();
-  }, [scout.uid]);
+    });
+    return () => unsub();
+  }, [scoutUid]);
 
-  const handleAddNote = async () => {
-    if (!newNoteText.trim()) return;
-    setSaving(true);
-    setSaveMsg('');
-    try {
-      const noteRef = doc(db, 'scout_notes', scout.uid);
-      const newNote = {
-        id: Date.now().toString(),
-        text: newNoteText.trim(),
-        date: newNoteDate || new Date().toISOString().split('T')[0],
-        authorId: currentUser.uid,
-        authorName: currentUser.fullName || currentUser.username || currentUser.email,
-        authorPosition: currentUser.leaderPosition || currentUser.role || 'Leader',
-        createdAt: new Date().toISOString()
-      };
-      const updatedNotes = [...notesList, newNote];
-      await setDoc(noteRef, {
-        notes: updatedNotes,
-        updatedAt: serverTimestamp(),
-        updatedBy: currentUser.uid,
-      }, { merge: true });
-      setNotesList(updatedNotes);
-      setNewNoteText('');
-      setSaveMsg('Note added.');
-      setTimeout(() => setSaveMsg(''), 2500);
-    } catch (err) {
-      console.error('Failed to save leader note:', err);
-      setSaveMsg('Error saving notes.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Calculate totals
+  const scoutInfo = profileData || scout || currentUser || {};
+  const scoutFullName = scoutInfo.fullName || scoutInfo.username || 'Scout Member';
+  const scoutRank = scoutInfo.rank || 'Scout';
+  const scoutPatrol = scoutInfo.patrolName || scoutInfo.patrolId || 'Taliʿa Patrol';
 
-  const handleDeleteNote = async (noteId) => {
-    if (!window.confirm("Are you sure you want to delete this note?")) return;
-    setSaving(true);
-    try {
-      const noteRef = doc(db, 'scout_notes', scout.uid);
-      const updatedNotes = notesList.filter(n => n.id !== noteId);
-      await setDoc(noteRef, {
-        notes: updatedNotes,
-        updatedAt: serverTimestamp(),
-        updatedBy: currentUser.uid,
-      }, { merge: true });
-      setNotesList(updatedNotes);
-      setSaveMsg('Note deleted.');
-      setTimeout(() => setSaveMsg(''), 2500);
-    } catch (err) {
-      console.error('Failed to delete note:', err);
-      setSaveMsg('Error deleting note.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const totalServiceHours = serviceLogs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+  const verifiedServiceHours = serviceLogs.filter(l => l.verified).reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
 
-  // Progress update helpers
-  const toggleRequirement = async (reqId) => {
-    if (!canEdit) return;
-    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
-    const existingReq = completedReqs[reqId] || {};
-    const newCompleted = !existingReq.completed;
-
-    const reqData = {
-      completed: newCompleted,
-      notes: existingReq.notes || '',
-      completedAt: newCompleted ? (existingReq.completedAt || new Date().toISOString().split('T')[0]) : ''
-    };
-
-    try {
-      await setDoc(docRef, {
-        completedRequirements: {
-          [reqId]: reqData
-        }
-      }, { merge: true });
-    } catch (err) {
-      console.error('Error updating requirement status:', err);
-    }
-  };
-
-  const handleDateChange = async (reqId, dateString) => {
-    if (!canEdit) return;
-    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
-    const existingReq = completedReqs[reqId] || {};
-
-    try {
-      await setDoc(docRef, {
-        completedRequirements: {
-          [reqId]: {
-            completed: !!existingReq.completed,
-            notes: existingReq.notes || '',
-            completedAt: dateString
-          }
-        }
-      }, { merge: true });
-    } catch (err) {
-      console.error('Error updating date:', err);
-    }
-  };
-
-  const handleScoutCompletionDateChange = async (dateVal) => {
-    if (!canEdit) return;
-    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
-    try {
-      await setDoc(docRef, { scoutCompletedAt: dateVal }, { merge: true });
-    } catch (err) {
-      console.error('Error updating scout completion date:', err);
-    }
-  };
-
-  const handleTestingDateChange = async (dateVal) => {
-    if (!canEdit) return;
-    const docRef = doc(db, 'user_progress', scout.uid, 'ranks', selectedRankId);
-    try {
-      await setDoc(docRef, { testingCompletedAt: dateVal }, { merge: true });
-    } catch (err) {
-      console.error('Error updating testing completion date:', err);
-    }
-  };
-
-  // Derive metrics
-  const completedRanksCount = RANKS_DATA.filter(rank => {
-    const rp = ranksProgress[rank.id] || { completedRequirements: {} };
-    const completedReqs = rp.completedRequirements || {};
-    const total = rank.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-    const done = rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
-    return total > 0 && done === total;
-  }).length;
-
-  const activeRankData = RANKS_DATA.find(r => r.id === selectedRankId) || RANKS_DATA[0];
-  const activeProg = ranksProgress[activeRankData.id] || { completedRequirements: {} };
-  const completedReqs = activeProg.completedRequirements || {};
-  const activeTotal = activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-  const activeDone = activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
-  const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
-
-  // Merit Badge Stats
-  const badgesEarned = MERIT_BADGES.filter(b => {
+  const earnedMeritBadges = MERIT_BADGES.filter(b => {
     const p = meritProgress[b.id];
     if (!p) return false;
-    return b.requirements.filter(r => p.steps?.[r.id]).length === b.requirements.length;
+    const total = b.requirements.length;
+    const approved = b.requirements.filter(r => p.steps?.[r.id] === true || p.steps?.[r.id]?.completed === true).length;
+    return total > 0 && approved === total;
   });
-  const eagleBadgesEarned = badgesEarned.filter(b => b.eagleRequired).length;
+
+  const plannedMeritBadges = MERIT_BADGES.filter(b => meritProgress[b.id]?.planned && !earnedMeritBadges.some(e => e.id === b.id));
 
   return (
-    <div className="space-y-6">
-      {/* Action Bar (Screen Only) */}
-      <div className="print-hide flex items-center justify-between">
+    <div className="space-y-6 max-w-5xl mx-auto font-sans pb-12 text-slate-900">
+      {/* Print / Back Toolbar (Screen Only) */}
+      <div className="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl print-hide">
         <button
+          type="button"
           onClick={onBack}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition text-sm cursor-pointer"
+          className="bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
         >
-          <ArrowLeft size={16} />
-          Back to Scout List
+          <ArrowLeft size={14} /> Back to Tracker
         </button>
+
         <button
+          type="button"
           onClick={() => window.print()}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-900/30"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40"
         >
-          <Printer size={16} />
-          Print Progress Report
+          <Printer size={16} /> Print Full Official Report (PDF)
         </button>
       </div>
 
-      {/* Screen Options Panel (Screen Only) */}
-      <div className="print-hide bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-wrap gap-4 items-center justify-between">
-        <div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Select Rank for Checklist</h2>
-          <p className="text-xs text-slate-400">Choose which rank checklist to view/print below</p>
-        </div>
-        <select
-          value={selectedRankId}
-          onChange={(e) => setSelectedRankId(e.target.value)}
-          className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-        >
-          {RANKS_DATA.map(r => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* ── PROGRESS REPORT CONTAINER ── */}
-      <div id="print-report" className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-6 shadow-xl">
-
-        {/* Report Header */}
-        <div className="report-header border-b border-slate-600 pb-4">
-          <div className="flex justify-between items-start">
+      {/* ── PRINTABLE REPORT CONTAINER ── */}
+      <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-2xl space-y-8 border border-slate-300 text-slate-900 print:p-0 print:border-none print:shadow-none print:m-0 print:rounded-none">
+        
+        {/* 1. OFFICIAL HEADER */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-emerald-800 pb-5 gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-900 text-white flex items-center justify-center text-3xl font-black shrink-0 print:border print:border-emerald-950">
+              ⚜️
+            </div>
             <div>
-              <h1 className="text-2xl font-black text-white">{scout.fullName || scout.username}</h1>
-              <p className="text-sm text-slate-400 mt-0.5">
-                Patrol: <span className="font-semibold text-emerald-400">{scout.patrolId || 'Taliʿa'} Patrol</span> &bull; 
-                Active Rank: <span className="font-semibold text-white">{scout.rank || 'Scout'}</span>
-              </p>
+              <h1 className="text-2xl font-black tracking-tight text-emerald-950 uppercase">
+                DHULFIQĀR SCOUTS BSA
+              </h1>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-600 mt-0.5">
+                Official Comprehensive Advancement & Progress Record
+              </h2>
             </div>
-            <div className="text-right font-sans">
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wide">Progress Report Summary</p>
-              <p className="text-sm text-white mt-1">{reportDate}</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Leader: <span className="text-white">{currentUser.fullName || currentUser.email}</span>
-              </p>
-            </div>
+          </div>
+
+          <div className="text-right text-xs text-slate-600 font-mono space-y-0.5">
+            <p><strong>Report Date:</strong> {reportDate}</p>
+            <p><strong>Troop Unit:</strong> Taliʿa Troop 110</p>
+            <p><strong>Status:</strong> Official Member Record</p>
           </div>
         </div>
 
-        {/* Summary Metrics */}
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Overall Progress</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-emerald-400">{activePercent}%</p>
-              <p className="text-xs text-slate-400 mt-1">{activeRankData.name} Progress</p>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-white">{completedRanksCount} / {RANKS_DATA.length}</p>
-              <p className="text-xs text-slate-400 mt-1">Ranks Completed</p>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center">
-              <p className="text-3xl font-black text-amber-400">{badgesEarned.length}</p>
-              <p className="text-xs text-slate-400 mt-1">{eagleBadgesEarned} / {TOTAL_EAGLE_REQUIRED_FOR_RANK} Eagle Badges</p>
-            </div>
+        {/* 2. SCOUT DEMOGRAPHICS & PROFILE BOX */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+          <div>
+            <span className="text-slate-500 uppercase text-[10px] font-bold block">Scout Name</span>
+            <strong className="text-sm text-slate-900 font-black">{scoutFullName}</strong>
           </div>
-
-          {/* Active Rank Progress Bar (Screen Only) */}
-          <div className="mt-4 w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-700 print-hide">
-            <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${activePercent}%` }}
-            />
+          <div>
+            <span className="text-slate-500 uppercase text-[10px] font-bold block">Active Rank</span>
+            <strong className="text-sm text-emerald-800 font-black capitalize">{scoutRank} Rank</strong>
+          </div>
+          <div>
+            <span className="text-slate-500 uppercase text-[10px] font-bold block">Patrol Unit</span>
+            <strong className="text-sm text-slate-900 font-bold">{scoutPatrol}</strong>
+          </div>
+          <div>
+            <span className="text-slate-500 uppercase text-[10px] font-bold block">BSA Member ID</span>
+            <strong className="text-sm text-slate-900 font-mono">{scoutInfo.bsaId || '—'}</strong>
           </div>
         </div>
 
-        {/* Requirement Checklist */}
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
-            Checklist: {activeRankData.name} Requirements
-          </h2>
-          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
-                <th className="px-3 py-2 w-12 border-r border-slate-700">No.</th>
-                <th className="px-3 py-2 border-r border-slate-700">Requirement Detail</th>
-                <th className="px-3 py-2 w-28 text-center border-r border-slate-700">Status</th>
-                <th className="px-3 py-2 w-32">Completed Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeRankData.categories.map((category) => 
-                category.requirements.map((req) => {
-                  const reqProg = completedReqs[req.id] || {};
-                  const isDone = !!reqProg.completed;
-                  const isPending = !!reqProg.pending && !isDone;
-                  const completionDate = reqProg.completedAt || reqProg.submittedAt || '';
-                  return (
-                    <tr key={req.id} className={`border-t border-slate-700/50 ${isDone ? 'bg-emerald-950/10' : isPending ? 'bg-amber-950/15' : 'bg-slate-800/20'}`}>
-                      <td className="px-3 py-2 border-r border-slate-700 font-mono font-bold text-slate-400 text-xs">
-                        {req.number}
-                      </td>
-                      <td className="px-3 py-2 border-r border-slate-700">
-                        <span className={isDone ? 'line-through text-slate-400' : 'text-slate-200'}>
-                          {req.text}
+        {/* 3. ADVANCEMENT & BSA 7 RANKS DETAILED BREAKDOWN */}
+        <div className="space-y-4">
+          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+              <span>⚜️ Section 1: BSA 7 Ranks Advancement Checklist</span>
+            </h3>
+            <span className="text-xs font-bold text-emerald-900">Official Sign-off Record</span>
+          </div>
+
+          <div className="space-y-4">
+            {RANKS_DATA.map(rank => {
+              const rProgress = ranksProgress[rank.id] || {};
+              const completedReqs = rProgress.completedRequirements || {};
+              const totalReqs = rank.categories.reduce((s, c) => s + c.requirements.length, 0);
+              const approvedCount = rank.categories.reduce((s, c) => s + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
+              const isRankComplete = totalReqs > 0 && approvedCount === totalReqs;
+
+              return (
+                <div key={rank.id} className="border border-slate-200 rounded-xl overflow-hidden break-inside-avoid bg-slate-50/50">
+                  <div className="bg-slate-100 p-3 flex items-center justify-between border-b border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-xs text-slate-900">{rank.name} Rank</span>
+                      {isRankComplete ? (
+                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2 py-0.2 rounded-full uppercase">
+                          ✓ Completed & Conferred
                         </span>
-                      </td>
-                      <td className="px-3 py-2 text-center border-r border-slate-700">
-                        {/* Screen View */}
-                        <div className="print-hide">
-                          {canEdit ? (
-                            <button
-                              onClick={() => toggleRequirement(req.id)}
-                              className={`text-[9px] px-2 py-1 rounded font-bold uppercase transition leading-none cursor-pointer border ${
-                                isDone
-                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                  : isPending
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : 'bg-slate-700/50 text-slate-400 border-slate-600'
-                              }`}
-                            >
-                              {isDone ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
-                            </button>
-                          ) : (
-                            <span className={isDone ? 'text-emerald-400 font-semibold text-xs' : isPending ? 'text-amber-400 font-semibold text-xs' : 'text-slate-500 text-xs'}>
-                              {isDone ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
-                            </span>
-                          )}
-                        </div>
-                        {/* Print View */}
-                        <div className="print-only">
-                          <span className={isDone ? 'print-report-complete text-emerald-400 font-semibold text-xs' : isPending ? 'text-amber-600 font-semibold text-xs' : 'print-report-pending text-slate-500 text-xs'}>
-                            {isDone ? 'APPROVED' : isPending ? 'PENDING APPROVAL' : 'INCOMPLETE'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-slate-450 text-xs font-mono">
-                        {/* Screen View */}
-                        <div className="print-hide">
-                          {canEdit ? (
-                            <input
-                              type="date"
-                              value={completionDate}
-                              onChange={(e) => handleDateChange(req.id, e.target.value)}
-                              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white focus:outline-none focus:border-emerald-500 max-w-[125px]"
-                            />
-                          ) : (
-                            <span>{completionDate || (isDone ? '—' : '')}</span>
-                          )}
-                        </div>
-                        {/* Print View */}
-                        <div className="print-only">
-                          <span>{completionDate || (isDone ? '—' : '')}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      ) : (
+                        <span className="bg-slate-200 text-slate-700 text-[10px] font-semibold px-2 py-0.2 rounded-full">
+                          {approvedCount} / {totalReqs} Completed ({Math.round((approvedCount/totalReqs)*100)}%)
+                        </span>
+                      )}
+                    </div>
+                    {rProgress.approvedAt && (
+                      <span className="text-[11px] text-slate-600 font-mono">
+                        Conferred: {rProgress.approvedAt}
+                      </span>
+                    )}
+                  </div>
 
-        {/* Milestones (Board of Review Sign-offs) */}
-        <div className="bg-slate-900/40 border border-slate-700 rounded-xl p-5 space-y-4">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest border-b border-slate-700/50 pb-2">
-            Rank Completion Sign-Off Milestones
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Scout Finished Date */}
-            <div>
-              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Calendar size={12} className="text-emerald-400" /> Scout Finished Date
-              </label>
-              <div className="print-hide">
-                {canEdit ? (
-                  <input
-                    type="date"
-                    value={activeProg.scoutCompletedAt || ''}
-                    onChange={(e) => handleScoutCompletionDateChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                ) : (
-                  <span className="text-slate-300 text-xs">{activeProg.scoutCompletedAt || 'No completion date set.'}</span>
-                )}
-              </div>
-              <div className="print-only text-xs text-black">
-                {activeProg.scoutCompletedAt || '—'}
-              </div>
-            </div>
+                  <div className="p-3 text-xs space-y-1.5">
+                    {rank.categories.map(cat => (
+                      <div key={cat.name} className="space-y-1">
+                        <span className="font-bold text-[10px] uppercase text-slate-500 block">{cat.name}</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {cat.requirements.map(req => {
+                            const reqData = completedReqs[req.id] || {};
+                            const isDone = !!reqData.completed;
 
-            {/* Board of Review / Sign-Off Date */}
-            <div>
-              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Award size={12} className="text-amber-400" /> Board of Review / Sign-Off Date
-              </label>
-              <div className="print-hide">
-                {canEdit ? (
-                  <input
-                    type="date"
-                    value={activeProg.testingCompletedAt || ''}
-                    onChange={(e) => handleTestingDateChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                ) : (
-                  <span className="text-slate-300 text-xs">{activeProg.testingCompletedAt || 'No review date set.'}</span>
-                )}
-              </div>
-              <div className="print-only text-xs text-black">
-                {activeProg.testingCompletedAt || '—'}
-              </div>
-            </div>
+                            return (
+                              <div key={req.id} className={`p-1.5 rounded-lg border text-[11px] flex items-start gap-1.5 ${isDone ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                <span className="font-bold mt-0.5">{isDone ? '✓' : '○'}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="line-clamp-2 leading-tight">{req.text}</p>
+                                  {isDone && reqData.approvedAt && (
+                                    <span className="text-[9px] text-emerald-700 block mt-0.5 font-mono">
+                                      Signed: {reqData.approvedAt} {reqData.approvedByName ? `(${reqData.approvedByName})` : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Safeguarding & Youth Protection Training (Screen & Print) */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Safeguarding & Youth Protection Training
-          </h2>
-          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
-                <th className="px-3 py-2 border-r border-slate-700">Module / Video</th>
-                <th className="px-3 py-2 border-r border-slate-700 text-center w-24">Status</th>
-                <th className="px-3 py-2 border-r border-slate-700 w-28">Completion Date</th>
-                <th className="px-3 py-2">Lesson Learned Summary</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SAFETY_VIDEOS.map((video) => {
-                const videoProg = safetyVideosProgress[video.id] || {};
-                const isWatched = !!videoProg.watched;
-                const completedDate = videoProg.completedDate || (videoProg.watchedAt ? new Date(videoProg.watchedAt).toLocaleDateString() : '');
-                const lesson = videoProg.lessonLearned || '';
+        {/* 4. ISLAMIC KNOWLEDGE & KARBALA CURRICULUM */}
+        <div className="space-y-3 break-inside-avoid">
+          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+              <span>🕌 Section 2: Islamic Knowledge, 14 Infallibles & Karbala Curriculum</span>
+            </h3>
+            <span className="text-xs font-bold text-emerald-900">Faith Modules</span>
+          </div>
 
-                return (
-                  <tr key={video.id} className="border-b border-slate-700 text-xs hover:bg-slate-900/10">
-                    <td className="px-3 py-2 border-r border-slate-700 font-medium text-slate-200">
-                      {video.title}
-                    </td>
-                    <td className="px-3 py-2 border-r border-slate-700 text-center">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        isWatched
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-slate-700/50 text-slate-400 border border-slate-600'
-                      }`}>
-                        {isWatched ? 'COMPLETED' : 'INCOMPLETE'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 border-r border-slate-700 text-slate-300 font-mono">
-                      {completedDate || '—'}
-                    </td>
-                    <td className="px-3 py-2 text-slate-350 italic whitespace-pre-wrap">
-                      {isWatched ? `"${lesson || 'No lesson entered.'}"` : '—'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Islamic Shia Basics Checklist */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Islamic Shia Basics Checklist
-          </h2>
-          <table className="w-full text-sm border border-slate-700 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-slate-900/60 text-left text-xs text-slate-400 border-b border-slate-700">
-                <th className="px-3 py-2 border-r border-slate-700 w-1/3">Topic</th>
-                <th className="px-3 py-2 border-r border-slate-700 text-center w-28">Status</th>
-                <th className="px-3 py-2 border-r border-slate-700 w-32">Completion Date</th>
-                <th className="px-3 py-2">Signed off By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ISLAMIC_BASICS_TOPICS.map((topic) => {
-                const topicProg = islamicProgress[topic.id] || {};
-                const isCompleted = !!topicProg.completed;
-                const isPending = !!topicProg.pending && !isCompleted;
-                const completedDate = topicProg.completedDate || topicProg.submittedDate || '';
-                const signedBy = topicProg.approvedByName || topicProg.updatedByName || '';
-
-                return (
-                  <tr key={topic.id} className={`border-b border-slate-700 text-xs ${isCompleted ? 'bg-emerald-950/10' : isPending ? 'bg-amber-950/15' : 'hover:bg-slate-900/10'}`}>
-                    <td className="px-3 py-2 border-r border-slate-700 font-medium text-slate-200">
-                      {topic.title}
-                    </td>
-                    <td className="px-3 py-2 border-r border-slate-700 text-center">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        isCompleted
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : isPending
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          : 'bg-slate-700/50 text-slate-400 border border-slate-600'
-                      }`}>
-                        {isCompleted ? 'APPROVED' : isPending ? 'PENDING' : 'INCOMPLETE'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 border-r border-slate-700 text-slate-300 font-mono">
-                      {completedDate || '—'}
-                    </td>
-                    <td className="px-3 py-2 text-slate-350 italic">
-                      {isCompleted ? (signedBy || 'Leader') : isPending ? 'Awaiting Sign-off' : '—'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Private Leader notes */}
-        <div>
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Leader Discussion Notes
-              <span className="print-hide ml-2 text-[9px] font-normal normal-case text-slate-500 border border-slate-700 rounded px-1.5 py-0.5">
-                Private — visible to leaders only
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-slate-800 block">The 14 Infallibles (Ma'sumeen)</span>
+              <p className="text-[11px] text-slate-600">
+                Biographies, life lessons, virtues & teachings of Prophet Muhammad (S) and Ahl al-Bayt (A).
+              </p>
+              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
+                ✓ Curriculum Covered
               </span>
-            </h2>
-            {saveMsg && <span className="text-xs text-emerald-400 font-semibold print-hide">{saveMsg}</span>}
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-slate-800 block">Karbala Heroes & Martyrs</span>
+              <p className="text-[11px] text-slate-600">
+                Imam Husayn, al-Abbas, Ali al-Akbar, Qasim, Muslim ibn Aqil, Habib ibn Madhahir & Karbala values.
+              </p>
+              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
+                ✓ Curriculum Covered
+              </span>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-slate-800 block">Daily Du'as & Post-Prayer Ta'qibat</span>
+              <p className="text-[11px] text-slate-600">
+                Ayat al-Kursi, Tasbih az-Zahra (SA), Du'a al-Faraj, Du'a al-Ahd & daily supplications.
+              </p>
+              <span className="text-[10px] text-emerald-800 font-bold block mt-1">
+                ✓ Curriculum Covered
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. MERIT BADGES & EAGLE ROADMAP */}
+        <div className="space-y-3 break-inside-avoid">
+          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+              <span>🏅 Section 3: Merit Badges & 21-Badge Eagle Roadmap</span>
+            </h3>
+            <span className="text-xs font-bold text-emerald-900">
+              {earnedMeritBadges.length} Earned • {plannedMeritBadges.length} Planned
+            </span>
           </div>
 
-          {/* Screen UI */}
-          <div className="print-hide bg-slate-900/30 border border-slate-700 rounded-xl p-4 space-y-4">
-            {notesLoading ? (
-              <div className="text-xs text-slate-500">Loading notes...</div>
-            ) : (
-              <div className="space-y-4">
-                {/* List of notes on screen */}
-                {notesList.length > 0 ? (
-                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
-                    {notesList.map((note) => {
-                      const canDelete = currentUser.uid === note.authorId || currentUser.role === 'owner';
-                      return (
-                        <div key={note.id} className="bg-slate-900 border border-slate-750 p-3 rounded-xl text-xs space-y-1 relative group">
-                          <div className="flex justify-between items-center text-slate-400 font-semibold border-b border-slate-800/40 pb-1 mb-1">
-                            <span>{note.authorName} ({note.authorPosition})</span>
-                            <div className="flex items-center gap-2">
-                              <span>{note.date}</span>
-                              {canDelete && (
-                                <button
-                                  onClick={() => handleDeleteNote(note.id)}
-                                  className="text-red-400 hover:text-red-300 transition cursor-pointer"
-                                  title="Delete note"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{note.text}</p>
-                        </div>
-                      );
-                    })}
+          {earnedMeritBadges.length === 0 && plannedMeritBadges.length === 0 ? (
+            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
+              No merit badges earned or planned yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              {earnedMeritBadges.map(b => (
+                <div key={b.id} className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-300 space-y-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-950 truncate">{b.name}</span>
+                    {b.eagleRequired && <span className="text-[9px] text-amber-700 font-black">★ EAGLE</span>}
                   </div>
-                ) : (
-                  <div className="text-xs text-slate-450 italic bg-slate-900/30 border border-slate-800 p-3 rounded-xl text-center">
-                    No leader discussion notes recorded yet.
-                  </div>
-                )}
-
-                {/* Form to add note on screen */}
-                <div className="border-t border-slate-700/50 pt-3 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2">
-                      <textarea
-                        rows={2}
-                        value={newNoteText}
-                        onChange={(e) => setNewNoteText(e.target.value)}
-                        placeholder="Enter new discussion note..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"
-                      />
-                    </div>
-                    <div className="space-y-2 flex flex-col justify-between">
-                      <input
-                        type="date"
-                        value={newNoteDate}
-                        onChange={(e) => setNewNoteDate(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                      <button
-                        onClick={handleAddNote}
-                        disabled={saving || !newNoteText.trim()}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <Plus size={12} />
-                        Add Note
-                      </button>
-                    </div>
-                  </div>
+                  <span className="text-[10px] text-emerald-700 font-semibold block">✓ Earned & Signed</span>
                 </div>
-              </div>
-            )}
+              ))}
+
+              {plannedMeritBadges.map(b => (
+                <div key={b.id} className="p-2.5 bg-amber-50 rounded-xl border border-amber-300 space-y-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-950 truncate">{b.name}</span>
+                    {b.eagleRequired && <span className="text-[9px] text-amber-800 font-black">★ EAGLE</span>}
+                  </div>
+                  <span className="text-[10px] text-amber-800 font-semibold block">🎯 Planned for Eagle</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 6. SERVICE & VOLUNTEERING HOURS LOG TABLE */}
+        <div className="space-y-3 break-inside-avoid">
+          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+              <span>⏱️ Section 4: Community Service & Volunteering Logs</span>
+            </h3>
+            <span className="text-xs font-bold text-emerald-900">
+              Total: {totalServiceHours} Hours ({verifiedServiceHours} Verified)
+            </span>
           </div>
 
-          {/* Print-only static list */}
-          <div className="print-only space-y-2">
-            {notesList.length > 0 ? (
-              notesList.map((n) => (
-                <div key={n.id} className="p-2 border border-slate-300 rounded text-xs text-black bg-white">
-                  <div className="flex justify-between font-bold border-b border-slate-200 pb-0.5 mb-1 text-[10px] text-slate-500">
-                    <span>{n.authorName} ({n.authorPosition})</span>
-                    <span>{n.date}</span>
+          {serviceLogs.length === 0 ? (
+            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
+              No community service or volunteering hours logged yet.
+            </p>
+          ) : (
+            <table className="w-full text-xs text-left border-collapse border border-slate-200">
+              <thead>
+                <tr className="bg-slate-100 border-b border-slate-300 text-[10px] uppercase font-bold text-slate-600">
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Type</th>
+                  <th className="p-2">Location / Organization</th>
+                  <th className="p-2">Hours</th>
+                  <th className="p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {serviceLogs.map((log, idx) => (
+                  <tr key={log.id || idx} className="border-b border-slate-200">
+                    <td className="p-2 font-mono">{log.date}</td>
+                    <td className="p-2 capitalize">{log.type}</td>
+                    <td className="p-2">{log.location}</td>
+                    <td className="p-2 font-bold text-emerald-900">{log.hours} hrs</td>
+                    <td className="p-2">
+                      {log.verified ? (
+                        <span className="text-emerald-700 font-bold">✓ Verified</span>
+                      ) : (
+                        <span className="text-slate-500 italic">Pending</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* 7. ASSIGNMENTS & HOMEWORK TASKS */}
+        <div className="space-y-3 break-inside-avoid">
+          <div className="border-b-2 border-emerald-800 pb-1.5 flex items-center justify-between">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+              <span>🎒 Section 5: Homework, Videos & Tasks Record</span>
+            </h3>
+            <span className="text-xs font-bold text-emerald-900">
+              {assignmentsList.length} Total Assigned
+            </span>
+          </div>
+
+          {assignmentsList.length === 0 ? (
+            <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
+              No homework tasks assigned yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {assignmentsList.map(item => {
+                const sub = scoutSubmissions[item.id] || {};
+                const isCompleted = sub.completed || false;
+
+                return (
+                  <div key={item.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-slate-900 block">{item.title}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Due: {item.dueDate || '—'}</span>
+                    </div>
+                    <div>
+                      {isCompleted ? (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                          ✓ Completed
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-slate-200 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
+                          Pending
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="whitespace-pre-wrap leading-relaxed text-black">{n.text}</p>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 8. SCOUT STATEMENT & DATED JOURNAL REFLECTIONS */}
+        <div className="space-y-3 break-inside-avoid">
+          <div className="border-b-2 border-emerald-800 pb-1.5">
+            <h3 className="font-black text-sm uppercase tracking-wider text-emerald-950">
+              📝 Section 6: Scout Biography & Journal Notes ({journalNotes.length} Entries)
+            </h3>
+          </div>
+
+          {scoutInfo.bio && (
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+              <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">About Me Statement</span>
+              <p className="text-slate-800 whitespace-pre-wrap">{scoutInfo.bio}</p>
+            </div>
+          )}
+
+          {journalNotes.length > 0 && (
+            <div className="space-y-2">
+              {journalNotes.slice(0, 5).map((note, idx) => (
+                <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                  <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
+                    <span>📅 {note.date} • {note.category || 'Note'}</span>
+                    <span>By: {note.authorName || scoutFullName}</span>
+                  </div>
+                  <p className="text-slate-800">{note.text}</p>
                 </div>
-              ))
-            ) : (
-              <div className="p-3 border border-black min-h-[50px] text-xs text-slate-450 italic">
-                No leader notes recorded.
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 9. OFFICIAL SIGNATURES & TROOP ENDORSEMENT */}
+        <div className="pt-8 border-t-2 border-slate-300 text-xs break-inside-avoid space-y-8">
+          <div className="grid grid-cols-2 gap-12">
+            <div>
+              <div className="border-b-2 border-slate-400 h-10 mb-1.5"></div>
+              <p className="font-bold text-slate-800">Scout Member Signature</p>
+              <p className="text-[10px] text-slate-500 font-mono">Date: ________________________</p>
+            </div>
+
+            <div>
+              <div className="border-b-2 border-slate-400 h-10 mb-1.5"></div>
+              <p className="font-bold text-slate-800">Scoutmaster / Troop Leader Signature</p>
+              <p className="text-[10px] text-slate-500 font-mono">Date: ________________________</p>
+            </div>
+          </div>
+
+          <div className="text-center text-[10px] text-slate-400 font-mono pt-4 border-t border-slate-200">
+            Official Document of Taliʿa / Dhulfiqār Scouts BSA • Generated on {reportDate} • Valid with Leader Signature
           </div>
         </div>
 

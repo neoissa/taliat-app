@@ -237,24 +237,42 @@ export default function ServiceLogs({ currentUser, scoutId: customScoutId }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Time (e.g. 10:00 AM / Morning)</label>
+                <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1 flex items-center gap-1">
+                  <Clock size={11} className="text-emerald-400" /> Session Time / Start Time
+                </label>
                 <input
-                  type="text"
-                  placeholder="e.g. Afternoon / 2 hours session"
+                  type="time"
+                  required
                   value={timeOfDay}
                   onChange={(e) => setTimeOfDay(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-350 uppercase mb-1">Hours Spent</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-[10px] font-bold text-slate-350 uppercase">
+                    Hours Spent (0.5 hr step)
+                  </label>
+                  <div className="flex gap-1">
+                    {[0.5, 1.0, 1.5, 2.0, 3.0, 4.0].map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setHours(h.toString())}
+                        className="text-[9px] bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white px-1.5 py-0.5 rounded border border-slate-700 cursor-pointer font-mono"
+                      >
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input
                   type="number"
-                  step="0.1"
-                  min="0.1"
+                  step="0.5"
+                  min="0.5"
                   required
-                  placeholder="e.g. 3.5"
+                  placeholder="e.g. 1.0, 1.5, 2.0, 2.5..."
                   value={hours}
                   onChange={(e) => setHours(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
