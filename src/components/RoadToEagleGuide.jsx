@@ -26,6 +26,8 @@ import {
   ChevronRight,
   HelpCircle,
   ArrowRight,
+  ArrowLeft,
+  Home,
   Flame,
   Check,
   Save,
@@ -421,6 +423,28 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans pb-16">
+      {/* ── 0. BACK / HOME NAVIGATION ── */}
+      {onNavigate && (
+        <div className="flex items-center gap-2 print-hide">
+          <button
+            type="button"
+            onClick={() => onNavigate('home')}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-3 py-2 transition cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('resources')}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-3 py-2 transition cursor-pointer"
+          >
+            <Home size={14} />
+            <span>Back to Resources</span>
+          </button>
+        </div>
+      )}
+
       {/* ── 1. HERO HEADER: ROAD TO EAGLE INTERACTIVE PORTAL ── */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/50 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
         <div className="absolute right-4 top-2 opacity-10 pointer-events-none">
