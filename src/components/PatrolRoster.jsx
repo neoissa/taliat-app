@@ -17,6 +17,7 @@ import MeritBadgeDashboard from './MeritBadgeDashboard';
 import VideoResources from './VideoResources';
 import ServiceLogs from './ServiceLogs';
 import IslamicBasics from './IslamicBasics';
+import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell } from 'lucide-react';
@@ -712,7 +713,9 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState('');
   const [addError, setAddError] = useState('');
-  const [pendingApprovalsMap, setPendingApprovalsMap] = useState({}); // { [scoutUid]: { ranks: number, merit: number, total: number } }
+  const [pendingApprovalsMap, setPendingApprovalsMap] = useState({});
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingModalScoutId, setPendingModalScoutId] = useState(null); // { [scoutUid]: { ranks: number, merit: number, total: number } }
 
   const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
   const isAssistantLeader = currentUser?.role === 'leader' && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
@@ -736,7 +739,7 @@ export default function PatrolRoster({ currentUser = {} }) {
     return () => unsub();
   }, [currentUser?.uid, currentUser?.role, currentUser?.email, currentUser?.leaderPosition, currentUser?.groupId, isOwner, isScoutmaster]);
 
-  // Subscribe to real-time pending approvals count for all visible scouts
+  // Subscribe to real-time pending approvals count for all visible scouts (Ranks + Badges + Islamic + Assignments)
   useEffect(() => {
     if (scouts.length === 0) {
       setPendingApprovalsMap({});
@@ -751,21 +754,16 @@ export default function PatrolRoster({ currentUser = {} }) {
         let count = 0;
         snap.docs.forEach((d) => {
           const data = d.data();
-          const reqs = data.completedRequirements || {};
+          const reqs = data.completedRequirements || data.steps || {};
           Object.values(reqs).forEach((r) => {
-            if (r?.pending && !r?.completed) count++;
+            if ((r?.pending || r === 'pending') && !r?.completed) count++;
           });
         });
         setPendingApprovalsMap((prev) => {
-          const prevScout = prev[scout.uid] || { merit: 0 };
-          return {
-            ...prev,
-            [scout.uid]: {
-              ...prevScout,
-              ranks: count,
-              total: count + (prevScout.merit || 0)
-            }
-          };
+          const prevScout = prev[scout.uid] || {};
+          const next = { ...prevScout, ranks: count };
+          const total = (next.ranks || 0) + (next.merit || 0) + (next.islamic || 0) + (next.assignments || 0);
+          return { ...prev, [scout.uid]: { ...next, total } };
         });
       }, (err) => console.error("Error loading scout ranks pending:", err));
       unsubs.push(unsubRanks);
@@ -776,24 +774,56 @@ export default function PatrolRoster({ currentUser = {} }) {
         let count = 0;
         snap.docs.forEach((d) => {
           const data = d.data();
-          const steps = data.completedSteps || {};
+          const steps = data.completedSteps || data.steps || {};
           Object.values(steps).forEach((s) => {
-            if (s?.pending && !s?.approved) count++;
+            if ((s?.pending || s === 'pending') && !s?.approved && !s?.completed) count++;
           });
+          if (data.pending && !data.completed) count++;
         });
         setPendingApprovalsMap((prev) => {
-          const prevScout = prev[scout.uid] || { ranks: 0 };
-          return {
-            ...prev,
-            [scout.uid]: {
-              ...prevScout,
-              merit: count,
-              total: (prevScout.ranks || 0) + count
-            }
-          };
+          const prevScout = prev[scout.uid] || {};
+          const next = { ...prevScout, merit: count };
+          const total = (next.ranks || 0) + (next.merit || 0) + (next.islamic || 0) + (next.assignments || 0);
+          return { ...prev, [scout.uid]: { ...next, total } };
         });
       }, (err) => console.error("Error loading scout merit pending:", err));
       unsubs.push(unsubMerit);
+
+      // 3. Listen to Islamic basics progress
+      const islamicRef = doc(db, 'user_progress', scout.uid, 'islamic_basics', 'status');
+      const unsubIslamic = onSnapshot(islamicRef, (snap) => {
+        let count = 0;
+        if (snap.exists()) {
+          const data = snap.data();
+          Object.values(data).forEach((p) => {
+            if ((p?.pending || p === 'pending') && !p?.completed) count++;
+          });
+        }
+        setPendingApprovalsMap((prev) => {
+          const prevScout = prev[scout.uid] || {};
+          const next = { ...prevScout, islamic: count };
+          const total = (next.ranks || 0) + (next.merit || 0) + (next.islamic || 0) + (next.assignments || 0);
+          return { ...prev, [scout.uid]: { ...next, total } };
+        });
+      }, (err) => console.error("Error loading scout islamic pending:", err));
+      unsubs.push(unsubIslamic);
+
+      // 4. Listen to Assignments submissions
+      const assignRef = collection(db, 'user_progress', scout.uid, 'assignments');
+      const unsubAssign = onSnapshot(assignRef, (snap) => {
+        let count = 0;
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          if (data.submittedDate && !data.completed && !data.graded) count++;
+        });
+        setPendingApprovalsMap((prev) => {
+          const prevScout = prev[scout.uid] || {};
+          const next = { ...prevScout, assignments: count };
+          const total = (next.ranks || 0) + (next.merit || 0) + (next.islamic || 0) + (next.assignments || 0);
+          return { ...prev, [scout.uid]: { ...next, total } };
+        });
+      }, (err) => console.error("Error loading scout assignments pending:", err));
+      unsubs.push(unsubAssign);
     });
 
     return () => {
@@ -936,25 +966,46 @@ export default function PatrolRoster({ currentUser = {} }) {
         )}
       </div>
 
-      {/* Approvals Needed Notification Banner */}
+      {/* Approvals Needed Notification Banner (Interactive) */}
       {totalApprovalsNeeded > 0 && (
-        <div className="bg-amber-950/40 border border-amber-500/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold shrink-0">
-              <Bell size={20} className="animate-bounce" />
+        <div
+          onClick={() => {
+            setPendingModalScoutId(null);
+            setShowPendingModal(true);
+          }}
+          className="bg-gradient-to-r from-amber-950/60 via-slate-900 to-amber-950/40 border-2 border-amber-500/60 hover:border-amber-400 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-amber-950/40 cursor-pointer group transition duration-300 hover:scale-[1.01]"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-md group-hover:scale-110 transition">
+              <Bell size={24} className="animate-bounce" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
-                <span>{totalApprovalsNeeded} Approval{totalApprovalsNeeded !== 1 ? 's' : ''} Needed</span>
-                <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="text-base font-black text-amber-300 flex items-center gap-2">
+                  <span>{totalApprovalsNeeded} Approval{totalApprovalsNeeded !== 1 ? 's' : ''} Needed</span>
+                </h4>
+                <span className="text-[10px] bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm">
                   Action Required
                 </span>
-              </h4>
-              <p className="text-xs text-amber-200/80">
-                Scouts in your patrol have submitted rank requirements or merit badges awaiting leader review.
+              </div>
+              <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                Scouts in your patrol have submitted Islamic tests, rank requirements, merit badges, or tasks awaiting leader review.
               </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPendingModalScoutId(null);
+              setShowPendingModal(true);
+            }}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/50 shrink-0 self-start sm:self-auto group-hover:shadow-amber-500/20"
+          >
+            <Clock size={15} />
+            <span>Review & Test Submissions ({totalApprovalsNeeded}) &rarr;</span>
+          </button>
         </div>
       )}
 
@@ -1341,9 +1392,18 @@ export default function PatrolRoster({ currentUser = {} }) {
                                   </div>
                                   <div className="flex items-center gap-3">
                                     {scoutApprovals > 0 && (
-                                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPendingModalScoutId(scout.uid);
+                                          setShowPendingModal(true);
+                                        }}
+                                        className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 flex items-center gap-1 animate-pulse transition cursor-pointer"
+                                        title="Click to review and test this scout's pending submissions"
+                                      >
                                         <Clock size={11} /> {scoutApprovals} Needs Review
-                                      </span>
+                                      </button>
                                     )}
                                     <span className="text-slate-400 text-sm">{expanded === scout.uid ? '▲' : '▼'}</span>
                                   </div>
@@ -1391,17 +1451,28 @@ export default function PatrolRoster({ currentUser = {} }) {
                                       </div>
                                     </div>
 
-                                    <button
-                                      onClick={() => setSelected(scout)}
-                                      className="mt-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
-                                    >
-                                      <span>Open Granular Portal & Notes &rarr;</span>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                      <button
+                                        onClick={() => setSelected(scout)}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
+                                      >
+                                        <span>Open Granular Portal & Notes &rarr;</span>
+                                      </button>
+
                                       {scoutApprovals > 0 && (
-                                        <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full text-[10px] font-black">
-                                          {scoutApprovals} Pending
-                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPendingModalScoutId(scout.uid);
+                                            setShowPendingModal(true);
+                                          }}
+                                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-950/40"
+                                        >
+                                          <Clock size={13} />
+                                          <span>Conduct Oral Testing & Sign-Off ({scoutApprovals}) &rarr;</span>
+                                        </button>
                                       )}
-                                    </button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
