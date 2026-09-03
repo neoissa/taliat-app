@@ -112,7 +112,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [showPrintReport, setShowPrintReport] = useState(false);
   const [showEaglePortal, setShowEaglePortal] = useState(false);
   const [showUniversalPendingModal, setShowUniversalPendingModal] = useState(false);
-  const [showNotesPrintReport, setShowNotesPrintReport] = useState(false);
 
 
   // Fetch groups for patrol batch completion
@@ -127,13 +126,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
       
-  // Scout Journal & Dated Notes states
-  const [journalNotes, setJournalNotes] = useState([]);
-  const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newNoteCategory, setNewNoteCategory] = useState('General Note');
-  const [newNoteText, setNewNoteText] = useState('');
-  const [addingNote, setAddingNote] = useState(false);
-  const [journalMsg, setJournalMsg] = useState('');
 
   // 1. Subscribe to scout's specific profile info (including bio)
   useEffect(() => {
@@ -157,73 +149,11 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     return () => unsub();
   }, [scoutId]);
 
-  // 2. Subscribe to scout's dated journal notes
-  useEffect(() => {
-    if (!scoutId) {
-      setJournalNotes([]);
-      return;
-    }
-    const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
-    const unsub = onSnapshot(docRef, (snap) => {
-      if (snap.exists() && Array.isArray(snap.data().notes)) {
-        // Sort notes by date descending
-        const sorted = [...snap.data().notes].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        setJournalNotes(sorted);
-      } else {
-        setJournalNotes([]);
-      }
-    }, (err) => {
-      console.error("Failed to load scout journal notes:", err);
-    });
-    return () => unsub();
-  }, [scoutId]);
 
 
 
-  const handleAddJournalNote = async (e) => {
-    e.preventDefault();
-    if (!scoutId || !newNoteText.trim()) return;
-    setAddingNote(true);
-    setJournalMsg('');
 
-    const newEntry = {
-      id: Date.now().toString(),
-      date: newNoteDate || new Date().toISOString().split('T')[0],
-      category: newNoteCategory || 'General Note',
-      text: newNoteText.trim(),
-      authorId: currentUser?.uid || '',
-      authorName: currentUser?.fullName || currentUser?.username || currentUser?.email || 'Scout',
-      authorRole: currentUser?.role || 'scout',
-      createdAt: new Date().toISOString()
-    };
 
-    const updated = [newEntry, ...journalNotes];
-
-    try {
-      const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
-      await setDoc(docRef, { notes: updated }, { merge: true });
-      setNewNoteText('');
-      setJournalMsg('Note added successfully!');
-      setTimeout(() => setJournalMsg(''), 3000);
-    } catch (err) {
-      console.error("Failed to add journal note:", err);
-      setJournalMsg('Failed to add note.');
-    } finally {
-      setAddingNote(false);
-    }
-  };
-
-  const handleDeleteJournalNote = async (noteId) => {
-    if (!scoutId || !noteId) return;
-    if (!window.confirm("Are you sure you want to delete this note?")) return;
-    const updated = journalNotes.filter(n => n.id !== noteId);
-    try {
-      const docRef = doc(db, 'user_progress', scoutId, 'journal', 'entries');
-      await setDoc(docRef, { notes: updated }, { merge: true });
-    } catch (err) {
-      console.error("Failed to delete journal note:", err);
-    }
-  };
 
   // Fetch scouts list if leader or owner and customScoutId is not provided
   useEffect(() => {
@@ -506,165 +436,8 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     );
   }
 
-  if (showNotesPrintReport) {
-    const currentScout = scoutData || { uid: currentUser?.uid, fullName: currentUser?.fullName, username: currentUser?.username, rank: currentUser?.rank || "Scout", bsaId: currentUser?.bsaId };
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl print-hide">
-          <button
-            onClick={() => setShowNotesPrintReport(false)}
-            className="bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
-          >
-            &larr; Back to Tracker
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg"
-          >
-            <Printer size={14} />
-            <span>Print to PDF / Printer</span>
-          </button>
-        </div>
-        {/* Clean printable notes sheet */}
-        <div className="bg-white text-slate-900 p-8 rounded-2xl shadow-xl space-y-6 border border-slate-300 font-sans print:p-0 print:border-none print:shadow-none">
-          {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-emerald-700 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">⚜️</span>
-                <h1 className="text-2xl font-black tracking-tight text-emerald-900">TALIʿA SCOUTS BSA</h1>
-              </div>
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-1">Official Scout Notes & Personal Journal</h2>
-            </div>
-            <div className="text-right text-xs text-slate-600">
-              <p><strong>Date Generated:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p><strong>Troop:</strong> Taliʿa Troop</p>
-            </div>
-          </div>
-
-          {/* Scout Info Box */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold">Scout Name</span>
-              <strong className="text-slate-900 text-sm">{currentScout.fullName || currentScout.username || 'Scout'}</strong>
-            </div>
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold">Current Rank</span>
-              <strong className="text-emerald-800 text-sm">{currentScout.rank || 'Scout'}</strong>
-            </div>
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold">BSA Member ID</span>
-              <strong className="text-slate-900">{currentScout.bsaId || '—'}</strong>
-            </div>
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold">Total Journal Notes</span>
-              <strong className="text-slate-900">{journalNotes.length} entries</strong>
-            </div>
-          </div>
-
-          {/* About Me / Biography */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-900 border-b border-slate-200 pb-1">
-              About Me & Personal Scouting Statement
-            </h3>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed min-h-[50px]">
-              {currentScout.bio ? (
-                <p className="whitespace-pre-wrap">{currentScout.bio}</p>
-              ) : (
-                <span className="italic text-slate-400">No personal bio added yet.</span>
-              )}
-            </div>
-          </div>
-
-          {/* Dated Journal Entries */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-900 border-b border-slate-200 pb-1">
-              Dated Journal Entries, Meeting Notes & Reflections ({journalNotes.length})
-            </h3>
-
-            {journalNotes.length === 0 ? (
-              <p className="text-xs text-slate-500 italic p-4 bg-slate-50 rounded-xl text-center">
-                No dated notes recorded yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {journalNotes.map((note, idx) => (
-                  <div key={note.id || idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5 break-inside-avoid">
-                    <div className="flex justify-between items-center text-xs border-b border-slate-200 pb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded text-[11px] font-mono">
-                          📅 {note.date}
-                        </span>
-                        <span className="font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded text-[10px]">
-                          {note.category || 'General Note'}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500">
-                        Author: <strong>{note.authorName || 'Scout'}</strong>
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
-                      {note.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Signatures Footer */}
-          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs">
-            <div>
-              <div className="border-b border-slate-400 h-10 mb-1"></div>
-              <p className="font-bold text-slate-700">Scout Signature</p>
-            </div>
-            <div>
-              <div className="border-b border-slate-400 h-10 mb-1"></div>
-              <p className="font-bold text-slate-700">Scoutmaster / Leader Signature</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header Banner with PDF Print */}
-      <div className="flex justify-between items-center bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl print-hide">
-        <div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Advancement Tracker</h2>
-          <p className="text-xs text-slate-400">Track rank checklists and complete requirements.</p>
-        </div>
-        {scoutId && (
-          <button
-            onClick={() => setShowPrintReport(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/30"
-          >
-            Print Progress Report (PDF)
-          </button>
-        )}
-      </div>
-
-      {/* Scout Selector for Leader/Owner viewing the tracker directly */}
-      {isLeaderOrOwner && !customScoutId && (
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl flex flex-wrap gap-4 items-center justify-between print-hide">
-          <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Select Scout</h2>
-            <p className="text-xs text-slate-400">View and track requirements progress for this scout</p>
-          </div>
-          <select
-            value={selectedScoutId}
-            onChange={(e) => setSelectedScoutId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-          >
-            {scoutsList.map(s => (
-              <option key={s.uid} value={s.uid}>{s.fullName || s.username} ({s.rank || 'Scout'})</option>
-            ))}
-          </select>
-        </div>
-      )}
-      
+    <div className="space-y-6 pb-12">
       {/* ── BATCH MODE ACTIVE NOTIFICATION BANNER ── */}
       {isBatchMode && (
         <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border border-emerald-500/40 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-hide">
@@ -716,149 +489,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       )}
 
 
-
-      {/* ── SEPARATE SECTION 2: SCOUT JOURNAL & DATED NOTES ── */}
-      {scoutId && (
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4 print-hide">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                <Calendar size={18} />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <span>Scout Journal & Dated Notes</span>
-                  <span className="text-[10px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full font-mono text-slate-300">
-                    {journalNotes.length} {journalNotes.length === 1 ? 'entry' : 'entries'}
-                  </span>
-                </h2>
-                <p className="text-[11px] text-slate-400">Log meeting notes, campout reflections, and advancement goals by date.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {journalMsg && <span className="text-xs text-emerald-400 font-semibold">{journalMsg}</span>}
-              <button
-                type="button"
-                onClick={() => setShowNotesPrintReport(true)}
-                className="bg-slate-700 hover:bg-slate-650 text-slate-200 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-600 shadow-sm"
-                title="Print your bio and notes to PDF"
-              >
-                <Printer size={13} className="text-amber-400" />
-                <span>Print Notes (PDF)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Add New Dated Note Form */}
-          <form onSubmit={handleAddJournalNote} className="bg-slate-900/40 border border-slate-750 p-4 rounded-xl space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Date Selector */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Calendar size={12} className="text-amber-400" /> Note Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={newNoteDate}
-                  onChange={(e) => setNewNoteDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                />
-              </div>
-
-              {/* Category / Type Selector */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Tag size={12} className="text-emerald-400" /> Category / Topic
-                </label>
-                <select
-                  value={newNoteCategory}
-                  onChange={(e) => setNewNoteCategory(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                >
-                  <option value="General Note">General Note</option>
-                  <option value="Troop Meeting">Troop Meeting</option>
-                  <option value="Campout & Outdoors">Campout & Outdoors</option>
-                  <option value="Advancement Goal">Advancement Goal</option>
-                  <option value="Service Project">Service Project</option>
-                  <option value="Personal Reflection">Personal Reflection</option>
-                  <option value="Leader Feedback">Leader Feedback</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Note Text */}
-            <div>
-              <textarea
-                required
-                rows={2}
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                placeholder="Write your dated note, activity recap, reflection, or goal here..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={addingNote || !newNoteText.trim()}
-                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Plus size={14} />
-                {addingNote ? 'Adding...' : 'Add Note to Journal'}
-              </button>
-            </div>
-          </form>
-
-          {/* List of Dated Notes (Chronological Feed) */}
-          <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-            {journalNotes.length > 0 ? (
-              journalNotes.map((note) => {
-                const canDelete = currentUser.uid === note.authorId || currentUser.uid === scoutId || currentUser.role === 'owner';
-                return (
-                  <div
-                    key={note.id}
-                    className="bg-slate-900 border border-slate-750 hover:border-slate-700 p-3.5 rounded-xl space-y-2 transition"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
-                          <Calendar size={11} /> {note.date}
-                        </span>
-                        <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md font-sans">
-                          {note.category}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          by <strong className="text-slate-300">{note.authorName}</strong>
-                        </span>
-                      </div>
-
-                      {canDelete && (
-                        <button
-                          onClick={() => handleDeleteJournalNote(note.id)}
-                          className="text-slate-500 hover:text-red-400 transition cursor-pointer p-1 rounded hover:bg-slate-800"
-                          title="Delete note"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
-                      {note.text}
-                    </p>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="bg-slate-900/30 border border-slate-800 p-5 rounded-xl text-center text-xs text-slate-400 italic">
-                No dated notes logged yet. Use the form above to record your first journal entry!
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Approvals Notification Banner for Leader */}
       {isLeaderOrOwner && totalPendingAcrossAllRanks > 0 && (
