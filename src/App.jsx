@@ -9,7 +9,6 @@ import ScoutList from './components/ScoutList';
 import PatrolRoster from './components/PatrolRoster';
 import MeritBadgeDashboard from './components/MeritBadgeDashboard';
 import RoadToEagleGuide from './components/RoadToEagleGuide';
-import LeaderReportsCenter from './components/LeaderReportsCenter';
 import GlobalAdminPanel from './components/GlobalAdminPanel';
 import GroupManager from './components/GroupManager';
 import VideoResources from './components/VideoResources';
@@ -19,9 +18,32 @@ import IslamicBasics from './components/IslamicBasics';
 import ServiceLogs from './components/ServiceLogs';
 import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
+import LeaderReportsCenter from './components/LeaderReportsCenter';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import {
+  Menu,
+  X,
+  Home,
+  Award,
+  BookOpen,
+  Star,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Book,
+  User,
+  Shield,
+  Users,
+  Layers,
+  FileText,
+  LogOut,
+  Printer,
+  Compass,
+  Sparkles,
+  ChevronRight
+} from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -29,6 +51,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [userGroupName, setUserGroupName] = useState('');
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 1. Real-time Firebase Auth & User Profile Listener
   useEffect(() => {
@@ -128,7 +151,6 @@ export default function App() {
       const lastReadTimeStr = localStorage.getItem(lastReadStorageKey);
       const lastReadTime = lastReadTimeStr ? Number(lastReadTimeStr) : 0;
 
-      // If user is actively on the chat tab, auto-mark as read
       if (currentTab === 'chat') {
         localStorage.setItem(lastReadStorageKey, Date.now().toString());
         setUnreadChatCount(0);
@@ -164,11 +186,7 @@ export default function App() {
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
     if (currentUser) {
-      if (isOwner) {
-        setCurrentTab('home');
-      } else if (isLeader) {
-        setCurrentTab('home');
-      } else {
+      if (!currentTab) {
         setCurrentTab('home');
       }
     } else {
@@ -185,12 +203,17 @@ export default function App() {
     }
   };
 
+  const handleTabClick = (tabId) => {
+    setCurrentTab(tabId);
+    setMobileMenuOpen(false);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-emerald-400 font-semibold text-sm">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading Dhulfiqār Scouts Portal...</span>
+          <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading Dhulfiqār Portal...</span>
         </div>
       </div>
     );
@@ -202,438 +225,270 @@ export default function App() {
 
   const roleLabel = isOwner ? 'Troop Owner / Superadmin' : isLeader ? (currentUser?.leaderPosition || 'Troop Leader') : 'Scout';
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
-      {/* Top App Header */}
-      <header className="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-50 print-hide">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-950/40">
-              ⚜️
-            </div>
-            <div>
-              <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
-                <span>Dhulfiqār Scouts</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-semibold uppercase">
-                  v3.0
-                </span>
-              </h1>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span className="text-emerald-400 font-semibold">{currentUser.fullName || currentUser.username || currentUser.email}</span>
-                <span>•</span>
-                <span className="capitalize text-slate-350">{roleLabel}</span>
-                {userGroupName && (
-                  <>
-                    <span>•</span>
-                    <span className="text-emerald-300 font-medium">{userGroupName} Patrol</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+  // ── DEFINE NAVIGATION ITEMS BY ROLE ──
+  const getNavItems = () => {
+    if (isOwner) {
+      return [
+        { id: 'home', label: 'Home Hub', icon: '🏠' },
+        { id: 'global-admin', label: 'Global Admin', icon: '⚡' },
+        { id: 'group-manager', label: 'Organization Hub', icon: '🏢' },
+        { id: 'roster', label: 'Patrol Roster', icon: '👥' },
+        { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
+        { id: 'reports', label: 'Reports Center', icon: '📈' },
+        { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
+        { id: 'events', label: 'Planned Events', icon: '📅' },
+        { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
+        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
+        { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
+        { id: 'resources', label: 'Resources & Guide', icon: '📚' },
+        { id: 'profile', label: 'My Profile', icon: '👤' }
+      ];
+    } else if (isLeader) {
+      return [
+        { id: 'home', label: 'Leader Hub', icon: '🏠' },
+        { id: 'roster', label: 'Patrol Roster', icon: '👥' },
+        { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
+        { id: 'reports', label: 'Reports Center', icon: '📈' },
+        { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
+        { id: 'events', label: 'Planned Events', icon: '📅' },
+        { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
+        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
+        { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
+        { id: 'resources', label: 'Resources & Guide', icon: '📚' },
+        { id: 'profile', label: 'My Profile', icon: '👤' }
+      ];
+    } else {
+      // Scout Navigation
+      return [
+        { id: 'home', label: 'Home Dashboard', icon: '🏠' },
+        { id: 'advancement', label: 'My 7 Ranks', icon: '⚜️' },
+        { id: 'assignments', label: 'My Homework', icon: '🎒' },
+        { id: 'merit-badges', label: 'My Merit Badges', icon: '🏅' },
+        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
+        { id: 'events', label: 'Upcoming Events', icon: '📅' },
+        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
+        { id: 'service-log', label: 'Service Log', icon: '⏱️' },
+        { id: 'chat', label: userGroupName ? `${userGroupName} Chat` : 'Patrol Chat', icon: '💬', badge: unreadChatCount },
+        { id: 'resources', label: 'Resources', icon: '📚' },
+        { id: 'profile', label: 'My Profile', icon: '👤' }
+      ];
+    }
+  };
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleLogout}
-              className="text-xs bg-slate-700 hover:bg-red-600/80 hover:text-white text-slate-300 font-semibold px-3 py-1.5 rounded-xl border border-slate-655 transition cursor-pointer"
-            >
-              Sign Out
-            </button>
+  const navItems = getNavItems();
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row font-sans">
+      
+      {/* ── MOBILE TOP BAR (VISIBLE ON SMALL SCREENS ONLY) ── */}
+      <header className="md:hidden bg-slate-950/95 backdrop-blur border-b border-slate-800 p-4 sticky top-0 z-40 flex items-center justify-between print-hide">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-base shadow-md">
+            ⚜️
+          </div>
+          <div>
+            <h1 className="text-sm font-black text-white leading-tight">Dhulfiqār Scouts</h1>
+            <span className="text-[10px] text-emerald-400 font-semibold">{currentUser.fullName || currentUser.username}</span>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
+          aria-label="Toggle navigation menu"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </header>
 
-      {/* Navigation Tab Bar */}
-      <div className="bg-slate-850 border-b border-slate-750 overflow-x-auto print-hide scrollbar-none">
-        <div className="max-w-6xl mx-auto px-4 flex gap-1 sm:gap-2">
-          {/* ── OWNER NAVIGATION ── */}
-          {isOwner && (
-            <>
-              <button
-                onClick={() => setCurrentTab('home')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'home'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🏠 Home Hub</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('global-admin')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'global-admin'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>⚡ Global Admin</span>
-              </button>
-              
-              <button
-                onClick={() => setCurrentTab('group-manager')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'group-manager'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🏢 Organization Hub</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'roster'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👥 Patrol Roster</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('scouts')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'scouts'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📊 Advancement Tracker</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('reports')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'reports'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📈 Reports Center</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🎒 Homework & Tasks</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📅 Planned Events</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('lesson-plans')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'lesson-plans'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📋 Lesson Plans</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🕌 Islamic Knowledge</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>💬 Patrol Messenger</span>
-                {unreadChatCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
-                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
+      {/* ── MOBILE DRAWER OVERLAY (MOBILE ONLY) ── */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex print-hide animate-fadeIn">
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-72 max-w-[85vw] bg-slate-950 border-r border-slate-800 flex flex-col h-full z-10 shadow-2xl overflow-y-auto">
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                  ⚜️
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-white">Dhulfiqār Scouts</h2>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-semibold uppercase">
+                    v3.0
                   </span>
-                )}
-              </button>
+                </div>
+              </div>
               <button
-                onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
               >
-                <span>📚 Resources</span>
+                <X size={18} />
               </button>
-              <button
-                onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👤 My Profile</span>
-              </button>
-            </>
-          )}
+            </div>
 
-          {/* ── LEADER NAVIGATION ── */}
-          {isLeader && (
-            <>
-              <button
-                onClick={() => setCurrentTab('home')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'home'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🏠 Leader Hub</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('roster')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'roster'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👥 Patrol Roster</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('scouts')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'scouts'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📊 Advancement Tracker</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🎒 Homework & Tasks</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📅 Planned Events</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('lesson-plans')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'lesson-plans'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📋 Lesson Plans</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🕌 Islamic Knowledge</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('admin')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'admin'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>➕ Add Requirement</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>💬 {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
-                {unreadChatCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
-                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📚 Resources</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👤 My Profile</span>
-              </button>
-            </>
-          )}
+            {/* User Profile Summary */}
+            <div className="p-4 bg-slate-900/60 border-b border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center font-bold text-emerald-400 text-xs">
+                  {currentUser.fullName?.charAt(0) || currentUser.username?.charAt(0) || 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-white truncate">{currentUser.fullName || currentUser.username}</p>
+                  <p className="text-[10px] text-slate-400 capitalize">{roleLabel}</p>
+                </div>
+              </div>
+              {userGroupName && (
+                <div className="mt-2 text-[10px] bg-slate-800 text-emerald-300 px-2.5 py-1 rounded-lg border border-slate-700/60 flex items-center gap-1">
+                  <span>👥</span> <span className="truncate">{userGroupName} Patrol</span>
+                </div>
+              )}
+            </div>
 
-          {/* ── SCOUT NAVIGATION ── */}
-          {isScout && (
-            <>
+            {/* Nav Items List */}
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabClick(item.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left ${
+                      isActive
+                        ? 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-base shrink-0">{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Logout Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-950">
               <button
-                onClick={() => setCurrentTab('home')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'home'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
               >
-                <span>🏠 Home</span>
+                <LogOut size={14} />
+                <span>Sign Out</span>
               </button>
-              <button
-                onClick={() => setCurrentTab('advancement')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'advancement'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>⚜️ My 7 Ranks</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('assignments')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'assignments'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🎒 My Homework</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('merit-badges')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'merit-badges'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🏅 My Merit Badges</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('events')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'events'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📅 Upcoming Events</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('islamic')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'islamic'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🕌 Islamic Knowledge</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('service-log')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'service-log'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>⏱️ Service Log</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('chat')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'chat'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>💬 {userGroupName ? `${userGroupName} Messenger` : 'Patrol Messenger'}</span>
-                {unreadChatCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
-                    {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setCurrentTab('resources')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'resources'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>📚 Resources</span>
-              </button>
-              <button
-                onClick={() => setCurrentTab('profile')}
-                className={`py-3 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                  currentTab === 'profile'
-                    ? 'border-emerald-500 text-emerald-400 shadow-sm'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👤 My Profile</span>
-              </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
-        {currentTab === 'road-to-eagle' && (
-        <RoadToEagleGuide currentUser={currentUser} onNavigate={setCurrentTab} />
       )}
 
-      {currentTab === 'home' && (isLeader || isOwner) && (
+      {/* ── DESKTOP PERMANENT SIDEBAR NAVIGATION ── */}
+      <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r border-slate-800 shrink-0 h-screen sticky top-0 z-30 select-none print-hide">
+        {/* Brand Header */}
+        <div className="p-5 border-b border-slate-800/90 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-950/40 shrink-0">
+            ⚜️
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
+              <span className="truncate">Dhulfiqār Scouts</span>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase shrink-0">
+                v3.0
+              </span>
+            </h1>
+            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">Taliʿa Leadership Portal</p>
+          </div>
+        </div>
+
+        {/* User Profile Mini-Card */}
+        <div className="p-4 mx-3 my-3 bg-slate-900/80 rounded-2xl border border-slate-800/80 shadow-sm space-y-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-xs shrink-0 shadow-sm">
+              {currentUser.fullName?.charAt(0) || currentUser.username?.charAt(0) || 'U'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-black text-white truncate">{currentUser.fullName || currentUser.username}</h4>
+              <p className="text-[10px] text-emerald-400 font-semibold capitalize truncate">{roleLabel}</p>
+            </div>
+          </div>
+          {userGroupName && (
+            <div className="text-[10px] bg-slate-800/80 text-emerald-300 px-2.5 py-1 rounded-xl border border-slate-700/50 flex items-center gap-1.5 truncate">
+              <span>👥</span>
+              <span className="font-semibold truncate">{userGroupName} Patrol</span>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Tab Links */}
+        <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+          <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5">
+            Navigation Menu
+          </div>
+          {navItems.map((item) => {
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left group ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/70'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-base shrink-0 group-hover:scale-110 transition">{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.badge > 0 ? (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                ) : (
+                  isActive && <ChevronRight size={13} className="text-emerald-400 shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-800/90 bg-slate-950">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-800 transition cursor-pointer"
+          >
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
+      <main className="flex-1 min-w-0 bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        {currentTab === 'road-to-eagle' && isScout && (
+          <RoadToEagleGuide currentUser={currentUser} onNavigate={setCurrentTab} />
+        )}
+
+        {currentTab === 'home' && (isLeader || isOwner) && (
           <LeaderHome 
             currentUser={currentUser} 
             onNavigate={(tab) => setCurrentTab(tab)} 
           />
         )}
+        
         {currentTab === 'home' && isScout && (
           <StudentHome 
             currentUser={currentUser} 
@@ -641,9 +496,11 @@ export default function App() {
             onNavigate={(tab) => setCurrentTab(tab)} 
           />
         )}
+
         {currentTab === 'global-admin' && isOwner && <GlobalAdminPanel currentUser={currentUser} />}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
+        {currentTab === 'scouts' && (isLeader || isOwner) && <ScoutList currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
@@ -654,7 +511,6 @@ export default function App() {
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-        {currentTab === 'scouts' && (isLeader || isOwner) && <ScoutList currentUser={currentUser} />}
         {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
         {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={setCurrentTab} />}
       </main>

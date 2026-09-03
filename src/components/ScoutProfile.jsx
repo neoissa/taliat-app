@@ -481,18 +481,20 @@ export default function ScoutProfile({ currentUser }) {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setActiveProfileTab('spt')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'spt'
-              ? 'bg-teal-600 text-white shadow-lg shadow-teal-950/50'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-          }`}
-        >
-          <Shield size={15} />
-          <span>SPT Certificate</span>
-        </button>
+        {(currentUser.role === 'leader' || currentUser.role === 'owner') && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('spt')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'spt'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Shield size={15} />
+            <span>SPT Certificate</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -663,7 +665,7 @@ export default function ScoutProfile({ currentUser }) {
       )}
 
       {/* ── TAB 4: SPT CERTIFICATE ── */}
-      {activeProfileTab === 'spt' && (
+      {activeProfileTab === 'spt' && (currentUser.role === 'leader' || currentUser.role === 'owner') && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4 max-w-2xl">
           <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
             <Shield size={16} className="text-emerald-400" /> Safety/Protection Training (SPT)
