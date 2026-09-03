@@ -126,10 +126,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
-  const [bioInput, setBioInput] = useState('');
-  const [savingBio, setSavingBio] = useState(false);
-  const [bioMsg, setBioMsg] = useState('');
-
+      
   // Scout Journal & Dated Notes states
   const [journalNotes, setJournalNotes] = useState([]);
   const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
@@ -181,21 +178,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     return () => unsub();
   }, [scoutId]);
 
-  const handleSaveBio = async () => {
-    if (!scoutId) return;
-    setSavingBio(true);
-    setBioMsg('');
-    try {
-      await setDoc(doc(db, 'users', scoutId), { bio: bioInput }, { merge: true });
-      setBioMsg('About Me updated successfully!');
-      setTimeout(() => setBioMsg(''), 3000);
-    } catch (err) {
-      console.error("Failed to update bio:", err);
-      setBioMsg('Failed to update About Me.');
-    } finally {
-      setSavingBio(false);
-    }
-  };
+
 
   const handleAddJournalNote = async (e) => {
     e.preventDefault();
@@ -732,57 +715,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
         </div>
       )}
 
-      {/* ── SEPARATE SECTION 1: ABOUT ME (SCOUT BIO) ── */}
-      {scoutId && (
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <User size={18} />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">About Me</h2>
-                <p className="text-[11px] text-slate-400">
-                  {currentUser.uid === scoutId
-                    ? 'Share facts about yourself, your hobbies, interests, and scouting goals.'
-                    : `Personal biography and introduction for ${scoutData?.fullName || scoutData?.username || 'this scout'}.`}
-                </p>
-              </div>
-            </div>
-            {bioMsg && <span className="text-xs text-emerald-400 font-semibold">{bioMsg}</span>}
-          </div>
 
-          {currentUser.uid === scoutId ? (
-            <div className="space-y-2">
-              <textarea
-                value={bioInput}
-                onChange={(e) => setBioInput(e.target.value)}
-                placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
-                rows={3}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSaveBio}
-                  disabled={savingBio}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <Sparkles size={13} />
-                  {savingBio ? 'Saving...' : 'Save About Me'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-900/50 border border-slate-750 p-4 rounded-xl min-h-[50px] text-xs text-slate-200 leading-relaxed">
-              {scoutData?.bio ? (
-                <p className="whitespace-pre-wrap">{scoutData.bio}</p>
-              ) : (
-                <span className="text-slate-400 italic">This scout has not added an About Me bio yet.</span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── SEPARATE SECTION 2: SCOUT JOURNAL & DATED NOTES ── */}
       {scoutId && (

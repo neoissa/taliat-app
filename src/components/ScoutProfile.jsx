@@ -3,7 +3,7 @@ import { auth, db, storage } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
-import { User, Mail, Phone, Lock, Shield, Image as ImageIcon, Check, Trash2, ExternalLink, Camera, Loader2 } from 'lucide-react';
+import { User, Sparkles, Mail, Phone, Lock, Shield, Image as ImageIcon, Check, Trash2, ExternalLink, Camera, Loader2 } from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
 
@@ -48,6 +48,7 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
 export default function ScoutProfile({ currentUser }) {
   // Profile information states
   const [fullName, setFullName] = useState('');
+  const [bio, setBio] = useState('');
   const [scoutEmail, setScoutEmail] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [scoutPhone, setScoutPhone] = useState('');
@@ -91,6 +92,7 @@ export default function ScoutProfile({ currentUser }) {
         if (snap.exists()) {
           const data = snap.data();
           setFullName(data.fullName || '');
+          setBio(data.bio || '');
           setScoutEmail(data.scoutEmail || data.email || '');
           setParentEmail(data.parentEmail || '');
           setScoutPhone(data.scoutPhone || '');
@@ -282,6 +284,7 @@ export default function ScoutProfile({ currentUser }) {
       const userRef = doc(db, 'users', currentUser.uid);
       const updates = {
         fullName: fullName.trim(),
+        bio: bio.trim(),
         scoutEmail: scoutEmail.trim(),
         scoutPhone: scoutPhone.trim(),
         photoURL: photoUrl || null,
@@ -603,6 +606,30 @@ export default function ScoutProfile({ currentUser }) {
                     </div>
                   </>
                 )}
+              </div>
+
+              
+              {/* ── ABOUT ME SECTION ── */}
+              <div className="pt-3 border-t border-slate-700/60 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <User size={15} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
+                    <p className="text-[11px] text-slate-400">
+                      Share facts about yourself, your hobbies, interests, and scouting goals.
+                    </p>
+                  </div>
+                </div>
+
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
+                  rows={3}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                />
               </div>
 
               <div className="flex justify-end border-t border-slate-700/60 pt-3">
