@@ -19,6 +19,7 @@ import ServiceLogs from './components/ServiceLogs';
 import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
+import ScoutJournalNotes from './components/ScoutJournalNotes';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
@@ -238,6 +239,7 @@ export default function App() {
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
         { id: 'events', label: 'Planned Events', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
+        { id: 'journal', label: 'Scout Journal & Notes', icon: '📝' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
         { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
         { id: 'resources', label: 'Resources & Guide', icon: '📚' },
@@ -252,6 +254,7 @@ export default function App() {
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
         { id: 'events', label: 'Planned Events', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
+        { id: 'journal', label: 'Scout Journal & Notes', icon: '📝' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
         { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
         { id: 'resources', label: 'Resources & Guide', icon: '📚' },
@@ -267,6 +270,7 @@ export default function App() {
         { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'events', label: 'Upcoming Events', icon: '📅' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
+        { id: 'journal', label: 'My Journal & Notes', icon: '📝' },
         { id: 'service-log', label: 'Service Log', icon: '⏱️' },
         { id: 'chat', label: userGroupName ? `${userGroupName} Chat` : 'Patrol Chat', icon: '💬', badge: unreadChatCount },
         { id: 'resources', label: 'Resources', icon: '📚' },
@@ -513,6 +517,7 @@ export default function App() {
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
         {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={setCurrentTab} />}
+        {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
     </div>
   );
