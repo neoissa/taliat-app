@@ -34,6 +34,7 @@ import {
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
+import LiveClockAndCalendar from './LiveClockAndCalendar';
 import { RANKS_DATA } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 

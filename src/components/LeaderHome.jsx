@@ -22,6 +22,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
+import LiveClockAndCalendar from './LiveClockAndCalendar';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -285,6 +286,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
       </div>
+
+      <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
 
       {/* ── 2. PENDING SUBMISSIONS & NOTIFICATIONS BANNER ── */}
       {totalPendingApprovals > 0 ? (

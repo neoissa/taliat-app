@@ -432,6 +432,13 @@ export default function App() {
               <span className="font-semibold truncate">{userGroupName} Patrol</span>
             </div>
           )}
+          <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+              <Clock size={11} className="animate-pulse" />
+              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          </div>
         </div>
 
         {/* Navigation Tab Links */}
