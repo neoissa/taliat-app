@@ -19,6 +19,7 @@ import ServiceLogs from './components/ServiceLogs';
 import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
+import PatrolAttendance from './components/PatrolAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
@@ -234,6 +235,7 @@ export default function App() {
         { id: 'global-admin', label: 'Global Admin', icon: '⚡' },
         { id: 'group-manager', label: 'Organization Hub', icon: '🏢' },
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
+        { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
@@ -524,6 +526,7 @@ export default function App() {
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
         {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={setCurrentTab} />}
+        {currentTab === 'attendance' && (isLeader || isOwner) && <PatrolAttendance currentUser={currentUser} />}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
     </div>
