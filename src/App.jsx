@@ -21,6 +21,7 @@ import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
 import PatrolAttendance from './components/PatrolAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
+import ParentDashboard from './components/ParentDashboard';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';

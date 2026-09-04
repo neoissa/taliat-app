@@ -231,23 +231,36 @@ function SingleScoutCustomReport({
   let reportTotalTuesdayHours = 0;
   let reportTotalFridayHours = 0;
   let reportAttendedSessionsCount = 0;
+  let reportUnexcusedAbsences = 0;
+  let reportExcusedCount = 0;
 
   filteredAttendance.forEach(s => {
     const rec = s.records?.[scoutUid];
-    if (rec && (rec.status === 'present' || rec.status === 'late')) {
-      reportAttendedSessionsCount++;
+    if (rec) {
       const sType = s.eventType || '';
       const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
       const defaultN = sType.includes('Camp') ? 2 : 0;
       const h = rec.hours !== undefined ? Number(rec.hours) : (s.hours !== undefined ? Number(s.hours) : defaultH);
       const n = rec.nights !== undefined ? Number(rec.nights) : (s.nights !== undefined ? Number(s.nights) : defaultN);
-      reportTotalAttendedHours += h;
-      reportTotalCampingNights += n;
-      if (sType.includes('Service') || sType.includes('Volunteer')) reportTotalServiceAttendanceHours += h;
-      else if (sType.includes('Tuesday')) reportTotalTuesdayHours += h;
-      else if (sType.includes('Weekly') || sType.includes('Friday')) reportTotalFridayHours += h;
+
+      if (rec.status === 'present' || rec.status === 'late') {
+        reportAttendedSessionsCount++;
+        reportTotalAttendedHours += h;
+        reportTotalCampingNights += n;
+        if (sType.includes('Service') || sType.includes('Volunteer')) reportTotalServiceAttendanceHours += h;
+        else if (sType.includes('Tuesday')) reportTotalTuesdayHours += h;
+        else if (sType.includes('Weekly') || sType.includes('Friday')) reportTotalFridayHours += h;
+      } else if (rec.status === 'excused') {
+        reportExcusedCount++;
+      } else if (rec.status === 'absent') {
+        reportUnexcusedAbsences++;
+      }
     }
   });
+
+  const reportTotalSessionsCount = filteredAttendance.length;
+  const reportAttendanceRate = reportTotalSessionsCount > 0 ? Math.round((reportAttendedSessionsCount / reportTotalSessionsCount) * 100) : 100;
+  const reportRiskLevel = reportUnexcusedAbsences >= 3 ? 'critical' : reportUnexcusedAbsences === 2 ? 'warning' : 'good';
 
   const filteredEvents = config.activities.enabled ? eventsList.filter(ev => {
     if (!isItemActiveInMode(ev.date)) return false;
@@ -283,8 +296,8 @@ function SingleScoutCustomReport({
         </div>
       </div>
 
-      {/* ── 2. SCOUT DEMOGRAPHICS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-100/70 p-4 rounded-xl border border-slate-300 text-xs">
+      {/* ── 2. SCOUT DEMOGRAPHICS & ATTENDANCE STANDING ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-100/70 p-4 rounded-xl border border-slate-300 text-xs">
         <div>
           <span className="text-slate-600 uppercase text-[10px] font-bold block">Scout Name</span>
           <strong className="text-sm text-slate-950 font-black">{scoutFullName}</strong>
@@ -301,6 +314,45 @@ function SingleScoutCustomReport({
           <span className="text-slate-600 uppercase text-[10px] font-bold block">BSA Member ID</span>
           <strong className="text-xs text-slate-900 font-mono">{scout.bsaId || 'BSA-110-' + scoutUid.substring(0, 5).toUpperCase()}</strong>
         </div>
+        <div>
+          <span className="text-slate-600 uppercase text-[10px] font-bold block">Attendance Standing</span>
+          <strong className={`text-xs font-mono font-bold block mt-0.5 ${
+            reportRiskLevel === 'critical' ? 'text-red-700' : reportRiskLevel === 'warning' ? 'text-amber-700' : 'text-emerald-800'
+          }`}>
+            {Math.round(reportTotalAttendedHours * 10) / 10}h &bull; {reportTotalCampingNights}n ({reportAttendanceRate}%)
+          </strong>
+        </div>
+      </div>
+
+      {/* Official Attendance Standing & Risk Warning Notice Box */}
+      <div className={`border-2 p-4 rounded-xl page-break-avoid ${
+        reportRiskLevel === 'critical'
+          ? 'border-red-600 bg-red-50 text-red-950'
+          : reportRiskLevel === 'warning'
+          ? 'border-amber-600 bg-amber-50 text-amber-950'
+          : 'border-emerald-700 bg-emerald-50 text-emerald-950'
+      }`}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 mb-1.5 border-b border-black/10 pb-1">
+          <strong className="text-xs uppercase font-black tracking-wide flex items-center gap-1.5">
+            <span>
+              {reportRiskLevel === 'critical'
+                ? '🚨 OFFICIAL RETENTION NOTICE: CRITICAL ATTENDANCE RISK'
+                : reportRiskLevel === 'warning'
+                ? '⚠️ ATTENDANCE WARNING NOTICE: AT RISK'
+                : '🟢 ATTENDANCE CERTIFICATION: IN GOOD STANDING'}
+            </span>
+          </strong>
+          <span className="font-mono text-xs font-bold">
+            {reportAttendedSessionsCount}/{reportTotalSessionsCount} Sessions ({reportAttendanceRate}%) &bull; {reportUnexcusedAbsences} Unexcused Absences
+          </span>
+        </div>
+        <p className="text-xs leading-relaxed">
+          {reportRiskLevel === 'critical'
+            ? `Scout has accumulated ${reportUnexcusedAbsences} unexcused absences (${reportAttendanceRate}% overall attendance rate). A mandatory parent-leader retention conference is required prior to rank advancement or board of review qualification.`
+            : reportRiskLevel === 'warning'
+            ? `Scout has 2 unexcused absences (${reportAttendanceRate}% overall attendance rate). Regular attendance at weekly troop meetings and patrol activities is required to maintain rank advancement eligibility.`
+            : `Scout is certified in good standing with ${reportAttendanceRate}% overall attendance rate, ${Math.round(reportTotalAttendedHours * 10) / 10} attended hours, and ${reportTotalCampingNights} camping nights across troop meetings, Tuesday workshops, and outdoor events.`}
+        </p>
       </div>
 
       {/* ── 3. RANK ADVANCEMENT MODULE ── */}
@@ -563,7 +615,7 @@ function SingleScoutCustomReport({
           </div>
 
           {/* Quick Hours Summary Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-100 p-2.5 rounded-lg border border-slate-300 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-100 p-2.5 rounded-lg border border-slate-300 text-xs">
             <div>
               <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Attended</span>
               <strong className="text-sm font-black text-slate-900 font-mono">{Math.round(reportTotalAttendedHours * 10) / 10} Hours</strong>
@@ -579,6 +631,12 @@ function SingleScoutCustomReport({
             <div>
               <span className="text-[10px] font-bold text-slate-600 uppercase block">Friday Meetings</span>
               <strong className="text-sm font-black text-slate-900 font-mono">{Math.round(reportTotalFridayHours * 10) / 10} Hours</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-600 uppercase block">Unexcused Absences</span>
+              <strong className={`text-sm font-black font-mono ${reportUnexcusedAbsences >= 3 ? 'text-red-700' : reportUnexcusedAbsences === 2 ? 'text-amber-700' : 'text-emerald-800'}`}>
+                {reportUnexcusedAbsences} Absences
+              </strong>
             </div>
           </div>
 

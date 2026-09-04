@@ -20,7 +20,7 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -715,7 +715,8 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [addError, setAddError] = useState('');
   const [pendingApprovalsMap, setPendingApprovalsMap] = useState({});
   const [showPendingModal, setShowPendingModal] = useState(false);
-  const [pendingModalScoutId, setPendingModalScoutId] = useState(null); // { [scoutUid]: { ranks: number, merit: number, total: number } }
+  const [pendingModalScoutId, setPendingModalScoutId] = useState(null);
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
 
   const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
   const isAssistantLeader = currentUser?.role === 'leader' && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
@@ -1390,7 +1391,31 @@ export default function PatrolRoster({ currentUser = {} }) {
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2.5 flex-wrap justify-end">
+                                    {/* Attendance & Standing Badge */}
+                                    {(() => {
+                                      const att = getScoutAttendanceStats(scout.uid);
+                                      if (att.risk === 'critical') {
+                                        return (
+                                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950/80 text-red-300 border border-red-700/60 flex items-center gap-1 shadow-sm animate-pulse" title="Critical Attendance Risk - 3+ Unexcused Absences">
+                                            🚨 {att.unexcused} Absences ({att.rate}% &bull; {att.hours}h)
+                                          </span>
+                                        );
+                                      } else if (att.risk === 'warning') {
+                                        return (
+                                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60 flex items-center gap-1 shadow-sm" title="Attendance Warning - 2 Unexcused Absences">
+                                            ⚠️ 2 Absences ({att.rate}% &bull; {att.hours}h)
+                                          </span>
+                                        );
+                                      } else {
+                                        return (
+                                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 flex items-center gap-1 shadow-sm" title="Certified In Good Standing">
+                                            🟢 {att.rate}% ({att.hours}h{att.nights > 0 ? ` &bull; ${att.nights}n` : ''})
+                                          </span>
+                                        );
+                                      }
+                                    })()}
+
                                     {scoutApprovals > 0 && (
                                       <button
                                         type="button"
@@ -1411,6 +1436,39 @@ export default function PatrolRoster({ currentUser = {} }) {
 
                                 {expanded === scout.uid && (
                                   <div className="px-4 pb-4 border-t border-slate-750 pt-3 space-y-3 bg-slate-900/30">
+                                    {/* Attendance & Standing Quick Panel */}
+                                    {(() => {
+                                      const att = getScoutAttendanceStats(scout.uid);
+                                      return (
+                                        <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Total Attended</span>
+                                            <span className="font-bold text-emerald-400 font-mono text-sm">{att.hours}h</span>
+                                            <span className="text-[10px] text-slate-400 block">({att.attended}/{att.total} sessions &bull; {att.rate}%)</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Camping Nights</span>
+                                            <span className="font-bold text-amber-400 font-mono text-sm">{att.nights} Nights</span>
+                                            <span className="text-[10px] text-slate-400 block">Overnight campouts</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Meetings Breakdown</span>
+                                            <span className="font-bold text-slate-200 font-mono text-xs block">Friday: {att.fridayHrs}h</span>
+                                            <span className="font-bold text-slate-200 font-mono text-xs block">Tuesday: {att.tuesdayHrs}h</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Troop Standing</span>
+                                            <span className={`font-bold text-xs block mt-0.5 ${
+                                              att.risk === 'critical' ? 'text-red-400 font-black' : att.risk === 'warning' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'
+                                            }`}>
+                                              {att.risk === 'critical' ? `🚨 Critical (${att.unexcused} Absences)` : att.risk === 'warning' ? `⚠️ At Risk (2 Absences)` : '🟢 Good Standing'}
+                                            </span>
+                                            <span className="text-[9px] text-slate-500 block">{att.excused} Excused</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
                                       <div>
                                         <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
