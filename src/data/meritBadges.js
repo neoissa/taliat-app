@@ -1,5 +1,8 @@
-// Official Scouting America Merit Badges Dataset with Complete Requirements, Workbooks, and Official Links
-// Sources: http://usscouts.org/meritbadges.asp & https://www.scouting.org/
+// Official Scouting America Merit Badges Dataset with Complete Requirements, Workbooks, Pamphlets, and Official Links
+// Sources: 
+// 1. https://www.scouting.org/skills/merit-badges/
+// 2. http://www.usscouts.org/mb/mbbooks.asp
+// 3. http://usscouts.org/meritbadges.asp
 
 export const TOTAL_EAGLE_REQUIRED_FOR_RANK = 14;
 export const TOTAL_MERIT_BADGES_FOR_EAGLE = 21;
@@ -73,7 +76,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Log every troop campout and summer camp in your scout handbook or app journal.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/camping/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb001.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb001.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Camping Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/camping/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Camping%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "citizenship-in-the-community",
@@ -119,7 +130,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-community/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb002.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb002.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Citizenship in the Community Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2015",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-community/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Citizenship%20in%20the%20Community%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "citizenship-in-the-nation",
@@ -169,7 +188,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-nation/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb003.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb003.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Citizenship in the Nation Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-nation/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Citizenship%20in%20the%20Nation%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "citizenship-in-the-world",
@@ -215,7 +242,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Attend a municipal town hall meeting or research national legislative bills ahead of time.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-world/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb004.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb004.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Citizenship in the World Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2014",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/citizenship-in-the-world/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Citizenship%20in%20the%20World%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "communication",
@@ -265,7 +300,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Lead a troop campfire program or patrol presentation to complete speaking requirements.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/communication/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb005.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb005.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Communication Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2019",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/communication/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Communication%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "cooking",
@@ -315,7 +358,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Coordinate with your patrol leader to serve as head cook during your next 2 troop campouts.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/cooking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb038.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb038.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Cooking Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/cooking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Cooking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "cycling",
@@ -353,7 +404,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Inspect bicycle safety gear and train stamina gradually on paved trails.",
     "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/cycling/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb039.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb039.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Cycling Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/cycling/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Cycling%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "emergency-preparedness",
@@ -403,7 +462,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Complete First Aid first. Build a home emergency disaster kit with non-perishable supplies.",
     "eagleGroup": "Choice: Emergency Prep OR Lifesaving",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/emergency-preparedness/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb006.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb006.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Emergency Preparedness Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/emergency-preparedness/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Emergency%20Preparedness%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "environmental-science",
@@ -449,7 +516,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Conduct 7-day ecosystem observations in a local park or reserve.",
     "eagleGroup": "Choice: Environmental Science OR Sustainability",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/environmental-science/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb007.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb007.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Environmental Science Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/environmental-science/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Environmental%20Science%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "family-life",
@@ -491,7 +566,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Hold a family meeting with your parents to agree on 5 regular chores and plan your family service project.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/family-life/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb129.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb129.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Family Life Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/family-life/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Family%20Life%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "first-aid",
@@ -537,7 +620,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Master bandage wraps, shock treatment, and CPR hands-on drills during troop meetings.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/first-aid/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb008.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb008.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "First Aid Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/first-aid/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=First%20Aid%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "hiking",
@@ -575,7 +666,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Plan day hikes with your patrol over several months. Maintain detailed trail logs.",
     "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/hiking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb061.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb061.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Hiking Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/hiking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Hiking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "lifesaving",
@@ -621,7 +720,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Best completed during summer camp under a certified BSA Aquatics Director.",
     "eagleGroup": "Choice: Emergency Prep OR Lifesaving",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/lifesaving/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb009.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb009.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Lifesaving Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/lifesaving/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Lifesaving%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "personal-fitness",
@@ -663,7 +770,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Schedule your initial fitness baseline test right away. Track workouts 3+ times weekly with your counselor.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/personal-fitness/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb010.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb010.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Personal Fitness Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/personal-fitness/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Personal%20Fitness%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "personal-management",
@@ -705,7 +820,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Set up a spreadsheet on day 1 to track all income and expenses. Discuss household project plans with family.",
     "eagleGroup": "Required",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/personal-management/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb011.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb011.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Personal Management Merit Badge Pamphlet",
+    "pamphletSku": "35928",
+    "pamphletDigitalSku": "655699",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/personal-management/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Personal%20Management%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "sustainability",
@@ -743,7 +866,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Conduct an energy and food waste audit in your home with family cooperation.",
     "eagleGroup": "Choice: Environmental Science OR Sustainability",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sustainability/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb152.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb152.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Sustainability Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/sustainability/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Sustainability%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "swimming",
@@ -785,7 +916,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Practice the crawl, backstroke, breaststroke, and sidestroke at troop pool sessions.",
     "eagleGroup": "Choice: Swimming OR Hiking OR Cycling",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/swimming/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb014.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb014.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Swimming Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/swimming/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Swimming%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "american-business",
@@ -823,7 +962,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-business/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb015.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb015.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "American Business Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/american-business/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=American%20Business%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "american-cultures",
@@ -861,7 +1008,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-cultures/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb017.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb017.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "American Cultures Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/american-cultures/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=American%20Cultures%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "american-heritage",
@@ -899,7 +1054,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-heritage/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb016.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb016.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "American Heritage Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2020",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/american-heritage/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=American%20Heritage%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "american-labor",
@@ -937,7 +1100,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/american-labor/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb121.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb121.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "American Labor Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/american-labor/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=American%20Labor%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "animal-science",
@@ -975,7 +1146,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/animal-science/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb018.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb018.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Animal Science Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/animal-science/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Animal%20Science%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "animation",
@@ -1013,7 +1192,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/animation/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb158.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb018.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Animation Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/animation/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Animation%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "archaeology",
@@ -1051,7 +1238,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/archaeology/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb132.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb132.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Archaeology Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/archaeology/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Archaeology%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "archery",
@@ -1089,7 +1284,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/archery/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb019.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb019.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Archery Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/archery/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Archery%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "architecture",
@@ -1127,7 +1330,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/architecture/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb020.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb020.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Architecture Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/architecture/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Architecture%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "art",
@@ -1165,7 +1376,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/art/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb021.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb021.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Art Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/art/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Art%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "astronomy",
@@ -1207,7 +1426,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/astronomy/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb022.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb022.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Astronomy Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/astronomy/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Astronomy%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "athletics",
@@ -1245,7 +1472,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/athletics/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb023.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb023.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Athletics Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/athletics/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Athletics%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "automotive-maintenance",
@@ -1283,7 +1518,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/automotive-maintenance/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb127.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb127.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Automotive Maintenance Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/automotive-maintenance/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Automotive%20Maintenance%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "aviation",
@@ -1325,7 +1568,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/aviation/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb025.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb025.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Aviation Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/aviation/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Aviation%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "backpacking",
@@ -1363,7 +1614,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/backpacking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb026.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb026.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Backpacking Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/backpacking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Backpacking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "basketry",
@@ -1401,7 +1660,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/basketry/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb027.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb027.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Basketry Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/basketry/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Basketry%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "bird-study",
@@ -1439,7 +1706,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/bird-study/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb029.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb029.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Bird Study Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/bird-study/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Bird%20Study%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "bugling",
@@ -1477,7 +1752,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/bugling/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb032.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb032.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Bugling Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/bugling/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Bugling%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "canoeing",
@@ -1515,7 +1798,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/canoeing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb033.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb033.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Canoeing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/canoeing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Canoeing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "chemistry",
@@ -1553,7 +1844,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/chemistry/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb034.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb034.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Chemistry Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/chemistry/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Chemistry%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "chess",
@@ -1591,7 +1890,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/chess/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb147.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb147.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Chess Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2013",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/chess/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Chess%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "climbing",
@@ -1629,7 +1936,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/climbing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb133.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb133.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Climbing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/climbing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Climbing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "coin-collecting",
@@ -1667,7 +1982,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/coin-collecting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb035.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb035.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Coin Collecting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/coin-collecting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Coin%20Collecting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "collections",
@@ -1705,7 +2028,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/collections/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb128.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb128.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Collections Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/collections/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Collections%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "composite-materials",
@@ -1743,7 +2074,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/composite-materials/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb137.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb137.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Composite Materials Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/composite-materials/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Composite%20Materials%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "crime-prevention",
@@ -1781,7 +2120,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/crime-prevention/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb131.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb131.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Crime Prevention Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/crime-prevention/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Crime%20Prevention%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "dentistry",
@@ -1819,7 +2166,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/dentistry/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb040.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb040.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Dentistry Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/dentistry/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Dentistry%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "digital-technology",
@@ -1857,7 +2212,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/digital-technology/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb154.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb154.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Digital Technology Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/digital-technology/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Digital%20Technology%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "disabilities-awareness",
@@ -1895,7 +2258,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/disabilities-awareness/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb060.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb060.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Disabilities Awareness Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/disabilities-awareness/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Disabilities%20Awareness%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "dog-care",
@@ -1933,7 +2304,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/dog-care/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb041.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb041.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Dog Care Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2017",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/dog-care/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Dog%20Care%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "drafting",
@@ -1971,7 +2350,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/drafting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb042.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb042.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Drafting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/drafting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Drafting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "electricity",
@@ -2009,7 +2396,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/electricity/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb043.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb043.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Electricity Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/electricity/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Electricity%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "electronics",
@@ -2047,7 +2442,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/electronics/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb044.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb044.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Electronics Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/electronics/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Electronics%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "energy",
@@ -2085,7 +2488,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/energy/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb045.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb045.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Energy Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/energy/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Energy%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "engineering",
@@ -2123,7 +2534,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/engineering/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb046.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb046.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Engineering Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/engineering/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Engineering%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "entrepreneurship",
@@ -2161,7 +2580,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/entrepreneurship/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb134.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb134.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Entrepreneurship Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2013",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/entrepreneurship/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Entrepreneurship%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "exploration",
@@ -2199,7 +2626,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/exploration/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb159.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb159.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Exploration Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/exploration/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Exploration%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "farm-mechanics",
@@ -2237,7 +2672,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/farm-mechanics/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb048.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb048.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Farm Mechanics Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/farm-mechanics/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Farm%20Mechanics%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "fingerprinting",
@@ -2275,7 +2718,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fingerprinting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb049.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb049.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Fingerprinting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/fingerprinting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Fingerprinting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "fire-safety",
@@ -2313,7 +2764,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fire-safety/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb050.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb050.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Fire Safety Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/fire-safety/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Fire%20Safety%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "fish-and-wildlife-management",
@@ -2351,7 +2810,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fish-and-wildlife-management/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb051.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb051.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Fish and Wildlife Management Merit Badge Pamphlet",
+    "pamphletSku": "35898",
+    "pamphletDigitalSku": "655190",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/fish-and-wildlife-management/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Fish%20and%20Wildlife%20Management%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "fishing",
@@ -2389,7 +2856,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fishing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb052.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb052.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Fishing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/fishing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Fishing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "fly-fishing",
@@ -2427,7 +2902,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/fly-fishing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb136.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb136.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Fly Fishing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/fly-fishing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Fly%20Fishing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "forestry",
@@ -2465,7 +2948,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/forestry/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb054.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb054.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Forestry Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/forestry/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Forestry%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "game-design",
@@ -2503,7 +2994,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/game-design/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb151.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb151.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Game Design Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/game-design/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Game%20Design%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "gardening",
@@ -2541,7 +3040,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/gardening/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb055.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb055.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Gardening Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2017",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/gardening/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Gardening%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "genealogy",
@@ -2579,7 +3086,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/genealogy/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb056.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb056.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Genealogy Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/genealogy/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Genealogy%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "geocaching",
@@ -2617,7 +3132,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/geocaching/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb145.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb145.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Geocaching Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/geocaching/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Geocaching%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "geology",
@@ -2655,7 +3178,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/geology/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb058.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb058.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Geology Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/geology/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Geology%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "golf",
@@ -2693,7 +3224,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/golf/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb059.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb059.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Golf Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/golf/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Golf%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "graphic-arts",
@@ -2731,7 +3270,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/graphic-arts/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb122.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb122.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Graphic Arts Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/graphic-arts/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Graphic%20Arts%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "home-repairs",
@@ -2769,7 +3316,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/home-repairs/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb062.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb062.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Home Repairs Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2011",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/home-repairs/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Home%20Repairs%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "horsemanship",
@@ -2807,7 +3362,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/horsemanship/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb063.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb063.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Horsemanship Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2013",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/horsemanship/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Horsemanship%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "indian-lore",
@@ -2845,7 +3408,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/indian-lore/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb064.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb064.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Indian Lore Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/indian-lore/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Indian%20Lore%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "insect-study",
@@ -2883,7 +3454,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/insect-study/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb065.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb065.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Insect Study Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/insect-study/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Insect%20Study%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "inventing",
@@ -2921,7 +3500,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/inventing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb144.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb144.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Inventing Merit Badge Pamphlet",
+    "pamphletSku": "35833",
+    "pamphletDigitalSku": "654378",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/inventing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Inventing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "journalism",
@@ -2959,7 +3546,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/journalism/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb066.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb066.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Journalism Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/journalism/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Journalism%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "kayaking",
@@ -2997,7 +3592,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/kayaking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb149.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb149.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Kayaking Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/kayaking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Kayaking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "landscape-architecture",
@@ -3035,7 +3638,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/landscape-architecture/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb067.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb067.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Landscape Architecture Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2017",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/landscape-architecture/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Landscape%20Architecture%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "law",
@@ -3073,7 +3684,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/law/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb068.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb068.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Law Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/law/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Law%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "leatherwork",
@@ -3111,7 +3730,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/leatherwork/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb069.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb069.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Leatherwork Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2016",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/leatherwork/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Leatherwork%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "mammal-study",
@@ -3149,7 +3776,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/mammal-study/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb071.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb071.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Mammal Study Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/mammal-study/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Mammal%20Study%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "medicine",
@@ -3187,7 +3822,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/medicine/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb130.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb130.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Medicine Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/medicine/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Medicine%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "metalwork",
@@ -3225,7 +3868,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/metalwork/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb074.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb074.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Metalwork Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/metalwork/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Metalwork%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "mining-in-society",
@@ -3263,7 +3914,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/mining-in-society/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb155.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb155.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Mining in Society Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/mining-in-society/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Mining%20in%20Society%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "model-design-and-building",
@@ -3301,7 +3960,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/model-design-and-building/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb075.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb075.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Model Design and Building Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2019",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/model-design-and-building/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Model%20Design%20and%20Building%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "motorboating",
@@ -3339,7 +4006,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/motorboating/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb076.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb076.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Motorboating Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/motorboating/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Motorboating%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "moviemaking",
@@ -3377,7 +4052,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/moviemaking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb156.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb156.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Moviemaking Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/moviemaking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Moviemaking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "music",
@@ -3415,7 +4098,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/music/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb077.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb077.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Music Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2016",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/music/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Music%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "nature",
@@ -3453,7 +4144,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/nature/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb078.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb078.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Nature Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/nature/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Nature%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "nuclear-science",
@@ -3491,7 +4190,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/nuclear-science/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb024.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb024.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Nuclear Science Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/nuclear-science/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Nuclear%20Science%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "oceanography",
@@ -3529,7 +4236,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/oceanography/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb079.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb079.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Oceanography Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2011",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/oceanography/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Oceanography%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "orienteering",
@@ -3567,7 +4282,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/orienteering/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb080.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb080.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Orienteering Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2011",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/orienteering/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Orienteering%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "painting",
@@ -3605,7 +4328,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/painting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb081.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb081.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Painting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2019",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/painting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Painting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "pets",
@@ -3643,7 +4374,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pets/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb082.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb082.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Pets Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2011",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/pets/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Pets%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "photography",
@@ -3681,7 +4420,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/photography/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb083.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb083.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Photography Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/photography/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Photography%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "pioneering",
@@ -3719,7 +4466,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pioneering/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb084.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb084.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Pioneering Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/pioneering/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Pioneering%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "plant-science",
@@ -3757,7 +4512,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/plant-science/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb085.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb085.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Plant Science Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/plant-science/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Plant%20Science%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "plumbing",
@@ -3795,7 +4558,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/plumbing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb086.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb086.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Plumbing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2016",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/plumbing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Plumbing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "pottery",
@@ -3833,7 +4604,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pottery/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb087.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb087.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Pottery Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/pottery/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Pottery%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "programming",
@@ -3871,7 +4650,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/programming/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb153.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb153.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Programming Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/programming/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Programming%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "public-health",
@@ -3909,7 +4696,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/public-health/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb089.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb089.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Public Health Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/public-health/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Public%20Health%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "public-speaking",
@@ -3947,7 +4742,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/public-speaking/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb090.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb090.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Public Speaking Merit Badge Pamphlet",
+    "pamphletSku": "35936",
+    "pamphletDigitalSku": "655689",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/public-speaking/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Public%20Speaking%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "pulp-and-paper",
@@ -3985,7 +4788,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/pulp-and-paper/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb091.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb091.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Pulp and Paper Merit Badge Pamphlet",
+    "pamphletSku": "35937",
+    "pamphletDigitalSku": "649748",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/pulp-and-paper/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Pulp%20and%20Paper%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "radio",
@@ -4023,7 +4834,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/radio/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb093.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb093.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Radio Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/radio/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Radio%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "railroading",
@@ -4061,7 +4880,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/railroading/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb094.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb094.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Railroading Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/railroading/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Railroading%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "reading",
@@ -4099,7 +4926,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/reading/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb095.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb095.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Reading Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/reading/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Reading%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "reptile-and-amphibian-study",
@@ -4137,7 +4972,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/reptile-and-amphibian-study/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb096.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb096.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Reptile and Amphibian Study Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/reptile-and-amphibian-study/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Reptile%20and%20Amphibian%20Study%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "rifle-shooting",
@@ -4175,7 +5018,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/rifle-shooting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb123.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb123.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Rifle Shooting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2018",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/rifle-shooting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Rifle%20Shooting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "robotics",
@@ -4213,7 +5064,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/robotics/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb146.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb146.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Robotics Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2011",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/robotics/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Robotics%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "rowing",
@@ -4251,7 +5110,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/rowing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb098.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb098.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Rowing Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2020",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/rowing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Rowing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "safety",
@@ -4289,7 +5156,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/safety/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb012.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb012.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Safety Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/safety/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Safety%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "salesmanship",
@@ -4327,7 +5202,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/salesmanship/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb099.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb099.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Salesmanship Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2022",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/salesmanship/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Salesmanship%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "scholarship",
@@ -4365,7 +5248,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scholarship/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb100.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb100.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Scholarship Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/scholarship/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Scholarship%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "scouting-heritage",
@@ -4403,7 +5294,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scouting-heritage/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb143.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb143.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Scouting Heritage Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/scouting-heritage/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Scouting%20Heritage%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "scuba-diving",
@@ -4441,7 +5340,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/scuba-diving/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb138.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb138.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Scuba Diving Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/scuba-diving/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Scuba%20Diving%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "sculpture",
@@ -4479,7 +5386,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sculpture/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb101.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb101.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Sculpture Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/sculpture/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Sculpture%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "search-and-rescue",
@@ -4517,7 +5432,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/search-and-rescue/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb150.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb150.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Search and Rescue Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2018",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/search-and-rescue/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Search%20and%20Rescue%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "shotgun-shooting",
@@ -4555,7 +5478,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/shotgun-shooting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb124.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb124.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Shotgun Shooting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2013",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/shotgun-shooting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Shotgun%20Shooting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "signs-signals-and-codes",
@@ -4593,7 +5524,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/signs-signals-and-codes/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb157.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb132.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Signs, Signals, and Codes Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2017",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/signs-signals-and-codes/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Signs%2C%20Signals%2C%20and%20Codes%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "skating",
@@ -4631,7 +5570,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/skating/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb103.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb103.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Skating Merit Badge Pamphlet",
+    "pamphletSku": "35949",
+    "pamphletDigitalSku": "650744",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/skating/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Skating%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "small-boat-sailing",
@@ -4669,7 +5616,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/small-boat-sailing/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb105.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb105.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Small-boat Sailing Merit Badge Pamphlet",
+    "pamphletSku": "35950",
+    "pamphletDigitalSku": "649749",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/small-boat-sailing/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Small-boat%20Sailing%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "snow-sports",
@@ -4707,7 +5662,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/snow-sports/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb135.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb135.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Snow Sports Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/snow-sports/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Snow%20Sports%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "soil-and-water-conservation",
@@ -4745,7 +5708,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/soil-and-water-conservation/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb106.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb106.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Soil and Water Conservation Merit Badge Pamphlet",
+    "pamphletSku": "35952",
+    "pamphletDigitalSku": "649768",
+    "pamphletRevYear": "2020",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/soil-and-water-conservation/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Soil%20and%20Water%20Conservation%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "space-exploration",
@@ -4783,7 +5754,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/space-exploration/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb107.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb107.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Space Exploration Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2019",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/space-exploration/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Space%20Exploration%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "sports",
@@ -4821,7 +5800,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/sports/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb013.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb013.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Sports Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/sports/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Sports%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "stamp-collecting",
@@ -4859,7 +5846,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/stamp-collecting/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb108.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb108.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Stamp Collecting Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/stamp-collecting/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Stamp%20Collecting%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "surveying",
@@ -4897,7 +5892,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/surveying/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb109.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb109.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Surveying Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/surveying/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Surveying%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "textile",
@@ -4935,7 +5938,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/textile/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb110.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb110.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Textile Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/textile/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Textile%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "theater",
@@ -4973,7 +5984,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/theater/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb111.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb111.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Theater Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2020",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/theater/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Theater%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "traffic-safety",
@@ -5011,7 +6030,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/traffic-safety/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb112.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb112.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Traffic Safety Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2021",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/traffic-safety/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Traffic%20Safety%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "truck-transportation",
@@ -5049,7 +6076,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/truck-transportation/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb113.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb113.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Truck Transportation Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/truck-transportation/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Truck%20Transportation%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "veterinary-medicine",
@@ -5087,7 +6122,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/veterinary-medicine/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb114.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb114.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Veterinary Medicine Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2024",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/veterinary-medicine/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Veterinary%20Medicine%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "water-sports",
@@ -5125,7 +6168,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/water-sports/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb115.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb115.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Water Sports Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2013",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/water-sports/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Water%20Sports%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "weather",
@@ -5163,7 +6214,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/weather/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb116.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb116.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Weather Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2023",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/weather/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Weather%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "welding",
@@ -5201,7 +6260,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/welding/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb148.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb148.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Welding Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2018",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/welding/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Welding%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "whitewater",
@@ -5239,7 +6306,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/whitewater/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb125.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb125.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Whitewater Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2019",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/whitewater/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Whitewater%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "wilderness-survival",
@@ -5277,7 +6352,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/wilderness-survival/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb117.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb117.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Wilderness Survival Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2017",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/wilderness-survival/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Wilderness%20Survival%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "wood-carving",
@@ -5315,7 +6398,15 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/wood-carving/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb118.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb118.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Wood Carving Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2015",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/wood-carving/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Wood%20Carving%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   },
   {
     "id": "woodwork",
@@ -5353,6 +6444,14 @@ export const MERIT_BADGES = [
     "eagleTip": "Read the official pamphlet, complete the workbook, and review with your Merit Badge Counselor.",
     "eagleGroup": "Elective",
     "scoutingOrgUrl": "https://www.scouting.org/merit-badges/woodwork/",
-    "usScoutsUrl": "http://usscouts.org/mb/mb119.asp"
+    "usScoutsUrl": "http://usscouts.org/mb/mb119.asp",
+    "scoutingOrgSkillsUrl": "https://www.scouting.org/skills/merit-badges/",
+    "pamphletTitle": "Woodwork Merit Badge Pamphlet",
+    "pamphletSku": "35866",
+    "pamphletDigitalSku": "655627",
+    "pamphletRevYear": "2020",
+    "pamphletUrl": "https://www.scouting.org/merit-badges/woodwork/",
+    "scoutShopPamphletUrl": "https://www.scoutshop.org/catalogsearch/result/?q=Woodwork%20Merit%20Badge%20Pamphlet",
+    "pamphletGuideUrl": "http://www.usscouts.org/mb/mbbooks.asp"
   }
 ];

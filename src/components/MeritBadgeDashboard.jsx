@@ -297,14 +297,27 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
               </button>
             </div>
 
-            {/* Right: Official Worksheet Downloads & Links */}
+            {/* Right: Official Pamphlet, Worksheets & External Links */}
             <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+              {badge.pamphletUrl && (
+                <a
+                  href={badge.pamphletUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-md"
+                  title={`Open Official ${badge.name} Merit Badge Pamphlet & Guide`}
+                >
+                  <BookOpen size={13} />
+                  <span>Official Pamphlet</span>
+                </a>
+              )}
+
               {badge.packetPdfUrl && (
                 <a
                   href={badge.packetPdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm"
+                  className="bg-slate-800 hover:bg-slate-750 text-emerald-400 hover:text-emerald-300 font-bold text-[11px] px-3 py-1.5 rounded-xl transition flex items-center gap-1 border border-emerald-500/30"
                   title="Download Printable USScouts PDF Workbook"
                 >
                   <FileDown size={13} />
@@ -317,7 +330,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                   href={badge.packetDocxUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-slate-700 hover:bg-slate-650 text-slate-200 hover:text-white font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-600"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-700"
                   title="Download Editable Word DOCX Workbook"
                 >
                   <FileText size={13} />
@@ -325,18 +338,68 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                 </a>
               )}
 
-              {badge.scoutingOrgUrl && (
+              {badge.scoutShopPamphletUrl && (
                 <a
-                  href={badge.scoutingOrgUrl}
+                  href={badge.scoutShopPamphletUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-slate-800 hover:bg-slate-750 text-sky-400 hover:text-sky-300 font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-700"
-                  title="View on Official Scouting.org"
+                  className="bg-slate-800 hover:bg-slate-750 text-amber-400 hover:text-amber-300 font-semibold text-[11px] px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 border border-slate-700"
+                  title="Purchase Print Pamphlet on ScoutShop.org"
                 >
-                  <Globe size={13} />
-                  <span>Scouting.org</span>
+                  <ExternalLink size={13} />
+                  <span>ScoutShop</span>
                 </a>
               )}
+            </div>
+          </div>
+
+          {/* Official Pamphlet Specification Card */}
+          <div className="bg-slate-900/90 border border-teal-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0">
+                <BookOpen size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h5 className="text-xs font-black text-white">
+                    {badge.pamphletTitle || `${badge.name} Merit Badge Pamphlet`}
+                  </h5>
+                  <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/40 px-2 py-0.2 rounded-full font-bold">
+                    Rev. {badge.pamphletRevYear || '2024'}
+                  </span>
+                  {badge.pamphletSku && (
+                    <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.2 rounded-full font-mono">
+                      Item SKU #{badge.pamphletSku}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Official Scouting America study guide, counselor instructions, and workbook references.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <a
+                href={badge.pamphletGuideUrl || "http://www.usscouts.org/mb/mbbooks.asp"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 transition"
+                title="View in USScouts Pamphlet Revision Catalog"
+              >
+                <span>USScouts Index</span>
+                <ExternalLink size={11} />
+              </a>
+              <a
+                href={badge.scoutingOrgSkillsUrl || "https://www.scouting.org/skills/merit-badges/"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-sky-300 hover:text-white bg-sky-950/60 hover:bg-sky-900 px-2.5 py-1.5 rounded-lg border border-sky-700/50 flex items-center gap-1 transition"
+                title="View Scouting.org Skills Library"
+              >
+                <span>Scouting.org Hub</span>
+                <ExternalLink size={11} />
+              </a>
             </div>
           </div>
 
@@ -558,13 +621,25 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
           <span className="font-bold text-white">{total > 0 ? Math.round((approved / total) * 100) : 0}%</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => onOpen(badge)}
             className="flex-1 bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs py-1.5 rounded-xl transition cursor-pointer text-center"
           >
             Requirements
           </button>
+
+          {badge.pamphletUrl && (
+            <a
+              href={badge.pamphletUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 bg-slate-900/80 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 hover:border-teal-400 rounded-xl transition cursor-pointer"
+              title={`View ${badge.name} Official Pamphlet & Guide (Rev. ${badge.pamphletRevYear || '2024'})`}
+            >
+              <BookOpen size={14} />
+            </a>
+          )}
 
           {badge.packetPdfUrl && (
             <a
@@ -757,6 +832,47 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   return (
     <div className="space-y-6">
       <KPIHeader progress={progress} activeTab={filter} onSelectTab={setFilter} />
+
+      {/* Top Quick Resource Reference Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/40 border border-teal-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg print-hide">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 shrink-0">
+            <BookOpen size={18} />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-white flex items-center gap-2">
+              <span>Official Merit Badge Pamphlet & Workbook Resources</span>
+              <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.2 rounded-full font-bold">
+                137 Official Badges
+              </span>
+            </h4>
+            <p className="text-[11px] text-slate-400">
+              Access official Scouting America pamphlets, USScouts revision index, printable PDF workbooks, and DOCX worksheets for all merit badges.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <a
+            href="http://www.usscouts.org/mb/mbbooks.asp"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-slate-800 hover:bg-slate-750 text-teal-300 hover:text-white border border-teal-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+          >
+            <span>📚 USScouts Books Index</span>
+            <ExternalLink size={12} />
+          </a>
+          <a
+            href="https://www.scouting.org/skills/merit-badges/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-slate-800 hover:bg-slate-750 text-sky-300 hover:text-white border border-sky-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+          >
+            <span>🌐 Scouting.org Skills Hub</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+      </div>
 
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col gap-3 justify-between print-hide">
