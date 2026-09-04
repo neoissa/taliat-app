@@ -102,7 +102,8 @@ export default function App() {
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = !isOwner && currentUser?.role === 'leader';
-  const isScout = !isOwner && !isLeader;
+  const isParent = !isOwner && !isLeader && currentUser?.role === 'parent';
+  const isScout = !isOwner && !isLeader && !isParent;
 
   // 2. Proactively promote neoissa@gmail.com to owner in the database on load
   useEffect(() => {
@@ -236,7 +237,7 @@ export default function App() {
     return <Login onLoginSuccess={(u) => setCurrentUser(u)} />;
   }
 
-  const roleLabel = isOwner ? 'Troop Owner / Superadmin' : isLeader ? (currentUser?.leaderPosition || 'Troop Leader') : 'Scout';
+  const roleLabel = isOwner ? 'Troop Owner / Superadmin' : isLeader ? (currentUser?.leaderPosition || 'Troop Leader') : isParent ? 'Parent / Guardian' : 'Scout';
 
   // ── DEFINE NAVIGATION ITEMS BY ROLE ──
   const getNavItems = () => {
@@ -273,6 +274,13 @@ export default function App() {
         { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
         { id: 'resources', label: 'Resources & Guide', icon: '📚' },
         { id: 'profile', label: 'My Profile', icon: '👤' }
+      ];
+    } else if (isParent) {
+      return [
+        { id: 'home', label: 'Parent Portal', icon: '👨‍👩‍👧' },
+        { id: 'events', label: 'Troop Calendar & Events', icon: '📅' },
+        { id: 'resources', label: 'Safety & Guides', icon: '📚' },
+        { id: 'profile', label: 'My Account', icon: '👤' }
       ];
     } else {
       // Scout Navigation
@@ -518,6 +526,13 @@ export default function App() {
           <StudentHome 
             currentUser={currentUser} 
             unreadChatCount={unreadChatCount} 
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {currentTab === 'home' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
             onNavigate={handleNavigate} 
           />
         )}

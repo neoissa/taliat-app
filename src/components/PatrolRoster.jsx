@@ -850,6 +850,175 @@ export default function PatrolRoster({ currentUser = {} }) {
     };
   }, []);
 
+  const handleAddParent = async (e) => {
+    e.preventDefault();
+    setParentErr('');
+    setParentMsg('');
+    const name = parentName.trim();
+    const email = parentEmail.trim().toLowerCase();
+    const password = parentPassword;
+
+    if (!name || !email || !password) {
+      setParentErr('Please fill in parent name, email, and temporary password.');
+      return;
+    }
+    if (password.length < 6) {
+      setParentErr('Password must be at least 6 characters.');
+      return;
+    }
+    if (parentLinkedScoutIds.length === 0) {
+      setParentErr('Please select at least one scout child to link to this parent.');
+      return;
+    }
+
+    setParentAdding(true);
+
+    try {
+      let secApp;
+      try {
+        secApp = getApp('secondary');
+      } catch {
+        secApp = initializeApp(firebaseConfig, 'secondary');
+      }
+      const secAuth = getAuth(secApp);
+      const cred = await createUserWithEmailAndPassword(secAuth, email, password);
+      const newUid = cred.user.uid;
+      await secAuth.signOut();
+
+      // Create Parent User Document
+      await setDoc(doc(db, 'users', newUid), {
+        fullName: name,
+        email,
+        username: email.split('@')[0],
+        role: 'parent',
+        linkedScoutIds: parentLinkedScoutIds,
+        assignedLeaderId: currentUser?.uid || null,
+        createdAt: serverTimestamp()
+      });
+
+      // Save secret for leader/owner password reset
+      await setDoc(doc(db, 'users', newUid, 'private', 'secrets'), { password });
+
+      // Automatically sync parentUids on each linked scout document
+      for (const scoutId of parentLinkedScoutIds) {
+        const targetScout = scouts.find(s => s.uid === scoutId);
+        const existingParents = Array.isArray(targetScout?.parentUids) ? targetScout.parentUids : [];
+        if (!existingParents.includes(newUid)) {
+          await setDoc(doc(db, 'users', scoutId), {
+            parentUids: [...existingParents, newUid]
+          }, { merge: true });
+        }
+      }
+
+      setParentMsg(`Parent account created for ${name}! Email: ${email} · Temporary Password: ${password}`);
+      setParentName('');
+      setParentEmail('');
+      setParentPassword('');
+      setParentLinkedScoutIds([]);
+      setShowParentForm(false);
+    } catch (err) {
+      console.error("Failed to create parent account:", err);
+      setParentErr(`Error creating parent: ${err.message}`);
+    } finally {
+      setParentAdding(false);
+    }
+  };
+
+  const handleSaveParentLinks = async () => {
+    if (!editingParent) return;
+    setSavingParentLinks(true);
+    setParentLinkMsg('');
+
+    try {
+      const parentUid = editingParent.uid;
+      const updatedLinkedIds = editParentLinkedIds;
+
+      // 1. Update parent doc
+      await setDoc(doc(db, 'users', parentUid), {
+        linkedScoutIds: updatedLinkedIds,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Sync parentUids on all scouts
+      for (const scout of scouts) {
+        const isLinked = updatedLinkedIds.includes(scout.uid);
+        const currentParents = Array.isArray(scout.parentUids) ? scout.parentUids : [];
+
+        if (isLinked && !currentParents.includes(parentUid)) {
+          await setDoc(doc(db, 'users', scout.uid), {
+            parentUids: [...currentParents, parentUid]
+          }, { merge: true });
+        } else if (!isLinked && currentParents.includes(parentUid)) {
+          await setDoc(doc(db, 'users', scout.uid), {
+            parentUids: currentParents.filter(pId => pId !== parentUid)
+          }, { merge: true });
+        }
+      }
+
+      setParentLinkMsg('✓ Linked scouts updated successfully!');
+      setTimeout(() => {
+        setEditingParent(null);
+        setParentLinkMsg('');
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to update parent links:", err);
+      setParentLinkMsg(`Error: ${err.message}`);
+    } finally {
+      setSavingParentLinks(false);
+    }
+  };
+
+  const handleResetParentPassword = async () => {
+    if (!resettingParentUser || !newParentResetPass.trim()) return;
+    if (newParentResetPass.trim().length < 6) {
+      setParentResetErr("Password must be at least 6 characters.");
+      return;
+    }
+
+    setParentResetLoading(true);
+    setParentResetErr('');
+    setParentResetMsg('');
+
+    try {
+      const secretsRef = doc(db, 'users', resettingParentUser.uid, 'private', 'secrets');
+      const secretsSnap = await getDoc(secretsRef);
+      let currentPassword = '';
+      if (secretsSnap.exists()) {
+        currentPassword = secretsSnap.data().password;
+      } else {
+        currentPassword = resettingParentUser.username;
+      }
+
+      if (!currentPassword) {
+        throw new Error("Could not retrieve current password for reset.");
+      }
+
+      let secApp;
+      try {
+        secApp = getApp('secondary');
+      } catch {
+        secApp = initializeApp(firebaseConfig, 'secondary');
+      }
+      const secAuth = getAuth(secApp);
+      const userCred = await signInWithEmailAndPassword(secAuth, resettingParentUser.email, currentPassword);
+      await updatePassword(userCred.user, newParentResetPass.trim());
+      await secAuth.signOut();
+
+      await setDoc(secretsRef, { password: newParentResetPass.trim() }, { merge: true });
+      setParentResetMsg("✓ Password updated successfully!");
+      setTimeout(() => {
+        setResettingParentUser(null);
+        setNewParentResetPass('');
+        setParentResetMsg('');
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to reset parent password:", err);
+      setParentResetErr(`Failed to reset password: ${err.message}`);
+    } finally {
+      setParentResetLoading(false);
+    }
+  };
+
   const handleAddScout = async (e) => {
     e.preventDefault();
     if (!canAddOrDeleteScouts) {
@@ -957,14 +1126,25 @@ export default function PatrolRoster({ currentUser = {} }) {
               : `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in the troop`}
           </p>
         </div>
-        {rosterSubTab === 'scouts' && canAddOrDeleteScouts && (
-          <button
-            onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
-          >
-            {showForm ? 'Cancel' : '+ Add Scout'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {rosterSubTab === 'scouts' && canAddOrDeleteScouts && (
+            <button
+              onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
+            >
+              {showForm ? 'Cancel' : '+ Add Scout'}
+            </button>
+          )}
+
+          {rosterSubTab === 'parents' && canAddOrDeleteScouts && (
+            <button
+              onClick={() => { setShowParentForm((v) => !v); setParentMsg(''); setParentErr(''); }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+            >
+              <span>{showParentForm ? 'Cancel' : '+ Create Parent Account'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Approvals Needed Notification Banner (Interactive) */}
@@ -1031,7 +1211,18 @@ export default function PatrolRoster({ currentUser = {} }) {
             rosterSubTab === 'leaders' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Leaders Directory
+          Leaders Directory ({leaders.length})
+        </button>
+        <button
+          onClick={() => setRosterSubTab('parents')}
+          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+            rosterSubTab === 'parents' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>👨‍👩‍👧 Parents Directory</span>
+          <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+            {parents.length}
+          </span>
         </button>
       </div>
 
@@ -1545,7 +1736,7 @@ export default function PatrolRoster({ currentUser = {} }) {
             );
           })()}
         </>
-      ) : (
+      ) : rosterSubTab === 'leaders' ? (
         <div className="space-y-3">
           {leaders.length === 0 ? (
             <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
@@ -1612,7 +1803,351 @@ export default function PatrolRoster({ currentUser = {} }) {
             ))
           )}
         </div>
-      )}
+      ) : rosterSubTab === 'parents' ? (
+        <div className="space-y-4">
+          {parentMsg && (
+            <div className="p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 rounded-xl text-xs font-semibold">
+              {parentMsg}
+            </div>
+          )}
+
+          {/* Create Parent Account Form */}
+          {showParentForm && (
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-4">
+              <div className="border-b border-slate-700 pb-2">
+                <h4 className="font-bold text-white text-base">Provision New Parent Account</h4>
+                <p className="text-xs text-slate-400">Parents receive read-only access to view their linked children's real-time progress.</p>
+              </div>
+
+              {parentErr && (
+                <div className="p-3 bg-red-950 border border-red-800 text-red-300 text-xs rounded-xl">
+                  {parentErr}
+                </div>
+              )}
+
+              <form onSubmit={handleAddParent} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={parentName}
+                      onChange={(e) => setParentName(e.target.value)}
+                      placeholder="e.g. Fatima Ahmed"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Email (Login Email)</label>
+                    <input
+                      type="email"
+                      required
+                      value={parentEmail}
+                      onChange={(e) => setParentEmail(e.target.value)}
+                      placeholder="e.g. parent@gmail.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Temporary Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={parentPassword}
+                      onChange={(e) => setParentPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      autoComplete="new-password"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Multi-Child Linking Selector */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-300 uppercase">
+                      Link Children ({parentLinkedScoutIds.length} Selected)
+                    </label>
+                    <span className="text-[10px] text-emerald-400 font-bold">Select all scouts belonging to this family</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/80 border border-slate-700/80 p-3.5 rounded-xl max-h-56 overflow-y-auto">
+                    {scouts.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic p-2 col-span-full">No scouts available in roster.</p>
+                    ) : (
+                      scouts.map(s => {
+                        const isChecked = parentLinkedScoutIds.includes(s.uid);
+                        return (
+                          <label
+                            key={s.uid}
+                            className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition ${
+                              isChecked ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold' : 'bg-slate-800/60 border-slate-750 text-slate-300 hover:bg-slate-750'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setParentLinkedScoutIds(prev => [...prev, s.uid]);
+                                } else {
+                                  setParentLinkedScoutIds(prev => prev.filter(id => id !== s.uid));
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700 cursor-pointer"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate">{s.fullName || s.username}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">{s.rank || 'Scout'}</span>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={parentAdding}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-950/40"
+                >
+                  {parentAdding ? 'Provisioning Parent Account…' : 'Create & Link Parent Account'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* List of Registered Parents */}
+          <div className="space-y-3">
+            {parents.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-sm bg-slate-800/40 rounded-2xl border border-slate-800 space-y-2">
+                <p className="font-bold text-white">No parent accounts created yet.</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">Click "+ Create Parent Account" to provision credentials for parents and link them to their children.</p>
+              </div>
+            ) : (
+              parents.map((p) => {
+                const linkedChildren = scouts.filter(s => {
+                  const linkedArr = Array.isArray(p.linkedScoutIds) ? p.linkedScoutIds : [];
+                  if (linkedArr.includes(s.uid)) return true;
+                  if (Array.isArray(s.parentUids) && s.parentUids.includes(p.uid)) return true;
+                  return false;
+                });
+
+                return (
+                  <div key={p.uid} className="bg-slate-800 border border-slate-700/80 rounded-2xl overflow-hidden shadow-lg space-y-3 p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black text-lg shrink-0">
+                          👨‍👩‍👧
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-white text-base">{p.fullName || p.username}</h4>
+                            <span className="text-[10px] bg-slate-900 border border-slate-700 text-emerald-300 font-mono px-2 py-0.5 rounded-full font-bold">
+                              Parent Account
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 font-mono mt-0.5">
+                            Email: <strong className="text-slate-200">{p.email || '—'}</strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setEditingParent(p);
+                            setEditParentLinkedIds(Array.isArray(p.linkedScoutIds) ? p.linkedScoutIds : linkedChildren.map(c => c.uid));
+                            setParentLinkMsg('');
+                          }}
+                          className="bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Users size={13} className="text-emerald-400" />
+                          <span>Edit Linked Scouts ({linkedChildren.length})</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setResettingParentUser(p);
+                            setNewParentResetPass('');
+                            setParentResetMsg('');
+                            setParentResetErr('');
+                          }}
+                          className="bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Lock size={13} className="text-amber-400" />
+                          <span>Reset Password</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Linked Scouts Tags */}
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Linked Children:</span>
+                      {linkedChildren.length === 0 ? (
+                        <span className="text-xs text-amber-400 italic">No scouts linked yet. Click "Edit Linked Scouts" to connect children.</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {linkedChildren.map(child => (
+                            <div
+                              key={child.uid}
+                              className="bg-slate-900/90 border border-slate-750 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs"
+                            >
+                              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold uppercase">
+                                {(child.fullName || child.username).charAt(0)}
+                              </div>
+                              <span className="font-bold text-white">{child.fullName || child.username}</span>
+                              <span className="text-[10px] text-emerald-400 font-mono font-semibold">({child.rank || 'Scout'})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Edit Linked Scouts Modal */}
+          {editingParent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-left">
+                <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+                  <div>
+                    <h3 className="font-black text-white text-base">Edit Linked Scouts</h3>
+                    <p className="text-xs text-slate-400">Parent: <strong>{editingParent.fullName || editingParent.username}</strong> ({editingParent.email})</p>
+                  </div>
+                  <button
+                    onClick={() => setEditingParent(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {parentLinkMsg && (
+                  <div className="p-3 bg-emerald-950 border border-emerald-800 text-emerald-300 text-xs rounded-xl font-bold">
+                    {parentLinkMsg}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-300 uppercase block">Check Scouts to Link:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-900 p-3 rounded-xl max-h-60 overflow-y-auto border border-slate-750">
+                    {scouts.map(s => {
+                      const isChecked = editParentLinkedIds.includes(s.uid);
+                      return (
+                        <label
+                          key={s.uid}
+                          className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition ${
+                            isChecked ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold' : 'bg-slate-800/60 border-slate-750 text-slate-300 hover:bg-slate-750'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditParentLinkedIds(prev => [...prev, s.uid]);
+                              } else {
+                                setEditParentLinkedIds(prev => prev.filter(id => id !== s.uid));
+                              }
+                            }}
+                            className="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate">{s.fullName || s.username}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{s.rank || 'Scout'}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-750">
+                  <button
+                    onClick={() => setEditingParent(null)}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveParentLinks}
+                    disabled={savingParentLinks}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
+                  >
+                    {savingParentLinks ? 'Saving…' : 'Save Linked Scouts'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reset Parent Password Modal */}
+          {resettingParentUser && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 text-left">
+                <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+                  <h3 className="font-bold text-white text-base">Reset Parent Password</h3>
+                  <button
+                    onClick={() => setResettingParentUser(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-xs text-slate-300">
+                  Set a new password for <strong>{resettingParentUser.fullName || resettingParentUser.username}</strong> ({resettingParentUser.email}):
+                </p>
+
+                {parentResetMsg && (
+                  <div className="p-2.5 bg-emerald-950 text-emerald-300 text-xs rounded-xl font-bold">
+                    {parentResetMsg}
+                  </div>
+                )}
+                {parentResetErr && (
+                  <div className="p-2.5 bg-red-950 text-red-300 text-xs rounded-xl font-bold">
+                    {parentResetErr}
+                  </div>
+                )}
+
+                <div>
+                  <input
+                    type="password"
+                    value={newParentResetPass}
+                    onChange={(e) => setNewParentResetPass(e.target.value)}
+                    placeholder="Enter new password (min 6 chars)"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-750">
+                  <button
+                    onClick={() => setResettingParentUser(null)}
+                    className="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleResetParentPassword}
+                    disabled={parentResetLoading || !newParentResetPass.trim()}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl"
+                  >
+                    {parentResetLoading ? 'Updating…' : 'Set New Password'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

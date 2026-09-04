@@ -112,6 +112,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editSptFileUrl, setEditSptFileUrl] = useState('');
   const [editSptFileName, setEditSptFileName] = useState('');
   const [uploadingAdminSpt, setUploadingAdminSpt] = useState(false);
+  const [editParentLinkedScoutIds, setEditParentLinkedScoutIds] = useState([]);
   const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
   const [activeWhatsappName, setActiveWhatsappName] = useState('');
 
@@ -949,6 +950,41 @@ export default function GlobalAdminPanel({ currentUser }) {
                       <option key={pos} value={pos}>{pos}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {editRole === 'parent' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                    Linked Children ({editParentLinkedScoutIds.length} Selected)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-900 p-3 rounded-xl max-h-48 overflow-y-auto border border-slate-750">
+                    {users.filter(u => u.role === 'scout').map(s => {
+                      const isChecked = editParentLinkedScoutIds.includes(s.uid);
+                      return (
+                        <label
+                          key={s.uid}
+                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer ${
+                            isChecked ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold' : 'bg-slate-800/60 border-slate-750 text-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditParentLinkedScoutIds(prev => [...prev, s.uid]);
+                              } else {
+                                setEditParentLinkedScoutIds(prev => prev.filter(id => id !== s.uid));
+                              }
+                            }}
+                            className="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700"
+                          />
+                          <span className="truncate">{s.fullName || s.username} ({s.rank || 'Scout'})</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

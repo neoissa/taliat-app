@@ -3,11 +3,16 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export default function Login({ onUserAuthenticated }) {
+export default function Login({ onUserAuthenticated, onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const notifySuccess = (profile) => {
+    if (typeof onLoginSuccess === 'function') onLoginSuccess(profile);
+    if (typeof onUserAuthenticated === 'function') onUserAuthenticated(profile);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,7 +46,7 @@ export default function Login({ onUserAuthenticated }) {
 
         if (userDoc.exists()) {
           const data = userDoc.data();
-          onUserAuthenticated({
+          notifySuccess({
             uid: user.uid,
             email: user.email,
             role: forcedRole || data.role || 'scout',
@@ -53,6 +58,7 @@ export default function Login({ onUserAuthenticated }) {
             username: data.username || cleanInput.split('@')[0],
             rank: data.rank || '',
             meritBadges: data.meritBadges || [],
+            linkedScoutIds: data.linkedScoutIds || [],
           });
         } else {
           const newProfile = {

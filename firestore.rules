@@ -31,6 +31,21 @@ service cloud.firestore {
         (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
     }
 
+    // Helper: check if parent
+    function isParent() {
+      return isAuthenticated() && hasUserDoc() && userDoc().role == 'parent';
+    }
+
+    // Helper: check if parent of scout
+    function isParentOf(scoutId) {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(scoutId)) &&
+         ('parentUids' in get(/databases/$(database)/documents/users/$(scoutId)).data) &&
+         request.auth.uid in get(/databases/$(database)/documents/users/$(scoutId)).data.parentUids) ||
+        (hasUserDoc() && ('linkedScoutIds' in userDoc()) && scoutId in userDoc().linkedScoutIds)
+      );
+    }
+
     // 1. Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -45,12 +60,19 @@ service cloud.firestore {
     // 2. Groups collection (Patrols)
     match /groups/{groupId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && !isParent();
     }
 
     // 3. Scout progress & requirements (ranks, merit badges, islamic basics, assignments, etc.)
     match /user_progress/{scoutId}/{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && !isParent();
+    }
+
+    // Attendance Sessions
+    match /attendance_sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow write: if isLeader() || isOwner();
     }
 
     // 4. Weekly Lesson Plans
