@@ -477,17 +477,40 @@ export default function UniversalPendingQueueModal({
         domainColor: 'border-teal-500/50 bg-teal-950/20 text-teal-300',
         title: a.title,
         subtitle: `Due ${a.dueDate || 'Soon'}`,
-        description: sub.notes || a.description || 'Scout completed and submitted worksheet/video response.',
-        submittedDate: sub.submittedDate,
+        description: sub.scoutNotes || sub.notes || a.description || 'Scout completed and submitted worksheet/video response.',
+        submittedDate: sub.submittedDate || (sub.submittedAt ? sub.submittedAt.split('T')[0] : 'Recently'),
         targetTab: 'assignments',
         testPrompt: 'Review scout worksheet notes and grade task.',
         approveHandler: async () => {
+          const dateVal = new Date().toISOString();
+          const hwKey = `${a.id}_${activeScoutId}`;
+          
+          await setDoc(doc(db, 'scout_homework', hwKey), {
+            assignmentId: a.id,
+            scoutId: activeScoutId,
+            assignmentTitle: a.title,
+            status: 'completed',
+            isCompleted: true,
+            verifiedByLeader: true,
+            completedAt: dateVal,
+            leaderId: currentUser?.uid || 'leader',
+            leaderName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
+            leaderFeedback: 'Verified and approved by leader in pending queue.'
+          }, { merge: true });
+
           await setDoc(doc(db, 'user_progress', activeScoutId, 'assignments', a.id), {
             completed: true,
+            isCompleted: true,
+            status: 'completed',
+            completedDate: dateVal.split('T')[0],
+            completedAt: dateVal,
             graded: true,
             grade: '100%',
+            verifiedByLeader: true,
+            leaderName: currentUser?.fullName || currentUser?.username || 'Leader',
             reviewedBy: currentUser?.uid || 'leader'
           }, { merge: true });
+
           showFeedback(`✓ Graded and approved task ${a.title}!`);
         }
       });

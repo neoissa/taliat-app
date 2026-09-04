@@ -62,6 +62,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [serviceLogs, setServiceLogs] = useState([]);
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [scoutSubmissions, setScoutSubmissions] = useState({});
+  const [scoutHomeworkMap, setScoutHomeworkMap] = useState({});
   const [eventsList, setEventsList] = useState([]);
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [leaderNotesDoc, setLeaderNotesDoc] = useState({});
@@ -162,6 +163,11 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
       setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    const unsubHw = onSnapshot(collection(db, 'scout_homework'), (snap) => {
+      const m = {};
+      snap.docs.forEach(d => { m[d.id] = d.data(); });
+      setScoutHomeworkMap(m);
+    });
     const unsubSub = onSnapshot(collection(db, 'user_progress', scoutUid, 'assignments'), (snap) => {
       const map = {};
       snap.docs.forEach(d => { map[d.id] = d.data(); });
@@ -170,6 +176,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return () => {
       unsubAssign();
       unsubSub();
+      unsubHw();
     };
   }, [scoutUid]);
 
@@ -411,20 +418,57 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   // Baseline Service Hours prior to window
   const baselineServiceHours = serviceLogs.filter(l => isDatePriorToStart(l.date)).reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
 
-  // ── HOMEWORK & EDUCATIONAL ASSIGNMENTS ──
-  const filteredHomework = assignmentsList.map(a => {
-    const sub = scoutSubmissions[a.id] || {};
+  // ── HOMEWORK & EDUCATIONAL ASSIGNMENTS (STRICT LIFECYCLE) ──
+  const filteredHomework = assignmentsList.filter(a => {
+    if (a.assignedTarget === 'patrol' && (profileData?.groupId || scout?.groupId) && a.targetGroupId !== (profileData?.groupId || scout?.groupId)) return false;
+    if (a.assignedTarget === 'scout' && a.targetScoutUid !== scoutUid) return false;
+    return true;
+  }).map(a => {
+    const hwKey = `${a.id}_${scoutUid}`;
+    const rec = scoutHomeworkMap[hwKey] || scoutSubmissions[a.id] || {};
+    const isComp = !!(rec.isCompleted || rec.status === 'completed' || rec.verifiedByLeader || (rec.completed && !rec.pending));
+    const isSub = rec.status === 'submitted' || (!!rec.submittedAt && !isComp);
+
+    let statusLabel = 'Incomplete';
+    let statusClass = 'text-slate-600 bg-slate-100';
+    let completionDate = '—';
+    let leaderSignOff = '—';
+
+    if (isComp) {
+      statusLabel = 'Completed';
+      statusClass = 'text-emerald-900 bg-emerald-100 font-bold';
+      completionDate = rec.completedDate || (rec.completedAt ? rec.completedAt.split('T')[0] : (rec.submittedDate || 'Verified'));
+      leaderSignOff = rec.leaderName || rec.verifiedByName || (rec.verifiedByLeader ? '✓ Signed by Leader' : 'Verified');
+    } else if (isSub) {
+      statusLabel = 'Submitted';
+      statusClass = 'text-blue-900 bg-blue-100 font-bold';
+      completionDate = 'Awaiting Review';
+      leaderSignOff = 'Pending Review';
+    } else if (a.dueDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(a.dueDate);
+      due.setHours(0, 0, 0, 0);
+      if (due < today) {
+        statusLabel = 'Overdue / Incomplete';
+        statusClass = 'text-red-900 bg-red-100 font-bold';
+      }
+    }
+
     return {
       id: a.id,
       title: a.title,
       category: a.category || (a.isIslamic ? 'Islamic Knowledge' : 'Scouting Skills'),
-      dateAssigned: a.dueDate || 'Ongoing',
-      dateCompleted: sub.submittedDate || (sub.completed ? 'Completed' : 'Pending'),
-      feedback: sub.grade || (sub.completed ? 'Approved' : 'Awaiting Submission')
+      dueDate: a.dueDate || 'Ongoing',
+      status: statusLabel,
+      statusClass,
+      completionDate,
+      leaderSignOff,
+      dateForFilter: completionDate !== '—' && completionDate !== 'Awaiting Review' ? completionDate : a.dueDate
     };
   }).filter(h => {
-    if (reportMode === 'window' && h.dateCompleted !== 'Pending') {
-      return isDateInWindow(h.dateCompleted);
+    if (reportMode === 'window') {
+      return isDateInWindow(h.dateForFilter);
     }
     return true;
   });
@@ -955,29 +999,39 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               <h4 className="text-xs font-black uppercase text-slate-950">
                 Homework & Educational Assignments
               </h4>
+              <span className="text-[10px] font-mono text-slate-600">{filteredHomework.length} Tasks</span>
             </div>
 
             <table className="w-full text-xs text-left border border-slate-300">
               <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
                 <tr>
-                  <th className="p-1.5">Task Title</th>
-                  <th className="p-1.5">Category</th>
-                  <th className="p-1.5">Status</th>
-                  <th className="p-1.5 text-right">Grade / Result</th>
+                  <th className="p-1.5">Assignment Name</th>
+                  <th className="p-1.5 w-20">Due Date</th>
+                  <th className="p-1.5 w-28 text-center">Status</th>
+                  <th className="p-1.5 w-24 text-center">Completion Date</th>
+                  <th className="p-1.5 text-right w-28">Leader Sign-off</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredHomework.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="p-2 text-center text-slate-500 italic text-[11px]">No assignments logged in this period.</td>
+                    <td colSpan="5" className="p-2 text-center text-slate-500 italic text-[11px]">No assignments logged in this period.</td>
                   </tr>
                 ) : (
-                  filteredHomework.slice(0, 5).map(h => (
+                  filteredHomework.map(h => (
                     <tr key={h.id}>
-                      <td className="p-1.5 font-bold text-slate-900 truncate max-w-[120px]">{h.title}</td>
-                      <td className="p-1.5 text-slate-600 text-[10px]">{h.category}</td>
-                      <td className="p-1.5 font-mono text-[10px] text-slate-700">{h.dateCompleted}</td>
-                      <td className="p-1.5 text-right font-bold text-emerald-800">{h.feedback}</td>
+                      <td className="p-1.5 font-bold text-slate-900 truncate max-w-[120px]">
+                        <span>{h.title}</span>
+                        <span className="block text-[8px] text-slate-500 font-normal">{h.category}</span>
+                      </td>
+                      <td className="p-1.5 font-mono text-slate-700 text-[10px]">{h.dueDate}</td>
+                      <td className="p-1.5 text-center">
+                        <span className={`text-[9px] px-1.5 py-0.2 rounded ${h.statusClass}`}>
+                          {h.status}
+                        </span>
+                      </td>
+                      <td className="p-1.5 text-center font-mono text-[10px] text-slate-700">{h.completionDate}</td>
+                      <td className="p-1.5 text-right font-bold text-slate-900 text-[10px]">{h.leaderSignOff}</td>
                     </tr>
                   ))
                 )}

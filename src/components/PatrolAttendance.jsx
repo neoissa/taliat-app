@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -37,7 +37,8 @@ import {
   Heart,
   BookOpen,
   Search,
-  X
+  X,
+  Mail
 } from 'lucide-react';
 
 export const EVENT_PROGRAM_CONFIG = {
@@ -152,12 +153,18 @@ export const mapCategoryToEventType = (cat, title = '') => {
 
 export default function PatrolAttendance({ currentUser, initialData }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = currentUser?.role === 'leader';
-  const isLeaderOrOwner = isOwner || isLeader;
+  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
+  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
 
-  // Patrol Scouts Roster State
-  const [scouts, setScouts] = useState([]);
+  // Patrol Scouts State
+  const [allScouts, setAllScouts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
   const [loading, setLoading] = useState(true);
+
+  // Real-time parent submitted absence notices
+  const [attendanceExcuses, setAttendanceExcuses] = useState([]);
 
   // Active Session State
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -185,44 +192,71 @@ export default function PatrolAttendance({ currentUser, initialData }) {
   const [selectedPrintProgram, setSelectedPrintProgram] = useState('all');
   const [selectedPrintScoutId, setSelectedPrintScoutId] = useState('');
 
-  // 1. Fetch Patrol Scouts (Scoped to Leader's Patrol)
+  // 1. Fetch Patrols / Groups
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setGroups(list);
+    });
+    return () => unsub();
+  }, []);
+
+  // 2. Fetch Parent Attendance Excuses
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'attendance_excuses'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAttendanceExcuses(list);
+    }, (err) => console.warn('Attendance excuses fallback:', err));
+    return () => unsub();
+  }, []);
+
+  // 3. Fetch Scouts
   useEffect(() => {
     if (!currentUser) return;
     const q = query(collection(db, 'users'), where('role', '==', 'scout'));
     const unsub = onSnapshot(q, (snap) => {
       let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      
-      if (!isOwner) {
-        list = list.filter(s => {
-          if (currentUser.groupId && s.groupId === currentUser.groupId) return true;
-          if (s.leaderId === currentUser.uid) return true;
-          if (currentUser.patrolName && s.patrolName === currentUser.patrolName) return true;
-          return false;
-        });
-      }
-
       list.sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || ''));
-      setScouts(list);
-      if (list.length > 0 && !selectedPrintScoutId) {
-        setSelectedPrintScoutId(list[0].uid);
-      }
+      setAllScouts(list);
       setLoading(false);
     }, (err) => {
-      console.error('Failed to load patrol scouts:', err);
+      console.error('Failed to load scouts in attendance:', err);
       setLoading(false);
     });
 
     return () => unsub();
-  }, [currentUser, isOwner]);
+  }, [currentUser]);
 
-  // 2. Fetch Historical Sessions for Patrol
+  // Filtered Scouts based on Executive Switcher or Assigned Patrol
+  const scouts = useMemo(() => {
+    if (isExecutive) {
+      if (selectedGroupId === 'all') return allScouts;
+      return allScouts.filter(s => s.groupId === selectedGroupId || s.patrolId === selectedGroupId);
+    }
+    // Regular leader scoped strictly to assigned patrol
+    return allScouts.filter(s => {
+      if (currentUser?.groupId && s.groupId === currentUser.groupId) return true;
+      if (s.leaderId === currentUser?.uid) return true;
+      if (currentUser?.patrolName && s.patrolName === currentUser.patrolName) return true;
+      return false;
+    });
+  }, [allScouts, isExecutive, selectedGroupId, currentUser]);
+
+  useEffect(() => {
+    if (scouts.length > 0 && !selectedPrintScoutId) {
+      setSelectedPrintScoutId(scouts[0].uid);
+    }
+  }, [scouts, selectedPrintScoutId]);
+
+  // 4. Fetch Historical Sessions
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      if (!isOwner && currentUser?.groupId) {
+      if (!isExecutive && currentUser?.groupId) {
         list = list.filter(s => s.groupId === currentUser.groupId || s.leaderId === currentUser.uid);
-      } else if (!isOwner) {
+      } else if (!isExecutive) {
         list = list.filter(s => s.leaderId === currentUser?.uid);
       }
 
@@ -233,9 +267,9 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     });
 
     return () => unsub();
-  }, [currentUser, isOwner]);
+  }, [currentUser, isExecutive]);
 
-  // 3. Fetch All Scheduled Events
+  // 5. Fetch Scheduled Events
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -246,7 +280,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     return () => unsub();
   }, []);
 
-  // 4. Handle Initial Data Navigation Pre-fill
+  // 6. Handle Initial Data Pre-fill
   useEffect(() => {
     if (initialData) {
       if (initialData.date) setSessionDate(initialData.date);
@@ -261,7 +295,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     }
   }, [initialData]);
 
-  // 5. Load Session Data when date or eventType changes
+  // 7. Load Session Data when date or eventType changes & apply parent absence excuses
   useEffect(() => {
     const norm = normalizeEventType(eventType);
     const existingSession = historicalSessions.find(s => 
@@ -280,24 +314,34 @@ export default function PatrolAttendance({ currentUser, initialData }) {
       setSessionHours(cfg.defaultHours);
       setSessionNights(cfg.defaultNights);
       
-      // Default all scouts to 'present' for new daily session
       const initialMap = {};
       scouts.forEach(s => {
-        initialMap[s.uid] = { 
-          status: 'present', 
-          hours: cfg.defaultHours, 
-          nights: cfg.defaultNights, 
-          note: '' 
-        };
+        // Auto-check if a parent excuse notice exists for this scout on sessionDate
+        const matchingExcuse = attendanceExcuses.find(e => e.scoutId === s.uid && e.date === sessionDate);
+        if (matchingExcuse) {
+          initialMap[s.uid] = {
+            status: 'excused',
+            hours: 0,
+            nights: 0,
+            note: `[Parent Excuse: ${matchingExcuse.reason}] ${matchingExcuse.notes || ''}`.trim()
+          };
+        } else {
+          initialMap[s.uid] = { 
+            status: 'present', 
+            hours: cfg.defaultHours, 
+            nights: cfg.defaultNights, 
+            note: '' 
+          };
+        }
       });
       setAttendanceRecords(initialMap);
       if (!initialData?.notes) {
         setSessionNotes('');
       }
     }
-  }, [sessionDate, eventType, historicalSessions, scouts]);
+  }, [sessionDate, eventType, historicalSessions, scouts, attendanceExcuses]);
 
-  // Handle Event Type Change with Default Hours & Nights
+  // Handle Event Type Change
   const handleEventTypeChange = (newType) => {
     const norm = normalizeEventType(newType);
     setEventType(norm);
@@ -325,7 +369,17 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     setSessionNotes('');
     const initialMap = {};
     scouts.forEach(s => {
-      initialMap[s.uid] = { status: 'present', hours: 3.0, nights: 0, note: '' };
+      const matchingExcuse = attendanceExcuses.find(e => e.scoutId === s.uid && e.date === today);
+      if (matchingExcuse) {
+        initialMap[s.uid] = {
+          status: 'excused',
+          hours: 0,
+          nights: 0,
+          note: `[Parent Excuse: ${matchingExcuse.reason}] ${matchingExcuse.notes || ''}`.trim()
+        };
+      } else {
+        initialMap[s.uid] = { status: 'present', hours: 3.0, nights: 0, note: '' };
+      }
     });
     setAttendanceRecords(initialMap);
   };
@@ -533,11 +587,14 @@ export default function PatrolAttendance({ currentUser, initialData }) {
       };
     });
 
+    const activePatrol = groups.find(g => g.id === selectedGroupId);
+    const targetGroupId = selectedGroupId !== 'all' ? selectedGroupId : (currentUser?.groupId || '');
+
     const payload = {
       sessionId,
       leaderId: currentUser?.uid || '',
-      groupId: currentUser?.groupId || '',
-      patrolName: currentUser?.patrolName || '',
+      groupId: targetGroupId,
+      patrolName: activePatrol ? activePatrol.name : (currentUser?.patrolName || ''),
       date: sessionDate,
       eventType,
       hours: Number(sessionHours) || 0,
@@ -550,8 +607,8 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     try {
       await setDoc(doc(db, 'attendance_sessions', sessionId), payload, { merge: true });
 
-      if (currentUser?.groupId) {
-        await setDoc(doc(db, 'groups', currentUser.groupId, 'attendance_sessions', sessionId), payload, { merge: true });
+      if (targetGroupId) {
+        await setDoc(doc(db, 'groups', targetGroupId, 'attendance_sessions', sessionId), payload, { merge: true });
       }
 
       setEditingSessionId(sessionId);
@@ -638,7 +695,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                 Patrol Roll Call, Hours & Retention Center
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Log program attendance with default & custom hours, record camping nights, track unexcused absences, and print official attendance transcripts.
+                Log program attendance with default & custom hours, record camping nights, manage parent absence notices, and print official transcripts.
               </p>
             </div>
           </div>
@@ -675,6 +732,50 @@ export default function PatrolAttendance({ currentUser, initialData }) {
             </button>
           </div>
         </div>
+
+        {/* ── EXECUTIVE PATROL SWITCHER TABS ── */}
+        {isExecutive && groups.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-slate-850 flex items-center gap-2 overflow-x-auto scrollbar-none relative z-10">
+            <span className="text-[10px] uppercase font-black text-slate-400 px-2 shrink-0 flex items-center gap-1">
+              <Shield size={12} className="text-emerald-400" /> Patrol Filter:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedGroupId('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                selectedGroupId === 'all'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-slate-900/90 text-slate-300 hover:text-white border border-slate-750'
+              }`}
+            >
+              <span>All Patrols</span>
+              <span className="bg-emerald-900/60 text-emerald-200 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                {allScouts.length}
+              </span>
+            </button>
+            {groups.map(g => {
+              const gScoutCount = allScouts.filter(s => s.groupId === g.id || s.patrolId === g.id).length;
+              const isSelected = selectedGroupId === g.id;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setSelectedGroupId(g.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-slate-900/90 text-slate-300 hover:text-white border border-slate-750'
+                  }`}
+                >
+                  <span>👥 {g.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isSelected ? 'bg-emerald-900/80 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                    {gScoutCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── 2. PATROL ATTENDANCE KPI METRICS HEADER ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
@@ -972,7 +1073,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
               <span>Patrol Roll Call Roster ({scouts.length} Scouts)</span>
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Select status, customize individual scout hours if needed, and enter session remarks.
+              Select status, review parent absence notices, customize hours, and enter session remarks.
             </p>
           </div>
           <span className="text-xs text-teal-300 font-mono font-bold">
@@ -983,7 +1084,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
         {scouts.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-xs italic space-y-2">
             <Users size={32} className="mx-auto text-slate-600" />
-            <p>No scouts found in your assigned patrol. Add scouts in the Organization Hub or Patrol Roster.</p>
+            <p>No scouts found in the selected patrol. Switch patrol filter or add scouts in the Patrol Roster.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1005,6 +1106,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                   const status = record.status || 'present';
                   const agg = getScoutAggregates(scout.uid);
                   const isAttended = status === 'present' || status === 'late';
+                  const matchingExcuse = attendanceExcuses.find(e => e.scoutId === scout.uid && e.date === sessionDate);
 
                   return (
                     <tr
@@ -1034,6 +1136,19 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                               {scout.fullName || scout.username}
                             </strong>
                             <span className="text-[10px] text-slate-400 font-mono">@{scout.username}</span>
+                            
+                            {/* Parent Absence Notice Badge */}
+                            {matchingExcuse && (
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px] bg-sky-950/80 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded-lg">
+                                <Mail size={11} className="text-sky-400 shrink-0" />
+                                <span>Excused: <strong>{matchingExcuse.reason}</strong></span>
+                                {matchingExcuse.notes && (
+                                  <span className="text-sky-200/80 truncate max-w-[120px]" title={matchingExcuse.notes}>
+                                    ({matchingExcuse.notes})
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -1178,24 +1293,23 @@ export default function PatrolAttendance({ currentUser, initialData }) {
             <History size={18} className="text-amber-400" />
             <div>
               <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                Patrol Attendance Log History ({historicalSessions.length} Total Sessions)
+                Patrol Attendance Log & History Archive
               </h3>
-              <p className="text-[11px] text-slate-400">
-                Click "Edit Log" on any previous session to update hours, nights, notes, or scout records.
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Review past sessions, make retroactive corrections, and delete obsolete entries.
               </p>
             </div>
           </div>
 
-          {/* Filter & Search Bar */}
-          <div className="flex items-center gap-2 flex-wrap text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
+              <Search size={13} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search date or topic..."
+                placeholder="Search date, type, note..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500"
+                className="bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -1235,7 +1349,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                   className={`bg-slate-900/90 border rounded-2xl p-4 transition space-y-2.5 shadow-sm relative ${
                     isCurrentEditing
                       ? 'border-teal-400 ring-2 ring-teal-500/40'
-                      : 'border-slate-750 hover:border-emerald-500/40'
+                      : 'border-slate-755 hover:border-emerald-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between">

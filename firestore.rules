@@ -25,10 +25,23 @@ service cloud.firestore {
          (hasUserDoc() && (userDoc().role == 'owner' || userDoc().isOwner == true)));
     }
 
+    // Helper: check if executive (owner, admin, scoutmaster, assistant scoutmaster)
+    function isExecutive() {
+      return isAuthenticated() && 
+        (isOwner() || 
+         (hasUserDoc() && (
+           userDoc().role == 'admin' || 
+           (userDoc().role == 'leader' && (
+             userDoc().leaderPosition == 'Scoutmaster' || 
+             userDoc().leaderPosition == 'Assistant Scoutmaster'
+           ))
+         )));
+    }
+
     // Helper: check if leader
     function isLeader() {
       return isAuthenticated() && 
-        (isOwner() || (hasUserDoc() && userDoc().role == 'leader'));
+        (isExecutive() || (hasUserDoc() && userDoc().role == 'leader'));
     }
 
     // Helper: check if parent
@@ -49,18 +62,19 @@ service cloud.firestore {
     // 1. Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
+      // Allow users to update their own profile (e.g. parents updating dual-parent info), or leaders/admins updating users
       allow create, update: if isAuthenticated();
-      allow delete: if isOwner();
+      allow delete: if isExecutive();
 
       match /private/{docId} {
-        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isOwner());
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isExecutive());
       }
     }
 
     // 2. Groups collection (Patrols)
     match /groups/{groupId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && !isParent();
+      allow write: if isExecutive() || isLeader();
     }
 
     // 3. Scout progress & requirements (ranks, merit badges, islamic basics, assignments, etc.)
@@ -69,48 +83,89 @@ service cloud.firestore {
       allow write: if isAuthenticated() && !isParent();
     }
 
-    // Attendance Sessions
+    // 4. Attendance Sessions
     match /attendance_sessions/{sessionId} {
       allow read: if isAuthenticated();
-      allow write: if isLeader() || isOwner();
+      allow write: if isLeader() || isExecutive();
     }
 
-    // 4. Weekly Lesson Plans
+    // 5. Parent Attendance Excuses / Absence Notices
+    match /attendance_excuses/{excuseId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isLeader() || isExecutive();
+    }
+
+    // 6. Parent Tasks & Required Waivers Registry
+    match /parent_tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow write: if isExecutive() || isLeader();
+    }
+
+    // 7. Parent Task Submissions
+    match /parent_task_submissions/{subId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 8. Parent Notifications & In-App Alerts Feed
+    match /parent_notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 9. Troop Broadcasts & Global Announcements
+    match /troop_broadcasts/{broadcastId} {
+      allow read: if isAuthenticated();
+      allow write: if isExecutive();
+    }
+
+    // 10. Weekly Lesson Plans
     match /lesson_plans/{planId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // 5. Homework & Task Assignments
+    // 11. Homework & Task Assignments
     match /assignments/{assignmentId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // 6. Planned Events & Troop Calendar
+    // 12. Planned Events, Troop Calendar & RSVPs
     match /events/{eventId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isExecutive() || isLeader();
+
+      match /rsvps/{rsvpId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
     }
 
-    // 7. Group Resources & Video Links
+    // 13. Group Resources & Video Links
     match /group_resources/{resourceId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // 8. Private leader notes & logs
+    // 14. Private leader notes & logs
     match /scout_notes/{scoutId} {
       allow read, write: if isAuthenticated();
     }
 
-    // 9. Chat room messages (Patrol Messenger)
+    // 15. Chat room messages (Patrol Messenger)
     match /chats/{roomId}/messages/{messageId} {
       allow read, write: if isAuthenticated();
     }
 
-    // 10. Service hours logs
+    // 16. Service hours logs
     match /service_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 17. Mail collection for triggering notification emails
+    match /mail/{mailId} {
       allow read, write: if isAuthenticated();
     }
 

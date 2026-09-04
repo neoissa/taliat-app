@@ -20,7 +20,7 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users } from 'lucide-react';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -33,13 +33,14 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   const [resettingPassword, setResettingPassword] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
   const [resetPasswordError, setResetPasswordError] = useState('');
-  const [detailTab, setDetailTab] = useState('advancement'); // 'advancement' | 'merit-badges' | 'video-resources'
+  const [detailTab, setDetailTab] = useState('advancement'); // 'advancement' | 'merit-badges' | 'resources' | 'service-logs' | 'islamic' | 'attendance'
   const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
   const [activeWhatsappName, setActiveWhatsappName] = useState('');
 
-  // Loading rank and merit badge counts for the KPI summary
+  // Loading rank, merit badge, and attendance counts for the KPI summary
   const [ranksProgress, setRanksProgress] = useState({});
   const [meritProgress, setMeritProgress] = useState({});
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
 
   // 1. Fetch private leader notes from /scout_notes/{scoutId}
   useEffect(() => {
@@ -93,9 +94,18 @@ function ScoutDetail({ scout, currentUser, onBack }) {
       setMeritProgress(map);
     });
 
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.records && s.records[scout.uid]);
+      list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
+      setAttendanceSessions(list);
+    });
+
     return () => {
       unsubRanks();
       unsubMerit();
+      unsubAttendance();
     };
   }, [scout.uid]);
 
@@ -207,8 +217,10 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   const completedRanksCount = RANKS_DATA.filter(rank => {
     const rp = ranksProgress[rank.id] || { completedRequirements: {} };
     const completedReqs = rp.completedRequirements || {};
-    const total = rank.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-    const done = rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
+    const total = rank.categories ? rank.categories.reduce((sum, c) => sum + c.requirements.length, 0) : (rank.requirements?.length || 0);
+    const done = rank.categories 
+      ? rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0)
+      : (rank.requirements?.filter(r => completedReqs[r.id]?.completed)?.length || 0);
     return total > 0 && done === total;
   }).length;
 
@@ -217,8 +229,12 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   const activeRankData = RANKS_DATA.find(r => r.id === activeRankId || r.name.toLowerCase() === activeRank.toLowerCase()) || RANKS_DATA[0];
   const activeProg = ranksProgress[activeRankData.id] || { completedRequirements: {} };
   const completedReqs = activeProg.completedRequirements || {};
-  const activeTotal = activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0);
-  const activeDone = activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0);
+  const activeTotal = activeRankData.categories 
+    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0)
+    : (activeRankData.requirements?.length || 0);
+  const activeDone = activeRankData.categories 
+    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0) 
+    : (activeRankData.requirements?.filter(r => completedReqs[r.id]?.completed)?.length || 0);
   const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
 
   // Merit Badge Stats
@@ -228,6 +244,44 @@ function ScoutDetail({ scout, currentUser, onBack }) {
     return b.requirements.filter(r => p.steps?.[r.id]).length === b.requirements.length;
   });
   const eagleBadgesEarned = badgesEarned.filter(b => b.eagleRequired).length;
+
+  // Attendance Metrics for Scout
+  let scoutTotalAttendedHours = 0;
+  let scoutTotalCampingNights = 0;
+  let scoutFridayHrs = 0;
+  let scoutTuesdayHrs = 0;
+  let scoutServiceHrs = 0;
+  let scoutAttendedCount = 0;
+  let scoutUnexcused = 0;
+  let scoutExcused = 0;
+
+  attendanceSessions.forEach(session => {
+    const rec = session.records?.[scout.uid];
+    if (rec) {
+      const sType = session.eventType || '';
+      const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+      const defaultN = sType.includes('Camp') ? 2 : 0;
+      const h = rec.hours !== undefined ? Number(rec.hours) : (session.hours !== undefined ? Number(session.hours) : defaultH);
+      const n = rec.nights !== undefined ? Number(rec.nights) : (session.nights !== undefined ? Number(session.nights) : defaultN);
+
+      if (rec.status === 'present' || rec.status === 'late') {
+        scoutAttendedCount++;
+        scoutTotalAttendedHours += h;
+        scoutTotalCampingNights += n;
+        if (sType.includes('Tuesday')) scoutTuesdayHrs += h;
+        else if (sType.includes('Weekly') || sType.includes('Friday')) scoutFridayHrs += h;
+        else if (sType.includes('Service') || sType.includes('Volunteer')) scoutServiceHrs += h;
+      } else if (rec.status === 'excused') {
+        scoutExcused++;
+      } else if (rec.status === 'absent') {
+        scoutUnexcused++;
+      }
+    }
+  });
+
+  const scoutTotalSessions = attendanceSessions.length;
+  const scoutAttendanceRate = scoutTotalSessions > 0 ? Math.round((scoutAttendedCount / scoutTotalSessions) * 100) : 100;
+  const scoutRiskLevel = scoutUnexcused >= 3 ? 'critical' : scoutUnexcused === 2 ? 'warning' : 'good';
 
   // Print Report Date
   const reportDate = new Date().toLocaleDateString('en-US', {
@@ -275,18 +329,24 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               </p>
             </div>
           </div>
-          <div className="flex gap-4">
-            <div className="text-center px-4 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
+          <div className="flex gap-3 flex-wrap">
+            <div className="text-center px-3.5 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
               <span className="text-sm font-bold text-white block">{completedRanksCount} / 7</span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Ranks Earned</span>
             </div>
-            <div className="text-center px-4 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
+            <div className="text-center px-3.5 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
               <span className="text-sm font-bold text-white block">{activePercent}%</span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Active Progress</span>
             </div>
-            <div className="text-center px-4 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
+            <div className="text-center px-3.5 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
               <span className="text-sm font-bold text-white block">{eagleBadgesEarned} / {TOTAL_EAGLE_REQUIRED_FOR_RANK}</span>
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Eagle Badges</span>
+            </div>
+            <div className="text-center px-3.5 py-2 bg-slate-900/50 border border-slate-700/60 rounded-xl">
+              <span className="text-sm font-bold text-emerald-400 block font-mono">{scoutTotalAttendedHours}h</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                {scoutRiskLevel === 'critical' ? '🚨 At Risk' : scoutRiskLevel === 'warning' ? '⚠️ Warning' : '🟢 Standing'} ({scoutAttendanceRate}%)
+              </span>
             </div>
           </div>
         </div>
@@ -403,7 +463,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
                 {notesList.map((note) => {
                   const canDelete = currentUser.uid === note.authorId || currentUser.role === 'owner';
                   return (
-                    <div key={note.id} className="bg-slate-900/60 border border-slate-750 p-3 rounded-xl text-xs space-y-1 relative group">
+                    <div key={note.id} className="bg-slate-900/60 border border-slate-755 p-3 rounded-xl text-xs space-y-1 relative group">
                       <div className="flex justify-between items-center text-slate-400 font-semibold border-b border-slate-800/40 pb-1 mb-1">
                         <span>{note.authorName} ({note.authorPosition})</span>
                         <div className="flex items-center gap-2">
@@ -464,7 +524,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         )}
       </div>
 
-      {/* Tabs to switch between Ranks and Merit Badges (Screen Only) */}
+      {/* Tabs to switch between sections (Screen Only) */}
       <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-1 print-hide">
         <button
           onClick={() => setDetailTab('advancement')}
@@ -485,6 +545,21 @@ function ScoutDetail({ scout, currentUser, onBack }) {
           }`}
         >
           Merit Badges Tracker
+        </button>
+        <button
+          onClick={() => setDetailTab('attendance')}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+            detailTab === 'attendance'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>📋 Attendance (${scoutTotalAttendedHours}h)</span>
+          {scoutRiskLevel !== 'good' && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${scoutRiskLevel === 'critical' ? 'bg-red-500 text-white animate-pulse' : 'bg-amber-500 text-slate-950'}`}>
+              {scoutUnexcused} Absences
+            </span>
+          )}
         </button>
         <button
           onClick={() => setDetailTab('resources')}
@@ -526,6 +601,143 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         {detailTab === 'merit-badges' && (
           <MeritBadgeDashboard currentUser={currentUser} scoutId={scout.uid} />
         )}
+        {detailTab === 'attendance' && (
+          <div className="space-y-4">
+            {/* Retention Risk Notice */}
+            {scoutRiskLevel === 'critical' && (
+              <div className="p-4 rounded-2xl bg-red-950/70 border-2 border-red-500 text-red-200 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-bold text-red-300 text-sm">
+                  <AlertTriangle size={18} className="text-red-400 animate-bounce shrink-0" />
+                  <span>CRITICAL ATTENDANCE RISK ({scoutUnexcused} Unexcused Absences)</span>
+                </div>
+                <p className="leading-relaxed">
+                  Scout has missed {scoutUnexcused} sessions unexcused. Minimum troop requirement is 75% attendance. Active parent conference recommended.
+                </p>
+              </div>
+            )}
+
+            {scoutRiskLevel === 'warning' && (
+              <div className="p-4 rounded-2xl bg-amber-950/70 border-2 border-amber-500/80 text-amber-200 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
+                  <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+                  <span>ATTENDANCE WARNING (2 Unexcused Absences)</span>
+                </div>
+                <p className="leading-relaxed">
+                  Scout has accumulated 2 absences ({scoutAttendanceRate}% attendance rate). Remind family of meeting requirements.
+                </p>
+              </div>
+            )}
+
+            {scoutRiskLevel === 'good' && (
+              <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-600/60 text-emerald-200 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-emerald-300">
+                  <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
+                  <span>CERTIFIED IN GOOD STANDING ({scoutAttendanceRate}% Attendance Rate)</span>
+                </div>
+                <span className="text-[11px] font-mono bg-emerald-900/60 px-2.5 py-0.5 rounded-full text-emerald-300 font-bold border border-emerald-700">
+                  Active Qualified
+                </span>
+              </div>
+            )}
+
+            {/* 4 Attendance Summary KPI Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Attended</span>
+                <span className="text-2xl font-black text-emerald-400 font-mono block mt-1">{scoutTotalAttendedHours}h</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{scoutAttendedCount} of {scoutTotalSessions} sessions ({scoutAttendanceRate}%)</span>
+              </div>
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Camping Experience</span>
+                <span className="text-2xl font-black text-amber-400 font-mono block mt-1">{scoutTotalCampingNights} Nights</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">Overnight campouts</span>
+              </div>
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Tuesday Program</span>
+                <span className="text-2xl font-black text-teal-400 font-mono block mt-1">{scoutTuesdayHrs}h</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">1.25 hrs / meeting</span>
+              </div>
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Friday Troop Meetings</span>
+                <span className="text-2xl font-black text-sky-400 font-mono block mt-1">{scoutFridayHrs}h</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">3.0 hrs / meeting</span>
+              </div>
+            </div>
+
+            {/* Attendance Activity Ledger Table */}
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-lg">
+              <div className="px-5 py-4 border-b border-slate-700 bg-slate-850 flex items-center justify-between">
+                <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                  <Calendar size={16} className="text-emerald-400" />
+                  <span>Session Attendance Ledger</span>
+                </h4>
+                <span className="text-xs text-slate-400">{attendanceSessions.length} total logged sessions</span>
+              </div>
+
+              {attendanceSessions.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No attendance records logged yet for this scout.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
+                      <tr>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Program / Event</th>
+                        <th className="p-3 text-center">Hours</th>
+                        <th className="p-3 text-center">Nights</th>
+                        <th className="p-3 text-center">Status</th>
+                        <th className="p-3">Remarks / Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60">
+                      {attendanceSessions.map((session) => {
+                        const rec = session.records?.[scout.uid] || {};
+                        const sType = session.eventType || '';
+                        const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+                        const defaultN = sType.includes('Camp') ? 2 : 0;
+                        const h = rec.hours !== undefined ? Number(rec.hours) : (session.hours !== undefined ? Number(session.hours) : defaultH);
+                        const n = rec.nights !== undefined ? Number(rec.nights) : (session.nights !== undefined ? Number(session.nights) : defaultN);
+                        const st = rec.status || 'unmarked';
+
+                        let badgeColor = 'bg-slate-800 text-slate-400 border-slate-700';
+                        if (st === 'present') badgeColor = 'bg-emerald-950/80 text-emerald-300 border-emerald-600/60';
+                        else if (st === 'late') badgeColor = 'bg-amber-950/80 text-amber-300 border-amber-600/60';
+                        else if (st === 'excused') badgeColor = 'bg-blue-950/80 text-blue-300 border-blue-600/60';
+                        else if (st === 'absent') badgeColor = 'bg-red-950/80 text-red-300 border-red-600/60 font-bold';
+
+                        return (
+                          <tr key={session.id} className="hover:bg-slate-750/30 transition">
+                            <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{session.date || '—'}</td>
+                            <td className="p-3">
+                              <span className="font-semibold text-white block">{session.title || session.eventType || 'Troop Meeting'}</span>
+                              <span className="text-[10px] text-slate-400 capitalize">{session.eventType}</span>
+                            </td>
+                            <td className="p-3 text-center font-mono font-bold text-slate-200">
+                              {st === 'present' || st === 'late' ? `${h}h` : '0h'}
+                            </td>
+                            <td className="p-3 text-center font-mono text-amber-400 font-bold">
+                              {(st === 'present' || st === 'late') && n > 0 ? `${n}n` : '—'}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] border uppercase tracking-wider font-semibold ${badgeColor}`}>
+                                {st}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-400 italic max-w-xs truncate">
+                              {rec.notes || session.notes || '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {detailTab === 'resources' && (
           <VideoResources currentUser={currentUser} scoutId={scout.uid} scout={scout} />
         )}
@@ -560,8 +772,8 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 
         {/* Print Summary cards */}
         <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Advancement Summary</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Advancement & Attendance Summary</h2>
+          <div className="grid grid-cols-4 gap-3">
             <div className="border border-slate-300 p-3 rounded text-center">
               <p className="text-xl font-bold text-black">{activePercent}%</p>
               <p className="text-[10px] text-slate-500">Active Rank Progress ({activeRank})</p>
@@ -574,7 +786,22 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               <p className="text-xl font-bold text-black">{badgesEarned.length}</p>
               <p className="text-[10px] text-slate-500">Merit Badges ({eagleBadgesEarned} Eagle-Req)</p>
             </div>
+            <div className="border border-slate-300 p-3 rounded text-center">
+              <p className="text-xl font-bold text-black">{scoutTotalAttendedHours}h</p>
+              <p className="text-[10px] text-slate-500">Attended ({scoutAttendanceRate}% Rate &bull; {scoutTotalCampingNights}n)</p>
+            </div>
           </div>
+        </div>
+
+        {/* Attendance Risk / Standing Notice Box */}
+        <div className="border border-black p-3 rounded text-xs space-y-1">
+          <p className="font-bold text-black uppercase">
+            Official Attendance & Retention Standing:
+            {scoutRiskLevel === 'critical' ? ' 🚨 CRITICAL ATTENDANCE RISK' : scoutRiskLevel === 'warning' ? ' ⚠️ ATTENDANCE WARNING' : ' 🟢 IN GOOD STANDING'}
+          </p>
+          <p className="text-slate-700">
+            Total Hours Logged: <strong>{scoutTotalAttendedHours}h</strong> | Camping: <strong>{scoutTotalCampingNights} Nights</strong> | Unexcused Absences: <strong>{scoutUnexcused}</strong> | Attendance Rate: <strong>{scoutAttendanceRate}%</strong>
+          </p>
         </div>
 
         {/* Detailed Requirement Checklist */}
@@ -592,7 +819,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {activeRankData.categories.map((category) => 
+              {activeRankData.categories ? activeRankData.categories.map((category) => 
                 category.requirements.map((req) => {
                   const isDone = !!completedReqs[req.id]?.completed;
                   const completionDate = completedReqs[req.id]?.completedAt || '';
@@ -613,10 +840,48 @@ function ScoutDetail({ scout, currentUser, onBack }) {
                     </tr>
                   );
                 })
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
+
+        {/* Attendance Activity Ledger in Print */}
+        {attendanceSessions.length > 0 && (
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Attendance & Activity Ledger</h2>
+            <table className="w-full text-xs text-left border border-slate-300">
+              <thead>
+                <tr className="bg-slate-100 text-black">
+                  <th className="p-2 border border-slate-300 w-24">Date</th>
+                  <th className="p-2 border border-slate-300">Event / Program</th>
+                  <th className="p-2 border border-slate-300 w-16 text-center">Hours</th>
+                  <th className="p-2 border border-slate-300 w-16 text-center">Nights</th>
+                  <th className="p-2 border border-slate-300 w-20 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendanceSessions.map((session) => {
+                  const rec = session.records?.[scout.uid] || {};
+                  const sType = session.eventType || '';
+                  const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+                  const defaultN = sType.includes('Camp') ? 2 : 0;
+                  const h = rec.hours !== undefined ? Number(rec.hours) : (session.hours !== undefined ? Number(session.hours) : defaultH);
+                  const n = rec.nights !== undefined ? Number(rec.nights) : (session.nights !== undefined ? Number(session.nights) : defaultN);
+                  const st = rec.status || 'unmarked';
+                  return (
+                    <tr key={session.id} className="border-t border-slate-300">
+                      <td className="p-2 border border-slate-300 font-mono text-black">{session.date || '—'}</td>
+                      <td className="p-2 border border-slate-300 text-black font-medium">{session.title || session.eventType}</td>
+                      <td className="p-2 border border-slate-300 text-center font-mono">{(st === 'present' || st === 'late') ? `${h}h` : '0h'}</td>
+                      <td className="p-2 border border-slate-300 text-center font-mono">{(st === 'present' || st === 'late') && n > 0 ? `${n}n` : '—'}</td>
+                      <td className="p-2 border border-slate-300 text-center uppercase font-bold text-[10px]">{st}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Leader Discussion Notes */}
         <div>
@@ -692,7 +957,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 export default function PatrolRoster({ currentUser = {} }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const [activeGroupTab, setActiveGroupTab] = useState('all');
-  const [rosterSubTab, setRosterSubTab] = useState('scouts');
+  const [rosterSubTab, setRosterSubTab] = useState('scouts'); // 'scouts' | 'leaders' | 'parents'
   const [scouts, setScouts] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -717,28 +982,50 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingModalScoutId, setPendingModalScoutId] = useState(null);
   const [attendanceSessions, setAttendanceSessions] = useState([]);
+  const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
+  const [activeWhatsappName, setActiveWhatsappName] = useState('');
+
+  // Parent Account Provisioning State
+  const [parents, setParents] = useState([]);
+  const [showParentForm, setShowParentForm] = useState(false);
+  const [parentName, setParentName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentPassword, setParentPassword] = useState('');
+  const [parentLinkedScoutIds, setParentLinkedScoutIds] = useState([]);
+  const [parentAdding, setParentAdding] = useState(false);
+  const [parentMsg, setParentMsg] = useState('');
+  const [parentErr, setParentErr] = useState('');
+  const [editingParent, setEditingParent] = useState(null);
+  const [editParentLinkedIds, setEditParentLinkedIds] = useState([]);
+  const [savingParentLinks, setSavingParentLinks] = useState(false);
+  const [parentLinkMsg, setParentLinkMsg] = useState('');
+  const [resettingParentUser, setResettingParentUser] = useState(null);
+  const [newParentResetPass, setNewParentResetPass] = useState('');
+  const [parentResetMsg, setParentResetMsg] = useState('');
+  const [parentResetErr, setParentResetErr] = useState('');
+  const [parentResetLoading, setParentResetLoading] = useState(false);
 
   const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantLeader = currentUser?.role === 'leader' && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
-  const canAddOrDeleteScouts = (isOwner || isScoutmaster || currentUser?.role === 'leader') && !isAssistantLeader;
+  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
+  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
+  const isAssistantLeader = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Leader';
+  const canAddOrDeleteScouts = isExecutive || (currentUser?.role === 'leader' && !isAssistantLeader);
 
   useEffect(() => {
-    const q = (isOwner || isScoutmaster)
-      ? query(collection(db, 'users'), where('role', '==', 'scout'))
-      : query(collection(db, 'users'), where('role', '==', 'scout'));
+    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
       
     const unsub = onSnapshot(q, (snap) => {
       let list = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-      if (!isOwner && !isScoutmaster) {
-        // Filter by assigned leaderId OR matching patrol groupId
-        list = list.filter(s => s.leaderId === currentUser?.uid || (currentUser?.groupId && s.groupId === currentUser?.groupId));
+      if (!isExecutive) {
+        // Filter strictly by assigned leaderId OR matching patrol groupId
+        list = list.filter(s => s.leaderId === currentUser?.uid || (currentUser?.groupId && (s.groupId === currentUser?.groupId || s.patrolId === currentUser?.groupId)));
       }
       setScouts(list);
     }, (err) => {
       console.error("Error listening to scouts in roster:", err);
     });
     return () => unsub();
-  }, [currentUser?.uid, currentUser?.role, currentUser?.email, currentUser?.leaderPosition, currentUser?.groupId, isOwner, isScoutmaster]);
+  }, [currentUser?.uid, currentUser?.role, currentUser?.email, currentUser?.leaderPosition, currentUser?.groupId, isExecutive]);
 
   // Subscribe to real-time pending approvals count for all visible scouts (Ranks + Badges + Islamic + Assignments)
   useEffect(() => {
@@ -842,16 +1129,76 @@ export default function PatrolRoster({ currentUser = {} }) {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
       setLeaders(allUsers.filter(u => u.role === 'leader' || u.role === 'owner'));
+      setParents(allUsers.filter(u => u.role === 'parent'));
     });
+
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      setAttendanceSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error("Error loading attendance in PatrolRoster:", err));
     
     return () => {
       unsubGroups();
       unsubUsers();
+      unsubAttendance();
     };
   }, []);
 
+  const getScoutAttendanceStats = (scoutUid) => {
+    let totalAttendedHours = 0;
+    let campingNights = 0;
+    let fridayHrs = 0;
+    let tuesdayHrs = 0;
+    let serviceHrs = 0;
+    let attended = 0;
+    let unexcused = 0;
+    let excused = 0;
+    let total = 0;
+
+    attendanceSessions.forEach(session => {
+      const rec = session.records?.[scoutUid];
+      if (rec) {
+        total++;
+        const sType = session.eventType || '';
+        const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+        const defaultN = sType.includes('Camp') ? 2 : 0;
+        const h = rec.hours !== undefined ? Number(rec.hours) : (session.hours !== undefined ? Number(session.hours) : defaultH);
+        const n = rec.nights !== undefined ? Number(rec.nights) : (session.nights !== undefined ? Number(session.nights) : defaultN);
+
+        if (rec.status === 'present' || rec.status === 'late') {
+          attended++;
+          totalAttendedHours += h;
+          campingNights += n;
+          if (sType.includes('Tuesday')) tuesdayHrs += h;
+          else if (sType.includes('Weekly') || sType.includes('Friday')) fridayHrs += h;
+          else if (sType.includes('Service') || sType.includes('Volunteer')) serviceHrs += h;
+        } else if (rec.status === 'excused') {
+          excused++;
+        } else if (rec.status === 'absent') {
+          unexcused++;
+        }
+      }
+    });
+
+    const rate = total > 0 ? Math.round((attended / total) * 100) : 100;
+    const risk = unexcused >= 3 ? 'critical' : unexcused === 2 ? 'warning' : 'good';
+
+    return {
+      hours: totalAttendedHours,
+      nights: campingNights,
+      fridayHrs,
+      tuesdayHrs,
+      serviceHrs,
+      attended,
+      total,
+      unexcused,
+      excused,
+      rate,
+      risk
+    };
+  };
+
   const handleAddParent = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setParentErr('');
     setParentMsg('');
     const name = parentName.trim();
@@ -1123,7 +1470,9 @@ export default function PatrolRoster({ currentUser = {} }) {
           <p className="text-xs text-slate-400">
             {rosterSubTab === 'scouts' 
               ? `${scouts.length} scout${scouts.length !== 1 ? 's' : ''} assigned to you`
-              : `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in the troop`}
+              : rosterSubTab === 'leaders'
+              ? `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in the troop`
+              : `${parents.length} parent account${parents.length !== 1 ? 's' : ''} registered`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1648,34 +1997,27 @@ export default function PatrolRoster({ currentUser = {} }) {
                                             <span className="font-bold text-slate-200 font-mono text-xs block">Tuesday: {att.tuesdayHrs}h</span>
                                           </div>
                                           <div>
-                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Troop Standing</span>
-                                            <span className={`font-bold text-xs block mt-0.5 ${
-                                              att.risk === 'critical' ? 'text-red-400 font-black' : att.risk === 'warning' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'
-                                            }`}>
-                                              {att.risk === 'critical' ? `🚨 Critical (${att.unexcused} Absences)` : att.risk === 'warning' ? `⚠️ At Risk (2 Absences)` : '🟢 Good Standing'}
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 block">Standing Status</span>
+                                            <span className={`font-bold text-xs block mt-0.5 ${att.risk === 'critical' ? 'text-red-400 font-bold' : att.risk === 'warning' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                              {att.risk === 'critical' ? `🚨 Critical (${att.unexcused} Absences)` : att.risk === 'warning' ? `⚠️ Warning (2 Absences)` : '🟢 Good Standing'}
                                             </span>
-                                            <span className="text-[9px] text-slate-500 block">{att.excused} Excused</span>
                                           </div>
                                         </div>
                                       );
                                     })()}
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs text-slate-300">
-                                      <div>
-                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">BSA Member ID</span>
-                                        <span className="font-semibold text-slate-200">{scout.bsaId || '—'}</span>
-                                      </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs text-slate-300">
                                       <div>
                                         <span className="text-slate-500 block uppercase text-[9px] font-bold">Personal Email</span>
-                                        <span className="font-semibold text-slate-200">{scout.scoutEmail || '—'}</span>
+                                        <span className="font-semibold text-slate-200 truncate block">{scout.scoutEmail || '—'}</span>
                                       </div>
                                       <div>
-                                        <span className="text-slate-500 block uppercase text-[9px] font-bold">Scout Phone</span>
-                                        <span className="font-semibold text-slate-200">{scout.scoutPhone || '—'}</span>
+                                        <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Scout Phone</span>
+                                        <span className="font-semibold text-slate-200 truncate block">{scout.scoutPhone || '—'}</span>
                                       </div>
                                       <div>
                                         <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Email</span>
-                                        <span className="font-semibold text-slate-200">{scout.parentEmail || '—'}</span>
+                                        <span className="font-semibold text-slate-200 truncate block">{scout.parentEmail || '—'}</span>
                                       </div>
                                       <div>
                                         <span className="text-slate-500 block uppercase text-[9px] font-bold">Parent Phone</span>
@@ -1688,7 +2030,7 @@ export default function PatrolRoster({ currentUser = {} }) {
                                                 setActiveWhatsappPhone(scout.parentPhone);
                                                 setActiveWhatsappName(`${scout.fullName || scout.username}'s Parent`);
                                               }}
-                                              className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center"
+                                              className="bg-emerald-600 hover:bg-emerald-500 text-white rounded p-0.5 transition cursor-pointer flex items-center justify-center shrink-0"
                                               title="Chat with parent on WhatsApp"
                                             >
                                               <svg className="w-3 h-3 fill-white" viewBox="0 0 24 24">
@@ -1858,75 +2200,74 @@ export default function PatrolRoster({ currentUser = {} }) {
                       required
                       value={parentPassword}
                       onChange={(e) => setParentPassword(e.target.value)}
-                      placeholder="Min 6 characters"
+                      placeholder="At least 6 characters"
                       autoComplete="new-password"
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
 
-                {/* Multi-Child Linking Selector */}
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase">
-                      Link Children ({parentLinkedScoutIds.length} Selected)
-                    </label>
-                    <span className="text-[10px] text-emerald-400 font-bold">Select all scouts belonging to this family</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/80 border border-slate-700/80 p-3.5 rounded-xl max-h-56 overflow-y-auto">
-                    {scouts.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic p-2 col-span-full">No scouts available in roster.</p>
-                    ) : (
-                      scouts.map(s => {
-                        const isChecked = parentLinkedScoutIds.includes(s.uid);
-                        return (
-                          <label
-                            key={s.uid}
-                            className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition ${
-                              isChecked ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold' : 'bg-slate-800/60 border-slate-750 text-slate-300 hover:bg-slate-750'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setParentLinkedScoutIds(prev => [...prev, s.uid]);
-                                } else {
-                                  setParentLinkedScoutIds(prev => prev.filter(id => id !== s.uid));
-                                }
-                              }}
-                              className="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700 cursor-pointer"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <span className="block truncate">{s.fullName || s.username}</span>
-                              <span className="text-[10px] text-slate-400 font-normal">{s.rank || 'Scout'}</span>
-                            </div>
-                          </label>
-                        );
-                      })
-                    )}
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                    Link Scout Children ({parentLinkedScoutIds.length} selected):
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900 p-3 rounded-xl max-h-48 overflow-y-auto border border-slate-750">
+                    {scouts.map((scout) => {
+                      const isChecked = parentLinkedScoutIds.includes(scout.uid);
+                      return (
+                        <label
+                          key={scout.uid}
+                          className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition ${
+                            isChecked ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold' : 'bg-slate-800/60 border-slate-750 text-slate-300 hover:bg-slate-750'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setParentLinkedScoutIds(prev => [...prev, scout.uid]);
+                              } else {
+                                setParentLinkedScoutIds(prev => prev.filter(id => id !== scout.uid));
+                              }
+                            }}
+                            className="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate">{scout.fullName || scout.username}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{scout.rank || 'Scout'}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={parentAdding}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition cursor-pointer text-sm shadow-lg shadow-emerald-950/40"
-                >
-                  {parentAdding ? 'Provisioning Parent Account…' : 'Create & Link Parent Account'}
-                </button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowParentForm(false)}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={parentAdding || parentLinkedScoutIds.length === 0}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
+                  >
+                    {parentAdding ? 'Provisioning...' : 'Provision Parent Account'}
+                  </button>
+                </div>
               </form>
             </div>
           )}
 
-          {/* List of Registered Parents */}
+          {/* Parents List */}
           <div className="space-y-3">
             {parents.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-sm bg-slate-800/40 rounded-2xl border border-slate-800 space-y-2">
-                <p className="font-bold text-white">No parent accounts created yet.</p>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">Click "+ Create Parent Account" to provision credentials for parents and link them to their children.</p>
+              <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
+                No parent accounts registered in the organization. Click "+ Create Parent Account" to register parents.
               </div>
             ) : (
               parents.map((p) => {
@@ -1978,31 +2319,32 @@ export default function PatrolRoster({ currentUser = {} }) {
                             setParentResetMsg('');
                             setParentResetErr('');
                           }}
-                          className="bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                          className="bg-slate-900 hover:bg-slate-750 border border-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                         >
-                          <Lock size={13} className="text-amber-400" />
-                          <span>Reset Password</span>
+                          <span>🔑 Reset Password</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Linked Scouts Tags */}
+                    {/* Linked Children Display */}
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Linked Children:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                        Linked Children ({linkedChildren.length}):
+                      </span>
                       {linkedChildren.length === 0 ? (
-                        <span className="text-xs text-amber-400 italic">No scouts linked yet. Click "Edit Linked Scouts" to connect children.</span>
+                        <p className="text-xs text-slate-500 italic">No scouts linked to this parent account yet.</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {linkedChildren.map(child => (
+                          {linkedChildren.map((c) => (
                             <div
-                              key={child.uid}
-                              className="bg-slate-900/90 border border-slate-750 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs"
+                              key={c.uid}
+                              className="bg-slate-900 border border-slate-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs"
                             >
-                              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold uppercase">
-                                {(child.fullName || child.username).charAt(0)}
-                              </div>
-                              <span className="font-bold text-white">{child.fullName || child.username}</span>
-                              <span className="text-[10px] text-emerald-400 font-mono font-semibold">({child.rank || 'Scout'})</span>
+                              <span className="text-emerald-400 font-bold">⚜️</span>
+                              <span className="font-semibold text-white">{c.fullName || c.username}</span>
+                              <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded-md font-mono">
+                                {c.rank || 'Scout'}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -2039,7 +2381,7 @@ export default function PatrolRoster({ currentUser = {} }) {
 
                 <div className="space-y-2">
                   <span className="text-xs font-bold text-slate-300 uppercase block">Check Scouts to Link:</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-900 p-3 rounded-xl max-h-60 overflow-y-auto border border-slate-750">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-900 p-3 rounded-xl max-h-60 overflow-y-auto border border-slate-755">
                     {scouts.map(s => {
                       const isChecked = editParentLinkedIds.includes(s.uid);
                       return (
@@ -2148,6 +2490,64 @@ export default function PatrolRoster({ currentUser = {} }) {
           )}
         </div>
       ) : null}
+
+      {/* Universal Pending Queue Modal */}
+      {showPendingModal && (
+        <UniversalPendingQueueModal
+          currentUser={currentUser}
+          isOpen={showPendingModal}
+          onClose={() => {
+            setShowPendingModal(false);
+            setPendingModalScoutId(null);
+          }}
+          targetScoutId={pendingModalScoutId}
+        />
+      )}
+
+      {/* WhatsApp Template Modal for Patrol */}
+      {activeWhatsappPhone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print-hide">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 text-left">
+            <h3 className="font-bold text-white text-base">Send WhatsApp Message</h3>
+            <p className="text-xs text-slate-350">
+              Select a template to send to <strong>{activeWhatsappName}</strong> ({activeWhatsappPhone}):
+            </p>
+            <div className="space-y-2">
+              {[
+                { label: "General Chat", text: "" },
+                { label: "Meeting Reminder", text: "Salam! This is a reminder about our upcoming Taliʿa Troop meeting. Please be prepared and on time. Shukran!" },
+                { label: "Safeguarding Video Reminder", text: "Salam! Please make sure to watch the required safeguarding / youth protection standard videos under your Taliʿa profile. This is an essential requirement. Shukran!" },
+                { label: "Islamic Knowledge Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Knowledge curriculum checklist under your Taliʿa profile. Shukran!" },
+                { label: "Service Hours Reminder", text: "Salam! Please remember to log your volunteering and community service hours in the Taliʿa Service Log. Shukran!" }
+              ].map((tmpl) => {
+                const encodedText = encodeURIComponent(tmpl.text);
+                const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
+                return (
+                  <a
+                    key={tmpl.label}
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setActiveWhatsappPhone(null)}
+                    className="block w-full bg-slate-900 border border-slate-750 hover:bg-slate-700 text-slate-200 hover:text-white px-4 py-2.5 rounded-xl text-xs font-semibold text-left transition"
+                  >
+                    {tmpl.label}
+                    {tmpl.text && <span className="block text-[10px] text-slate-450 font-normal mt-0.5 truncate">{tmpl.text}</span>}
+                  </a>
+                );
+              })}
+            </div>
+            <div className="flex justify-end pt-2 border-t border-slate-750/50">
+              <button
+                onClick={() => setActiveWhatsappPhone(null)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -101,9 +101,12 @@ export default function App() {
   }, []);
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = !isOwner && currentUser?.role === 'leader';
-  const isParent = !isOwner && !isLeader && currentUser?.role === 'parent';
-  const isScout = !isOwner && !isLeader && !isParent;
+  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
+  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
+  const isLeader = !isExecutive && currentUser?.role === 'leader';
+  const isParent = !isExecutive && !isLeader && currentUser?.role === 'parent';
+  const isScout = !isExecutive && !isLeader && !isParent;
 
   // 2. Proactively promote neoissa@gmail.com to owner in the database on load
   useEffect(() => {
@@ -237,15 +240,26 @@ export default function App() {
     return <Login onLoginSuccess={(u) => setCurrentUser(u)} />;
   }
 
-  const roleLabel = isOwner ? 'Troop Owner / Superadmin' : isLeader ? (currentUser?.leaderPosition || 'Troop Leader') : isParent ? 'Parent / Guardian' : 'Scout';
+  const roleLabel = isOwner 
+    ? 'Troop Owner / Superadmin' 
+    : isScoutmaster 
+    ? 'Scoutmaster' 
+    : isAssistantScoutmaster 
+    ? 'Assistant Scoutmaster' 
+    : currentUser?.role === 'admin' 
+    ? 'Executive Admin' 
+    : isLeader 
+    ? (currentUser?.leaderPosition || 'Troop Leader') 
+    : isParent 
+    ? 'Parent / Guardian' 
+    : 'Scout';
 
   // ── DEFINE NAVIGATION ITEMS BY ROLE ──
   const getNavItems = () => {
-    if (isOwner) {
+    if (isExecutive) {
       return [
-        { id: 'home', label: 'Home Hub', icon: '🏠' },
-        { id: 'global-admin', label: 'Global Admin', icon: '⚡' },
-        { id: 'group-manager', label: 'Organization Hub', icon: '🏢' },
+        { id: 'home', label: 'Executive Hub', icon: '🏠' },
+        { id: 'admin', label: 'Executive Admin Hub', icon: '⚡' },
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
@@ -280,7 +294,7 @@ export default function App() {
         { id: 'home', label: 'Parent Portal', icon: '👨‍👩‍👧' },
         { id: 'events', label: 'Troop Calendar & Events', icon: '📅' },
         { id: 'resources', label: 'Safety & Guides', icon: '📚' },
-        { id: 'profile', label: 'My Account', icon: '👤' }
+        { id: 'profile', label: 'Family Profile', icon: '👤' }
       ];
     } else {
       // Scout Navigation
@@ -515,7 +529,7 @@ export default function App() {
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
 
-        {currentTab === 'home' && (isLeader || isOwner) && (
+        {currentTab === 'home' && (isLeader || isExecutive) && (
           <LeaderHome 
             currentUser={currentUser} 
             onNavigate={handleNavigate} 
@@ -537,23 +551,24 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'global-admin' && isOwner && <GlobalAdminPanel currentUser={currentUser} />}
+        {(currentTab === 'admin' || currentTab === 'global-admin') && isExecutive && (
+          <AdminPanel currentUser={currentUser} />
+        )}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
-        {currentTab === 'roster' && (isLeader || isOwner) && <PatrolRoster currentUser={currentUser} />}
-        {currentTab === 'scouts' && (isLeader || isOwner) && <ScoutList currentUser={currentUser} />}
+        {currentTab === 'roster' && (isLeader || isExecutive) && <PatrolRoster currentUser={currentUser} />}
+        {currentTab === 'scouts' && (isLeader || isExecutive) && <ScoutList currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
-        {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
+        {currentTab === 'lesson-plans' && (isLeader || isExecutive) && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-        {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
-        {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
-        {currentTab === 'attendance' && (isLeader || isOwner) && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
+        {currentTab === 'reports' && (isLeader || isExecutive) && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'attendance' && (isLeader || isExecutive) && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
     </div>

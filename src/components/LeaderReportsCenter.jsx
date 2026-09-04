@@ -52,6 +52,7 @@ function SingleScoutCustomReport({
   const [serviceLogs, setServiceLogs] = useState([]);
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [scoutSubmissions, setScoutSubmissions] = useState({});
+  const [scoutHomeworkMap, setScoutHomeworkMap] = useState({});
   const [eventsList, setEventsList] = useState([]);
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [leaderNotes, setLeaderNotes] = useState({});
@@ -83,6 +84,11 @@ function SingleScoutCustomReport({
     const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
       setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    const unsubHw = onSnapshot(collection(db, 'scout_homework'), (snap) => {
+      const m = {};
+      snap.docs.forEach(d => { m[d.id] = d.data(); });
+      setScoutHomeworkMap(m);
+    });
     const unsubSub = onSnapshot(collection(db, 'user_progress', scoutUid, 'assignments'), (snap) => {
       const m = {};
       snap.docs.forEach(d => { m[d.id] = d.data(); });
@@ -111,6 +117,7 @@ function SingleScoutCustomReport({
     });
 
     return () => {
+      unsubHw();
       unsubRanks();
       unsubMerit();
       unsubIslamic();
@@ -196,18 +203,61 @@ function SingleScoutCustomReport({
   }) : [];
   const totalServiceHours = filteredService.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
 
-  // Filter Homework
-  const filteredHomework = config.homework.enabled && config.homework.includeAssignments ? assignmentsList.map(a => {
-    const sub = scoutSubmissions[a.id] || {};
+  // Filter Homework with Strict Lifecycle & Schema
+  const filteredHomework = config.homework.enabled && config.homework.includeAssignments ? assignmentsList.filter(a => {
+    // Check target applicability
+    if (a.assignedTarget === 'patrol' && scout.groupId && a.targetGroupId !== scout.groupId) return false;
+    if (a.assignedTarget === 'scout' && a.targetScoutUid !== scoutUid) return false;
+    return true;
+  }).map(a => {
+    const hwKey = `${a.id}_${scoutUid}`;
+    const rec = scoutHomeworkMap[hwKey] || scoutSubmissions[a.id] || {};
+    const isComp = !!(rec.isCompleted || rec.status === 'completed' || rec.verifiedByLeader || (rec.completed && !rec.pending));
+    const isSub = rec.status === 'submitted' || (!!rec.submittedAt && !isComp);
+    
+    let statusLabel = 'Incomplete';
+    let statusClass = 'text-slate-600 bg-slate-100';
+    let completionDate = '—';
+    let leaderSignOff = '—';
+
+    if (isComp) {
+      statusLabel = 'Completed';
+      statusClass = 'text-emerald-900 bg-emerald-100 font-bold';
+      completionDate = rec.completedDate || (rec.completedAt ? rec.completedAt.split('T')[0] : (rec.submittedDate || 'Verified'));
+      leaderSignOff = rec.leaderName || rec.verifiedByName || (rec.verifiedByLeader ? '✓ Signed by Leader' : 'Verified');
+    } else if (isSub) {
+      statusLabel = 'Submitted';
+      statusClass = 'text-blue-900 bg-blue-100 font-bold';
+      completionDate = 'Awaiting Review';
+      leaderSignOff = 'Pending Review';
+    } else if (a.dueDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(a.dueDate);
+      due.setHours(0, 0, 0, 0);
+      if (due < today) {
+        statusLabel = 'Overdue / Incomplete';
+        statusClass = 'text-red-900 bg-red-100 font-bold';
+      }
+    }
+
     return {
       id: a.id,
       title: a.title,
       category: a.category || (a.isIslamic ? 'Islamic Knowledge' : 'Scouting Skills'),
-      dateAssigned: a.dueDate || 'Ongoing',
-      dateCompleted: sub.submittedDate || (sub.completed ? 'Completed' : 'Pending'),
-      feedback: sub.grade || (sub.completed ? 'Approved' : 'Awaiting Submission')
+      dueDate: a.dueDate || 'Ongoing',
+      status: statusLabel,
+      statusClass,
+      completionDate,
+      leaderSignOff,
+      dateForFilter: completionDate !== '—' && completionDate !== 'Awaiting Review' ? completionDate : a.dueDate
     };
-  }).filter(h => isItemActiveInMode(h.dateCompleted)) : [];
+  }).filter(h => {
+    if (reportMode === 'window') {
+      return isDateInWindow(h.dateForFilter);
+    }
+    return true;
+  }) : [];
 
   // Filter Islamic Topics
   const completedIslamicTopics = config.homework.enabled && config.homework.includeIslamic ? ISLAMIC_BASICS_TOPICS.filter(t => {
@@ -558,39 +608,69 @@ function SingleScoutCustomReport({
 
       {/* ── 7. HOMEWORK & ISLAMIC CURRICULUM ── */}
       {config.homework.enabled && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 page-break-avoid">
+        <div className="space-y-4 page-break-avoid">
           {config.homework.includeAssignments && (
             <div className="space-y-2">
-              <h4 className="text-xs font-black uppercase text-slate-950 border-b border-slate-300 pb-1">
-                Homework & Assignments ({filteredHomework.length})
-              </h4>
-              <div className="space-y-1 text-xs">
-                {filteredHomework.length === 0 ? (
-                  <p className="text-slate-500 italic text-[11px] p-2">No homework logged.</p>
-                ) : (
-                  filteredHomework.slice(0, 5).map(h => (
-                    <div key={h.id} className="flex justify-between items-center p-2 rounded bg-slate-50 border border-slate-200">
-                      <span className="font-semibold text-slate-900 truncate max-w-[180px]">{h.title}</span>
-                      <span className="font-mono text-[10px] text-emerald-800 font-bold">{h.feedback}</span>
-                    </div>
-                  ))
-                )}
+              <div className="border-b-2 border-slate-800 pb-1 flex justify-between items-center">
+                <h4 className="text-sm font-black uppercase text-slate-950 flex items-center gap-1.5">
+                  <FileText size={15} />
+                  <span>Homework & Assignments ({filteredHomework.length} Total Records)</span>
+                </h4>
+                <span className="text-[10px] font-mono text-slate-600">Strict Status Lifecycle Tracking</span>
               </div>
+
+              <table className="w-full text-xs text-left border border-slate-300">
+                <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
+                  <tr>
+                    <th className="p-2">Assignment Name</th>
+                    <th className="p-2 w-24">Due Date</th>
+                    <th className="p-2 w-32 text-center">Status</th>
+                    <th className="p-2 w-28 text-center">Completion Date</th>
+                    <th className="p-2 w-32 text-right">Leader Sign-off</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredHomework.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-3 text-center text-slate-500 italic text-[11px]">
+                        No homework assignments recorded for this reporting period.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredHomework.map(h => (
+                      <tr key={h.id}>
+                        <td className="p-2 font-bold text-slate-950">
+                          <span>{h.title}</span>
+                          <span className="block text-[9px] text-slate-500 font-normal">{h.category}</span>
+                        </td>
+                        <td className="p-2 font-mono text-slate-700">{h.dueDate}</td>
+                        <td className="p-2 text-center">
+                          <span className={`text-[10px] px-2 py-0.5 rounded ${h.statusClass}`}>
+                            {h.status}
+                          </span>
+                        </td>
+                        <td className="p-2 text-center font-mono text-slate-700">{h.completionDate}</td>
+                        <td className="p-2 text-right font-semibold text-slate-900">{h.leaderSignOff}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
 
           {config.homework.includeIslamic && (
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <h4 className="text-xs font-black uppercase text-slate-950 border-b border-slate-300 pb-1">
-                Islamic Basics & Curriculum ({completedIslamicTopics.length} Passed)
+                Islamic Basics & Curriculum Testing ({completedIslamicTopics.length} Passed)
               </h4>
-              <div className="space-y-1 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                 {completedIslamicTopics.length === 0 ? (
-                  <p className="text-slate-500 italic text-[11px] p-2">No Islamic tests recorded in this window.</p>
+                  <p className="text-slate-500 italic text-[11px] p-2 col-span-full">No Islamic tests recorded in this window.</p>
                 ) : (
-                  completedIslamicTopics.slice(0, 5).map(t => (
+                  completedIslamicTopics.map(t => (
                     <div key={t.id} className="flex justify-between items-center p-2 rounded bg-emerald-50/50 border border-emerald-200">
-                      <span className="font-semibold text-slate-900 truncate max-w-[180px]">{t.title}</span>
+                      <span className="font-semibold text-slate-900 truncate max-w-[160px]">{t.title}</span>
                       <span className="font-mono text-[10px] text-emerald-800 font-bold">✓ Tested</span>
                     </div>
                   ))
