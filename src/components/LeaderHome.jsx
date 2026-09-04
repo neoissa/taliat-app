@@ -216,6 +216,15 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             <button
               type="button"
+              onClick={() => onNavigate && onNavigate('attendance')}
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            >
+              <Calendar size={15} className="text-teal-400" />
+              <span>📋 Patrol Attendance</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => onNavigate && onNavigate('reports')}
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
             >
@@ -235,7 +244,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
 
         {/* ── Quick KPI Stat Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           <div 
             onClick={() => {
               if (totalPendingApprovals > 0) {
@@ -252,6 +261,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Pending Tasks</span>
             <strong className="text-base font-black text-white block mt-0.5">
               {totalPendingApprovals} Action Items
+            </strong>
+          </div>
+
+          <div 
+            onClick={() => onNavigate && onNavigate('attendance')}
+            className="bg-slate-900/70 border border-teal-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-teal-400 transition"
+          >
+            <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Patrol Attendance</span>
+            <strong className="text-base font-black text-white block mt-0.5">
+              📋 Roll Call & Logs
             </strong>
           </div>
 
@@ -472,6 +491,21 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   </div>
                 </div>
                 <ChevronRight size={14} className="text-emerald-400 group-hover:translate-x-0.5 transition" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('attendance')}
+                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-teal-500/50 transition flex items-center justify-between cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">📋</span>
+                  <div>
+                    <h4 className="font-bold text-white group-hover:text-teal-300">Patrol Attendance & Retention</h4>
+                    <p className="text-[10px] text-slate-400">Roll call, presence logs & absence alerts</p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-slate-500 group-hover:text-teal-400 transition" />
               </button>
 
               <button

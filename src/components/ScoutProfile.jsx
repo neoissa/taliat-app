@@ -1,9 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db, storage } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
-import { User, Sparkles, Mail, Phone, Lock, Shield, Image as ImageIcon, Check, Trash2, ExternalLink, Camera, Loader2 } from 'lucide-react';
+import { 
+  User, 
+  Sparkles, 
+  Mail, 
+  Phone, 
+  Lock, 
+  Shield, 
+  Image as ImageIcon, 
+  Check, 
+  Trash2, 
+  ExternalLink, 
+  Camera, 
+  Loader2,
+  Calendar,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  TrendingUp,
+  Info,
+  ChevronRight,
+  Filter
+} from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
 
@@ -64,7 +87,20 @@ export default function ScoutProfile({ currentUser }) {
   const [sptFileName, setSptFileName] = useState('');
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
-  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'eagle' | 'homework' | 'spt' | 'security'
+  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security'
+  
+  // Attendance Tracking & Risk States
+  const [attendanceStats, setAttendanceStats] = useState({
+    totalSessions: 0,
+    presentCount: 0,
+    absentCount: 0,
+    excusedCount: 0,
+    lateCount: 0,
+    attendanceRate: 100,
+    riskLevel: 'green' // 'green' | 'yellow' | 'red'
+  });
+  const [scoutAttendanceSessions, setScoutAttendanceSessions] = useState([]);
+  const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all' | 'present' | 'absent' | 'excused'
   
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -127,6 +163,78 @@ export default function ScoutProfile({ currentUser }) {
     };
     
     loadProfile();
+  }, [currentUser?.uid]);
+
+  // ── 0. REAL-TIME ATTENDANCE SESSIONS & ABSENCE RISK ENGINE ──
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      const mySessions = [];
+      let present = 0;
+      let absent = 0;
+      let excused = 0;
+      let late = 0;
+
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        const record = data.records?.[currentUser.uid];
+        if (record) {
+          const status = record.status || 'present';
+          mySessions.push({
+            id: d.id,
+            date: data.date || '',
+            eventType: data.eventType || 'Weekly Troop Meeting',
+            sessionNotes: data.notes || '',
+            status: status,
+            note: record.note || ''
+          });
+
+          if (status === 'present') {
+            present++;
+          } else if (status === 'late') {
+            late++;
+            present++;
+          } else if (status === 'absent') {
+            absent++;
+          } else if (status === 'excused') {
+            excused++;
+          }
+        }
+      });
+
+      // Sort chronological descending
+      mySessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+      const total = mySessions.length;
+      const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+      
+      // Absence Risk Thresholds:
+      // Red: >= 3 unexcused absences
+      // Yellow: >= 2 unexcused absences
+      // Green: 0-1 unexcused absences
+      let risk = 'green';
+      if (absent >= 3) {
+        risk = 'red';
+      } else if (absent >= 2) {
+        risk = 'yellow';
+      }
+
+      setAttendanceStats({
+        totalSessions: total,
+        presentCount: present,
+        absentCount: absent,
+        excusedCount: excused,
+        lateCount: late,
+        attendanceRate: rate,
+        riskLevel: risk
+      });
+      setScoutAttendanceSessions(mySessions);
+    }, (err) => {
+      console.warn("Scout attendance stats listener fallback:", err);
+    });
+
+    return () => unsub();
   }, [currentUser?.uid]);
 
   // ── 1. ROBUST PROFILE PHOTO UPLOAD WITH COMPRESSION & INSTANT AUTO-SAVE ──
@@ -428,9 +536,48 @@ export default function ScoutProfile({ currentUser }) {
             Email: <span className="text-emerald-400 font-medium">{currentUser.email}</span>
           </p>
           {currentUser.role === 'scout' && (
-            <p className="text-xs text-slate-400">
-              Active Rank: <span className="text-white font-semibold">{rankName}</span> &bull; BSA ID: <span className="text-slate-300 font-mono">{bsaId}</span>
-            </p>
+            <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap pt-1 text-xs">
+              <span className="text-slate-400">
+                Active Rank: <strong className="text-white">{rankName}</strong> &bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId}</strong>
+              </span>
+
+              {/* Attendance Risk Warning Badge in Header */}
+              {attendanceStats.totalSessions > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {attendanceStats.riskLevel === 'red' ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveProfileTab('attendance')}
+                      className="bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-pulse cursor-pointer transition shadow-sm"
+                      title="Click to review critical attendance warnings"
+                    >
+                      <AlertCircle size={11} />
+                      <span>🚨 Attendance Warning: {attendanceStats.absentCount} Absences ({attendanceStats.attendanceRate}%)</span>
+                    </button>
+                  ) : attendanceStats.riskLevel === 'yellow' ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveProfileTab('attendance')}
+                      className="bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 cursor-pointer transition shadow-sm"
+                      title="Click to review attendance notice"
+                    >
+                      <AlertTriangle size={11} />
+                      <span>⚠️ Attendance Notice: {attendanceStats.absentCount} Absences ({attendanceStats.attendanceRate}%)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveProfileTab('attendance')}
+                      className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 cursor-pointer transition shadow-sm"
+                      title="Click to view attendance record"
+                    >
+                      <CheckCircle2 size={11} />
+                      <span>✓ Good Attendance ({attendanceStats.attendanceRate}%)</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -450,6 +597,30 @@ export default function ScoutProfile({ currentUser }) {
           <User size={15} />
           <span>👤 Personal Info</span>
         </button>
+
+        {currentUser.role === 'scout' && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('attendance')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'attendance'
+                ? (attendanceStats.riskLevel === 'red' 
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-950/50' 
+                    : attendanceStats.riskLevel === 'yellow' 
+                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50' 
+                    : 'bg-teal-600 text-white shadow-lg shadow-teal-950/50')
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Calendar size={15} />
+            <span>📋 My Attendance</span>
+            {attendanceStats.absentCount >= 2 && (
+              <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                {attendanceStats.absentCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {currentUser.role === 'scout' && (
           <button
@@ -511,6 +682,254 @@ export default function ScoutProfile({ currentUser }) {
       </div>
 
       
+      {/* ── TAB: DEDICATED ATTENDANCE & WARNING TRACKER (FOR SCOUTS) ── */}
+      {activeProfileTab === 'attendance' && currentUser.role === 'scout' && (
+        <div className="space-y-6">
+          {/* Automated Color-Coded Warning Banner */}
+          {attendanceStats.riskLevel === 'red' ? (
+            <div className="bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/60 border-2 border-red-500/80 rounded-3xl p-6 shadow-2xl space-y-3">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-bold shrink-0 shadow-lg animate-bounce">
+                  <AlertCircle size={26} />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-red-300">
+                      🚨 Critical Attendance Warning: {attendanceStats.absentCount} Unexcused Absences
+                    </h3>
+                    <span className="bg-red-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Immediate Action Required
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-200/90 leading-relaxed font-medium">
+                    You have accumulated <strong>{attendanceStats.absentCount} unexcused absences</strong> across recorded patrol meetings and halqas (current attendance rate: <strong>{attendanceStats.attendanceRate}%</strong>). Active troop participation is mandatory for Scout rank advancements, patrol voting, and leadership qualifications.
+                  </p>
+                  <div className="pt-2 text-xs text-red-300 bg-red-950/50 p-3 rounded-xl border border-red-500/30 flex items-center gap-2">
+                    <Info size={15} className="shrink-0" />
+                    <span><strong>Action Step:</strong> Please consult with your Patrol Leader or Scoutmaster to review your attendance record and arrange make-up sessions or submit excused absence notes.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : attendanceStats.riskLevel === 'yellow' ? (
+            <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/60 border-2 border-amber-500/80 rounded-3xl p-6 shadow-2xl space-y-3">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-lg">
+                  <AlertTriangle size={26} />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-amber-300">
+                      ⚠️ Attendance Advisory: {attendanceStats.absentCount} Absences Recorded
+                    </h3>
+                    <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Attention Needed
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                    You have <strong>{attendanceStats.absentCount} unexcused absences</strong>. Regular troop meeting and halqa attendance is essential to maintain your active standing and continue advancing toward your next rank.
+                  </p>
+                  <div className="pt-2 text-xs text-amber-300 bg-amber-950/50 p-3 rounded-xl border border-amber-500/30 flex items-center gap-2">
+                    <Info size={15} className="shrink-0" />
+                    <span><strong>Pro-Tip:</strong> If you are unable to attend due to illness, school exams, or travel, notify your leader ahead of time so your absence is marked as <em>Excused</em>.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/60 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-2xl flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-lg">
+                <CheckCircle2 size={26} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-emerald-300 flex items-center gap-2">
+                  <span>🟢 Good Attendance Standing ({attendanceStats.attendanceRate}%)</span>
+                </h3>
+                <p className="text-xs text-emerald-200/90 leading-relaxed font-medium">
+                  MāshāʾAllāh! You have attended <strong>{attendanceStats.presentCount} of {attendanceStats.totalSessions}</strong> recorded troop sessions with only {attendanceStats.absentCount} absence{attendanceStats.absentCount === 1 ? '' : 's'}. Keep up the great consistency!
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Attendance KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Sessions</span>
+              <strong className="text-xl font-black text-white font-mono block">{attendanceStats.totalSessions} Logs</strong>
+              <span className="text-[10px] text-slate-400">Total recorded meetings</span>
+            </div>
+
+            <div className="bg-slate-800 border border-emerald-500/40 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Present & Attended</span>
+              <strong className="text-xl font-black text-emerald-300 font-mono block">{attendanceStats.presentCount} Sessions</strong>
+              <span className="text-[10px] text-emerald-400/80">{attendanceStats.attendanceRate}% Attendance Rate</span>
+            </div>
+
+            <div className={`p-4 rounded-2xl space-y-1 shadow-md border ${
+              attendanceStats.absentCount >= 3 
+                ? 'bg-red-950/40 border-red-500 text-red-300' 
+                : attendanceStats.absentCount >= 2 
+                ? 'bg-amber-950/40 border-amber-500 text-amber-300' 
+                : 'bg-slate-800 border-slate-700 text-slate-200'
+            }`}>
+              <span className="text-[10px] font-bold uppercase tracking-wider block">Unexcused Absences</span>
+              <strong className="text-xl font-black font-mono block">{attendanceStats.absentCount} Missed</strong>
+              <span className="text-[10px] opacity-80">
+                {attendanceStats.absentCount >= 3 ? '🚨 Critical Alert' : attendanceStats.absentCount >= 2 ? '⚠️ Warning' : 'Within Limits'}
+              </span>
+            </div>
+
+            <div className="bg-slate-800 border border-sky-500/30 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider block">Excused Absences</span>
+              <strong className="text-xl font-black text-sky-300 font-mono block">{attendanceStats.excusedCount} Excused</strong>
+              <span className="text-[10px] text-sky-400/80">With advance notice</span>
+            </div>
+
+            <div className="bg-slate-800 border border-amber-500/30 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Late Arrivals</span>
+              <strong className="text-xl font-black text-amber-300 font-mono block">{attendanceStats.lateCount} Late</strong>
+              <span className="text-[10px] text-amber-400/80">Counted as attended</span>
+            </div>
+          </div>
+
+          {/* Chronological Attendance History Table */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-750 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Clock size={16} className="text-teal-400" />
+                  <span>My Attendance Session History ({filteredSessions.length} Entries)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Detailed roll call log recorded by your patrol leader during troop events.
+                </p>
+              </div>
+
+              {/* Status Filter Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFilter('all')}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                    attendanceFilter === 'all'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-750'
+                  }`}
+                >
+                  All ({scoutAttendanceSessions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFilter('present')}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                    attendanceFilter === 'present'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-emerald-300 border border-slate-750'
+                  }`}
+                >
+                  Present ({attendanceStats.presentCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFilter('absent')}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                    attendanceFilter === 'absent'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-red-300 border border-slate-750'
+                  }`}
+                >
+                  Absent ({attendanceStats.absentCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFilter('excused')}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                    attendanceFilter === 'excused'
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-sky-300 border border-slate-750'
+                  }`}
+                >
+                  Excused ({attendanceStats.excusedCount})
+                </button>
+              </div>
+            </div>
+
+            {filteredSessions.length === 0 ? (
+              <div className="text-center py-10 text-slate-500 text-xs italic space-y-2">
+                <Calendar size={28} className="mx-auto text-slate-600" />
+                <p>No attendance logs match the selected filter.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-200 border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-700/80 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      <th className="py-3 px-3">Session Date</th>
+                      <th className="py-3 px-3">Event Type</th>
+                      <th className="py-3 px-3">Meeting Notes / Topic</th>
+                      <th className="py-3 px-3">Your Attendance</th>
+                      <th className="py-3 px-3">Leader Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-750/60">
+                    {filteredSessions.map((session) => (
+                      <tr 
+                        key={session.id}
+                        className={`transition ${
+                          session.status === 'absent'
+                            ? 'bg-red-950/20 hover:bg-red-950/30'
+                            : session.status === 'late'
+                            ? 'bg-amber-950/15 hover:bg-amber-950/25'
+                            : 'hover:bg-slate-750/30'
+                        }`}
+                      >
+                        <td className="py-3 px-3 font-mono font-bold text-slate-300 flex items-center gap-1.5">
+                          <Calendar size={13} className="text-teal-400" />
+                          <span>{session.date || '—'}</span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-white">
+                          {session.eventType}
+                        </td>
+                        <td className="py-3 px-3 text-slate-400">
+                          {session.sessionNotes || '—'}
+                        </td>
+                        <td className="py-3 px-3">
+                          {session.status === 'present' ? (
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                              <Check size={11} /> Present
+                            </span>
+                          ) : session.status === 'absent' ? (
+                            <span className="bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                              <XCircle size={11} /> Absent
+                            </span>
+                          ) : session.status === 'excused' ? (
+                            <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                              Excused
+                            </span>
+                          ) : session.status === 'late' ? (
+                            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
+                              Late
+                            </span>
+                          ) : (
+                            <span className="bg-slate-700 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-xl capitalize">
+                              {session.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-300 italic">
+                          {session.note || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── TAB 1: ROAD TO EAGLE & PALMS ── */}
       {activeProfileTab === 'eagle' && currentUser.role === 'scout' && (
         <RoadToEagleTracker currentUser={currentUser} scoutId={currentUser.uid} />
@@ -523,141 +942,221 @@ export default function ScoutProfile({ currentUser }) {
 
       {/* ── TAB 3: PERSONAL INFORMATION ── */}
       {activeProfileTab === 'personal' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
-              <User size={16} className="text-emerald-400" /> Personal Information
-            </h3>
-
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
-                  <input
-                    type="text"
-                    disabled={currentUser.role === 'scout'}
-                    value={bsaId}
-                    onChange={(e) => setBsaId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                    <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
-                  </label>
-                  <input
-                    type="email"
-                    value={scoutEmail}
-                    onChange={(e) => setScoutEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                    <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
-                  </label>
-                  <input
-                    type="tel"
-                    value={scoutPhone}
-                    onChange={(e) => setScoutPhone(e.target.value)}
-                    placeholder="e.g. +1234567890"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                {currentUser.role === 'scout' && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                        <Mail size={12} /> Parent Email
-                      </label>
-                      <input
-                        type="email"
-                        value={parentEmail}
-                        onChange={(e) => setParentEmail(e.target.value)}
-                        placeholder="parent@example.com"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                        <Phone size={12} /> Parent Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={parentPhone}
-                        onChange={(e) => setParentPhone(e.target.value)}
-                        placeholder="e.g. +1234567890"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </>
+        <div className="space-y-6">
+          {/* If Scout has attendance warnings, show advisory banner on Personal Tab */}
+          {currentUser.role === 'scout' && attendanceStats.totalSessions > 0 && attendanceStats.riskLevel !== 'green' && (
+            <div 
+              onClick={() => setActiveProfileTab('attendance')}
+              className={`p-4 rounded-2xl border flex items-center justify-between gap-4 cursor-pointer transition shadow-lg ${
+                attendanceStats.riskLevel === 'red'
+                  ? 'bg-red-950/60 border-red-500/80 hover:border-red-400 text-red-200'
+                  : 'bg-amber-950/60 border-amber-500/80 hover:border-amber-400 text-amber-200'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {attendanceStats.riskLevel === 'red' ? (
+                  <AlertCircle size={22} className="text-red-400 shrink-0 animate-bounce" />
+                ) : (
+                  <AlertTriangle size={22} className="text-amber-400 shrink-0" />
                 )}
+                <div>
+                  <strong className="text-xs font-black block">
+                    {attendanceStats.riskLevel === 'red'
+                      ? `🚨 Critical Attendance Warning: ${attendanceStats.absentCount} Unexcused Absences (${attendanceStats.attendanceRate}% Attendance)`
+                      : `⚠️ Attendance Advisory: ${attendanceStats.absentCount} Absences Recorded (${attendanceStats.attendanceRate}% Attendance)`
+                    }
+                  </strong>
+                  <p className="text-[11px] opacity-90 mt-0.5">
+                    Click here to view your complete roll call breakdown, session dates, and attendance policy details.
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                className="bg-slate-900 border border-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0"
+              >
+                <span>View Log</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
 
-              
-              {/* ── ABOUT ME SECTION ── */}
-              <div className="pt-3 border-t border-slate-700/60 space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                    <User size={15} />
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+              <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+                <User size={16} className="text-emerald-400" /> Personal Information
+              </h3>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
-                    <p className="text-[11px] text-slate-400">
-                      Share facts about yourself, your hobbies, interests, and scouting goals.
-                    </p>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                    <input
+                      type="text"
+                      disabled={currentUser.role === 'scout'}
+                      value={bsaId}
+                      onChange={(e) => setBsaId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
+                    </label>
+                    <input
+                      type="email"
+                      value={scoutEmail}
+                      onChange={(e) => setScoutEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
+                    </label>
+                    <input
+                      type="tel"
+                      value={scoutPhone}
+                      onChange={(e) => setScoutPhone(e.target.value)}
+                      placeholder="e.g. +1234567890"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {currentUser.role === 'scout' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                          <Mail size={12} /> Parent Email
+                        </label>
+                        <input
+                          type="email"
+                          value={parentEmail}
+                          onChange={(e) => setParentEmail(e.target.value)}
+                          placeholder="parent@example.com"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                          <Phone size={12} /> Parent Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={parentPhone}
+                          onChange={(e) => setParentPhone(e.target.value)}
+                          placeholder="e.g. +1234567890"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
-                  rows={3}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
-                />
-              </div>
+                {/* ── ABOUT ME SECTION ── */}
+                <div className="pt-3 border-t border-slate-700/60 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                      <User size={15} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
+                      <p className="text-[11px] text-slate-400">
+                        Share facts about yourself, your hobbies, interests, and scouting goals.
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex justify-end border-t border-slate-700/60 pt-3">
-                <button
-                  type="submit"
-                  disabled={updating}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
-                >
-                  {updating ? 'Saving Changes...' : 'Save Profile Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
+                    rows={3}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  />
+                </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
-              <Shield size={16} className="text-emerald-400" /> Troop Affiliation
-            </h3>
-            <div className="space-y-3 text-xs">
-              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
-                <strong className="text-white text-sm">{patrolName} Patrol</strong>
-              </div>
-              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
-                <strong className="text-emerald-400 text-sm">{rankName}</strong>
+                <div className="flex justify-end border-t border-slate-700/60 pt-3">
+                  <button
+                    type="submit"
+                    disabled={updating}
+                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
+                  >
+                    {updating ? 'Saving Changes...' : 'Save Profile Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Troop Affiliation & Attendance Card */}
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
+              <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
+                <Shield size={16} className="text-emerald-400" /> Troop Standing
+              </h3>
+              <div className="space-y-3 text-xs">
+                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
+                  <strong className="text-white text-sm">{patrolName} Patrol</strong>
+                </div>
+                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
+                  <strong className="text-emerald-400 text-sm">{rankName}</strong>
+                </div>
+
+                {/* Attendance Summary Tile */}
+                {currentUser.role === 'scout' && (
+                  <div 
+                    onClick={() => setActiveProfileTab('attendance')}
+                    className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
+                      attendanceStats.riskLevel === 'red'
+                        ? 'bg-red-950/30 border-red-500/50 hover:border-red-400'
+                        : attendanceStats.riskLevel === 'yellow'
+                        ? 'bg-amber-950/30 border-amber-500/50 hover:border-amber-400'
+                        : 'bg-slate-900/60 border-slate-750 hover:border-teal-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Attendance Standing</span>
+                      <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <strong className={`text-sm font-black font-mono ${
+                        attendanceStats.riskLevel === 'red'
+                          ? 'text-red-400'
+                          : attendanceStats.riskLevel === 'yellow'
+                          ? 'text-amber-400'
+                          : 'text-teal-300'
+                      }`}>
+                        {attendanceStats.attendanceRate}% Rate
+                      </strong>
+                      <span className="text-[10px] text-slate-300 font-mono">
+                        {attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions
+                      </span>
+                    </div>
+                    {attendanceStats.absentCount > 0 && (
+                      <p className={`text-[10px] font-semibold ${
+                        attendanceStats.riskLevel === 'red' ? 'text-red-400' : 'text-amber-400'
+                      }`}>
+                        {attendanceStats.riskLevel === 'red' ? '🚨' : '⚠️'} {attendanceStats.absentCount} Unexcused Absence{attendanceStats.absentCount === 1 ? '' : 's'}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

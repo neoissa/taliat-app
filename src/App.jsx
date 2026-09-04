@@ -251,6 +251,7 @@ export default function App() {
       return [
         { id: 'home', label: 'Leader Hub', icon: '🏠' },
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
+        { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
