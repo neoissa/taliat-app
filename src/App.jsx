@@ -205,6 +205,16 @@ export default function App() {
     }
   };
 
+  const [attendanceInitialData, setAttendanceInitialData] = useState(null);
+
+  const handleNavigate = (tab, extraData = null) => {
+    if (tab === 'attendance' && extraData) {
+      setAttendanceInitialData(extraData);
+    }
+    setCurrentTab(tab);
+    setMobileMenuOpen(false);
+  };
+
   const handleTabClick = (tabId) => {
     setCurrentTab(tabId);
     setMobileMenuOpen(false);
@@ -493,13 +503,13 @@ export default function App() {
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
       <main className="flex-1 min-w-0 bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
         {currentTab === 'road-to-eagle' && isScout && (
-          <RoadToEagleGuide currentUser={currentUser} onNavigate={setCurrentTab} />
+          <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
 
         {currentTab === 'home' && (isLeader || isOwner) && (
           <LeaderHome 
             currentUser={currentUser} 
-            onNavigate={(tab) => setCurrentTab(tab)} 
+            onNavigate={handleNavigate} 
           />
         )}
         
@@ -507,7 +517,7 @@ export default function App() {
           <StudentHome 
             currentUser={currentUser} 
             unreadChatCount={unreadChatCount} 
-            onNavigate={(tab) => setCurrentTab(tab)} 
+            onNavigate={handleNavigate} 
           />
         )}
 
@@ -518,7 +528,7 @@ export default function App() {
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
-        {currentTab === 'events' && <EventsManager currentUser={currentUser} />}
+        {currentTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'lesson-plans' && (isLeader || isOwner) && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
@@ -526,8 +536,8 @@ export default function App() {
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'admin' && (isLeader || isOwner) && <AdminPanel />}
-        {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={setCurrentTab} />}
-        {currentTab === 'attendance' && (isLeader || isOwner) && <PatrolAttendance currentUser={currentUser} />}
+        {currentTab === 'reports' && (isLeader || isOwner) && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'attendance' && (isLeader || isOwner) && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
     </div>

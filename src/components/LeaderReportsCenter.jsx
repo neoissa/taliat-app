@@ -53,6 +53,7 @@ function SingleScoutCustomReport({
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [scoutSubmissions, setScoutSubmissions] = useState({});
   const [eventsList, setEventsList] = useState([]);
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [leaderNotes, setLeaderNotes] = useState({});
   const [eagleData, setEagleData] = useState({});
   const [eagleRoadmap, setEagleRoadmap] = useState({});
@@ -87,6 +88,13 @@ function SingleScoutCustomReport({
       snap.docs.forEach(d => { m[d.id] = d.data(); });
       setScoutSubmissions(m);
     });
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.records && s.records[scoutUid]);
+      list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
+      setAttendanceSessions(list);
+    });
     const unsubEvents = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
@@ -109,6 +117,7 @@ function SingleScoutCustomReport({
       unsubService();
       unsubAssign();
       unsubSub();
+      unsubAttendance();
       unsubEvents();
       unsubNotes();
       unsubEagle();
@@ -207,7 +216,39 @@ function SingleScoutCustomReport({
     return isItemActiveInMode(p.completedDate || p.dateCompleted || '');
   }) : [];
 
-  // Filter Events
+  // Filter Events & Real Attendance Sessions
+  const filteredAttendance = config.activities.enabled ? attendanceSessions.filter(s => {
+    if (!isItemActiveInMode(s.date)) return false;
+    const type = (s.eventType || '').toLowerCase();
+    if (type.includes('camp')) return config.activities.includeCampouts;
+    if (type.includes('hike') || type.includes('outdoor')) return config.activities.includeHikes;
+    return config.activities.includeMeetings;
+  }) : [];
+
+  let reportTotalAttendedHours = 0;
+  let reportTotalCampingNights = 0;
+  let reportTotalServiceAttendanceHours = 0;
+  let reportTotalTuesdayHours = 0;
+  let reportTotalFridayHours = 0;
+  let reportAttendedSessionsCount = 0;
+
+  filteredAttendance.forEach(s => {
+    const rec = s.records?.[scoutUid];
+    if (rec && (rec.status === 'present' || rec.status === 'late')) {
+      reportAttendedSessionsCount++;
+      const sType = s.eventType || '';
+      const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+      const defaultN = sType.includes('Camp') ? 2 : 0;
+      const h = rec.hours !== undefined ? Number(rec.hours) : (s.hours !== undefined ? Number(s.hours) : defaultH);
+      const n = rec.nights !== undefined ? Number(rec.nights) : (s.nights !== undefined ? Number(s.nights) : defaultN);
+      reportTotalAttendedHours += h;
+      reportTotalCampingNights += n;
+      if (sType.includes('Service') || sType.includes('Volunteer')) reportTotalServiceAttendanceHours += h;
+      else if (sType.includes('Tuesday')) reportTotalTuesdayHours += h;
+      else if (sType.includes('Weekly') || sType.includes('Friday')) reportTotalFridayHours += h;
+    }
+  });
+
   const filteredEvents = config.activities.enabled ? eventsList.filter(ev => {
     if (!isItemActiveInMode(ev.date)) return false;
     const type = (ev.type || '').toLowerCase();
@@ -514,33 +555,80 @@ function SingleScoutCustomReport({
           <div className="border-b-2 border-slate-800 pb-1.5 flex justify-between items-center">
             <h3 className="text-base font-black uppercase text-slate-950 flex items-center gap-2">
               <Compass size={16} />
-              <span>Taliʿa Patrol Activities & Attendance ({filteredEvents.length} Events)</span>
+              <span>Taliʿa Patrol Activities & Attendance ({Math.round(reportTotalAttendedHours * 10) / 10} Total Attended Hours)</span>
             </h3>
+            <span className="text-xs font-mono font-bold text-slate-700">
+              {reportTotalCampingNights} Camping Nights &bull; {reportAttendedSessionsCount}/{filteredAttendance.length} Sessions Attended
+            </span>
+          </div>
+
+          {/* Quick Hours Summary Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-100 p-2.5 rounded-lg border border-slate-300 text-xs">
+            <div>
+              <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Attended</span>
+              <strong className="text-sm font-black text-slate-900 font-mono">{Math.round(reportTotalAttendedHours * 10) / 10} Hours</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-600 uppercase block">Camping Nights</span>
+              <strong className="text-sm font-black text-slate-900 font-mono">{reportTotalCampingNights} Nights</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-600 uppercase block">Tuesday Program</span>
+              <strong className="text-sm font-black text-slate-900 font-mono">{Math.round(reportTotalTuesdayHours * 10) / 10} Hours</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-600 uppercase block">Friday Meetings</span>
+              <strong className="text-sm font-black text-slate-900 font-mono">{Math.round(reportTotalFridayHours * 10) / 10} Hours</strong>
+            </div>
           </div>
 
           <table className="w-full text-xs text-left border border-slate-300">
             <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
               <tr>
-                <th className="p-2">Event Title</th>
-                <th className="p-2 w-32">Type</th>
-                <th className="p-2 w-28">Date</th>
-                <th className="p-2 w-36 text-right">Participation Status</th>
+                <th className="p-2 w-24">Date</th>
+                <th className="p-2">Program / Session</th>
+                <th className="p-2 w-20 text-center">Hours</th>
+                <th className="p-2 w-16 text-center">Nights</th>
+                <th className="p-2 w-28 text-center">Status</th>
+                <th className="p-2">Notes / Topic</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredEvents.length === 0 ? (
+              {filteredAttendance.length === 0 && filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-3 text-center text-slate-500 italic">No activity logs recorded.</td>
+                  <td colSpan="6" className="p-3 text-center text-slate-500 italic">No attendance or activity logs recorded in this period.</td>
                 </tr>
               ) : (
-                filteredEvents.slice(0, 6).map(ev => (
-                  <tr key={ev.id}>
-                    <td className="p-2 font-bold text-slate-950">{ev.title}</td>
-                    <td className="p-2 text-slate-600 capitalize">{ev.type || 'Patrol Meeting'}</td>
-                    <td className="p-2 font-mono text-slate-700">{ev.date}</td>
-                    <td className="p-2 text-right font-bold text-emerald-800">✓ Present & Active</td>
-                  </tr>
-                ))
+                filteredAttendance.map(s => {
+                  const rec = s.records?.[scoutUid] || { status: 'present' };
+                  const isAttended = rec.status === 'present' || rec.status === 'late';
+                  const sType = s.eventType || '';
+                  const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+                  const defaultN = sType.includes('Camp') ? 2 : 0;
+                  const h = isAttended ? (rec.hours !== undefined ? Number(rec.hours) : (s.hours !== undefined ? Number(s.hours) : defaultH)) : 0;
+                  const n = isAttended ? (rec.nights !== undefined ? Number(rec.nights) : (s.nights !== undefined ? Number(s.nights) : defaultN)) : 0;
+
+                  return (
+                    <tr key={s.id}>
+                      <td className="p-2 font-mono text-slate-700">{s.date}</td>
+                      <td className="p-2 font-bold text-slate-950">{s.eventType}</td>
+                      <td className="p-2 text-center font-mono font-bold">{h}h</td>
+                      <td className="p-2 text-center font-mono">{n}n</td>
+                      <td className="p-2 text-center uppercase font-bold text-[10px]">
+                        {rec.status === 'present' ? (
+                          <span className="text-emerald-800">✓ Present</span>
+                        ) : rec.status === 'late' ? (
+                          <span className="text-amber-800">⏱️ Late</span>
+                        ) : rec.status === 'excused' ? (
+                          <span className="text-sky-800">✉️ Excused</span>
+                        ) : (
+                          <span className="text-red-700">✗ Absent</span>
+                        )}
+                      </td>
+                      <td className="p-2 text-slate-700">{rec.note || s.notes || '—'}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -731,6 +819,17 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
         notes: { enabled: true },
         signatures: { enabled: true }
       });
+    } else if (presetType === 'attendance_transcript') {
+      setConfig({
+        ranks: { enabled: false, scope: 'current', specific: [] },
+        badges: { enabled: false, scope: 'all', specific: [] },
+        eagle: { enabled: false, includeTenure: false, includePhases: false, includeVolunteerHours: false, includeReferences: false, includePalms: false },
+        service: { enabled: true, conservationOnly: false },
+        homework: { enabled: false, includeAssignments: false, includeIslamic: false },
+        activities: { enabled: true, includeMeetings: true, includeCampouts: true, includeHikes: true },
+        notes: { enabled: true },
+        signatures: { enabled: true }
+      });
     } else if (presetType === 'master_record') {
       setConfig({
         ranks: { enabled: true, scope: 'all', specific: [] },
@@ -827,6 +926,15 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
             >
               <strong className="text-sky-300 block font-bold group-hover:text-sky-200">🦅 Eagle Candidate Review</strong>
               <p className="text-[10px] text-slate-400 mt-0.5">Star/Life/Eagle + 21 Badges + Project</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyPreset('attendance_transcript')}
+              className="p-3 rounded-2xl bg-slate-900 border border-teal-500/40 hover:border-teal-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
+            >
+              <strong className="text-teal-300 block font-bold group-hover:text-teal-200">📋 Attendance & Hours Transcript</strong>
+              <p className="text-[10px] text-slate-400 mt-0.5">Official hours, nights & service audit</p>
             </button>
 
             <button

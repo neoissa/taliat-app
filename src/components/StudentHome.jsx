@@ -29,7 +29,9 @@ import {
   MapPin,
   Check,
   ArrowRight,
-  Zap
+  Zap,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
@@ -45,6 +47,15 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
+  const [attendanceStats, setAttendanceStats] = useState({
+    totalSessions: 0,
+    presentCount: 0,
+    absentCount: 0,
+    excusedCount: 0,
+    lateCount: 0,
+    attendanceRate: 100,
+    riskLevel: 'green' // 'green' | 'yellow' | 'red'
+  });
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -134,6 +145,76 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     return () => unsub();
   }, [scoutUid]);
 
+  // 6. Subscribe to attendance sessions for scout
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      let present = 0;
+      let absent = 0;
+      let excused = 0;
+      let late = 0;
+      let total = 0;
+      let totalHours = 0;
+      let campingNights = 0;
+      let tuesdayHours = 0;
+      let fridayHours = 0;
+
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        const record = data.records?.[scoutUid];
+        if (record) {
+          total++;
+          const status = record.status || 'present';
+          const isAttended = status === 'present' || status === 'late';
+          const sType = data.eventType || '';
+          const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
+          const defaultN = sType.includes('Camp') ? 2 : 0;
+          const sHours = record.hours !== undefined ? Number(record.hours) : (data.hours !== undefined ? Number(data.hours) : defaultH);
+          const sNights = record.nights !== undefined ? Number(record.nights) : (data.nights !== undefined ? Number(data.nights) : defaultN);
+
+          if (status === 'present') {
+            present++;
+          } else if (status === 'late') {
+            late++;
+            present++;
+          } else if (status === 'absent') {
+            absent++;
+          } else if (status === 'excused') {
+            excused++;
+          }
+
+          if (isAttended) {
+            totalHours += sHours;
+            campingNights += sNights;
+            if (sType.includes('Tuesday')) tuesdayHours += sHours;
+            else if (sType.includes('Weekly') || sType.includes('Friday')) fridayHours += sHours;
+          }
+        }
+      });
+
+      const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+      let risk = 'green';
+      if (absent >= 3) risk = 'red';
+      else if (absent >= 2) risk = 'yellow';
+
+      setAttendanceStats({
+        totalSessions: total,
+        presentCount: present,
+        absentCount: absent,
+        excusedCount: excused,
+        lateCount: late,
+        attendanceRate: rate,
+        riskLevel: risk,
+        totalHours: Math.round(totalHours * 10) / 10,
+        campingNights,
+        tuesdayHours: Math.round(tuesdayHours * 10) / 10,
+        fridayHours: Math.round(fridayHours * 10) / 10
+      });
+    }, (err) => console.warn("Attendance stats fallback:", err));
+
+    return () => unsub();
+  }, [scoutUid]);
+
   const activeRank = currentUser?.rank || 'Scout';
 
   // Real-time pending items count
@@ -215,7 +296,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {/* ── Quick Scout Stats Grid ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           {/* Active Rank */}
           <div className="bg-slate-900/70 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
@@ -225,6 +306,36 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Active Rank</span>
               <strong className="text-sm font-black text-emerald-400 capitalize block">
                 {activeRank}
+              </strong>
+            </div>
+          </div>
+
+          {/* Attendance Standing Tile */}
+          <div 
+            onClick={() => onNavigate && onNavigate('profile')}
+            className={`p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer transition border ${
+              attendanceStats.riskLevel === 'red'
+                ? 'bg-red-950/40 border-red-500/60 hover:border-red-400'
+                : attendanceStats.riskLevel === 'yellow'
+                ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
+                : 'bg-slate-900/70 border-teal-500/30 hover:border-teal-400'
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              attendanceStats.riskLevel === 'red'
+                ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                : attendanceStats.riskLevel === 'yellow'
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                : 'bg-teal-500/15 text-teal-400 border border-teal-500/30'
+            }`}>
+              <Calendar size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] block uppercase font-bold tracking-wider ${
+                attendanceStats.riskLevel === 'red' ? 'text-red-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
+              }`}>Attendance</span>
+              <strong className="text-sm font-black text-white block truncate">
+                {attendanceStats.attendanceRate}% ({attendanceStats.presentCount}/{attendanceStats.totalSessions})
               </strong>
             </div>
           </div>
@@ -270,6 +381,98 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               </strong>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── 1.5. SCOUT ATTENDANCE STANDING & WARNING BANNER ── */}
+      <div 
+        onClick={() => onNavigate && onNavigate('profile')}
+        className={`rounded-3xl p-5 sm:p-6 shadow-xl border-2 transition cursor-pointer group ${
+          attendanceStats.riskLevel === 'red'
+            ? 'bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/60 border-red-500/80 hover:border-red-400'
+            : attendanceStats.riskLevel === 'yellow'
+            ? 'bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/60 border-amber-500/80 hover:border-amber-400'
+            : 'bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/40 border-teal-500/40 hover:border-teal-400'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+              attendanceStats.riskLevel === 'red'
+                ? 'bg-red-500/20 border border-red-500/40 text-red-400 animate-bounce'
+                : attendanceStats.riskLevel === 'yellow'
+                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+                : 'bg-teal-500/20 border border-teal-500/40 text-teal-400'
+            }`}>
+              {attendanceStats.riskLevel === 'red' ? (
+                <AlertCircle size={24} />
+              ) : attendanceStats.riskLevel === 'yellow' ? (
+                <AlertTriangle size={24} />
+              ) : (
+                <Calendar size={24} />
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                  attendanceStats.riskLevel === 'red'
+                    ? 'bg-red-500 text-slate-950'
+                    : attendanceStats.riskLevel === 'yellow'
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                }`}>
+                  {attendanceStats.riskLevel === 'red'
+                    ? '🚨 Critical Attendance Alert'
+                    : attendanceStats.riskLevel === 'yellow'
+                    ? '⚠️ Attendance Advisory'
+                    : '📋 Troop Attendance & Standing'
+                  }
+                </span>
+                <span className="text-xs text-slate-300 font-bold font-mono">
+                  {attendanceStats.attendanceRate}% Attendance Rate &bull; {attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions
+                </span>
+                <span className="text-xs text-teal-300 font-bold font-mono bg-teal-950/60 border border-teal-500/40 px-2 py-0.5 rounded-full">
+                  ⏱️ {attendanceStats.totalHours || 0} Hours &bull; 🏕️ {attendanceStats.campingNights || 0} Nights
+                </span>
+              </div>
+
+              <h3 className="text-base font-black text-white">
+                {attendanceStats.riskLevel === 'red'
+                  ? `Warning: ${attendanceStats.absentCount} Unexcused Absences Accumulated`
+                  : attendanceStats.riskLevel === 'yellow'
+                  ? `Notice: ${attendanceStats.absentCount} Absences Recorded`
+                  : `Active Troop Participation & Roll Call Status`
+                }
+              </h3>
+              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                {attendanceStats.riskLevel === 'red'
+                  ? 'Your unexcused absences exceed the recommended limit. Regular attendance is required for active rank advancement. Please talk to your leader to review makeup options.'
+                  : attendanceStats.riskLevel === 'yellow'
+                  ? 'You have 2 absences on file. Notify your patrol leader in advance when you cannot make it so absences can be excused.'
+                  : 'MāshāʾAllāh! You are in good standing with your weekly troop meetings, halqas, and outdoor activities.'
+                }
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate && onNavigate('profile');
+            }}
+            className={`font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center ${
+              attendanceStats.riskLevel === 'red'
+                ? 'bg-red-600 hover:bg-red-500 text-white'
+                : attendanceStats.riskLevel === 'yellow'
+                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                : 'bg-teal-600 hover:bg-teal-500 text-white'
+            }`}
+          >
+            <span>View Attendance Log</span>
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
 

@@ -33,6 +33,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const [scouts, setScouts] = useState([]);
   const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
+  const [eventAttendanceFilter, setEventAttendanceFilter] = useState('all'); // 'all' | 'pending' | 'recorded'
   const [assignments, setAssignments] = useState([]);
   const [pendingMap, setPendingMap] = useState({});
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -59,15 +62,31 @@ export default function LeaderHome({ currentUser, onNavigate }) {
     return () => unsub();
   }, []);
 
-  // 3. Fetch Upcoming Events
+  // 3. Fetch All Scheduled Events
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
-      setEvents(list.slice(0, 4));
+      setAllEvents(list);
+      setEvents(list.slice(0, 6));
     }, (err) => console.warn('LeaderHome events fallback:', err));
     return () => unsub();
   }, []);
+
+  // 3.5 Fetch Attendance Sessions (Scoped to Leader's Patrol)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!isOwner && currentUser?.groupId) {
+        list = list.filter(s => s.groupId === currentUser.groupId || s.leaderId === currentUser.uid);
+      } else if (!isOwner) {
+        list = list.filter(s => s.leaderId === currentUser?.uid);
+      }
+      list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      setAttendanceSessions(list);
+    }, (err) => console.warn('Attendance sessions fallback in LeaderHome:', err));
+    return () => unsub();
+  }, [currentUser, isOwner]);
 
   // 4. Fetch Assignments
   useEffect(() => {
@@ -163,6 +182,74 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
     return () => unsubs.forEach(u => u());
   }, [scouts]);
+
+  // 6. Category to EventType Mapper
+  const mapCategoryToEventType = (cat) => {
+    const c = (cat || '').toLowerCase();
+    if (c.includes('camp') || c === 'campout') return 'Campout';
+    if (c.includes('faith') || c.includes('halqa') || c.includes('study')) return 'Halqa / Study Circle';
+    if (c.includes('service') || c.includes('volunteer')) return 'Service Project';
+    if (c.includes('hike') || c.includes('outdoor')) return 'Day Hike';
+    if (c.includes('workshop') || c.includes('ceremony')) return 'Special Workshop';
+    return 'Weekly Troop Meeting';
+  };
+
+  // 7. Helper to cross-reference event with recorded attendance sessions
+  const getEventAttendanceInfo = (ev) => {
+    const mappedType = mapCategoryToEventType(ev.category || ev.type);
+    const session = attendanceSessions.find(s => 
+      s.date === ev.date && 
+      (s.eventType === mappedType || (s.notes && s.notes.includes(ev.title)))
+    );
+
+    if (!session || !session.records) {
+      return { recorded: false, presentCount: 0, totalCount: 0, turnoutPct: 0, session: null, mappedType };
+    }
+
+    const records = Object.values(session.records);
+    const present = records.filter(r => r.status === 'present' || r.status === 'late').length;
+    const total = records.length;
+    const turnout = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    return {
+      recorded: true,
+      presentCount: present,
+      totalCount: total,
+      turnoutPct: turnout,
+      session,
+      mappedType
+    };
+  };
+
+  // Calculate Patrol Risk metrics
+  let patrolYellowRiskCount = 0;
+  let patrolRedRiskCount = 0;
+
+  scouts.forEach(scout => {
+    let unexcusedCount = 0;
+    attendanceSessions.forEach(sess => {
+      const rec = sess.records?.[scout.uid];
+      if (rec && rec.status === 'absent') {
+        unexcusedCount++;
+      }
+    });
+    if (unexcusedCount >= 3) {
+      patrolRedRiskCount++;
+    } else if (unexcusedCount > 1) {
+      patrolYellowRiskCount++;
+    }
+  });
+
+  // Filter events based on attendance status
+  const filteredEvents = allEvents.filter(ev => {
+    const info = getEventAttendanceInfo(ev);
+    if (eventAttendanceFilter === 'pending') return !info.recorded;
+    if (eventAttendanceFilter === 'recorded') return info.recorded;
+    return true;
+  });
+
+  const pendingRollCallCount = allEvents.filter(ev => !getEventAttendanceInfo(ev).recorded).length;
+  const recordedRollCallCount = allEvents.filter(ev => getEventAttendanceInfo(ev).recorded).length;
 
   const totalPendingApprovals = Object.values(pendingMap).reduce((sum, item) => sum + (item?.total || 0), 0);
   const scoutsWithPending = scouts.filter(s => (pendingMap[s.uid]?.total || 0) > 0);
@@ -268,9 +355,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             onClick={() => onNavigate && onNavigate('attendance')}
             className="bg-slate-900/70 border border-teal-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-teal-400 transition"
           >
-            <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Patrol Attendance</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Patrol Attendance</span>
+              {patrolRedRiskCount > 0 && (
+                <span className="bg-red-500/30 border border-red-500/50 text-red-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                  {patrolRedRiskCount} Risk
+                </span>
+              )}
+            </div>
             <strong className="text-base font-black text-white block mt-0.5">
-              📋 Roll Call & Logs
+              {attendanceSessions.length} Sessions Logged
             </strong>
           </div>
 
@@ -300,7 +394,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           >
             <span className="text-[10px] text-purple-400 block uppercase font-bold tracking-wider">Planned Events</span>
             <strong className="text-base font-black text-white block mt-0.5">
-              {events.length} Upcoming
+              {allEvents.length} Scheduled
             </strong>
           </div>
         </div>
@@ -428,41 +522,171 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
 
-          {/* Upcoming Troop Events & Halqas */}
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-              <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
-                <Calendar size={16} className="text-emerald-400" />
-                <span>Upcoming Troop Events & Halqas</span>
-              </h3>
+          {/* ── UPCOMING TROOP EVENTS & ATTENDANCE ROLL CALL MONITOR ── */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-4">
+              <div>
+                <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
+                  <Calendar size={18} className="text-teal-400" />
+                  <span>Troop Events & Attendance Roll Call</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Scheduled troop events automatically sync with patrol roll call & attendance tracking.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('attendance')}
+                  className="bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <span>📋 Attendance Hub</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('events')}
+                  className="bg-slate-750 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <span>All Events</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
               <button
                 type="button"
-                onClick={() => onNavigate && onNavigate('events')}
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                onClick={() => setEventAttendanceFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
+                  eventAttendanceFilter === 'all'
+                    ? 'bg-slate-700 text-white border-slate-500 shadow-sm'
+                    : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-slate-800'
+                }`}
               >
-                <span>All Events</span>
-                <ChevronRight size={13} />
+                All Events ({allEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventAttendanceFilter('pending')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                  eventAttendanceFilter === 'pending'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm'
+                    : 'bg-slate-900/60 text-slate-400 hover:text-amber-300 border-slate-800'
+                }`}
+              >
+                <span>⚠️ Roll Call Pending</span>
+                <span className="bg-amber-500/30 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                  {pendingRollCallCount}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventAttendanceFilter('recorded')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                  eventAttendanceFilter === 'recorded'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
+                    : 'bg-slate-900/60 text-slate-400 hover:text-emerald-300 border-slate-800'
+                }`}
+              >
+                <span>🟢 Logged Sessions</span>
+                <span className="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                  {recordedRollCallCount}
+                </span>
               </button>
             </div>
 
-            <div className="space-y-2.5">
-              {events.length === 0 ? (
-                <p className="text-xs text-slate-400 italic p-3">No upcoming events scheduled.</p>
+            {/* Event List */}
+            <div className="space-y-3">
+              {filteredEvents.length === 0 ? (
+                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+                  <p className="text-xs text-slate-400 italic">
+                    {eventAttendanceFilter === 'pending'
+                      ? '🎉 Awesome! All scheduled events have attendance logs completed.'
+                      : eventAttendanceFilter === 'recorded'
+                      ? 'No attendance sessions logged yet for scheduled events.'
+                      : 'No upcoming troop events found in the schedule.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('events')}
+                    className="inline-flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 font-bold cursor-pointer"
+                  >
+                    <span>➕ Schedule New Troop Event</span>
+                  </button>
+                </div>
               ) : (
-                events.map(ev => (
-                  <div key={ev.id} className="bg-slate-900/80 border border-slate-750 p-3.5 rounded-2xl flex items-center justify-between gap-3">
-                    <div>
-                      <h4 className="font-extrabold text-xs text-white">{ev.title}</h4>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                        <span>📅 {ev.date || 'Scheduled'}</span>
-                        {ev.location && <span>📍 {ev.location}</span>}
-                      </p>
+                filteredEvents.slice(0, 8).map(ev => {
+                  const info = getEventAttendanceInfo(ev);
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`bg-slate-900/80 border rounded-2xl p-4 transition space-y-3 ${
+                        info.recorded
+                          ? 'border-emerald-500/30 hover:border-emerald-500/60'
+                          : 'border-slate-750 hover:border-amber-500/40'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] bg-slate-800 text-teal-300 border border-slate-700 font-mono font-bold px-2 py-0.5 rounded-md">
+                              📅 {ev.date || 'Upcoming'}
+                            </span>
+                            {ev.time && (
+                              <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-mono px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Clock size={10} className="text-amber-400" /> {ev.time}
+                              </span>
+                            )}
+                            <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-bold px-2 py-0.5 rounded-md">
+                              {ev.category || ev.type || 'Event'}
+                            </span>
+                            {info.recorded ? (
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span>🟢 Logged:</span> {info.presentCount}/{info.totalCount} Scouts ({info.turnoutPct}%)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span>⚠️ Roll Call Pending</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
+
+                          {ev.location && (
+                            <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                              <span>📍 {ev.location}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Action CTA Button */}
+                        <div className="shrink-0">
+                          {info.recorded ? (
+                            <button
+                              type="button"
+                              onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                              className="w-full sm:w-auto bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/40 hover:border-teal-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                            >
+                              <span>✏️ Update Roll Call</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                              className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
+                            >
+                              <Calendar size={13} />
+                              <span>📋 Take Attendance (Auto-Sync)</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2.5 py-0.5 rounded-full">
-                      {ev.type || 'Meeting'}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
