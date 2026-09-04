@@ -57,6 +57,23 @@ const BSA_LEADERSHIP_POSITIONS = [
   'Den Chief'
 ];
 
+const RECOMMENDED_BADGES_DATA = [
+  { id: 'wilderness-survival', name: 'Wilderness Survival', category: 'Outdoors', highlight: 'Build natural shelters & survive overnight' },
+  { id: 'robotics', name: 'Robotics', category: 'STEM', highlight: 'Design, build and code autonomous robots' },
+  { id: 'chess', name: 'Chess', category: 'Strategy', highlight: 'Tactics, strategies, and tournament play' },
+  { id: 'astronomy', name: 'Astronomy', category: 'STEM', highlight: 'Telescopes, night sky mapping & stars' },
+  { id: 'woodwork', name: 'Woodwork', category: 'Trades', highlight: 'Hand tools, joinery, and crafting projects' },
+  { id: 'archery', name: 'Archery', category: 'Outdoors', highlight: 'Bows, arrows, range safety, and marksmanship' },
+  { id: 'programming', name: 'Programming', category: 'STEM', highlight: 'Software algorithms, Python/JS, and web tech' },
+  { id: 'pioneering', name: 'Pioneering', category: 'Outdoors', highlight: 'Rope lashings, bridges, and camp towers' },
+  { id: 'leatherwork', name: 'Leatherwork', category: 'Trades', highlight: 'Carving, stitching, and tooling leather gear' },
+  { id: 'public-speaking', name: 'Public Speaking', category: 'Leadership', highlight: 'Speeches, storytelling, and debate skills' },
+  { id: 'automotive-maintenance', name: 'Automotive Maintenance', category: 'Trades', highlight: 'Engines, tires, fluids, and car safety' },
+  { id: 'orienteering', name: 'Orienteering', category: 'Outdoors', highlight: 'Map & compass navigation in rugged terrain' },
+  { id: 'photography', name: 'Photography', category: 'Arts', highlight: 'Visual storytelling, lighting, and camera modes' },
+  { id: 'electricity', name: 'Electricity', category: 'STEM', highlight: 'Circuits, wiring safety, and electromagnets' }
+];
+
 const DEFAULT_REFERENCES = [
   { type: 'Parents / Guardians', name: '', address: '', phone: '', email: '' },
   { type: 'Religious Leader', name: '', address: '', phone: '', email: '' },
@@ -89,6 +106,7 @@ export default function RoadToEagleTracker({ currentUser, scoutId: propScoutId, 
   // Elective Modal Picker State
   const [showElectiveModal, setShowElectiveModal] = useState(false);
   const [electiveSearch, setElectiveSearch] = useState('');
+  const [recommendedCategory, setRecommendedCategory] = useState('All');
 
   // Editable Form States
   const [joinedTroopDate, setJoinedTroopDate] = useState('');
@@ -1015,107 +1033,278 @@ export default function RoadToEagleTracker({ currentUser, scoutId: propScoutId, 
             </div>
           </div>
 
-          {/* ── SECTION B: 7 ELECTIVE MERIT BADGES ── */}
+          {/* ── PART 3: CUSTOM ELECTIVES ROADMAP & RECOMMENDED BADGES HUB ── */}
           <div className="space-y-4 pt-4 border-t border-slate-700/80">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
               <div>
                 <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="text-base">🎨</span>
-                  <span>Part 2: 7 Elective Merit Badges Roadmap</span>
+                  <span>Part 3: 7 Elective Badges Roadmap & Recommended Badges Hub</span>
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Choose any 7 elective merit badges from 120+ official BSA options to complete your 21 total badges.
+                  Plan your 7 electives by choosing from the recommended badges on the right or browsing all 120+ electives.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowElectiveModal(true)}
-                className="bg-slate-750 hover:bg-slate-700 text-teal-300 hover:text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer border border-teal-500/30 flex items-center gap-1.5 self-start sm:self-auto"
-              >
-                <Plus size={13} />
-                <span>Browse 120+ Electives</span>
-              </button>
-            </div>
-
-            {/* List of Planned & Earned Electives */}
-            {earnedElectives.length === 0 && plannedElectives.length === 0 ? (
-              <div className="bg-slate-900/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-3">
-                <Compass size={36} className="mx-auto text-slate-600" />
-                <h5 className="text-xs font-bold text-white uppercase tracking-wider">No Elective Badges Added Yet</h5>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Click the button below to browse and select 7 elective merit badges (like Robotics, Archery, Chess, Astronomy, Wilderness Survival, etc.).
-                </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-slate-900 border border-slate-750 text-emerald-400">
+                  {earnedElectives.length + plannedElectives.length} of 7 Selected
+                </span>
                 <button
                   type="button"
                   onClick={() => setShowElectiveModal(true)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer inline-flex items-center gap-1.5"
+                  className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
                 >
-                  <Plus size={14} />
-                  <span>Choose Electives Now</span>
+                  <Plus size={13} />
+                  <span>Browse All 120+</span>
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {[...earnedElectives, ...plannedElectives].map(b => {
-                  const status = getBadgeStatus(b.id);
-                  const isEarned = status === 'earned';
-                  return (
-                    <div
-                      key={b.id}
-                      className={`p-3.5 rounded-2xl border transition flex flex-col justify-between gap-3 ${
-                        isEarned
-                          ? 'bg-sky-950/30 border-sky-500/40 shadow-sm'
-                          : 'bg-indigo-950/20 border-indigo-500/30'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                            isEarned
-                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                              : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                          }`}>
-                            {isEarned ? '✓ Earned' : '🎯 In Plan'}
-                          </span>
-                          {b.category && (
-                            <span className="text-[9px] text-slate-400 truncate max-w-[120px]">{b.category}</span>
-                          )}
-                        </div>
-                        <strong className="text-xs font-extrabold text-white block truncate">{b.name}</strong>
-                      </div>
+            </div>
 
-                      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePlanned(b.id, true)}
-                          disabled={isEarned || readOnly}
-                          className={`flex-1 py-1 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
+            {/* Two-Column Studio Layout: Left = Selected Roadmap Slots, Right = Recommended Badges */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column (7 Cols): Scout's Selected & Planned Electives Roadmap */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckSquare size={14} className="text-teal-400" />
+                    <span>My Selected Elective Roadmap ({earnedElectives.length + plannedElectives.length}/7)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {totalElectivesMissingToPlan === 0 ? '✓ 7 Slots Filled' : `${totalElectivesMissingToPlan} empty slot${totalElectivesMissingToPlan === 1 ? '' : 's'}`}
+                  </span>
+                </div>
+
+                {/* If NO electives selected, show the Empty State Board */}
+                {earnedElectives.length === 0 && plannedElectives.length === 0 ? (
+                  <div className="bg-slate-900/70 border-2 border-dashed border-slate-700 rounded-3xl p-7 text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 text-2xl mx-auto shadow-md">
+                      🎯
+                    </div>
+                    <div className="space-y-1">
+                      <h5 className="text-sm font-extrabold text-white">No Elective Badges Selected Yet</h5>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        Your 7 elective slots are currently empty. Select badges from the <strong>Recommended Badges</strong> on the right or click below to browse all electives!
+                      </p>
+                    </div>
+
+                    {/* 7 Empty Slot Placeholders */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-left">
+                      {[1, 2, 3, 4, 5, 6, 7].map(slotNum => (
+                        <div
+                          key={slotNum}
+                          onClick={() => setShowElectiveModal(true)}
+                          className="p-3 rounded-xl border border-dashed border-slate-750 bg-slate-950/40 hover:border-teal-500/50 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between text-xs text-slate-500 hover:text-teal-300"
+                        >
+                          <span className="font-semibold flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-slate-800 text-[10px] flex items-center justify-center font-bold text-slate-400">{slotNum}</span>
+                            <span>Empty Elective Slot</span>
+                          </span>
+                          <Plus size={13} className="text-slate-600 group-hover:text-teal-400" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {/* Render All Selected & Earned Badges */}
+                    {[...earnedElectives, ...plannedElectives].map((b, idx) => {
+                      const status = getBadgeStatus(b.id);
+                      const isEarned = status === 'earned';
+                      return (
+                        <div
+                          key={b.id}
+                          className={`p-3.5 rounded-2xl border transition flex items-center justify-between gap-3 ${
                             isEarned
-                              ? 'bg-sky-900/30 text-sky-300 border border-sky-500/20 cursor-default'
-                              : 'bg-slate-800 hover:bg-red-950/40 text-slate-300 hover:text-red-300 border border-slate-700'
+                              ? 'bg-emerald-950/20 border-emerald-500/40 text-white'
+                              : 'bg-slate-900/80 border-slate-750 hover:border-slate-700 text-slate-200'
                           }`}
                         >
-                          {isEarned ? '✓ Earned' : 'Remove from Plan'}
-                        </button>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isEarned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-teal-500/20 text-teal-300'
+                            }`}>
+                              #{idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <strong className="text-xs font-extrabold text-white block truncate">{b.name}</strong>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <span>{b.category || 'Elective'}</span>
+                                <span className={`font-bold px-1.5 py-0.2 rounded ${
+                                  isEarned ? 'text-emerald-400 bg-emerald-950' : 'text-teal-400 bg-teal-950'
+                                }`}>
+                                  {isEarned ? '✓ Earned' : '🎯 In Plan'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
 
-                        {b.pamphletUrl && (
-                          <a
-                            href={b.pamphletUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-xl bg-slate-800 hover:bg-teal-700 text-teal-300 hover:text-white border border-slate-700 transition"
-                            title="View Official Pamphlet"
-                          >
-                            <BookOpen size={13} />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {b.pamphletUrl && (
+                              <a
+                                href={b.pamphletUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-xl bg-slate-800 hover:bg-teal-700 text-teal-300 hover:text-white border border-slate-700 transition"
+                                title="View Pamphlet"
+                              >
+                                <BookOpen size={13} />
+                              </a>
+                            )}
+                            {!isEarned && (
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePlanned(b.id, true)}
+                                disabled={readOnly}
+                                className="p-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 transition cursor-pointer"
+                                title="Remove from Plan"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Remaining Empty Slot Boxes up to 7 */}
+                    {Array.from({ length: Math.max(0, 7 - (earnedElectives.length + plannedElectives.length)) }).map((_, emptyIdx) => {
+                      const slotNumber = earnedElectives.length + plannedElectives.length + emptyIdx + 1;
+                      return (
+                        <div
+                          key={`empty-${emptyIdx}`}
+                          onClick={() => setShowElectiveModal(true)}
+                          className="p-3 rounded-2xl border border-dashed border-slate-750 bg-slate-950/40 hover:border-teal-500/40 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between text-xs text-slate-500 hover:text-teal-300"
+                        >
+                          <span className="font-semibold flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-xl bg-slate-800 text-[10px] flex items-center justify-center font-bold text-slate-400">#{slotNumber}</span>
+                            <span>Empty Slot #{slotNumber} &bull; Click to choose a badge</span>
+                          </span>
+                          <Plus size={13} className="text-slate-600" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Right Column (5 Cols): Recommended Badges Studio Panel */}
+              <div className="lg:col-span-5 bg-slate-900/90 border border-teal-500/30 rounded-3xl p-5 space-y-4 shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-400" />
+                      <span>Recommended Badges</span>
+                    </h5>
+                    <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-bold">
+                      Dhulfiqār Picks
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Click <strong>+ Add</strong> on any badge below to instantly add it to your plan on the left.
+                  </p>
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                  {['All', 'Outdoors', 'STEM', 'Trades', 'Strategy', 'Leadership', 'Arts'].map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setRecommendedCategory(cat)}
+                      className={`px-2.5 py-1 rounded-xl font-bold transition cursor-pointer border ${
+                        recommendedCategory === cat
+                          ? 'bg-teal-600 text-white border-teal-500 shadow-sm'
+                          : 'bg-slate-800 text-slate-400 border-slate-750 hover:text-white'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Recommended Badges Scrollable List */}
+                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {RECOMMENDED_BADGES_DATA
+                    .filter(b => recommendedCategory === 'All' || b.category === recommendedCategory)
+                    .map(item => {
+                      const fullBadge = MERIT_BADGES.find(mb => normalizeId(mb.id) === normalizeId(item.id));
+                      const status = getBadgeStatus(item.id);
+                      const isEarned = status === 'earned';
+                      const isPlanned = status === 'planned' || status === 'in-progress';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition flex flex-col justify-between gap-2 text-xs ${
+                            isEarned
+                              ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
+                              : isPlanned
+                              ? 'bg-teal-950/30 border-teal-500/40 text-teal-200'
+                              : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <strong className="text-xs font-bold text-white block">{item.name}</strong>
+                              <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{item.highlight}</p>
+                            </div>
+                            <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full shrink-0">
+                              {item.category}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-850">
+                            {fullBadge?.pamphletUrl ? (
+                              <a
+                                href={fullBadge.pamphletUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-semibold text-teal-400 hover:text-teal-300 flex items-center gap-1"
+                              >
+                                <BookOpen size={11} />
+                                <span>Pamphlet</span>
+                              </a>
+                            ) : <span />}
+
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePlanned(item.id, isPlanned)}
+                              disabled={isEarned || readOnly}
+                              className={`px-3 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                                isEarned
+                                  ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-500/30 cursor-default'
+                                  : isPlanned
+                                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-red-950/40 hover:text-red-300'
+                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                              }`}
+                            >
+                              {isEarned ? (
+                                <>
+                                  <Check size={11} />
+                                  <span>Earned</span>
+                                </>
+                              ) : isPlanned ? (
+                                <>
+                                  <Target size={11} />
+                                  <span>In Plan (Remove)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus size={11} />
+                                  <span>Add to Plan</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
