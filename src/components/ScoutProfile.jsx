@@ -175,16 +175,31 @@ export default function ScoutProfile({ currentUser }) {
       let absent = 0;
       let excused = 0;
       let late = 0;
+      let totalAttendedHours = 0;
+      let totalCampingNights = 0;
+      let totalServiceHours = 0;
+      let totalTuesdayHours = 0;
+      let totalFridayHours = 0;
+      let totalHalqaHours = 0;
 
       snap.docs.forEach((d) => {
         const data = d.data();
         const record = data.records?.[currentUser.uid];
         if (record) {
           const status = record.status || 'present';
+          const isAttended = status === 'present' || status === 'late';
+          const sType = data.eventType || 'Weekly Troop Meeting (Friday)';
+          const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : (sType.includes('Service') ? 3.0 : 3.0);
+          const defaultN = sType.includes('Camp') ? 2 : 0;
+          const sHours = record.hours !== undefined ? Number(record.hours) : (data.hours !== undefined ? Number(data.hours) : defaultH);
+          const sNights = record.nights !== undefined ? Number(record.nights) : (data.nights !== undefined ? Number(data.nights) : defaultN);
+
           mySessions.push({
             id: d.id,
             date: data.date || '',
-            eventType: data.eventType || 'Weekly Troop Meeting',
+            eventType: sType,
+            hours: sHours,
+            nights: sNights,
             sessionNotes: data.notes || '',
             status: status,
             note: record.note || ''
@@ -199,6 +214,15 @@ export default function ScoutProfile({ currentUser }) {
             absent++;
           } else if (status === 'excused') {
             excused++;
+          }
+
+          if (isAttended) {
+            totalAttendedHours += sHours;
+            totalCampingNights += sNights;
+            if (sType.includes('Tuesday')) totalTuesdayHours += sHours;
+            else if (sType.includes('Weekly') || sType.includes('Friday')) totalFridayHours += sHours;
+            else if (sType.includes('Halqa') || sType.includes('Study')) totalHalqaHours += sHours;
+            else if (sType.includes('Service') || sType.includes('Volunteer')) totalServiceHours += sHours;
           }
         }
       });
@@ -227,7 +251,13 @@ export default function ScoutProfile({ currentUser }) {
         excusedCount: excused,
         lateCount: late,
         attendanceRate: rate,
-        riskLevel: risk
+        riskLevel: risk,
+        totalHours: Math.round(totalAttendedHours * 10) / 10,
+        campingNights: totalCampingNights,
+        serviceHours: Math.round(totalServiceHours * 10) / 10,
+        tuesdayHours: Math.round(totalTuesdayHours * 10) / 10,
+        fridayHours: Math.round(totalFridayHours * 10) / 10,
+        halqaHours: Math.round(totalHalqaHours * 10) / 10
       });
       setScoutAttendanceSessions(mySessions);
     }, (err) => {
@@ -460,6 +490,12 @@ export default function ScoutProfile({ currentUser }) {
       setUpdatingPassword(false);
     }
   };
+
+  // Filter sessions by selected tab
+  const filteredSessions = scoutAttendanceSessions.filter(s => {
+    if (attendanceFilter === 'all') return true;
+    return s.status === attendanceFilter;
+  });
 
   if (loading) {
     return <div className="text-center py-10 text-slate-400 text-sm">Loading profile settings...</div>;
@@ -754,16 +790,22 @@ export default function ScoutProfile({ currentUser }) {
 
           {/* Attendance KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Sessions</span>
-              <strong className="text-xl font-black text-white font-mono block">{attendanceStats.totalSessions} Logs</strong>
-              <span className="text-[10px] text-slate-400">Total recorded meetings</span>
+            <div className="bg-slate-800 border border-teal-500/40 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider block">Total Hours</span>
+              <strong className="text-xl font-black text-teal-300 font-mono block">{attendanceStats.totalHours || 0} Hours</strong>
+              <span className="text-[10px] text-slate-400">Total earned in troop</span>
             </div>
 
             <div className="bg-slate-800 border border-emerald-500/40 p-4 rounded-2xl space-y-1 shadow-md">
               <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Present & Attended</span>
-              <strong className="text-xl font-black text-emerald-300 font-mono block">{attendanceStats.presentCount} Sessions</strong>
+              <strong className="text-xl font-black text-emerald-300 font-mono block">{attendanceStats.presentCount} / {attendanceStats.totalSessions}</strong>
               <span className="text-[10px] text-emerald-400/80">{attendanceStats.attendanceRate}% Attendance Rate</span>
+            </div>
+
+            <div className="bg-slate-800 border border-indigo-500/40 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block">Camping Nights</span>
+              <strong className="text-xl font-black text-indigo-300 font-mono block">{attendanceStats.campingNights || 0} Nights</strong>
+              <span className="text-[10px] text-indigo-300/80">Outdoor campouts</span>
             </div>
 
             <div className={`p-4 rounded-2xl space-y-1 shadow-md border ${
@@ -781,15 +823,9 @@ export default function ScoutProfile({ currentUser }) {
             </div>
 
             <div className="bg-slate-800 border border-sky-500/30 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider block">Excused Absences</span>
-              <strong className="text-xl font-black text-sky-300 font-mono block">{attendanceStats.excusedCount} Excused</strong>
-              <span className="text-[10px] text-sky-400/80">With advance notice</span>
-            </div>
-
-            <div className="bg-slate-800 border border-amber-500/30 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Late Arrivals</span>
-              <strong className="text-xl font-black text-amber-300 font-mono block">{attendanceStats.lateCount} Late</strong>
-              <span className="text-[10px] text-amber-400/80">Counted as attended</span>
+              <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider block">Excused & Late</span>
+              <strong className="text-xl font-black text-sky-300 font-mono block">{attendanceStats.excusedCount} Exc / {attendanceStats.lateCount} Late</strong>
+              <span className="text-[10px] text-sky-400/80">Notice / late log</span>
             </div>
           </div>
 
@@ -866,8 +902,9 @@ export default function ScoutProfile({ currentUser }) {
                   <thead>
                     <tr className="border-b border-slate-700/80 text-[10px] font-black uppercase tracking-wider text-slate-400">
                       <th className="py-3 px-3">Session Date</th>
-                      <th className="py-3 px-3">Event Type</th>
-                      <th className="py-3 px-3">Meeting Notes / Topic</th>
+                      <th className="py-3 px-3">Program / Event</th>
+                      <th className="py-3 px-3 text-center">Duration</th>
+                      <th className="py-3 px-3">Meeting Topic / Notes</th>
                       <th className="py-3 px-3">Your Attendance</th>
                       <th className="py-3 px-3">Leader Remark</th>
                     </tr>
@@ -884,12 +921,17 @@ export default function ScoutProfile({ currentUser }) {
                             : 'hover:bg-slate-750/30'
                         }`}
                       >
-                        <td className="py-3 px-3 font-mono font-bold text-slate-300 flex items-center gap-1.5">
-                          <Calendar size={13} className="text-teal-400" />
-                          <span>{session.date || '—'}</span>
+                        <td className="py-3 px-3 font-mono font-bold text-slate-300">
+                          <span className="flex items-center gap-1.5">
+                            <Calendar size={13} className="text-teal-400" />
+                            <span>{session.date || '—'}</span>
+                          </span>
                         </td>
                         <td className="py-3 px-3 font-semibold text-white">
                           {session.eventType}
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-bold text-teal-300">
+                          {session.status === 'present' || session.status === 'late' ? `${session.hours || 0}h${session.nights > 0 ? ` • ${session.nights}n` : ''}` : '0h'}
                         </td>
                         <td className="py-3 px-3 text-slate-400">
                           {session.sessionNotes || '—'}
@@ -1122,7 +1164,7 @@ export default function ScoutProfile({ currentUser }) {
                 {currentUser.role === 'scout' && (
                   <div 
                     onClick={() => setActiveProfileTab('attendance')}
-                    className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
+                    className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-2 ${
                       attendanceStats.riskLevel === 'red'
                         ? 'bg-red-950/30 border-red-500/50 hover:border-red-400'
                         : attendanceStats.riskLevel === 'yellow'
@@ -1131,7 +1173,7 @@ export default function ScoutProfile({ currentUser }) {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Attendance Standing</span>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Attendance & Hours Standing</span>
                       <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
                     </div>
                     <div className="flex items-center justify-between">
@@ -1144,12 +1186,16 @@ export default function ScoutProfile({ currentUser }) {
                       }`}>
                         {attendanceStats.attendanceRate}% Rate
                       </strong>
-                      <span className="text-[10px] text-slate-300 font-mono">
-                        {attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions
+                      <span className="text-[10px] text-teal-300 font-mono font-bold">
+                        {attendanceStats.totalHours || 0} Hours Earned
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span>{attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions</span>
+                      <span>{attendanceStats.campingNights || 0} Camping Nights</span>
+                    </div>
                     {attendanceStats.absentCount > 0 && (
-                      <p className={`text-[10px] font-semibold ${
+                      <p className={`text-[10px] font-semibold pt-1 border-t border-slate-800 ${
                         attendanceStats.riskLevel === 'red' ? 'text-red-400' : 'text-amber-400'
                       }`}>
                         {attendanceStats.riskLevel === 'red' ? '🚨' : '⚠️'} {attendanceStats.absentCount} Unexcused Absence{attendanceStats.absentCount === 1 ? '' : 's'}
