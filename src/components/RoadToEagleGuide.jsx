@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
-import { MERIT_BADGES } from '../data/meritBadges';
+import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK, TOTAL_MERIT_BADGES_FOR_EAGLE } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
 import {
   Award,
@@ -31,7 +31,12 @@ import {
   Save,
   Printer,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BookOpen,
+  Target,
+  Compass,
+  Search,
+  X
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import EagleProjectRoadmap from './EagleProjectRoadmap';
@@ -63,6 +68,28 @@ const DEFAULT_REFERENCES = [
   { type: '6. Personal Reference 2 (Character)', name: '', address: '', phone: '', email: '' }
 ];
 
+const RECOMMENDED_BADGES_DATA = [
+  { id: 'wilderness-survival', name: 'Wilderness Survival', category: 'Outdoors', highlight: 'Build natural shelters & survive overnight' },
+  { id: 'robotics', name: 'Robotics', category: 'STEM', highlight: 'Design, build and code autonomous robots' },
+  { id: 'chess', name: 'Chess', category: 'Strategy', highlight: 'Tactics, strategies, and tournament play' },
+  { id: 'astronomy', name: 'Astronomy', category: 'STEM', highlight: 'Telescopes, night sky mapping & stars' },
+  { id: 'woodwork', name: 'Woodwork', category: 'Trades', highlight: 'Hand tools, joinery, and crafting projects' },
+  { id: 'archery', name: 'Archery', category: 'Outdoors', highlight: 'Bows, arrows, range safety, and marksmanship' },
+  { id: 'programming', name: 'Programming', category: 'STEM', highlight: 'Software algorithms, Python/JS, and web tech' },
+  { id: 'pioneering', name: 'Pioneering', category: 'Outdoors', highlight: 'Rope lashings, bridges, and camp towers' },
+  { id: 'leatherwork', name: 'Leatherwork', category: 'Trades', highlight: 'Carving, stitching, and tooling leather gear' },
+  { id: 'public-speaking', name: 'Public Speaking', category: 'Leadership', highlight: 'Speeches, storytelling, and debate skills' },
+  { id: 'automotive-maintenance', name: 'Automotive Maintenance', category: 'Trades', highlight: 'Engines, tires, fluids, and car safety' },
+  { id: 'orienteering', name: 'Orienteering', category: 'Outdoors', highlight: 'Map & compass navigation in rugged terrain' },
+  { id: 'photography', name: 'Photography', category: 'Arts', highlight: 'Visual storytelling, lighting, and camera modes' },
+  { id: 'electricity', name: 'Electricity', category: 'STEM', highlight: 'Circuits, wiring safety, and electromagnets' }
+];
+
+// Helper to normalize badge ID matching
+function normalizeId(id = '') {
+  return id.toLowerCase().replace(/_/g, '-');
+}
+
 export default function RoadToEagleGuide({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader';
@@ -82,7 +109,12 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
   const [saveSuccess, setSaveSuccess] = useState('');
 
   // Active Milestone Tab: 'tenure' | 'leadership' | 'badges' | 'project' | 'references' | 'bor' | 'palms'
-  const [activeMilestone, setActiveMilestone] = useState('tenure');
+  const [activeMilestone, setActiveMilestone] = useState('badges');
+
+  // Elective Modal Picker State
+  const [showElectiveModal, setShowElectiveModal] = useState(false);
+  const [electiveSearch, setElectiveSearch] = useState('');
+  const [recommendedCategory, setRecommendedCategory] = useState('All');
 
   // Milestone 1: Tenure
   const [lifeBorDate, setLifeBorDate] = useState('');
@@ -206,7 +238,10 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
     // 3. Real-time Subscription to Merit Badges Progress
     const unsubBadges = onSnapshot(collection(db, 'user_progress', activeScoutId, 'merit_badges'), (snap) => {
       const map = {};
-      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      snap.docs.forEach(d => { 
+        map[d.id] = d.data();
+        map[normalizeId(d.id)] = d.data();
+      });
       setMeritProgress(map);
       setLoading(false);
     });
@@ -217,40 +252,72 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
     };
   }, [activeScoutId]);
 
-  // ── 21 MERIT BADGES AUDIT EVALUATION ──
-  const isBadgeEarned = (badgeId) => {
-    const p = meritProgress[badgeId];
-    if (!p) return false;
-    if (p.completed === true || p.dateCompleted) return true;
-    const badge = MERIT_BADGES.find(b => b.id === badgeId);
-    if (!badge || !badge.requirements) return false;
-    const total = badge.requirements.length;
-    const approved = badge.requirements.filter(r => p.steps?.[r.id] === true || p.steps?.[r.id]?.completed === true).length;
-    return total > 0 && approved === total;
+  // ── REAL-TIME BADGE STATUS HELPER ──
+  const getBadgeStatus = (badgeId) => {
+    const rawId = badgeId;
+    const normId = normalizeId(badgeId);
+    const p = meritProgress[rawId] || meritProgress[normId];
+    if (!p) return 'not-started';
+
+    if (p.completed === true || p.dateCompleted) return 'earned';
+
+    const badge = MERIT_BADGES.find(b => normalizeId(b.id) === normId);
+    if (badge && Array.isArray(badge.requirements) && badge.requirements.length > 0) {
+      const approvedCount = badge.requirements.filter(r => {
+        const stepVal = p.steps?.[r.id];
+        return stepVal === true || stepVal?.completed === true;
+      }).length;
+      if (approvedCount === badge.requirements.length) return 'earned';
+      if (approvedCount > 0) return 'in-progress';
+    }
+
+    if (p.planned === true) return 'planned';
+    return 'not-started';
+  };
+
+  const isBadgeEarned = (badgeId) => getBadgeStatus(badgeId) === 'earned';
+  const isBadgePlanned = (badgeId) => getBadgeStatus(badgeId) === 'planned';
+  const isBadgeInProgress = (badgeId) => getBadgeStatus(badgeId) === 'in-progress';
+
+  // Toggle Planned state directly in real-time
+  const handleTogglePlanned = async (badgeId, currentlyPlanned) => {
+    const normId = normalizeId(badgeId);
+    const ref = doc(db, 'user_progress', activeScoutId, 'merit_badges', normId);
+    const existing = meritProgress[normId] || meritProgress[badgeId] || {};
+    try {
+      await setDoc(ref, {
+        ...existing,
+        planned: !currentlyPlanned,
+        plannedAt: !currentlyPlanned ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Error toggling planned badge in RoadToEagleGuide:", err);
+    }
   };
 
   // 14 Mandatory Eagle Categories
   const mandatory11Solo = [
-    { id: 'first_aid', name: 'First Aid', slug: 'first-aid' },
-    { id: 'citizenship_in_the_community', name: 'Citizenship in the Community', slug: 'citizenship-in-the-community' },
-    { id: 'citizenship_in_the_nation', name: 'Citizenship in the Nation', slug: 'citizenship-in-the-nation' },
-    { id: 'citizenship_in_society', name: 'Citizenship in Society', slug: 'citizenship-in-society' },
-    { id: 'citizenship_in_the_world', name: 'Citizenship in the World', slug: 'citizenship-in-the-world' },
-    { id: 'communication', name: 'Communication', slug: 'communication' },
-    { id: 'cooking', name: 'Cooking', slug: 'cooking' },
-    { id: 'personal_fitness', name: 'Personal Fitness', slug: 'personal-fitness' },
-    { id: 'personal_management', name: 'Personal Management', slug: 'personal-management' },
-    { id: 'camping', name: 'Camping', slug: 'camping' },
-    { id: 'family_life', name: 'Family Life', slug: 'family-life' }
+    { id: 'first-aid', name: 'First Aid' },
+    { id: 'citizenship-in-the-community', name: 'Citizenship in the Community' },
+    { id: 'citizenship-in-the-nation', name: 'Citizenship in the Nation' },
+    { id: 'citizenship-in-society', name: 'Citizenship in Society' },
+    { id: 'citizenship-in-the-world', name: 'Citizenship in the World' },
+    { id: 'communication', name: 'Communication' },
+    { id: 'cooking', name: 'Cooking' },
+    { id: 'personal-fitness', name: 'Personal Fitness' },
+    { id: 'personal-management', name: 'Personal Management' },
+    { id: 'camping', name: 'Camping' },
+    { id: 'family-life', name: 'Family Life' }
   ];
 
   const groupA = [
-    { id: 'emergency_preparedness', name: 'Emergency Preparedness' },
+    { id: 'emergency-preparedness', name: 'Emergency Preparedness' },
     { id: 'lifesaving', name: 'Lifesaving' }
   ];
 
   const groupB = [
-    { id: 'environmental_science', name: 'Environmental Science' },
+    { id: 'environmental-science', name: 'Environmental Science' },
     { id: 'sustainability', name: 'Sustainability' }
   ];
 
@@ -260,22 +327,85 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
     { id: 'cycling', name: 'Cycling' }
   ];
 
-  const soloEvaluated = mandatory11Solo.map(b => ({ ...b, earned: isBadgeEarned(b.id) }));
-  const groupAEvaluated = { name: 'Emergency Preparedness OR Lifesaving', earned: groupA.some(b => isBadgeEarned(b.id)), badges: groupA.map(b => ({ ...b, earned: isBadgeEarned(b.id) })) };
-  const groupBEvaluated = { name: 'Environmental Science OR Sustainability', earned: groupB.some(b => isBadgeEarned(b.id)), badges: groupB.map(b => ({ ...b, earned: isBadgeEarned(b.id) })) };
-  const groupCEvaluated = { name: 'Swimming OR Hiking OR Cycling', earned: groupC.some(b => isBadgeEarned(b.id)), badges: groupC.map(b => ({ ...b, earned: isBadgeEarned(b.id) })) };
+  const soloEvaluated = mandatory11Solo.map(b => {
+    const status = getBadgeStatus(b.id);
+    const fullBadge = MERIT_BADGES.find(mb => normalizeId(mb.id) === normalizeId(b.id));
+    return {
+      ...b,
+      status,
+      earned: status === 'earned',
+      planned: status === 'planned',
+      inProgress: status === 'in-progress',
+      pamphletSku: fullBadge?.pamphletSku,
+      pamphletUrl: fullBadge?.pamphletUrl,
+      timeAlert: fullBadge?.timeAlert
+    };
+  });
 
-  const eagleCategoriesPassed = 
-    soloEvaluated.filter(b => b.earned).length +
+  const evaluateGroup = (name, badgesList) => {
+    const badges = badgesList.map(b => {
+      const status = getBadgeStatus(b.id);
+      const fullBadge = MERIT_BADGES.find(mb => normalizeId(mb.id) === normalizeId(b.id));
+      return {
+        ...b,
+        status,
+        earned: status === 'earned',
+        planned: status === 'planned',
+        inProgress: status === 'in-progress',
+        pamphletSku: fullBadge?.pamphletSku,
+        pamphletUrl: fullBadge?.pamphletUrl,
+        timeAlert: fullBadge?.timeAlert
+      };
+    });
+    const earned = badges.some(b => b.earned);
+    const plannedOrInProgress = badges.some(b => b.planned || b.inProgress);
+    return { name, earned, plannedOrInProgress, badges };
+  };
+
+  const groupAEvaluated = evaluateGroup('Emergency Preparedness OR Lifesaving', groupA);
+  const groupBEvaluated = evaluateGroup('Environmental Science OR Sustainability', groupB);
+  const groupCEvaluated = evaluateGroup('Swimming OR Hiking OR Cycling', groupC);
+
+  const eagleSoloEarned = soloEvaluated.filter(b => b.earned).length;
+  const eagleSoloPlanned = soloEvaluated.filter(b => b.planned || b.inProgress).length;
+
+  const eagleGroupsEarned = 
     (groupAEvaluated.earned ? 1 : 0) +
     (groupBEvaluated.earned ? 1 : 0) +
     (groupCEvaluated.earned ? 1 : 0);
 
-  const allEarnedBadges = MERIT_BADGES.filter(b => isBadgeEarned(b.id));
-  const totalBadgesEarnedCount = allEarnedBadges.length;
-  const electivesCount = Math.max(0, totalBadgesEarnedCount - eagleCategoriesPassed);
-  const totalEaglePathBadgesCount = Math.min(14, eagleCategoriesPassed) + Math.min(7, electivesCount);
-  const is21BadgesSatisfied = eagleCategoriesPassed >= 14 && totalBadgesEarnedCount >= 21;
+  const eagleGroupsPlanned = 
+    (!groupAEvaluated.earned && groupAEvaluated.plannedOrInProgress ? 1 : 0) +
+    (!groupBEvaluated.earned && groupBEvaluated.plannedOrInProgress ? 1 : 0) +
+    (!groupCEvaluated.earned && groupCEvaluated.plannedOrInProgress ? 1 : 0);
+
+  const totalEagleRequiredEarned = eagleSoloEarned + eagleGroupsEarned;
+  const totalEagleRequiredPlanned = eagleSoloPlanned + eagleGroupsPlanned;
+  const totalEagleRequiredMissingToPlan = Math.max(0, 14 - (totalEagleRequiredEarned + totalEagleRequiredPlanned));
+
+  // Electives
+  const allEagleBadgeIds = new Set([
+    ...mandatory11Solo.map(b => b.id),
+    ...groupA.map(b => b.id),
+    ...groupB.map(b => b.id),
+    ...groupC.map(b => b.id)
+  ]);
+
+  const electiveBadges = MERIT_BADGES.filter(b => !allEagleBadgeIds.has(normalizeId(b.id)));
+  const earnedElectives = electiveBadges.filter(b => isBadgeEarned(b.id));
+  const plannedElectives = electiveBadges.filter(b => isBadgePlanned(b.id) || isBadgeInProgress(b.id));
+
+  const totalElectivesEarned = earnedElectives.length;
+  const totalElectivesPlanned = plannedElectives.length;
+  const totalElectivesMissingToPlan = Math.max(0, 7 - (totalElectivesEarned + totalElectivesPlanned));
+
+  const totalBadgesEarnedCount = MERIT_BADGES.filter(b => isBadgeEarned(b.id)).length;
+  const totalBadgesPlannedCount = MERIT_BADGES.filter(b => isBadgePlanned(b.id) || isBadgeInProgress(b.id)).length;
+  const totalRemainingToEarn = Math.max(0, 21 - totalBadgesEarnedCount);
+  const totalRemainingToPlan = Math.max(0, 21 - (totalBadgesEarnedCount + totalBadgesPlannedCount));
+
+  const is21BadgesSatisfied = totalEagleRequiredEarned >= 14 && totalBadgesEarnedCount >= 21;
+  const is21PlanSatisfied = (totalEagleRequiredEarned + totalEagleRequiredPlanned >= 14) && (totalBadgesEarnedCount + totalBadgesPlannedCount >= 21);
 
   // ── EAGLE PALMS CALCULATOR ──
   const extraBadgesBeyond21 = Math.max(0, totalBadgesEarnedCount - 21);
@@ -312,8 +442,6 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
 
     try {
       const userRef = doc(db, 'users', activeScoutId);
-      const eagleDocRef = doc(db, 'user_progress', activeScoutId, 'road_to_eagle', 'data');
-
       const payload = {
         activeTenureStartDate: lifeBorDate,
         joinedTroopDate,
@@ -323,11 +451,6 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
           endDate: leadershipEndDate,
           durationMonths: Number(leadershipMonths) || 6,
           approved: leadershipApproved
-        },
-        meritBadgesSummary: {
-          totalCount: totalBadgesEarnedCount,
-          eagleRequiredCount: eagleCategoriesPassed,
-          is21Complete: is21BadgesSatisfied
         },
         eagleProject: {
           title: projectTitle.trim(),
@@ -350,55 +473,24 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
         councilVerified,
         borDate,
         borApproved: borPassed,
-        eaglePalms: {
-          totalPalms: totalPalmsEarned,
-          silver: silverPalms,
-          gold: goldPalms,
-          bronze: bronzePalms,
-          totalMeritBadges: totalBadgesEarnedCount
-        },
         updatedAt: new Date().toISOString()
       };
 
       await setDoc(userRef, payload, { merge: true });
-      await setDoc(eagleDocRef, payload, { merge: true });
-
-      setSaveSuccess('✓ Road to Eagle progress saved and synchronized in real time!');
+      setSaveSuccess('✓ Official Eagle Advancement Record saved successfully!');
       setTimeout(() => setSaveSuccess(''), 4000);
     } catch (err) {
-      console.error('Failed to save Road to Eagle data:', err);
-      setSaveSuccess('⚠️ Error saving: ' + err.message);
+      console.error('Failed to save Eagle progress:', err);
+      setSaveSuccess('⚠️ Error saving record: ' + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Add volunteer hour log
-  const handleAddVolunteerLog = (e) => {
-    e.preventDefault();
-    if (!newVolName.trim() || !newVolHours) return;
-
-    const newEntry = {
-      id: Date.now().toString(),
-      name: newVolName.trim(),
-      date: newVolDate,
-      hours: Number(newVolHours) || 0,
-      category: newVolCategory
-    };
-
-    setVolunteerLogs([...volunteerLogs, newEntry]);
-    setNewVolName('');
-    setNewVolHours('');
-  };
-
-  const handleDeleteVolunteerLog = (id) => {
-    setVolunteerLogs(volunteerLogs.filter(v => v.id !== id));
-  };
-
-  const handleRefChange = (index, field, val) => {
-    const next = [...references];
-    next[index] = { ...next[index], [field]: val };
-    setReferences(next);
+  const handleReferenceChange = (idx, field, value) => {
+    const updated = [...references];
+    updated[idx] = { ...updated[idx], [field]: value };
+    setReferences(updated);
   };
 
   const scoutName = scoutProfile.fullName || scoutProfile.username || 'Scout';
@@ -407,24 +499,30 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
   const RANKS_PIPELINE = [
     { id: 'scout', label: 'Scout' },
     { id: 'tenderfoot', label: 'Tenderfoot' },
-    { id: 'secondclass', label: '2nd Class' },
-    { id: 'firstclass', label: '1st Class' },
+    { id: 'second_class', label: '2nd Class' },
+    { id: 'first_class', label: '1st Class' },
     { id: 'star', label: 'Star' },
     { id: 'life', label: 'Life' },
-    { id: 'eagle', label: '🦅 Eagle' },
-    { id: 'palms', label: '🪶 Palms' }
+    { id: 'eagle', label: 'Eagle' },
+    { id: 'palms', label: 'Palms' }
   ];
 
+  const filteredElectivesForModal = electiveBadges.filter(b => {
+    if (!electiveSearch.trim()) return true;
+    const q = electiveSearch.toLowerCase();
+    return b.name.toLowerCase().includes(q) || (b.category || '').toLowerCase().includes(q);
+  });
+
   if (loading) {
-    return <div className="text-center py-16 text-slate-400 text-sm">Loading Road to Eagle Portal...</div>;
+    return <div className="text-center py-12 text-slate-400 text-sm">Loading Eagle Advancement Blueprint...</div>;
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto font-sans pb-16">
-      {/* ── 1. HERO HEADER: ROAD TO EAGLE INTERACTIVE PORTAL ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/50 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+    <div className="space-y-6 max-w-6xl mx-auto font-sans">
+      {/* ── 1. HERO BANNER: MASTER ROAD TO EAGLE PORTAL ── */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
         <div className="absolute right-4 top-2 opacity-10 pointer-events-none">
-          <Award size={220} className="text-amber-400" />
+          <Award size={200} className="text-amber-400" />
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -436,17 +534,17 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
                 <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <Star size={11} /> Official Scouting America Eagle Milestone Portal
+                  <Star size={11} /> Official Scouting America Eagle Milestone Workflow
                 </span>
                 <span className="bg-slate-800 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                  Candidate: {scoutName}
+                  Rank: {scoutRank}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Road to Eagle Scout & Eagle Palms Portal
-              </h1>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Road to Eagle Scout Blueprint
+              </h2>
               <p className="text-xs text-slate-350 mt-1 max-w-2xl leading-relaxed">
-                Complete your self-guided journey to Scouting\'s highest rank: track active Life tenure, qualifying leadership, 21 merit badges, the Eagle service project, 6 references, and Eagle Palms!
+                Step-by-step 7-milestone blueprint, real-time 21 merit badge planner, project management, and board-of-review approvals for <strong>{scoutName}</strong>.
               </p>
             </div>
           </div>
@@ -495,7 +593,7 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
           <div className="bg-slate-900/70 border border-slate-750 p-3 rounded-2xl">
             <span className="text-[10px] text-slate-400 uppercase font-bold block">Merit Badges</span>
             <strong className="text-sm font-black text-amber-400 block truncate">
-              {totalEaglePathBadgesCount}/21 <span className="text-[10px] text-slate-400">({eagleCategoriesPassed}/14 Req)</span>
+              {totalBadgesEarnedCount}/21 <span className="text-[10px] text-slate-400">({totalEagleRequiredEarned}/14 Req)</span>
             </strong>
           </div>
 
@@ -523,31 +621,6 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
             </strong>
           </div>
         </div>
-
-        {/* ── INTERACTIVE VISUAL PROGRESSION PIPELINE ── */}
-        <div className="mt-5 pt-4 border-t border-slate-700/60 relative z-10">
-          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">
-            BSA Scout Advancement Pipeline:
-          </span>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            {RANKS_PIPELINE.map((r, i) => {
-              const isPastOrCurrent = true; // pipeline active representation
-              const isEagleOrPalms = r.id === 'eagle' || r.id === 'palms';
-              return (
-                <div
-                  key={r.id}
-                  className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center justify-center gap-1 ${
-                    isEagleOrPalms
-                      ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 font-black shadow-sm'
-                      : 'bg-slate-900/50 border-slate-750 text-slate-300'
-                  }`}
-                >
-                  <span className="text-xs">{r.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       {saveSuccess && (
@@ -559,9 +632,9 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
       {/* ── 2. MILESTONE NAVIGATION TABS ── */}
       <div className="flex flex-wrap gap-2 border-b border-slate-750 pb-3">
         {[
+          { id: 'badges', label: '3. 21 Merit Badges', icon: '🏅', isDone: is21BadgesSatisfied },
           { id: 'tenure', label: '1. Tenure & Service', icon: '⏱️', isDone: tenureStats.isMet },
           { id: 'leadership', label: '2. 6-Mo Leadership', icon: '⚜️', isDone: isLeadershipSatisfied },
-          { id: 'badges', label: '3. 21 Merit Badges', icon: '🏅', isDone: is21BadgesSatisfied },
           { id: 'project', label: '4. Eagle Project', icon: '🛠️', isDone: isProjectSatisfied },
           { id: 'references', label: '5. References & Essay', icon: '📝', isDone: isReferencesSatisfied && isAmbitionsSatisfied },
           { id: 'bor', label: '6. Conference & BOR', icon: '🏛️', isDone: borPassed },
@@ -583,6 +656,575 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
         ))}
       </div>
 
+      {/* ──────────────── MILESTONE 3: 21 MERIT BADGES AUDIT ENGINE & PLANNER ──────────────── */}
+      {activeMilestone === 'badges' && (
+        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-7 shadow-xl space-y-7 animate-fadeIn">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Award className="text-amber-400" size={22} />
+                <span>Milestone 3: 21 Merit Badges Audit Engine & Real-Time Planner</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Requirement 3: Earn a total of 21 merit badges (14 Eagle-required categories + 7 electives).
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('merit-badges')}
+                className="bg-slate-750 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer border border-slate-650 flex items-center gap-1.5 shadow-sm"
+              >
+                <Compass size={14} className="text-teal-400" />
+                <span>Explore All 137 Badges</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowElectiveModal(true)}
+                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
+              >
+                <Plus size={15} />
+                <span>Add Elective to Plan</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── METRIC CARDS & REAL-TIME REMAINING BADGES COUNTER ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Total 21 Badges */}
+            <div className="bg-gradient-to-br from-slate-900 to-amber-950/40 border border-amber-500/40 p-4 sm:p-5 rounded-2xl space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Award size={16} className="text-amber-400" />
+                  <span>Total Badges</span>
+                </span>
+                <span className="text-xs font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                  {totalBadgesEarnedCount} / 21
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 flex">
+                  <div 
+                    className="bg-emerald-500 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100, (totalBadgesEarnedCount / 21) * 100)}%` }}
+                  />
+                  <div 
+                    className="bg-amber-400/80 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100 - (totalBadgesEarnedCount / 21) * 100, (totalBadgesPlannedCount / 21) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                  <span className="text-emerald-400">✓ {totalBadgesEarnedCount} Earned</span>
+                  <span className="text-amber-300">🎯 {totalBadgesPlannedCount} In Plan</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-semibold">Remaining to Earn:</span>
+                <strong className={`font-mono ${totalRemainingToEarn === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {totalRemainingToEarn === 0 ? '✓ Complete!' : `${totalRemainingToEarn} more needed`}
+                </strong>
+              </div>
+            </div>
+
+            {/* 14 Eagle-Required Badges */}
+            <div className="bg-gradient-to-br from-slate-900 to-emerald-950/40 border border-emerald-500/40 p-4 sm:p-5 rounded-2xl space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                  <Star size={16} className="text-emerald-400" />
+                  <span>Eagle-Required</span>
+                </span>
+                <span className="text-xs font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                  {totalEagleRequiredEarned} / 14
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 flex">
+                  <div 
+                    className="bg-emerald-500 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100, (totalEagleRequiredEarned / 14) * 100)}%` }}
+                  />
+                  <div 
+                    className="bg-teal-400/80 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100 - (totalEagleRequiredEarned / 14) * 100, (totalEagleRequiredPlanned / 14) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                  <span className="text-emerald-400">✓ {totalEagleRequiredEarned} Earned</span>
+                  <span className="text-teal-300">🎯 {totalEagleRequiredPlanned} In Plan</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-semibold">Remaining to Plan:</span>
+                <strong className={`font-mono ${totalEagleRequiredMissingToPlan === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {totalEagleRequiredMissingToPlan === 0 ? '✓ 14 Selected!' : `${totalEagleRequiredMissingToPlan} unselected`}
+                </strong>
+              </div>
+            </div>
+
+            {/* 7 Elective Badges */}
+            <div className="bg-gradient-to-br from-slate-900 to-sky-950/40 border border-sky-500/40 p-4 sm:p-5 rounded-2xl space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-sky-300 flex items-center gap-1.5">
+                  <Compass size={16} className="text-sky-400" />
+                  <span>Electives</span>
+                </span>
+                <span className="text-xs font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                  {totalElectivesEarned} / 7
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 flex">
+                  <div 
+                    className="bg-sky-500 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100, (totalElectivesEarned / 7) * 100)}%` }}
+                  />
+                  <div 
+                    className="bg-indigo-400/80 h-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100 - (totalElectivesEarned / 7) * 100, (totalElectivesPlanned / 7) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                  <span className="text-sky-400">✓ {totalElectivesEarned} Earned</span>
+                  <span className="text-indigo-300">🎯 {totalElectivesPlanned} In Plan</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-semibold">Remaining to Plan:</span>
+                <strong className={`font-mono ${totalElectivesMissingToPlan === 0 ? 'text-emerald-400' : 'text-sky-400'}`}>
+                  {totalElectivesMissingToPlan === 0 ? '✓ 7 Selected!' : `${totalElectivesMissingToPlan} more needed`}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {/* ── PART 1: 11 SOLO MANDATORY EAGLE-REQUIRED BADGES ── */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+              <span>Part 1: 11 Solo Mandatory Eagle-Required Badges</span>
+              <span className="text-emerald-400 font-mono text-[11px] font-bold">
+                {eagleSoloEarned} Earned • {eagleSoloPlanned} Planned
+              </span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {soloEvaluated.map(b => (
+                <div
+                  key={b.id}
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2.5 transition ${
+                    b.earned
+                      ? 'bg-emerald-950/30 border-emerald-500/50 text-white shadow-sm'
+                      : b.planned || b.inProgress
+                      ? 'bg-teal-950/20 border-teal-500/40 text-slate-200'
+                      : 'bg-slate-900/60 border-slate-750 text-slate-400 hover:border-slate-650'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {b.earned ? (
+                      <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                    ) : b.planned || b.inProgress ? (
+                      <Target size={18} className="text-teal-400 shrink-0" />
+                    ) : (
+                      <Circle size={18} className="text-slate-600 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <span className={`text-xs font-bold block truncate ${b.earned ? 'text-white' : 'text-slate-300'}`}>
+                        {b.name}
+                      </span>
+                      {b.pamphletSku && (
+                        <span className="text-[9px] text-slate-500 font-mono">SKU #{b.pamphletSku}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!b.earned && (
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePlanned(b.id, b.planned)}
+                        className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                          b.planned
+                            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-red-950/40 hover:text-red-300'
+                            : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700'
+                        }`}
+                      >
+                        {b.planned ? (
+                          <>
+                            <Target size={11} />
+                            <span>In Plan</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={11} />
+                            <span>+ Plan</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                      b.earned
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : b.inProgress
+                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        : b.planned
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {b.earned ? '✓ Earned' : b.inProgress ? 'In Progress' : b.planned ? 'Planned' : 'Needed'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── PART 2: 3 ALTERNATE CHOICE GROUPS ── */}
+          <div className="space-y-3 pt-3 border-t border-slate-700/60">
+            <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">
+              Part 2: 3 Alternate Choice Groups (Pick 1 from each group)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { title: 'Group A (Prep / Lifesaving)', group: groupAEvaluated },
+                { title: 'Group B (Environment)', group: groupBEvaluated },
+                { title: 'Group C (Physical / Outdoor)', group: groupCEvaluated }
+              ].map(({ title, group }, gIdx) => (
+                <div
+                  key={gIdx}
+                  className={`p-4 rounded-2xl border space-y-2.5 ${
+                    group.earned
+                      ? 'bg-emerald-950/20 border-emerald-500/40 shadow-sm'
+                      : group.plannedOrInProgress
+                      ? 'bg-teal-950/20 border-teal-500/30'
+                      : 'bg-slate-900/60 border-slate-750'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <strong className="text-xs font-black text-amber-300">{title}</strong>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      group.earned
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : group.plannedOrInProgress
+                        ? 'bg-teal-500/20 text-teal-300'
+                        : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {group.earned ? '✓ Satisfied' : group.plannedOrInProgress ? '🎯 In Plan' : 'Pick 1'}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {group.badges.map(b => (
+                      <div
+                        key={b.id}
+                        className={`flex items-center justify-between text-xs p-2 rounded-xl border ${
+                          b.earned
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                            : b.planned
+                            ? 'bg-teal-950/30 border-teal-500/30 text-teal-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        <span className={b.earned ? 'font-bold' : ''}>{b.name}</span>
+                        
+                        <div className="flex items-center gap-1">
+                          {!b.earned && (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePlanned(b.id, b.planned)}
+                              className={`px-2 py-0.5 rounded-lg text-[9px] font-bold transition cursor-pointer ${
+                                b.planned
+                                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                              }`}
+                            >
+                              {b.planned ? 'In Plan' : '+ Plan'}
+                            </button>
+                          )}
+                          {b.earned && <Check size={13} className="text-emerald-400" />}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── PART 3: 7 ELECTIVES ROADMAP & RECOMMENDED BADGES STUDIO ── */}
+          <div className="space-y-4 pt-4 border-t border-slate-700/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <span className="text-base">🎨</span>
+                  <span>Part 3: 7 Elective Badges Roadmap & Recommended Badges Hub</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Plan your 7 electives by selecting from the recommended badges on the right or browsing all 120+ electives.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-slate-900 border border-slate-750 text-emerald-400">
+                  {earnedElectives.length + plannedElectives.length} of 7 Selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowElectiveModal(true)}
+                  className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                >
+                  <Plus size={13} />
+                  <span>Browse All 120+</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Two-Column Studio Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left (7 Cols): Selected Elective Roadmap Slots */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckSquare size={14} className="text-teal-400" />
+                    <span>My Selected Elective Roadmap ({earnedElectives.length + plannedElectives.length}/7)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {totalElectivesMissingToPlan === 0 ? '✓ 7 Slots Filled' : `${totalElectivesMissingToPlan} empty slot${totalElectivesMissingToPlan === 1 ? '' : 's'}`}
+                  </span>
+                </div>
+
+                {/* Empty State Board if 0 electives selected */}
+                {earnedElectives.length === 0 && plannedElectives.length === 0 ? (
+                  <div className="bg-slate-900/70 border-2 border-dashed border-slate-700 rounded-3xl p-7 text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 text-2xl mx-auto shadow-md">
+                      🎯
+                    </div>
+                    <div className="space-y-1">
+                      <h5 className="text-sm font-extrabold text-white">No Elective Badges Selected Yet</h5>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        Your 7 elective slots are currently empty. Select badges from the <strong>Recommended Badges</strong> on the right or click below to browse all electives!
+                      </p>
+                    </div>
+
+                    {/* 7 Empty Slot Placeholders */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-left">
+                      {[1, 2, 3, 4, 5, 6, 7].map(slotNum => (
+                        <div
+                          key={slotNum}
+                          onClick={() => setShowElectiveModal(true)}
+                          className="p-3 rounded-xl border border-dashed border-slate-750 bg-slate-950/40 hover:border-teal-500/50 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between text-xs text-slate-500 hover:text-teal-300"
+                        >
+                          <span className="font-semibold flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-slate-800 text-[10px] flex items-center justify-center font-bold text-slate-400">{slotNum}</span>
+                            <span>Empty Elective Slot</span>
+                          </span>
+                          <Plus size={13} className="text-slate-600" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {[...earnedElectives, ...plannedElectives].map((b, idx) => {
+                      const status = getBadgeStatus(b.id);
+                      const isEarned = status === 'earned';
+                      return (
+                        <div
+                          key={b.id}
+                          className={`p-3.5 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                            isEarned
+                              ? 'bg-emerald-950/20 border-emerald-500/40 text-white'
+                              : 'bg-slate-900/80 border-slate-750 hover:border-slate-700 text-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isEarned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-teal-500/20 text-teal-300'
+                            }`}>
+                              #{idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <strong className="text-xs font-extrabold text-white block truncate">{b.name}</strong>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <span>{b.category || 'Elective'}</span>
+                                <span className={`font-bold px-1.5 py-0.2 rounded ${
+                                  isEarned ? 'text-emerald-400 bg-emerald-950' : 'text-teal-400 bg-teal-950'
+                                }`}>
+                                  {isEarned ? '✓ Earned' : '🎯 In Plan'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {b.pamphletUrl && (
+                              <a
+                                href={b.pamphletUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-xl bg-slate-800 hover:bg-teal-700 text-teal-300 hover:text-white border border-slate-700 transition"
+                                title="View Pamphlet"
+                              >
+                                <BookOpen size={13} />
+                              </a>
+                            )}
+                            {!isEarned && (
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePlanned(b.id, true)}
+                                className="p-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 transition cursor-pointer"
+                                title="Remove from Plan"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Remaining Empty Slots */}
+                    {Array.from({ length: Math.max(0, 7 - (earnedElectives.length + plannedElectives.length)) }).map((_, emptyIdx) => {
+                      const slotNumber = earnedElectives.length + plannedElectives.length + emptyIdx + 1;
+                      return (
+                        <div
+                          key={`empty-${emptyIdx}`}
+                          onClick={() => setShowElectiveModal(true)}
+                          className="p-3 rounded-2xl border border-dashed border-slate-750 bg-slate-950/40 hover:border-teal-500/40 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between text-xs text-slate-500 hover:text-teal-300"
+                        >
+                          <span className="font-semibold flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-xl bg-slate-800 text-[10px] flex items-center justify-center font-bold text-slate-400">#{slotNumber}</span>
+                            <span>Empty Slot #{slotNumber} &bull; Click to choose a badge</span>
+                          </span>
+                          <Plus size={13} className="text-slate-600" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Right (5 Cols): Recommended Badges Studio Panel */}
+              <div className="lg:col-span-5 bg-slate-900/90 border border-teal-500/30 rounded-3xl p-5 space-y-4 shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-400" />
+                      <span>Recommended Badges</span>
+                    </h5>
+                    <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-bold">
+                      Dhulfiqār Picks
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Click <strong>+ Add</strong> on any badge below to instantly add it to your plan on the left.
+                  </p>
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                  {['All', 'Outdoors', 'STEM', 'Trades', 'Strategy', 'Leadership', 'Arts'].map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setRecommendedCategory(cat)}
+                      className={`px-2.5 py-1 rounded-xl font-bold transition cursor-pointer border ${
+                        recommendedCategory === cat
+                          ? 'bg-teal-600 text-white border-teal-500 shadow-sm'
+                          : 'bg-slate-800 text-slate-400 border-slate-750 hover:text-white'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Recommended List */}
+                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {RECOMMENDED_BADGES_DATA
+                    .filter(b => recommendedCategory === 'All' || b.category === recommendedCategory)
+                    .map(item => {
+                      const fullBadge = MERIT_BADGES.find(mb => normalizeId(mb.id) === normalizeId(item.id));
+                      const status = getBadgeStatus(item.id);
+                      const isEarned = status === 'earned';
+                      const isPlanned = status === 'planned' || status === 'in-progress';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition flex flex-col justify-between gap-2 text-xs ${
+                            isEarned
+                              ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
+                              : isPlanned
+                              ? 'bg-teal-950/30 border-teal-500/40 text-teal-200'
+                              : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <strong className="text-xs font-bold text-white block">{item.name}</strong>
+                              <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{item.highlight}</p>
+                            </div>
+                            <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full shrink-0">
+                              {item.category}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-850">
+                            {fullBadge?.pamphletUrl ? (
+                              <a
+                                href={fullBadge.pamphletUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-semibold text-teal-400 hover:text-teal-300 flex items-center gap-1"
+                              >
+                                <BookOpen size={11} />
+                                <span>Pamphlet</span>
+                              </a>
+                            ) : <span />}
+
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePlanned(item.id, isPlanned)}
+                              disabled={isEarned}
+                              className={`px-3 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                                isEarned
+                                  ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-500/30 cursor-default'
+                                  : isPlanned
+                                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-red-950/40 hover:text-red-300'
+                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                              }`}
+                            >
+                              {isEarned ? (
+                                <>
+                                  <Check size={11} />
+                                  <span>Earned</span>
+                                </>
+                              ) : isPlanned ? (
+                                <>
+                                  <Target size={11} />
+                                  <span>In Plan (Remove)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus size={11} />
+                                  <span>Add to Plan</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ──────────────── MILESTONE 1: TENURE & ACTIVE SERVICE ──────────────── */}
       {activeMilestone === 'tenure' && (
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
@@ -598,145 +1240,103 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4">
-              <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
-                Life Board of Review & Active Date
+              <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar size={15} /> Board of Review & Start Date
               </h3>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  Life Scout Board of Review Date
-                </label>
-                <input
-                  type="date"
-                  value={lifeBorDate}
-                  onChange={(e) => setLifeBorDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  Initial Joined Troop Date
-                </label>
-                <input
-                  type="date"
-                  value={joinedTroopDate}
-                  onChange={(e) => setJoinedTroopDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
-                />
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Life Rank Board of Review Date:</label>
+                  <input
+                    type="date"
+                    value={lifeBorDate}
+                    onChange={(e) => setLifeBorDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Joined Troop Date:</label>
+                  <input
+                    type="date"
+                    value={joinedTroopDate}
+                    onChange={(e) => setJoinedTroopDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Elapsed Time & Verification Banner */}
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4 flex flex-col justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                  Active Tenure Countdown & Verification
-                </h3>
-                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Elapsed Active Time:</span>
-                    <strong className="text-white font-mono text-sm">{tenureStats.days} Days ({tenureStats.months} Months)</strong>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Requirement Status:</span>
-                    <strong className={`font-black ${tenureStats.isMet ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {tenureStats.isMet ? '✓ 6-Month Tenure Satisfied (180+ Days)' : `${tenureStats.remainingDays} Days Remaining`}
-                    </strong>
-                  </div>
+            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4">
+              <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck size={15} /> Active Tenure Calculator
+              </h3>
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Elapsed Days Since Life Rank:</span>
+                  <strong className={`font-mono text-sm ${tenureStats.isMet ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {tenureStats.days} Days ({tenureStats.months} Months)
+                  </strong>
                 </div>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={activeTenureChecklist.regularAttendance}
-                    onChange={(e) => setActiveTenureChecklist({ ...activeTenureChecklist, regularAttendance: e.target.checked })}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>Maintained regular troop meeting & campout attendance</span>
-                </label>
-                <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={activeTenureChecklist.scoutSpirit}
-                    onChange={(e) => setActiveTenureChecklist({ ...activeTenureChecklist, scoutSpirit: e.target.checked })}
-                    className="w-4 h-4 rounded text-emerald-500"
-                  />
-                  <span>Demonstrated Scout Oath, Law, and Scout Spirit in daily life</span>
-                </label>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Requirement Status:</span>
+                  <strong className={tenureStats.isMet ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                    {tenureStats.isMet ? '✓ 6-Month Tenure Satisfied!' : `${tenureStats.remainingDays} Days Remaining`}
+                  </strong>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ──────────────── MILESTONE 2: LEADERSHIP IN POSITION OF RESPONSIBILITY ──────────────── */}
+      {/* ──────────────── MILESTONE 2: 6-MONTH LEADERSHIP POSITION ──────────────── */}
       {activeMilestone === 'leadership' && (
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
           <div className="border-b border-slate-700 pb-3">
             <h2 className="text-base font-black text-white flex items-center gap-2">
-              <ShieldCheck className="text-emerald-400" size={20} />
-              <span>Milestone 2: Leadership in Position of Responsibility (6 Months Minimum)</span>
+              <Shield className="text-amber-400" size={20} />
+              <span>Milestone 2: 6-Month Position of Responsibility</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Requirement 4: Serve actively in one or more qualifying leadership positions for at least six months while a Life Scout.
-            </p>
-          </div>
-
-          <div className="bg-amber-950/30 border border-amber-500/40 p-4 rounded-2xl text-xs text-amber-200 space-y-1">
-            <strong className="text-amber-300 font-bold block">⚠️ Important BSA Leadership Qualification Rules:</strong>
-            <p>
-              Qualifying troop positions include SPL, ASPL, Patrol Leader, Troop Guide, OA Rep, Den Chief, Scribe, Librarian, Historian, Quartermaster, JASM, Chaplain Aide, Instructor, Webmaster, and Outdoor Ethics Guide.
-            </p>
-            <p className="text-amber-300/90 font-medium">
-              * Note: Assistant Patrol Leader (APL) and Bugler do <strong>NOT</strong> qualify for Eagle Scout rank leadership.
+              Requirement 4: While a Life Scout, serve actively in your troop for six months in one or more of the qualifying positions of responsibility.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4">
+            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-4 text-xs">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  Select Qualifying Leadership Role
-                </label>
+                <label className="block text-slate-400 mb-1 font-semibold">Select Leadership Position:</label>
                 <select
                   value={leadershipRole}
                   onChange={(e) => setLeadershipRole(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-400 cursor-pointer"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold cursor-pointer"
                 >
                   {QUALIFYING_LEADERSHIP_POSITIONS.map(p => (
                     <option key={p.title} value={p.title}>{p.title}</option>
                   ))}
                 </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">Start Date:</label>
                   <input
                     type="date"
                     value={leadershipStartDate}
                     onChange={(e) => setLeadershipStartDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">End Date</label>
+                  <label className="block text-slate-400 mb-1 font-semibold">End Date:</label>
                   <input
                     type="date"
                     value={leadershipEndDate}
                     onChange={(e) => setLeadershipEndDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white"
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  Months Served in Position
-                </label>
+                <label className="block text-slate-400 mb-1 font-semibold">Total Months Served:</label>
                 <input
                   type="number"
                   min="1"
@@ -761,7 +1361,7 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400">Duration:</span>
                     <strong className={`font-black ${isLeadershipSatisfied ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {leadershipMonths} Months {isLeadershipSatisfied ? '(✓ $\ge 6$ Mo Complete)' : '(Need 6 Mo)'}
+                      {leadershipMonths} Months {isLeadershipSatisfied ? '(✓ $\\ge 6$ Mo Complete)' : '(Need 6 Mo)'}
                     </strong>
                   </div>
                 </div>
@@ -781,354 +1381,344 @@ export default function RoadToEagleGuide({ currentUser, onNavigate }) {
         </div>
       )}
 
-      {/* ──────────────── MILESTONE 3: 21 MERIT BADGES AUDIT ENGINE ──────────────── */}
-      {activeMilestone === 'badges' && (
+      {/* ──────────────── MILESTONE 4: EAGLE PROJECT & WORKBOOK ──────────────── */}
+      {activeMilestone === 'project' && (
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-4">
-            <div>
-              <h2 className="text-base font-black text-white flex items-center gap-2">
-                <Award className="text-amber-400" size={20} />
-                <span>Milestone 3: 21 Merit Badges Audit Engine</span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Requirement 3: Earn a total of 21 merit badges (14 Eagle-required categories + 7 electives).
-              </p>
-            </div>
-
-            <button
-              onClick={() => onNavigate && onNavigate('merit-badges')}
-              className="bg-slate-700 hover:bg-slate-650 text-amber-300 font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-            >
-              <span>Explore All 137 Badges</span>
-              <ExternalLink size={13} />
-            </button>
+          <div className="border-b border-slate-700 pb-3">
+            <h2 className="text-base font-black text-white flex items-center gap-2">
+              <Sparkles className="text-amber-400" size={20} />
+              <span>Milestone 4: Eagle Scout Service Project Workbook & Approvals</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Requirement 5: While a Life Scout, plan, develop, and give leadership to others in a service project helpful to any religious institution, school, or community.
+            </p>
           </div>
 
-          {/* 11 Solo Core Eagle Badges */}
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-400 mb-1 font-semibold">Project Title / Name:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Community Mosque Library Renovation & Book Cataloging"
+                  value={projectTitle}
+                  onChange={(e) => setProjectTitle(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1 font-semibold">Beneficiary Organization:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Al-Hoda Educational Foundation"
+                  value={projectBeneficiary}
+                  onChange={(e) => setProjectBeneficiary(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Approval Checkboxes */}
+            <div className="bg-slate-900/60 border border-slate-750 p-4 rounded-2xl space-y-3">
+              <strong className="text-xs font-bold text-amber-300 uppercase tracking-wider block">
+                Required Project Approvals (All Must Be Signed):
+              </strong>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label: 'Beneficiary Approval', val: beneficiaryApproved, setVal: setBeneficiaryApproved },
+                  { label: 'Scoutmaster Approval', val: smApproved, setVal: setSmApproved },
+                  { label: 'Troop Committee Approval', val: committeeApproved, setVal: setCommitteeApproved },
+                  { label: 'Council / District Approval', val: districtApproved, setVal: setDistrictApproved },
+                ].map((item, idx) => (
+                  <label key={idx} className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                    <input
+                      type="checkbox"
+                      checked={item.val}
+                      onChange={(e) => item.setVal(e.target.checked)}
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-200">{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── MILESTONE 5: REFERENCES & AMBITIONS ──────────────── */}
+      {activeMilestone === 'references' && (
+        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
+          <div className="border-b border-slate-700 pb-3">
+            <h2 className="text-base font-black text-white flex items-center gap-2">
+              <FileText className="text-amber-400" size={20} />
+              <span>Milestone 5: Eagle Scout Reference Contacts & Ambitions Essay</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Requirement 2 & 6: Provide 6 references who can attest to your character, and write a statement of your ambitions and life purpose.
+            </p>
+          </div>
+
           <div className="space-y-3">
-            <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">
-              11 Solo Mandatory Eagle-Required Badges
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {soloEvaluated.map(b => (
-                <div
-                  key={b.id}
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2.5 transition ${
-                    b.earned
-                      ? 'bg-emerald-950/30 border-emerald-500/40 text-white'
-                      : 'bg-slate-900/60 border-slate-750 text-slate-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {b.earned ? (
-                      <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                    ) : (
-                      <Circle size={18} className="text-slate-600 shrink-0" />
-                    )}
-                    <span className={`text-xs font-bold truncate ${b.earned ? 'text-white' : 'text-slate-300'}`}>
-                      {b.name}
-                    </span>
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              6 Reference Contacts
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              {references.map((r, idx) => (
+                <div key={idx} className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-750 space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-850 pb-1.5">
+                    <strong className="text-amber-300">{r.type}</strong>
+                    <span className="text-[10px] text-slate-500 font-mono">Ref #{idx + 1}</span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    b.earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {b.earned ? '✓ Earned' : 'Needed'}
-                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={r.name}
+                      onChange={(e) => handleReferenceChange(idx, 'name', e.target.value)}
+                      className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Phone Number"
+                      value={r.phone}
+                      onChange={(e) => handleReferenceChange(idx, 'phone', e.target.value)}
+                      className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white"
+                    />
+                  </div>
+                  <input
+                    type="email"
+                    placeholder="Email Address"
+                    value={r.email}
+                    onChange={(e) => handleReferenceChange(idx, 'email', e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white"
+                  />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 3 Alternate Groups */}
-          <div className="space-y-3 pt-3 border-t border-slate-700/60">
-            <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">
-              3 Alternate Choice Groups (Pick 1 from each group)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Group A */}
-              <div className={`p-4 rounded-2xl border space-y-2.5 ${
-                groupAEvaluated.earned ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-900/60 border-slate-750'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <strong className="text-xs font-black text-amber-300">Group A (Prep / Lifesaving)</strong>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    groupAEvaluated.earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {groupAEvaluated.earned ? '✓ Satisfied' : 'Pick 1'}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {groupAEvaluated.badges.map(b => (
-                    <div key={b.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className={b.earned ? 'text-emerald-300 font-bold' : 'text-slate-400'}>{b.name}</span>
-                      {b.earned && <Check size={13} className="text-emerald-400" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Group B */}
-              <div className={`p-4 rounded-2xl border space-y-2.5 ${
-                groupBEvaluated.earned ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-900/60 border-slate-750'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <strong className="text-xs font-black text-amber-300">Group B (Environment)</strong>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    groupBEvaluated.earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {groupBEvaluated.earned ? '✓ Satisfied' : 'Pick 1'}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {groupBEvaluated.badges.map(b => (
-                    <div key={b.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className={b.earned ? 'text-emerald-300 font-bold' : 'text-slate-400'}>{b.name}</span>
-                      {b.earned && <Check size={13} className="text-emerald-400" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Group C */}
-              <div className={`p-4 rounded-2xl border space-y-2.5 ${
-                groupCEvaluated.earned ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-900/60 border-slate-750'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <strong className="text-xs font-black text-amber-300">Group C (Physical / Outdoor)</strong>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    groupCEvaluated.earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {groupCEvaluated.earned ? '✓ Satisfied' : 'Pick 1'}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {groupCEvaluated.badges.map(b => (
-                    <div key={b.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-950 border border-slate-800">
-                      <span className={b.earned ? 'text-emerald-300 font-bold' : 'text-slate-400'}>{b.name}</span>
-                      {b.earned && <Check size={13} className="text-emerald-400" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ──────────────── MILESTONE 4: EAGLE SCOUT SERVICE PROJECT ROADMAP ──────────────── */}
-      {activeMilestone === 'project' && (
-        <EagleProjectRoadmap
-          scoutId={activeScoutId}
-          currentUser={currentUser}
-          onSyncParent={(projectSummary) => {
-            if (projectSummary) {
-              setProjectTitle(projectSummary.title || '');
-              setProjectBeneficiary(projectSummary.beneficiary || '');
-              setProjectBeneficiaryContact(projectSummary.beneficiaryContact || '');
-              setProjectStage(projectSummary.stage || 'proposal');
-              setBeneficiaryApproved(!!projectSummary.beneficiaryApproval);
-              setSmApproved(!!projectSummary.smApproval);
-              setCommitteeApproved(!!projectSummary.committeeApproval);
-              setDistrictApproved(!!projectSummary.districtApproval);
-              setWorkbookCompleted(!!projectSummary.workbookCompleted);
-              setFinalReportSigned(!!projectSummary.finalReportSigned);
-              if (Array.isArray(projectSummary.volunteerLogs)) {
-                setVolunteerLogs(projectSummary.volunteerLogs);
-              }
-            }
-          }}
-        />
-      )}
-
-      {/* ──────────────── MILESTONE 5: REFERENCES & STATEMENT OF AMBITIONS ──────────────── */}
-      {activeMilestone === 'references' && (
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
-          <div className="border-b border-slate-700 pb-3">
-            <h2 className="text-base font-black text-white flex items-center gap-2">
-              <Users className="text-amber-400" size={20} />
-              <span>Milestone 5: 6 Character References & Statement of Ambitions</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Requirement 2 & 6: Provide contact information for six references and compose your Statement of Ambitions and Life Purpose.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {references.map((ref, idx) => (
-              <div key={idx} className="bg-slate-900/70 border border-slate-750 p-4 rounded-2xl space-y-2">
-                <span className="text-xs font-black text-amber-300 block truncate">{ref.type}</span>
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={ref.name}
-                  onChange={(e) => handleRefChange(idx, 'name', e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Mailing Address"
-                  value={ref.address}
-                  onChange={(e) => handleRefChange(idx, 'address', e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="tel"
-                    placeholder="Phone"
-                    value={ref.phone}
-                    onChange={(e) => handleRefChange(idx, 'phone', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={ref.email}
-                    onChange={(e) => handleRefChange(idx, 'email', e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Statement of Ambitions Editor */}
-          <div className="space-y-2 pt-3 border-t border-slate-700/60">
-            <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText size={15} className="text-emerald-400" />
-              <span>Statement of Ambitions and Life Purpose</span>
-            </h3>
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Statement of Ambitions and Life Purpose (Requirement 6)
+            </h4>
             <textarea
-              rows={7}
+              rows={5}
               value={statementOfAmbitions}
               onChange={(e) => setStatementOfAmbitions(e.target.value)}
-              placeholder="Write your personal statement of ambitions, goals in life, reflections on Islamic and Scout values, and a listing of leadership positions held outside of scouting..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-2xl p-4 text-xs text-white leading-relaxed focus:outline-none focus:border-amber-400"
+              placeholder="Attach a statement of your ambitions and life purpose and a listing of positions held in your religious institution, school, camp, community, or other organizations, during which you demonstrated leadership skills. Include honors and awards received during this service."
+              className="w-full bg-slate-950 border border-slate-700 rounded-2xl p-4 text-xs text-white leading-relaxed placeholder-slate-500 focus:outline-none focus:border-amber-500"
             />
           </div>
         </div>
       )}
 
-      {/* ──────────────── MILESTONE 6: SCOUTMASTER CONFERENCE & EAGLE BOR ──────────────── */}
+      {/* ──────────────── MILESTONE 6: BOR & SIGN-OFF ──────────────── */}
       {activeMilestone === 'bor' && (
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
           <div className="border-b border-slate-700 pb-3">
             <h2 className="text-base font-black text-white flex items-center gap-2">
-              <Sparkles className="text-amber-400" size={20} />
+              <ShieldCheck className="text-amber-400" size={20} />
               <span>Milestone 6: Scoutmaster Conference & Eagle Board of Review</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Final steps: Official Rank Application, Scoutmaster Conference, Council Verification, and the District Eagle Board of Review.
+              Requirement 7: Successfully complete your Scoutmaster Conference and Eagle Scout Board of Review.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-3 text-xs">
-              <h3 className="font-bold text-amber-300 uppercase text-xs">Eagle Application Steps</h3>
-              <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={appCompleted}
-                  onChange={(e) => setAppCompleted(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-500"
-                />
-                <span>1. Official Eagle Scout Rank Application Fully Completed</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+            <div className="p-4 bg-slate-900/60 border border-slate-750 rounded-2xl space-y-3">
+              <strong className="text-amber-300 font-bold block">Scoutmaster Conference</strong>
+              <input
+                type="date"
+                value={smConferenceDate}
+                onChange={(e) => setSmConferenceDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+              <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={smConferenceSigned}
                   onChange={(e) => setSmConferenceSigned(e.target.checked)}
                   className="w-4 h-4 rounded text-emerald-500"
                 />
-                <span>2. Scoutmaster Conference Successfully Completed & Signed</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={councilVerified}
-                  onChange={(e) => setCouncilVerified(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-500"
-                />
-                <span>3. Council Service Center Verified Records & Approved for BOR</span>
+                <span>Scoutmaster Conference Completed & Signed</span>
               </label>
             </div>
 
-            <div className="bg-slate-900/60 border border-slate-750 p-5 rounded-2xl space-y-3 text-xs">
-              <h3 className="font-bold text-emerald-300 uppercase text-xs">Eagle Board of Review</h3>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Board of Review Date</label>
-                <input
-                  type="date"
-                  value={borDate}
-                  onChange={(e) => setBorDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 text-slate-200 cursor-pointer pt-2">
+            <div className="p-4 bg-slate-900/60 border border-slate-750 rounded-2xl space-y-3">
+              <strong className="text-amber-300 font-bold block">Eagle Board of Review</strong>
+              <input
+                type="date"
+                value={borDate}
+                onChange={(e) => setBorDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+              <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={borPassed}
                   onChange={(e) => setBorPassed(e.target.checked)}
                   className="w-4 h-4 rounded text-emerald-500"
                 />
-                <strong className="text-emerald-400 font-bold">4. Eagle Scout Board of Review Passed (Eagle Rank Conferred!) 🦅</strong>
+                <span>Eagle Board of Review Passed (Official Eagle Scout!)</span>
               </label>
             </div>
           </div>
         </div>
       )}
 
-      {/* ──────────────── MILESTONE 7: EAGLE PALMS EXPANSION MODULE ──────────────── */}
+      {/* ──────────────── MILESTONE 7: EAGLE PALMS ──────────────── */}
       {activeMilestone === 'palms' && (
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-6 animate-fadeIn">
           <div className="border-b border-slate-700 pb-3">
             <h2 className="text-base font-black text-white flex items-center gap-2">
               <Sparkles className="text-amber-400" size={20} />
-              <span>Milestone 7: Eagle Palms Recognition & Expansion Module</span>
+              <span>Milestone 7: Official Eagle Palms Calculator</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              1 Palm for every 5 merit badges earned beyond the 21 required for Eagle. Concurrently awarded at the Eagle Board of Review!
+              Earn 1 Eagle Palm for every 5 additional merit badges completed beyond the 21 required for Eagle.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-amber-950/30 to-slate-900 border-2 border-amber-700/50 p-5 rounded-2xl text-center space-y-2">
-              <span className="text-3xl block">🥉</span>
-              <h3 className="font-extrabold text-sm text-amber-200">Bronze Palm</h3>
-              <p className="text-[11px] text-slate-400">5 Additional Merit Badges</p>
-              <div className="text-2xl font-black text-white pt-2">{bronzePalms} Earned</div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-amber-500/30 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Badges Earned</span>
+              <strong className="text-2xl font-black text-white font-mono block">{totalBadgesEarnedCount}</strong>
+              <span className="text-[10px] text-emerald-400">({extraBadgesBeyond21} beyond 21)</span>
             </div>
-
-            <div className="bg-gradient-to-br from-yellow-950/30 to-slate-900 border-2 border-yellow-500/50 p-5 rounded-2xl text-center space-y-2">
-              <span className="text-3xl block">🥇</span>
-              <h3 className="font-extrabold text-sm text-yellow-300">Gold Palm</h3>
-              <p className="text-[11px] text-slate-400">10 Additional Merit Badges</p>
-              <div className="text-2xl font-black text-white pt-2">{goldPalms} Earned</div>
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-750 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Bronze Palms (5 Badges)</span>
+              <strong className="text-2xl font-black text-amber-600 font-mono block">{bronzePalms}</strong>
             </div>
-
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-400/50 p-5 rounded-2xl text-center space-y-2">
-              <span className="text-3xl block">🥈</span>
-              <h3 className="font-extrabold text-sm text-slate-200">Silver Palm</h3>
-              <p className="text-[11px] text-slate-400">15 Additional Merit Badges</p>
-              <div className="text-2xl font-black text-white pt-2">{silverPalms} Earned</div>
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-750 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Gold Palms (10 Badges)</span>
+              <strong className="text-2xl font-black text-yellow-400 font-mono block">{goldPalms}</strong>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-750 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Silver Palms (15 Badges)</span>
+              <strong className="text-2xl font-black text-slate-200 font-mono block">{silverPalms}</strong>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="p-4 bg-slate-900/60 rounded-2xl border border-slate-750 text-xs space-y-2">
-            <div className="flex justify-between items-center text-slate-300 font-bold">
-              <span>Total Merit Badges Earned:</span>
-              <span className="text-amber-400 text-sm font-black">{totalBadgesEarnedCount} Badges</span>
+      {/* ── ELECTIVE BADGES MODAL PICKER ── */}
+      {showElectiveModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-850 border-2 border-teal-500/40 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fadeIn">
+            
+            <div className="p-5 border-b border-slate-750 flex items-center justify-between">
+              <div>
+                <h4 className="text-base font-black text-white flex items-center gap-2">
+                  <Compass size={18} className="text-teal-400" />
+                  <span>Choose Elective Merit Badges for Eagle Plan</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Select elective merit badges to reach your 7 required electives ({earnedElectives.length + plannedElectives.length} / 7 selected).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowElectiveModal(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div className="flex justify-between items-center text-slate-300">
-              <span>Additional Badges Beyond 21:</span>
-              <span className="font-mono">{extraBadgesBeyond21} Badges</span>
+
+            <div className="p-4 border-b border-slate-800 bg-slate-900/60">
+              <div className="relative">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search 120+ electives by name or category (e.g. Robotics, Wilderness, Archery)..."
+                  value={electiveSearch}
+                  onChange={(e) => setElectiveSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                />
+              </div>
             </div>
-            <div className="flex justify-between items-center text-slate-300">
-              <span>Total Palms Concurrently Earned:</span>
-              <span className="text-emerald-400 font-black">{totalPalmsEarned} Palms Total ({silverPalms} Silver, {goldPalms} Gold, {bronzePalms} Bronze)</span>
+
+            <div className="p-5 overflow-y-auto space-y-2 max-h-[50vh]">
+              {filteredElectivesForModal.map(b => {
+                const status = getBadgeStatus(b.id);
+                const isEarned = status === 'earned';
+                const isPlanned = status === 'planned' || status === 'in-progress';
+
+                return (
+                  <div
+                    key={b.id}
+                    className={`p-3 rounded-2xl border flex items-center justify-between gap-3 text-xs transition ${
+                      isEarned
+                        ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
+                        : isPlanned
+                        ? 'bg-teal-950/30 border-teal-500/40 text-teal-200'
+                        : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <strong className="block truncate text-white text-xs font-bold">{b.name}</strong>
+                      <span className="text-[10px] text-slate-400">{b.category || 'Elective'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {b.pamphletUrl && (
+                        <a
+                          href={b.pamphletUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-teal-700 text-teal-300 hover:text-white border border-slate-700 transition"
+                          title="View Official Pamphlet"
+                        >
+                          <BookOpen size={12} />
+                        </a>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePlanned(b.id, isPlanned)}
+                        disabled={isEarned}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                          isEarned
+                            ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-500/30 cursor-default'
+                            : isPlanned
+                            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-red-950/40 hover:text-red-300'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                        }`}
+                      >
+                        {isEarned ? (
+                          <>
+                            <Check size={13} />
+                            <span>Earned</span>
+                          </>
+                        ) : isPlanned ? (
+                          <>
+                            <Target size={13} />
+                            <span>In Plan (Remove)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={13} />
+                            <span>Add to Plan</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-4 border-t border-slate-750 bg-slate-900 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowElectiveModal(false)}
+                className="bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs px-5 py-2 rounded-xl transition cursor-pointer border border-slate-700"
+              >
+                Done Selecting
+              </button>
             </div>
           </div>
         </div>
