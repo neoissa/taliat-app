@@ -992,8 +992,10 @@ We wanted to remind scouts to log their community service and volunteering hours
                   }
                 ];
               })().map((tmpl) => {
-                const encodedText = encodeURIComponent(tmpl.text);
-                const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
+                const cleanPhone = (activeWhatsappPhone || '').replace(/[^0-9]/g, '');
+                const waLink = cleanPhone 
+                  ? `https://wa.me/${cleanPhone}${tmpl.text ? `?text=${encodedText}` : ''}`
+                  : `https://wa.me/?text=${encodedText}`;
                 return (
                   <a
                     key={tmpl.label}
@@ -2639,8 +2641,10 @@ We wanted to remind scouts to log their community service and volunteering hours
                   }
                 ];
               })().map((tmpl) => {
-                const encodedText = encodeURIComponent(tmpl.text);
-                const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
+                const cleanPhone = (activeWhatsappPhone || '').replace(/[^0-9]/g, '');
+                const waLink = cleanPhone 
+                  ? `https://wa.me/${cleanPhone}${tmpl.text ? `?text=${encodedText}` : ''}`
+                  : `https://wa.me/?text=${encodedText}`;
                 return (
                   <a
                     key={tmpl.label}

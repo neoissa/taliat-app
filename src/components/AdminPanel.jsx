@@ -196,6 +196,7 @@ export default function AdminPanel({ currentUser }) {
   const [newPatrolName, setNewPatrolName] = useState('');
   const [newPatrolMotto, setNewPatrolMotto] = useState('');
   const [newPatrolLeaderId, setNewPatrolLeaderId] = useState('');
+  const [newPatrolAssistantLeaderIds, setNewPatrolAssistantLeaderIds] = useState([]);
   const [newPatrolPhotoURL, setNewPatrolPhotoURL] = useState('');
   const [patrolCreating, setPatrolCreating] = useState(false);
   const [patrolMsg, setPatrolMsg] = useState('');
@@ -205,6 +206,7 @@ export default function AdminPanel({ currentUser }) {
   const [editPatrolName, setEditPatrolName] = useState('');
   const [editPatrolMotto, setEditPatrolMotto] = useState('');
   const [editPatrolLeaderId, setEditPatrolLeaderId] = useState('');
+  const [editPatrolAssistantLeaderIds, setEditPatrolAssistantLeaderIds] = useState([]);
   const [editPatrolPhotoURL, setEditPatrolPhotoURL] = useState('');
   const [editPatrolScoutIds, setEditPatrolScoutIds] = useState([]);
   const [patrolUpdating, setPatrolUpdating] = useState(false);
@@ -476,6 +478,7 @@ export default function AdminPanel({ currentUser }) {
     const name = whatsappUser.fullName || whatsappUser.username || 'Member';
     const username = whatsappUser.username || whatsappUser.email || 'username';
     const password = whatsappPassword || 'taliat2026';
+    const appUrl = 'https://taliat-app.vercel.app/';
     const uPatrol = groups.find(g => g.id === whatsappUser.groupId)?.name || '';
     const patrolName = uPatrol;
     const leaderPosition = whatsappUser.leaderPosition || (whatsappUser.role === 'owner' ? 'Troop Headmaster / Lead Admin' : 'Scout Leader');
@@ -673,25 +676,30 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
     try {
       const patrolId = `patrol_${Date.now()}`;
+      const allLeaderIds = [newPatrolLeaderId, ...newPatrolAssistantLeaderIds].filter(Boolean);
+
       await setDoc(doc(db, 'groups', patrolId), {
         id: patrolId,
         name: newPatrolName.trim(),
         motto: newPatrolMotto.trim() || 'Forward with Honor',
         leaderId: newPatrolLeaderId || null,
+        assistantLeaderIds: newPatrolAssistantLeaderIds || [],
+        assignedLeaderIds: allLeaderIds,
         photoURL: newPatrolPhotoURL || null,
         archived: false,
         createdAt: serverTimestamp()
       });
 
-      // If leader assigned, update leader's groupId
-      if (newPatrolLeaderId) {
-        await setDoc(doc(db, 'users', newPatrolLeaderId), { groupId: patrolId, patrolId: patrolId }, { merge: true });
+      // If leader or assistant leaders assigned, update their groupId & patrolId
+      for (const lUid of allLeaderIds) {
+        await setDoc(doc(db, 'users', lUid), { groupId: patrolId, patrolId: patrolId }, { merge: true });
       }
 
       setPatrolMsg(`✓ Patrol "${newPatrolName}" created successfully!`);
       setNewPatrolName('');
       setNewPatrolMotto('');
       setNewPatrolLeaderId('');
+      setNewPatrolAssistantLeaderIds([]);
       setNewPatrolPhotoURL('');
       setTimeout(() => setPatrolMsg(''), 3000);
     } catch (err) {
@@ -706,6 +714,13 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
     setEditPatrolName(patrol.name || '');
     setEditPatrolMotto(patrol.motto || '');
     setEditPatrolLeaderId(patrol.leaderId || '');
+    
+    // Support assistantLeaderIds or fallback to assignedLeaderIds excluding primary leader
+    const existingAssistantLeaders = Array.isArray(patrol.assistantLeaderIds) 
+      ? patrol.assistantLeaderIds 
+      : (Array.isArray(patrol.assignedLeaderIds) ? patrol.assignedLeaderIds.filter(id => id !== patrol.leaderId) : []);
+    setEditPatrolAssistantLeaderIds(existingAssistantLeaders);
+    
     setEditPatrolPhotoURL(patrol.photoURL || '');
     const currentScouts = scoutsList.filter(s => s.groupId === patrol.id || s.patrolId === patrol.id).map(s => s.uid);
     setEditPatrolScoutIds(currentScouts);
@@ -722,21 +737,37 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
     try {
       const patrolRef = doc(db, 'groups', editingPatrol.id);
+      // Assistant leaders must not include the primary leader
+      const cleanAssistantLeaderIds = editPatrolAssistantLeaderIds.filter(id => id !== editPatrolLeaderId);
+      const allLeaderIds = [editPatrolLeaderId, ...cleanAssistantLeaderIds].filter(Boolean);
+
       await updateDoc(patrolRef, {
         name: editPatrolName.trim(),
         motto: editPatrolMotto.trim() || 'Forward with Honor',
         leaderId: editPatrolLeaderId || null,
+        assistantLeaderIds: cleanAssistantLeaderIds,
+        assignedLeaderIds: allLeaderIds,
         photoURL: editPatrolPhotoURL || null,
         updatedAt: serverTimestamp()
       });
 
-      // Sync leader assignment
-      if (editPatrolLeaderId) {
-        await setDoc(doc(db, 'users', editPatrolLeaderId), { groupId: editingPatrol.id, patrolId: editingPatrol.id }, { merge: true });
+      // Sync leader assignments
+      const prevLeaderIds = [
+        editingPatrol.leaderId,
+        ...(Array.isArray(editingPatrol.assistantLeaderIds) ? editingPatrol.assistantLeaderIds : []),
+        ...(Array.isArray(editingPatrol.assignedLeaderIds) ? editingPatrol.assignedLeaderIds : [])
+      ].filter(Boolean);
+
+      // Assign all new leaders
+      for (const lUid of allLeaderIds) {
+        await setDoc(doc(db, 'users', lUid), { groupId: editingPatrol.id, patrolId: editingPatrol.id }, { merge: true });
       }
-      if (editingPatrol.leaderId && editingPatrol.leaderId !== editPatrolLeaderId) {
-        // Clear previous leader's groupId if reassigned
-        await updateDoc(doc(db, 'users', editingPatrol.leaderId), { groupId: null, patrolId: null });
+
+      // Remove unassigned leaders
+      for (const prevUid of prevLeaderIds) {
+        if (!allLeaderIds.includes(prevUid)) {
+          await updateDoc(doc(db, 'users', prevUid), { groupId: null, patrolId: null });
+        }
       }
 
       // Sync scout assignments
@@ -756,7 +787,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
         }
       }
 
-      setEditPatrolMsg('✓ Patrol details and scout roster successfully updated!');
+      setEditPatrolMsg('✓ Patrol details, assistant leaders, and scout roster successfully updated!');
       setTimeout(() => setEditingPatrol(null), 1200);
     } catch (err) {
       console.error("Failed to update patrol:", err);
@@ -778,16 +809,22 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
   };
 
   const handleDeletePatrol = async (patrol) => {
-    if (!window.confirm(`Are you sure you want to delete the "${patrol.name}" Patrol? All assigned scouts will be unassigned.`)) return;
+    if (!window.confirm(`Are you sure you want to delete the "${patrol.name}" Patrol? All assigned scouts and leaders will be unassigned.`)) return;
     try {
       // Unassign scouts
       const assignedScouts = scoutsList.filter(s => s.groupId === patrol.id || s.patrolId === patrol.id);
       for (const s of assignedScouts) {
         await updateDoc(doc(db, 'users', s.uid), { groupId: null, patrolId: null });
       }
-      // Unassign leader
-      if (patrol.leaderId) {
-        await updateDoc(doc(db, 'users', patrol.leaderId), { groupId: null, patrolId: null });
+      // Unassign leader & assistant leaders
+      const leadersToUnassign = [
+        patrol.leaderId,
+        ...(Array.isArray(patrol.assistantLeaderIds) ? patrol.assistantLeaderIds : []),
+        ...(Array.isArray(patrol.assignedLeaderIds) ? patrol.assignedLeaderIds : [])
+      ].filter(Boolean);
+
+      for (const lUid of leadersToUnassign) {
+        await updateDoc(doc(db, 'users', lUid), { groupId: null, patrolId: null });
       }
       await deleteDoc(doc(db, 'groups', patrol.id));
     } catch (err) {
@@ -1202,10 +1239,16 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Assign Patrol Leader</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Assign Patrol Leader (Primary)</label>
                 <select
                   value={newPatrolLeaderId}
-                  onChange={(e) => setNewPatrolLeaderId(e.target.value)}
+                  onChange={(e) => {
+                    const lId = e.target.value;
+                    setNewPatrolLeaderId(lId);
+                    if (lId) {
+                      setNewPatrolAssistantLeaderIds(prev => prev.filter(id => id !== lId));
+                    }
+                  }}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="">Select Leader...</option>
@@ -1213,6 +1256,53 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                     <option key={l.uid} value={l.uid}>{l.fullName || l.username} ({l.leaderPosition || 'Leader'})</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Patrol Assistant Leaders Selection */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-bold text-slate-300 uppercase">
+                    Patrol Assistant Leaders ({newPatrolAssistantLeaderIds.length})
+                  </label>
+                  <span className="text-[10px] text-slate-400">Optional</span>
+                </div>
+                <div className="max-h-28 overflow-y-auto space-y-1 bg-slate-900 p-2 rounded-xl border border-slate-700">
+                  {leadersList
+                    .filter(l => l.uid !== newPatrolLeaderId)
+                    .map(l => {
+                      const isAssigned = newPatrolAssistantLeaderIds.includes(l.uid);
+                      return (
+                        <label
+                          key={l.uid}
+                          className={`flex items-center justify-between p-1.5 rounded-lg border text-xs cursor-pointer transition ${
+                            isAssigned
+                              ? 'bg-emerald-950/60 border-emerald-500 text-white font-bold'
+                              : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-850'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isAssigned}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewPatrolAssistantLeaderIds(prev => [...prev, l.uid]);
+                                } else {
+                                  setNewPatrolAssistantLeaderIds(prev => prev.filter(id => id !== l.uid));
+                                }
+                              }}
+                              className="rounded text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="truncate text-[11px]">{l.fullName || l.username}</span>
+                            <span className="text-[9px] text-emerald-400 font-normal">({l.leaderPosition || 'Leader'})</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  {leadersList.filter(l => l.uid !== newPatrolLeaderId).length === 0 && (
+                    <p className="text-[10px] text-slate-500 italic p-1">No other leaders available.</p>
+                  )}
+                </div>
               </div>
 
               {/* Patrol Emblem Upload */}
@@ -1276,7 +1366,14 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {groups.map(g => {
                 const pScouts = scoutsList.filter(s => s.groupId === g.id || s.patrolId === g.id);
-                const pLeader = leadersList.find(l => l.uid === g.leaderId || l.groupId === g.id);
+                const pLeader = leadersList.find(l => l.uid === g.leaderId || (l.groupId === g.id && l.leaderPosition !== 'Assistant Leader' && l.leaderPosition !== 'Assistant Scoutmaster'));
+                const pAssistantLeaders = leadersList.filter(l => {
+                  if (l.uid === g.leaderId) return false;
+                  if (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(l.uid)) return true;
+                  if (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(l.uid)) return true;
+                  if (l.groupId === g.id || l.patrolId === g.id) return true;
+                  return false;
+                });
 
                 return (
                   <div key={g.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3.5 shadow-xl hover:border-emerald-500/40 transition">
@@ -1311,15 +1408,44 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                       </span>
                     </div>
 
-                    {/* Assigned Leader Box */}
-                    <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Assigned Patrol Leader:</span>
-                      <p className="text-white font-semibold flex items-center gap-1.5">
-                        <span>{pLeader?.fullName || pLeader?.username || 'No Leader Assigned'}</span>
-                        {pLeader?.leaderPosition && (
-                          <span className="text-[10px] text-emerald-400 font-normal">({pLeader.leaderPosition})</span>
-                        )}
-                      </p>
+                    {/* Assigned Leader & Assistant Leaders Box */}
+                    <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-2.5">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Patrol Leader:</span>
+                        <p className="text-white font-semibold flex items-center gap-1.5 mt-0.5">
+                          <span>{pLeader?.fullName || pLeader?.username || 'No Leader Assigned'}</span>
+                          {pLeader?.leaderPosition && (
+                            <span className="text-[10px] text-emerald-400 font-normal">({pLeader.leaderPosition})</span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Assistant Patrol Leaders ({pAssistantLeaders.length}):
+                          </span>
+                          <button
+                            onClick={() => handleOpenEditPatrol(g)}
+                            className="text-[10px] text-emerald-400 hover:text-emerald-300 hover:underline font-normal cursor-pointer"
+                          >
+                            + edit
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {pAssistantLeaders.length === 0 ? (
+                            <span className="text-[11px] text-slate-500 italic">No assistant leaders assigned yet.</span>
+                          ) : (
+                            pAssistantLeaders.map(al => (
+                              <span key={al.uid} className="inline-flex items-center gap-1.5 text-[10px] bg-emerald-950/70 border border-emerald-700/60 text-emerald-200 px-2.5 py-1 rounded-xl font-medium shadow-sm">
+                                <Shield size={11} className="text-emerald-400 shrink-0" />
+                                <span className="font-bold">{al.fullName || al.username}</span>
+                                {al.leaderPosition && <span className="text-[9px] text-emerald-300/80 font-normal">({al.leaderPosition})</span>}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Scouts Roster Chips */}
@@ -2248,7 +2374,10 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               </button>
 
               <a
-                href={`https://wa.me/${whatsappPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(getWhatsAppMessageText())}`}
+                href={(whatsappPhone && whatsappPhone.replace(/[^0-9]/g, '')) 
+                  ? `https://wa.me/${whatsappPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(getWhatsAppMessageText())}`
+                  : `https://wa.me/?text=${encodeURIComponent(getWhatsAppMessageText())}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
@@ -2434,7 +2563,13 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                 <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Assigned Patrol Leader</label>
                 <select
                   value={editPatrolLeaderId}
-                  onChange={(e) => setEditPatrolLeaderId(e.target.value)}
+                  onChange={(e) => {
+                    const lId = e.target.value;
+                    setEditPatrolLeaderId(lId);
+                    if (lId) {
+                      setEditPatrolAssistantLeaderIds(prev => prev.filter(id => id !== lId));
+                    }
+                  }}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="">No Assigned Leader</option>
@@ -2445,6 +2580,59 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                   ))}
                 </select>
               </div>
+
+              {/* Patrol Assistant Leaders Selection */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-bold text-slate-300 uppercase">
+                    Patrol Assistant Leaders ({editPatrolAssistantLeaderIds.length})
+                  </label>
+                  <span className="text-[10px] text-slate-400">Select one or more assistant leaders</span>
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1.5 bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
+                  {leadersList
+                    .filter(l => l.uid !== editPatrolLeaderId)
+                    .map(l => {
+                      const isAssigned = editPatrolAssistantLeaderIds.includes(l.uid);
+                      return (
+                        <label
+                          key={l.uid}
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition ${
+                            isAssigned
+                              ? 'bg-emerald-950/50 border-emerald-500 text-white font-bold'
+                              : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isAssigned}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEditPatrolAssistantLeaderIds(prev => [...prev, l.uid]);
+                                } else {
+                                  setEditPatrolAssistantLeaderIds(prev => prev.filter(id => id !== l.uid));
+                                }
+                              }}
+                              className="rounded text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="truncate">{l.fullName || l.username}</span>
+                            <span className="text-[10px] text-emerald-400 font-mono font-normal">({l.leaderPosition || 'Assistant Leader'})</span>
+                          </div>
+                          {l.groupId && l.groupId !== editingPatrol.id && (
+                            <span className="text-[10px] text-slate-500 font-normal">
+                              currently: {groups.find(g => g.id === l.groupId)?.name}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  {leadersList.filter(l => l.uid !== editPatrolLeaderId).length === 0 && (
+                    <p className="text-[11px] text-slate-500 italic p-2">No other leaders available.</p>
+                  )}
+                </div>
+              </div>
+
 
               {/* Emblem Upload */}
               <div>
