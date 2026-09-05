@@ -75,7 +75,10 @@ import {
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
   'Assistant Scoutmaster',
+  'Patrol Leader',
   'Assistant Leader',
+  'Senior Patrol Leader',
+  'Assistant Senior Patrol Leader',
   'Committee Chair',
   'Committee Member',
   'Chartered Org Representative',
@@ -142,7 +145,8 @@ export default function AdminPanel({ currentUser }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [newUserType, setNewUserType] = useState('leader'); // 'leader' | 'parent' | 'scout'
   const [newFullName, setNewFullName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPersonalEmail, setNewPersonalEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newLeaderPosition, setNewLeaderPosition] = useState('Assistant Scoutmaster');
   const [newGroupId, setNewGroupId] = useState('');
@@ -292,18 +296,21 @@ export default function AdminPanel({ currentUser }) {
     e.preventDefault();
     setUserErr('');
     setUserMsg('');
-    const email = newEmail.trim().toLowerCase();
+    const rawInput = (newUsername || '').trim().toLowerCase();
     const name = newFullName.trim();
     const password = newPassword;
 
-    if (!name || !email || !password) {
-      setUserErr('Please provide full name, email, and password.');
+    if (!name || !rawInput || !password) {
+      setUserErr('Please provide full name, username/login ID, and password.');
       return;
     }
     if (password.length < 6) {
       setUserErr('Password must be at least 6 characters.');
       return;
     }
+
+    const cleanUsername = rawInput.includes('@') ? rawInput.split('@')[0] : rawInput;
+    const authEmail = rawInput.includes('@') ? rawInput : `${rawInput}@talia.app`;
 
     setUserCreating(true);
 
@@ -315,14 +322,15 @@ export default function AdminPanel({ currentUser }) {
         secApp = initializeApp(firebaseConfig, 'secondary');
       }
       const secAuth = getAuth(secApp);
-      const cred = await createUserWithEmailAndPassword(secAuth, email, password);
+      const cred = await createUserWithEmailAndPassword(secAuth, authEmail, password);
       const newUid = cred.user.uid;
       await secAuth.signOut();
 
       const baseDoc = {
         fullName: name,
-        email,
-        username: email.split('@')[0],
+        username: cleanUsername,
+        email: authEmail,
+        personalEmail: newPersonalEmail.trim() || (rawInput.includes('@') ? rawInput : null),
         role: newUserType,
         createdAt: serverTimestamp()
       };
@@ -330,11 +338,14 @@ export default function AdminPanel({ currentUser }) {
       if (newUserType === 'leader') {
         baseDoc.leaderPosition = newLeaderPosition;
         baseDoc.groupId = newGroupId || null;
+        baseDoc.patrolId = newGroupId || null;
       } else if (newUserType === 'parent') {
         baseDoc.linkedScoutIds = newLinkedScoutIds;
       } else if (newUserType === 'scout') {
         baseDoc.groupId = newGroupId || null;
+        baseDoc.patrolId = newGroupId || null;
         baseDoc.rank = newRank;
+        baseDoc.scoutEmail = newPersonalEmail.trim() || null;
       }
 
       await setDoc(doc(db, 'users', newUid), baseDoc);
@@ -351,13 +362,30 @@ export default function AdminPanel({ currentUser }) {
         }
       }
 
-      setUserMsg(`✓ Account successfully created for ${name} (${newUserType.toUpperCase()})!`);
+      // If leader assigned to a patrol, update group
+      if (newUserType === 'leader' && newGroupId) {
+        const groupRef = doc(db, 'groups', newGroupId);
+        const groupDoc = groups.find(g => g.id === newGroupId);
+        if (groupDoc) {
+          const leadersList = groupDoc.assignedLeaderIds || [];
+          if (!leadersList.includes(newUid)) {
+            await updateDoc(groupRef, {
+              assignedLeaderIds: [...leadersList, newUid]
+            });
+          }
+        }
+      }
+
+      setUserMsg(`✓ Account created for ${name}! (Login Username: ${cleanUsername})`);
       setTimeout(() => {
         setShowUserModal(false);
         setNewFullName('');
-        setNewEmail('');
+        setNewUsername('');
+        setNewPersonalEmail('');
         setNewPassword('');
         setNewLinkedScoutIds([]);
+        setNewGroupId('');
+        setUserMsg('');
       }, 1500);
     } catch (err) {
       console.error("Failed to create user:", err);
@@ -1111,7 +1139,12 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                             </div>
                             <div className="min-w-0">
                               <strong className="text-white block truncate">{u.fullName || u.username}</strong>
-                              <span className="text-[11px] text-slate-400 block truncate">{u.email}</span>
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+                                <span className="font-mono text-emerald-400 font-semibold">@{u.username || u.email?.split('@')[0]}</span>
+                                {(u.personalEmail || u.scoutEmail || u.parentEmail || (u.email && !u.email.endsWith('@talia.app') && u.email !== `${u.username}@talia.app`)) && (
+                                  <span className="truncate">&bull; {u.personalEmail || u.scoutEmail || u.parentEmail || u.email}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1617,7 +1650,14 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               .filter(g => selectedProgressPatrolId === 'all' || selectedProgressPatrolId === g.id)
               .map(g => {
                 const patrolScouts = scoutsList.filter(s => s.groupId === g.id || s.patrolId === g.id);
-                const pLeader = leadersList.find(l => l.uid === g.leaderId || l.groupId === g.id);
+                const pLeader = leadersList.find(l => l.uid === g.leaderId || (l.groupId === g.id && l.leaderPosition !== 'Assistant Leader' && l.leaderPosition !== 'Assistant Scoutmaster'));
+                const pAssistantLeaders = leadersList.filter(l => {
+                  if (l.uid === (g.leaderId || pLeader?.uid)) return false;
+                  if (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(l.uid)) return true;
+                  if (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(l.uid)) return true;
+                  if (l.groupId === g.id || l.patrolId === g.id) return true;
+                  return false;
+                });
                 const pServiceHours = serviceLogs
                   .filter(l => patrolScouts.some(s => s.uid === l.scoutId || s.uid === l.userId))
                   .reduce((acc, l) => acc + (Number(l.hours) || 0), 0);
@@ -1631,39 +1671,94 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                 return (
                   <div key={g.id} className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-5">
                     {/* Patrol Header Card */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-755 pb-4">
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/40 flex items-center justify-center text-white font-black text-xl overflow-hidden shrink-0 shadow-md">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-755 pb-4">
+                      <div className="flex items-start gap-4 min-w-0 flex-1">
+                        <div className="relative group w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500/40 flex items-center justify-center text-white font-black text-2xl overflow-hidden shrink-0 shadow-lg mt-0.5">
                           {g.photoURL ? (
                             <img src={g.photoURL} alt={g.name} className="w-full h-full object-cover" />
                           ) : (
                             <span>👥</span>
                           )}
+                          <label className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition text-emerald-400" title="Change Patrol Emblem">
+                            <Camera size={16} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleDirectEmblemUpload(e.target.files?.[0], g.id)}
+                            />
+                          </label>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-black text-white">{g.name} Patrol</h3>
-                            <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-mono">
-                              {patrolScouts.length} Scouts
+
+                        <div className="space-y-2 min-w-0 flex-1">
+                          {/* Patrol Title & Meta */}
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <h3 className="text-lg font-black text-white">
+                              {g.name?.toLowerCase().includes('patrol') ? g.name : `${g.name} Patrol`}
+                            </h3>
+                            <span className="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-mono font-bold shadow-sm">
+                              {patrolScouts.length} {patrolScouts.length === 1 ? 'Scout' : 'Scouts'}
                             </span>
+                            {g.motto && (
+                              <span className="text-xs text-slate-400 italic">
+                                &bull; &ldquo;{g.motto}&rdquo;
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-slate-400">
-                            Leader: <strong className="text-slate-200">{pLeader?.fullName || pLeader?.username || 'None'}</strong> • Motto: <em className="text-slate-300">"{g.motto || 'Forward'}"</em>
-                          </p>
+
+                          {/* Informative Leadership Info Badges */}
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                            {/* Assigned Primary Leader */}
+                            <div className="inline-flex items-center gap-1.5 bg-slate-900 border border-slate-750 px-2.5 py-1 rounded-xl text-xs shadow-sm">
+                              <Crown size={13} className="text-amber-400 shrink-0" />
+                              <span className="text-slate-400 font-semibold text-[11px]">Leader:</span>
+                              <strong className="text-white font-bold">
+                                {pLeader?.fullName || pLeader?.username || 'No Leader Assigned'}
+                              </strong>
+                              {pLeader?.leaderPosition && (
+                                <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 px-1.5 py-0.2 rounded font-mono font-medium">
+                                  {pLeader.leaderPosition}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Assistant Leaders List */}
+                            <div className="inline-flex flex-wrap items-center gap-1.5 bg-slate-900 border border-slate-750 px-2.5 py-1 rounded-xl text-xs shadow-sm">
+                              <Shield size={13} className="text-emerald-400 shrink-0" />
+                              <span className="text-slate-400 font-semibold text-[11px]">
+                                Assistant Leaders ({pAssistantLeaders.length}):
+                              </span>
+                              {pAssistantLeaders.length === 0 ? (
+                                <span className="text-[11px] text-slate-500 italic">None assigned</span>
+                              ) : (
+                                pAssistantLeaders.map(al => (
+                                  <span
+                                    key={al.uid}
+                                    className="inline-flex items-center gap-1 text-[10px] bg-emerald-950/80 border border-emerald-700/70 text-emerald-200 px-2 py-0.5 rounded-lg font-medium"
+                                  >
+                                    <span className="font-bold">{al.fullName || al.username}</span>
+                                    {al.leaderPosition && (
+                                      <span className="text-[9px] text-emerald-300/80 font-mono">({al.leaderPosition})</span>
+                                    )}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
-                          <span className="text-[10px] text-slate-400 block uppercase font-bold">Patrol Service</span>
+                      <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+                        <div className="text-right bg-slate-900 px-3.5 py-2 rounded-2xl border border-slate-750 shadow-inner">
+                          <span className="text-[9px] text-slate-400 block uppercase font-black tracking-wider">Patrol Service</span>
                           <span className="text-xs font-mono font-black text-emerald-400">{pServiceHours} Hours</span>
                         </div>
                         <button
                           onClick={() => handleOpenEditPatrol(g)}
-                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                          className="px-3.5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                         >
                           <Edit3 size={13} />
-                          <span>Edit</span>
+                          <span>Edit Patrol</span>
                         </button>
                       </div>
                     </div>
@@ -2090,19 +2185,31 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                   placeholder="e.g. Ali Reza"
                   value={newFullName}
                   onChange={(e) => setNewFullName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address (Login Username) *</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Login Username *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. aissa or ali.reza (no email required)"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._@-]/g, ''))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Users can log into the portal with just their username. No email format is required.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Personal / Contact Email (Optional)</label>
                 <input
                   type="email"
-                  required
-                  placeholder="e.g. ali@example.com"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. personal@gmail.com"
+                  value={newPersonalEmail}
+                  onChange={(e) => setNewPersonalEmail(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 

@@ -20,7 +20,7 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users, Crown, Shield } from 'lucide-react';
 import { 
   getKashafGreeting, 
   getLockedClosing, 
@@ -1274,11 +1274,11 @@ export default function PatrolRoster({ currentUser = {} }) {
     setParentErr('');
     setParentMsg('');
     const name = parentName.trim();
-    const email = parentEmail.trim().toLowerCase();
+    const rawInput = parentEmail.trim().toLowerCase();
     const password = parentPassword;
 
-    if (!name || !email || !password) {
-      setParentErr('Please fill in parent name, email, and temporary password.');
+    if (!name || !rawInput || !password) {
+      setParentErr('Please fill in parent name, username / login ID, and temporary password.');
       return;
     }
     if (password.length < 6) {
@@ -1292,6 +1292,9 @@ export default function PatrolRoster({ currentUser = {} }) {
 
     setParentAdding(true);
 
+    const cleanUsername = rawInput.includes('@') ? rawInput.split('@')[0] : rawInput;
+    const authEmail = rawInput.includes('@') ? rawInput : `${rawInput}@talia.app`;
+
     try {
       let secApp;
       try {
@@ -1300,15 +1303,16 @@ export default function PatrolRoster({ currentUser = {} }) {
         secApp = initializeApp(firebaseConfig, 'secondary');
       }
       const secAuth = getAuth(secApp);
-      const cred = await createUserWithEmailAndPassword(secAuth, email, password);
+      const cred = await createUserWithEmailAndPassword(secAuth, authEmail, password);
       const newUid = cred.user.uid;
       await secAuth.signOut();
 
       // Create Parent User Document
       await setDoc(doc(db, 'users', newUid), {
         fullName: name,
-        email,
-        username: email.split('@')[0],
+        email: authEmail,
+        username: cleanUsername,
+        parentEmail: rawInput.includes('@') ? rawInput : null,
         role: 'parent',
         linkedScoutIds: parentLinkedScoutIds,
         assignedLeaderId: currentUser?.uid || null,
@@ -1329,7 +1333,7 @@ export default function PatrolRoster({ currentUser = {} }) {
         }
       }
 
-      setParentMsg(`✓ Parent account created for ${name}! App Link: https://taliat-app.vercel.app/ · Login Email: ${email} · Temporary Password: ${password}`);
+      setParentMsg(`✓ Parent account created for ${name}! Username: ${cleanUsername} · Temporary Password: ${password}`);
       setParentName('');
       setParentEmail('');
       setParentPassword('');
@@ -1872,6 +1876,10 @@ export default function PatrolRoster({ currentUser = {} }) {
                   name: g.name,
                   description: g.description || 'Active Troop Patrol',
                   leaderId: g.leaderId,
+                  assistantLeaderIds: g.assistantLeaderIds || [],
+                  assignedLeaderIds: g.assignedLeaderIds || [],
+                  photoURL: g.photoURL || null,
+                  motto: g.motto || null,
                   scouts: groupScouts,
                   approvals: groupApprovals
                 });
@@ -1884,6 +1892,10 @@ export default function PatrolRoster({ currentUser = {} }) {
                   name: 'Unassigned Scouts',
                   description: 'Scouts pending assignment to a specific patrol',
                   leaderId: null,
+                  assistantLeaderIds: [],
+                  assignedLeaderIds: [],
+                  photoURL: null,
+                  motto: null,
                   scouts: unassigned,
                   approvals: unassignedApprovals
                 });
@@ -1897,6 +1909,10 @@ export default function PatrolRoster({ currentUser = {} }) {
                 name: selectedGroup ? selectedGroup.name : 'Selected Patrol',
                 description: selectedGroup?.description || 'Active Troop Patrol',
                 leaderId: selectedGroup?.leaderId,
+                assistantLeaderIds: selectedGroup?.assistantLeaderIds || [],
+                assignedLeaderIds: selectedGroup?.assignedLeaderIds || [],
+                photoURL: selectedGroup?.photoURL || null,
+                motto: selectedGroup?.motto || null,
                 scouts: groupScouts,
                 approvals: groupApprovals
               });
@@ -1913,7 +1929,15 @@ export default function PatrolRoster({ currentUser = {} }) {
             return (
               <div className="space-y-6">
                 {patrolSections.map((patrol) => {
-                  const assignedLeader = leaders.find(l => l.uid === patrol.leaderId);
+                  const assignedLeader = leaders.find(l => l.uid === patrol.leaderId || (l.groupId === patrol.id && l.leaderPosition !== 'Assistant Leader' && l.leaderPosition !== 'Assistant Scoutmaster'));
+                  const assistantLeaders = leaders.filter(l => {
+                    if (l.uid === (patrol.leaderId || assignedLeader?.uid)) return false;
+                    if (Array.isArray(patrol.assistantLeaderIds) && patrol.assistantLeaderIds.includes(l.uid)) return true;
+                    if (Array.isArray(patrol.assignedLeaderIds) && patrol.assignedLeaderIds.includes(l.uid)) return true;
+                    if (l.groupId === patrol.id || l.patrolId === patrol.id) return true;
+                    return false;
+                  });
+
                   return (
                     <div
                       key={patrol.id}
@@ -1921,11 +1945,15 @@ export default function PatrolRoster({ currentUser = {} }) {
                     >
                       {/* Patrol Header Card */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-extrabold text-lg shrink-0">
-                            🛡️
+                        <div className="flex items-start sm:items-center gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-extrabold text-lg shrink-0 overflow-hidden shadow-md">
+                            {patrol.photoURL ? (
+                              <img src={patrol.photoURL} alt={patrol.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span>🛡️</span>
+                            )}
                           </div>
-                          <div>
+                          <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h4 className="text-base font-extrabold text-white">
                                 {patrol.name.toLowerCase().includes('patrol') ? patrol.name : `${patrol.name} Patrol`}
@@ -1938,14 +1966,45 @@ export default function PatrolRoster({ currentUser = {} }) {
                                   <Clock size={11} /> {patrol.approvals} Needs Review
                                 </span>
                               )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {assignedLeader ? (
-                                <span>Leader: <strong className="text-slate-200">{assignedLeader.fullName || assignedLeader.username}</strong></span>
-                              ) : (
-                                <span>{patrol.description}</span>
+                              {patrol.motto && (
+                                <span className="text-xs text-slate-400 italic">
+                                  &bull; &ldquo;{patrol.motto}&rdquo;
+                                </span>
                               )}
-                            </p>
+                            </div>
+
+                            {/* Leadership info row */}
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {assignedLeader ? (
+                                <div className="inline-flex items-center gap-1 bg-slate-900 border border-slate-750 px-2 py-0.5 rounded-lg">
+                                  <Crown size={12} className="text-amber-400 shrink-0" />
+                                  <span className="text-slate-400 text-[10px]">Leader:</span>
+                                  <strong className="text-slate-200">{assignedLeader.fullName || assignedLeader.username}</strong>
+                                  {assignedLeader.leaderPosition && (
+                                    <span className="text-[9px] text-emerald-400 font-mono">({assignedLeader.leaderPosition})</span>
+                                  )}
+                                </div>
+                              ) : patrol.id !== 'unassigned' ? (
+                                <span className="text-slate-500 italic text-[11px]">No Leader Assigned</span>
+                              ) : (
+                                <span className="text-slate-400 text-[11px]">{patrol.description}</span>
+                              )}
+
+                              {assistantLeaders.length > 0 && (
+                                <div className="inline-flex flex-wrap items-center gap-1 bg-slate-900 border border-slate-750 px-2 py-0.5 rounded-lg">
+                                  <Shield size={12} className="text-emerald-400 shrink-0" />
+                                  <span className="text-slate-400 text-[10px]">Assistants:</span>
+                                  {assistantLeaders.map(al => (
+                                    <span key={al.uid} className="inline-flex items-center gap-1 text-[10px] bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 px-1.5 py-0.2 rounded font-medium">
+                                      <span className="font-bold">{al.fullName || al.username}</span>
+                                      {al.leaderPosition && (
+                                        <span className="text-[9px] text-emerald-300/80 font-mono">({al.leaderPosition})</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -2263,15 +2322,16 @@ export default function PatrolRoster({ currentUser = {} }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Email (Login Email)</label>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Parent Username / Login ID *</label>
                     <input
-                      type="email"
+                      type="text"
                       required
                       value={parentEmail}
-                      onChange={(e) => setParentEmail(e.target.value)}
-                      placeholder="e.g. parent@gmail.com"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      onChange={(e) => setParentEmail(e.target.value.toLowerCase().replace(/[^a-z0-9._@-]/g, ''))}
+                      placeholder="e.g. fatima.ahmed (no email required)"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
                     />
+                    <p className="text-[10px] text-slate-400 mt-1">Parents can log in with just their username.</p>
                   </div>
 
                   <div>

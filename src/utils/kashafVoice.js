@@ -158,6 +158,7 @@ export function getLockedClosing(patrolName = '') {
 export function generateLeaderInviteMessage({
   name = 'Leader',
   username = '',
+  email = '',
   password = '',
   leaderPosition = 'Scout Leader',
   patrolName = '',
@@ -166,6 +167,7 @@ export function generateLeaderInviteMessage({
   const greeting = getKashafGreeting('leader', name);
   const patrolClosing = getLockedClosing(patrolName);
   const unitLine = patrolName && patrolName.trim() ? patrolName.trim() : 'Dhulfiqār Leadership HQ';
+  const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
   
   return `${greeting}
 
@@ -175,7 +177,7 @@ We are pleased to provide your leadership access credentials and onboarding deta
 🛡️ *Assigned Unit / Patrol:* ${unitLine}
 
 🔗 *Portal Link:* ${appUrl}
-👤 *Username:* ${username}
+👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
 📌 *Required Leader Setup & Action Checklist:*
@@ -193,19 +195,21 @@ Jazākum Allāhu khayran for your leadership, dedication, and service to the you
 export function generateScoutInviteMessage({
   name = 'Scout',
   username = '',
+  email = '',
   password = '',
   patrolName = '',
   appUrl = 'https://taliat-app.vercel.app/'
 }) {
   const greeting = getKashafGreeting('scout', name);
   const closing = getLockedClosing(patrolName);
+  const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
 
   return `${greeting}
 
 We wanted to share the official login credentials and onboarding access for *${name}* to the *Dhulfiqār Scouts Portal*:
 
 🔗 *Portal Link:* ${appUrl}
-👤 *Username:* ${username}
+👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
 📌 *Required Profile Setup Instructions:*
@@ -232,13 +236,14 @@ export function generateParentInviteMessage({
 }) {
   const greeting = getKashafGreeting('parent', name);
   const closing = getLockedClosing(patrolName);
+  const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
 
   return `${greeting}
 
 We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
 
 🔗 *Portal Link:* ${appUrl}
-👤 *Email / Username:* ${email || username}
+👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
 📌 *Parent Portal Features & Instructions:*

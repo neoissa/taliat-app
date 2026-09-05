@@ -17,7 +17,10 @@ import {
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
   'Assistant Scoutmaster',
+  'Patrol Leader',
   'Assistant Leader',
+  'Senior Patrol Leader',
+  'Assistant Senior Patrol Leader',
   'Committee Chair',
   'Committee Member',
   'Chartered Org Representative',
