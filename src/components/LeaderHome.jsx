@@ -19,7 +19,9 @@ import {
   AlertTriangle,
   Plus,
   MessageSquare,
-  TrendingUp
+  TrendingUp,
+  Crown,
+  KeyRound
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
@@ -256,18 +258,30 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
   return (
     <div className="space-y-6 pb-12 font-sans">
-      {/* ── 1. LEADER HERO COMMAND CARD ── */}
-      <div className="bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border border-emerald-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+      {/* ── 1. LEADER / OWNER HERO COMMAND CARD ── */}
+      <div className={`rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden ${
+        isOwner 
+          ? 'bg-gradient-to-br from-slate-950 via-amber-950/60 to-slate-900 border-2 border-amber-500/60 shadow-amber-950/50' 
+          : 'bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border-2 border-emerald-500/40 shadow-emerald-950/40'
+      }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="w-18 h-18 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2.5 shadow-xl shadow-emerald-950/50 shrink-0 text-3xl">
-              ⚜️
+            <div className={`w-18 h-18 rounded-2xl flex items-center justify-center p-2.5 shadow-xl shrink-0 text-3xl ${
+              isOwner 
+                ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/60' 
+                : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50'
+            }`}>
+              {isOwner ? '👑' : '⚜️'}
             </div>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider">
-                  {roleLabel}
+                <span className={`text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider border ${
+                  isOwner 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' 
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                }`}>
+                  {isOwner ? '👑 Troop Owner & Superadmin' : `⚜️ ${roleLabel}`}
                 </span>
                 <span className="bg-slate-700/70 text-slate-200 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                   <span>👥</span> {scouts.length} Registered Scouts
@@ -275,18 +289,37 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span>✨</span> Be Prepared &bull; كُن مُسْتَعِدّاً
                 </span>
+                {isOwner && (
+                  <span className="bg-yellow-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                    <Crown size={10} /> Full Superadmin Authority
+                  </span>
+                )}
               </div>
 
               <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || 'Leader'}!
+                Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}! {isOwner ? '👑' : '⚜️'}
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Welcome to your Dhulfiqār Leadership Command Center. Monitor scout advancement, test submissions, schedule events, and generate customized troop reports.
+                {isOwner 
+                  ? 'Welcome to the Supreme Troop Owner Command Center. You hold exclusive authority to modify usernames, supervise all patrol hierarchies, manage system-wide credentials, and oversee troop governance.'
+                  : 'Welcome to your Dhulfiqār Leadership Command Center. Monitor scout advancement, test submissions, schedule events, and generate customized troop reports.'
+                }
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2.5 shrink-0">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('admin')}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+              >
+                <Crown size={15} />
+                <span>⚡ Executive Admin Hub</span>
+              </button>
+            )}
+
             {totalPendingApprovals > 0 && (
               <button
                 type="button"

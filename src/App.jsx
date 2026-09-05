@@ -45,7 +45,8 @@ import {
   Printer,
   Compass,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Crown
 } from 'lucide-react';
 
 export default function App() {
@@ -376,9 +377,15 @@ export default function App() {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row font-sans">
       
       {/* ── MOBILE TOP BAR (VISIBLE ON SMALL SCREENS ONLY) ── */}
-      <header className="md:hidden bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3.5 sticky top-0 z-40 flex items-center justify-between print-hide">
+      <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b p-3.5 sticky top-0 z-40 flex items-center justify-between print-hide ${
+        isOwner ? 'border-amber-500/50 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950' : 'border-slate-800'
+      }`}>
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center text-emerald-300 font-black text-sm shadow-md overflow-hidden shrink-0">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 ${
+            isOwner 
+              ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300' 
+              : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300'
+          }`}>
             {userPhoto ? (
               <img
                 src={userPhoto}
@@ -387,24 +394,37 @@ export default function App() {
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             ) : (
-              <span>{userInitials}</span>
+              <span>{isOwner ? '👑' : userInitials}</span>
             )}
           </div>
           <div className="min-w-0">
             <h1 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
               <span className="truncate">Dhulfiqār Scouts</span>
-              {userGroup?.photoURL && (
+              {isOwner ? (
+                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
+                  👑 OWNER
+                </span>
+              ) : isLeader || isExecutive ? (
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
+                  ⚜️ LEADER
+                </span>
+              ) : null}
+              {userGroup?.photoURL && !isOwner && (
                 <img src={userGroup.photoURL} alt="Patrol" className="w-3.5 h-3.5 rounded object-cover border border-emerald-500/40 shrink-0 inline-block" />
               )}
             </h1>
-            <span className="text-[11px] text-emerald-400 font-semibold truncate block">
+            <span className={`text-[11px] font-semibold truncate block ${isOwner ? 'text-amber-400' : 'text-emerald-400'}`}>
               {currentUser.fullName || currentUser.username} • {userGroupName ? `${userGroupName} Patrol` : roleLabel}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-emerald-400 font-mono font-bold text-xs bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+          <div className={`flex items-center gap-1 font-mono font-bold text-xs px-2 py-1 rounded-lg border ${
+            isOwner 
+              ? 'text-amber-300 bg-amber-950/50 border-amber-500/40' 
+              : 'text-emerald-400 bg-slate-900 border-slate-800'
+          }`}>
             <Clock size={12} className="animate-pulse" />
             <span>{formattedTime}</span>
           </div>
@@ -430,13 +450,21 @@ export default function App() {
             {/* Drawer Header */}
             <div className="p-5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
-                  ⚜️
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg ${
+                  isOwner 
+                    ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/60' 
+                    : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/50'
+                }`}>
+                  {isOwner ? '👑' : '⚜️'}
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-white">Dhulfiqār Scouts</h2>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-semibold uppercase">
-                    v3.0
+                  <span className={`text-[10px] border px-2 py-0.2 rounded-full font-semibold uppercase ${
+                    isOwner 
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    {isOwner ? '👑 Owner Console' : isLeader || isExecutive ? '⚜️ Leader Console' : 'v3.0'}
                   </span>
                 </div>
               </div>
@@ -450,9 +478,30 @@ export default function App() {
             </div>
 
             {/* User Profile Summary */}
-            <div className="p-4 bg-slate-900/90 border-b border-slate-800 space-y-3">
+            <div className={`p-4 border-b space-y-3 ${
+              isOwner 
+                ? 'bg-gradient-to-b from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/40' 
+                : 'bg-slate-900/90 border-slate-800'
+            }`}>
+              {/* Authority Badge */}
+              {isOwner ? (
+                <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl px-2.5 py-1 flex items-center gap-1.5 text-[10px] font-black text-amber-300 uppercase tracking-wider">
+                  <Crown size={12} className="text-amber-400" />
+                  <span>👑 Troop Owner & Superadmin</span>
+                </div>
+              ) : isLeader || isExecutive ? (
+                <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-xl px-2.5 py-1 flex items-center gap-1.5 text-[10px] font-extrabold text-emerald-300 uppercase tracking-wider">
+                  <Shield size={12} className="text-emerald-400" />
+                  <span>⚜️ Troop Leadership Console</span>
+                </div>
+              ) : null}
+
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-base shrink-0 shadow-md shadow-emerald-950/40 overflow-hidden relative">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative ${
+                  isOwner 
+                    ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50' 
+                    : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40'
+                }`}>
                   {userPhoto ? (
                     <img
                       src={userPhoto}
@@ -461,18 +510,26 @@ export default function App() {
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
-                    <span>{userInitials}</span>
+                    <span>{isOwner ? '👑' : userInitials}</span>
                   )}
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full shadow-sm"></span>
+                  <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-slate-900 rounded-full shadow-sm ${
+                    isOwner ? 'bg-amber-400' : 'bg-emerald-400'
+                  }`}></span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-sm font-black text-white truncate leading-tight">{currentUser.fullName || currentUser.username}</h4>
-                  <p className="text-[11px] text-emerald-400 font-semibold capitalize truncate mt-0.5">{roleLabel}</p>
+                  <p className={`text-[11px] font-semibold capitalize truncate mt-0.5 ${
+                    isOwner ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>{roleLabel}</p>
                 </div>
               </div>
 
               {/* Patrol / Organization Badge with Icon */}
-              <div className="text-xs bg-slate-950/90 text-emerald-300 px-3 py-2 rounded-xl border border-slate-800/90 flex items-center gap-2.5 shadow-inner">
+              <div className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2.5 shadow-inner ${
+                isOwner 
+                  ? 'bg-slate-950/90 text-amber-300 border-amber-500/30' 
+                  : 'bg-slate-950/90 text-emerald-300 border-slate-800/90'
+              }`}>
                 {userGroup?.photoURL ? (
                   <img
                     src={userGroup.photoURL}
@@ -482,18 +539,26 @@ export default function App() {
                   />
                 ) : (
                   <span className="text-sm shrink-0">
-                    {isParent ? '👨‍👩‍👧' : isExecutive ? '⚜️' : isLeader ? '🛡️' : '👥'}
+                    {isOwner ? '👑' : isParent ? '👨‍👩‍👧' : isExecutive ? '⚜️' : isLeader ? '🛡️' : '👥'}
                   </span>
                 )}
                 <span className="font-bold truncate text-slate-200">
-                  {userGroupName ? `${userGroupName} Patrol` : (isParent ? 'Dhulfiqār Family Guardian' : isExecutive ? 'Dhulfiqār Troop HQ' : isLeader ? 'Dhulfiqār Leadership' : 'Dhulfiqār Scouts')}
+                  {isOwner 
+                    ? '👑 Supreme Troop Administration' 
+                    : userGroupName 
+                    ? `${userGroupName} Patrol` 
+                    : (isParent ? 'Dhulfiqār Family Guardian' : isExecutive ? 'Dhulfiqār Troop HQ' : isLeader ? 'Dhulfiqār Leadership' : 'Dhulfiqār Scouts')}
                 </span>
               </div>
 
               {/* Prominent Live Digital Clock & Date */}
               <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-black text-sm tracking-wider bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/90 shadow-sm">
-                  <Clock size={15} className="text-emerald-400 animate-pulse shrink-0" />
+                <div className={`flex items-center gap-1.5 font-mono font-black text-sm tracking-wider px-3 py-1.5 rounded-xl border shadow-sm ${
+                  isOwner 
+                    ? 'text-amber-300 bg-amber-950/50 border-amber-500/40' 
+                    : 'text-emerald-400 bg-slate-950/80 border-slate-800/90'
+                }`}>
+                  <Clock size={15} className="animate-pulse shrink-0" />
                   <span>{formattedTime}</span>
                 </div>
                 <div className="text-xs text-slate-300 font-bold font-mono px-2.5 py-1.5 bg-slate-850 rounded-xl border border-slate-750 shrink-0 shadow-sm">
@@ -512,7 +577,9 @@ export default function App() {
                     onClick={() => handleTabClick(item.id)}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left ${
                       isActive
-                        ? 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                        ? isOwner
+                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-amber-300 border-l-4 border-amber-500 font-extrabold shadow-sm'
+                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
                         : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
                     }`}
                   >
@@ -546,28 +613,79 @@ export default function App() {
       )}
 
       {/* ── DESKTOP PERMANENT SIDEBAR NAVIGATION ── */}
-      <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r border-slate-800 shrink-0 h-screen sticky top-0 z-30 select-none print-hide">
+      <aside className={`hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r shrink-0 h-screen sticky top-0 z-30 select-none print-hide ${
+        isOwner ? 'border-amber-500/40' : 'border-slate-800'
+      }`}>
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800/90 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-950/40 shrink-0">
-            ⚜️
+        <div className={`p-5 border-b flex items-center gap-3 ${
+          isOwner ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 to-transparent' : 'border-slate-800/90'
+        }`}>
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 ${
+            isOwner 
+              ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/50' 
+              : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/40'
+          }`}>
+            {isOwner ? '👑' : '⚜️'}
           </div>
           <div className="min-w-0">
             <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
               <span className="truncate">Dhulfiqār Scouts</span>
-              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase shrink-0">
-                v3.0
+              <span className={`text-[9px] border px-2 py-0.2 rounded-full font-bold uppercase shrink-0 ${
+                isOwner 
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {isOwner ? '👑 Owner' : 'v3.0'}
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">Taliʿa Leadership Portal</p>
+            <p className={`text-[11px] font-medium truncate mt-0.5 ${
+              isOwner ? 'text-amber-300/80 font-bold' : isLeader || isExecutive ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+            }`}>
+              {isOwner ? '👑 Supreme Admin Console' : isLeader || isExecutive ? '⚜️ Taliʿa Leadership Portal' : 'Taliʿa Scouting Portal'}
+            </p>
           </div>
         </div>
 
         {/* User Profile Mini-Card */}
-        <div className="p-4 mx-3 my-3 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-lg space-y-3">
+        <div className={`p-4 mx-3 my-3 rounded-2xl border shadow-lg space-y-3 ${
+          isOwner 
+            ? 'bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-950 border-amber-500/60 shadow-amber-950/40' 
+            : isLeader || isExecutive 
+            ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border-emerald-500/50 shadow-emerald-950/30'
+            : 'bg-slate-900/90 border-slate-800'
+        }`}>
+          {/* Distinctive Authority Banner for Owner vs Leader */}
+          {isOwner ? (
+            <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl px-2.5 py-1 flex items-center justify-between text-[10px] font-black text-amber-300 uppercase tracking-wider shadow-sm">
+              <span className="flex items-center gap-1.5">
+                <Crown size={12} className="text-amber-400 animate-pulse" />
+                <span>Superadmin Active</span>
+              </span>
+              <span className="bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded text-[9px] font-black">
+                OWNER
+              </span>
+            </div>
+          ) : isLeader || isExecutive ? (
+            <div className="bg-emerald-500/20 border border-emerald-500/40 rounded-xl px-2.5 py-1 flex items-center justify-between text-[10px] font-black text-emerald-300 uppercase tracking-wider shadow-sm">
+              <span className="flex items-center gap-1.5">
+                <Shield size={12} className="text-emerald-400" />
+                <span>Leadership Hub</span>
+              </span>
+              <span className="bg-emerald-500 text-slate-950 px-1.5 py-0.2 rounded text-[9px] font-black">
+                LEADER
+              </span>
+            </div>
+          ) : null}
+
           {/* User Row: Avatar + Name + Role */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-base shrink-0 shadow-md shadow-emerald-950/40 overflow-hidden relative group">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group ${
+              isOwner 
+                ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50 ring-2 ring-amber-500/20' 
+                : isLeader || isExecutive
+                ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/60 text-emerald-300 shadow-emerald-950/40 ring-2 ring-emerald-500/20'
+                : 'bg-gradient-to-br from-slate-700/30 to-slate-800/20 border-2 border-slate-600 text-slate-300'
+            }`}>
               {userPhoto ? (
                 <img
                   src={userPhoto}
@@ -576,19 +694,29 @@ export default function App() {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
-                <span className="drop-shadow-sm">{userInitials}</span>
+                <span className="drop-shadow-sm">{isOwner ? '👑' : userInitials}</span>
               )}
               {/* Active Online Indicator */}
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full shadow-sm" title="Online"></span>
+              <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-slate-900 rounded-full shadow-sm ${
+                isOwner ? 'bg-amber-400 ring-1 ring-amber-300' : 'bg-emerald-400 ring-1 ring-emerald-300'
+              }`} title="Online"></span>
             </div>
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-black text-white truncate leading-tight">{currentUser.fullName || currentUser.username}</h4>
-              <p className="text-[11px] text-emerald-400 font-semibold capitalize truncate mt-0.5">{roleLabel}</p>
+              <p className={`text-[11px] font-bold capitalize truncate mt-0.5 ${
+                isOwner ? 'text-amber-300 font-black' : isLeader || isExecutive ? 'text-emerald-300 font-extrabold' : 'text-slate-400'
+              }`}>{roleLabel}</p>
             </div>
           </div>
 
           {/* Patrol Unit / Group Badge with Icon */}
-          <div className="text-xs bg-slate-950/90 text-emerald-300 px-3 py-2 rounded-xl border border-slate-800/90 flex items-center gap-2.5 shadow-inner">
+          <div className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2.5 shadow-inner ${
+            isOwner 
+              ? 'bg-slate-950/90 text-amber-300 border-amber-500/40' 
+              : isLeader || isExecutive
+              ? 'bg-slate-950/90 text-emerald-300 border-emerald-500/30'
+              : 'bg-slate-950/90 text-slate-300 border-slate-800/90'
+          }`}>
             {userGroup?.photoURL ? (
               <img
                 src={userGroup.photoURL}
@@ -598,18 +726,26 @@ export default function App() {
               />
             ) : (
               <span className="text-sm shrink-0">
-                {isParent ? '👨‍👩‍👧' : isExecutive ? '⚜️' : isLeader ? '🛡️' : '👥'}
+                {isOwner ? '👑' : isParent ? '👨‍👩‍👧' : isExecutive ? '⚜️' : isLeader ? '🛡️' : '👥'}
               </span>
             )}
             <span className="font-bold truncate text-slate-200">
-              {userGroupName ? `${userGroupName} Patrol` : (isParent ? 'Dhulfiqār Family Guardian' : isExecutive ? 'Dhulfiqār Troop HQ' : isLeader ? 'Dhulfiqār Leadership' : 'Dhulfiqār Scouts')}
+              {isOwner 
+                ? '👑 Supreme Troop Admin' 
+                : userGroupName 
+                ? `${userGroupName} Patrol` 
+                : (isParent ? 'Dhulfiqār Family Guardian' : isExecutive ? 'Dhulfiqār Troop HQ' : isLeader ? 'Dhulfiqār Leadership' : 'Dhulfiqār Scouts')}
             </span>
           </div>
 
           {/* Prominent Live Digital Clock & Date */}
           <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-black text-sm tracking-wider bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/90 shadow-sm">
-              <Clock size={15} className="text-emerald-400 animate-pulse shrink-0" />
+            <div className={`flex items-center gap-1.5 font-mono font-black text-sm tracking-wider px-3 py-1.5 rounded-xl border shadow-sm ${
+              isOwner 
+                ? 'text-amber-300 bg-amber-950/60 border-amber-500/50 shadow-amber-950/40' 
+                : 'text-emerald-400 bg-slate-950/80 border-slate-800/90'
+            }`}>
+              <Clock size={15} className={`animate-pulse shrink-0 ${isOwner ? 'text-amber-400' : 'text-emerald-400'}`} />
               <span>{formattedTime}</span>
             </div>
             <div className="text-xs text-slate-300 font-bold font-mono px-2.5 py-1.5 bg-slate-850 rounded-xl border border-slate-750 shrink-0 shadow-sm">
@@ -631,7 +767,9 @@ export default function App() {
                 onClick={() => handleTabClick(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left group ${
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                    ? isOwner
+                      ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-amber-300 border-l-4 border-amber-500 font-extrabold shadow-sm'
+                      : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
                     : 'text-slate-400 hover:text-white hover:bg-slate-900/70'
                 }`}
               >
@@ -644,7 +782,7 @@ export default function App() {
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 ) : (
-                  isActive && <ChevronRight size={13} className="text-emerald-400 shrink-0" />
+                  isActive && <ChevronRight size={13} className={isOwner ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
                 )}
               </button>
             );

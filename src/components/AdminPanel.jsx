@@ -147,6 +147,7 @@ export default function AdminPanel({ currentUser }) {
   // Editing User Modal State
   const [editingUser, setEditingUser] = useState(null);
   const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editLeaderPosition, setEditLeaderPosition] = useState('');
   const [editGroupId, setEditGroupId] = useState('');
@@ -360,6 +361,7 @@ export default function AdminPanel({ currentUser }) {
   const handleOpenEditUser = (u) => {
     setEditingUser(u);
     setEditFullName(u.fullName || u.username || '');
+    setEditUsername(u.username || (u.email ? u.email.split('@')[0] : ''));
     setEditRole(u.role || 'scout');
     setEditLeaderPosition(u.leaderPosition || 'Assistant Scoutmaster');
     setEditGroupId(u.groupId || '');
@@ -385,6 +387,12 @@ export default function AdminPanel({ currentUser }) {
         groupId: editGroupId || null,
         updatedAt: serverTimestamp()
       };
+
+      // Owner-only: Allow username modification
+      if (isOwner && editUsername.trim()) {
+        const cleanedUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+        updatePayload.username = cleanedUsername;
+      }
 
       if (editRole === 'leader') {
         updatePayload.leaderPosition = editLeaderPosition;
@@ -906,20 +914,37 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* ── HEADER BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className={`border-2 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+        isOwner 
+          ? 'bg-gradient-to-r from-slate-900 via-amber-950/50 to-slate-900 border-amber-500/60 shadow-amber-950/40' 
+          : 'bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border-emerald-500/40 shadow-emerald-950/30'
+      }`}>
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-emerald-950/60 shrink-0">
-            <Crown size={28} />
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shrink-0 ${
+            isOwner 
+              ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/60' 
+              : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/60'
+          }`}>
+            {isOwner ? <Crown size={28} /> : <Shield size={28} />}
           </div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-xl font-black text-white">Executive Admin Hub</h2>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-extrabold uppercase">
-                {isOwner ? 'Troop Superadmin' : 'Scoutmaster Console'}
+              <h2 className="text-xl font-black text-white">
+                {isOwner ? '👑 Supreme Troop Owner & Executive Hub' : '⚡ Executive Leadership & Management Hub'}
+              </h2>
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase border ${
+                isOwner 
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' 
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {isOwner ? '👑 Troop Superadmin (Full Authority)' : '⚜️ Scoutmaster Console'}
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-1">
-              Global governance: user provisioning, role hierarchy, patrol architecture, troop broadcasts, and parent health forms registry.
+              {isOwner 
+                ? 'Supreme troop governance: full username modification privileges, account provisioning, role elevations, patrol architecture, broadcasts, and system registries.'
+                : 'Executive troop management: patrol administration, scout advancement oversight, event coordination, and parent communications. (Username modifications are restricted to Troop Owner).'
+              }
             </p>
           </div>
         </div>
@@ -927,7 +952,11 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowUserModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/50"
+            className={`font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg ${
+              isOwner 
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-950/50' 
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/50'
+            }`}
           >
             <UserPlus size={16} />
             <span>Create New User</span>
@@ -2544,11 +2573,18 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
       {/* ── EDIT USER MODAL ── */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className={`bg-slate-900 border-2 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto ${
+            isOwner ? 'border-amber-500/60 shadow-amber-950/50' : 'border-emerald-500/50'
+          }`}>
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                <Edit3 size={18} className="text-emerald-400" />
+                {isOwner ? <Crown size={18} className="text-amber-400" /> : <Edit3 size={18} className="text-emerald-400" />}
                 <span>Edit User: {editingUser.fullName || editingUser.username}</span>
+                {isOwner && (
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black">
+                    👑 OWNER EDIT
+                  </span>
+                )}
               </h3>
               <button
                 onClick={() => setEditingUser(null)}
@@ -2562,15 +2598,58 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
             {editMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{editMsg}</p>}
 
             <form onSubmit={handleSaveEditUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editFullName}
-                  onChange={(e) => setEditFullName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Username Field with Strict Owner-Only Permissions */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`block text-xs font-bold uppercase flex items-center gap-1 ${
+                      isOwner ? 'text-amber-300' : 'text-slate-400'
+                    }`}>
+                      {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
+                      <span>Username</span>
+                    </label>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
+                      isOwner 
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`}>
+                      {isOwner ? '👑 Editable' : '🔒 Locked'}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    disabled={!isOwner}
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                    className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
+                      isOwner 
+                        ? 'bg-slate-950 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
+                        : 'bg-slate-950/60 border border-slate-800 text-slate-500 cursor-not-allowed select-none'
+                    }`}
+                    placeholder="username"
+                  />
+                  <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                    isOwner ? 'text-amber-400/90 font-medium' : 'text-slate-500 font-normal'
+                  }`}>
+                    {isOwner ? (
+                      <span>👑 Owner Authority: You can modify this login username.</span>
+                    ) : (
+                      <span>🔒 Locked: Only Troop Owner can modify usernames.</span>
+                    )}
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

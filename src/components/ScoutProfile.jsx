@@ -4,7 +4,9 @@ import { doc, getDoc, setDoc, collection, onSnapshot } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { 
-  User, 
+  User,
+  Crown,
+  KeyRound, 
   Sparkles, 
   Mail, 
   Phone, 
@@ -69,8 +71,10 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
 }
 
 export default function ScoutProfile({ currentUser }) {
+  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   // Profile information states
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [scoutEmail, setScoutEmail] = useState('');
   const [parentEmail, setParentEmail] = useState('');
@@ -128,6 +132,7 @@ export default function ScoutProfile({ currentUser }) {
         if (snap.exists()) {
           const data = snap.data();
           setFullName(data.fullName || '');
+          setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
           setBio(data.bio || '');
           setScoutEmail(data.scoutEmail || data.email || '');
           setParentEmail(data.parentEmail || '');
@@ -422,6 +427,7 @@ export default function ScoutProfile({ currentUser }) {
       const userRef = doc(db, 'users', currentUser.uid);
       const updates = {
         fullName: fullName.trim(),
+        ...(isOwner && username.trim() ? { username: username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') } : {}),
         bio: bio.trim(),
         scoutEmail: scoutEmail.trim(),
         scoutPhone: scoutPhone.trim(),
@@ -1040,6 +1046,42 @@ export default function ScoutProfile({ currentUser }) {
                       onChange={(e) => setFullName(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     />
+                  </div>
+
+                  {/* Username Field with Owner-Only Enforcement */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`block text-xs font-semibold uppercase flex items-center gap-1.5 ${isOwner ? 'text-amber-300' : 'text-slate-400'}`}>
+                        {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
+                        <span>Username</span>
+                      </label>
+                      <span className={`text-[9px] px-2 py-0.2 rounded font-bold uppercase ${
+                        isOwner 
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}>
+                        {isOwner ? '👑 Owner Editable' : '🔒 Locked'}
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      disabled={!isOwner}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                      className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
+                        isOwner 
+                          ? 'bg-slate-900 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
+                          : 'bg-slate-950/60 border border-slate-800 text-slate-400 cursor-not-allowed select-none'
+                      }`}
+                      placeholder="username"
+                    />
+                    <p className={`text-[10px] mt-1 ${isOwner ? 'text-amber-400/80 font-medium' : 'text-slate-500'}`}>
+                      {isOwner 
+                        ? '👑 Owner Privilege: You can edit this username.' 
+                        : '🔒 Locked: Only Troop Owner can modify usernames.'
+                      }
+                    </p>
                   </div>
 
                   <div>

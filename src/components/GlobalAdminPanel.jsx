@@ -95,6 +95,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   // Editing User Modal State
   const [editingUser, setEditingUser] = useState(null);
   const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
   const [uploadingUserPhoto, setUploadingUserPhoto] = useState(false);
   const [editRole, setEditRole] = useState('');
@@ -181,7 +182,6 @@ export default function GlobalAdminPanel({ currentUser }) {
 
       await setDoc(doc(db, 'users', newUid, 'private', 'secrets'), { password });
 
-      // If group is selected, also assign this leader to the group's assignedLeaderIds
       if (leadGroup) {
         const groupRef = doc(db, 'groups', leadGroup);
         const groupDoc = groups.find(g => g.id === leadGroup);
@@ -303,6 +303,7 @@ export default function GlobalAdminPanel({ currentUser }) {
   const openEditModal = (user) => {
     setEditingUser(user);
     setEditFullName(user.fullName || '');
+    setEditUsername(user.username || (user.email ? user.email.split('@')[0] : ''));
     setEditPhotoUrl(user.photoURL || '');
     setEditRole(user.role || 'scout');
     setEditGroup(user.groupId || '');
@@ -328,6 +329,7 @@ export default function GlobalAdminPanel({ currentUser }) {
       const ref = doc(db, 'users', editingUser.uid);
       const updates = {
         fullName: editFullName.trim(),
+        ...(isOwner && editUsername.trim() ? { username: editUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') } : {}),
         photoURL: editPhotoUrl || null,
         role: editRole,
         groupId: editGroup || null,
@@ -923,6 +925,42 @@ export default function GlobalAdminPanel({ currentUser }) {
                   onChange={(e) => setEditFullName(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              {/* Username Field with Strict Owner-Only Enforcement */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`block text-xs font-semibold uppercase flex items-center gap-1.5 ${isOwner ? 'text-amber-300' : 'text-slate-400'}`}>
+                    {isOwner ? <KeyRound size={13} className="text-amber-400" /> : <Lock size={13} className="text-slate-500" />}
+                    <span>Username</span>
+                  </label>
+                  <span className={`text-[9px] px-2 py-0.2 rounded font-bold uppercase ${
+                    isOwner 
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}>
+                    {isOwner ? '👑 Owner Editable' : '🔒 Locked'}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  disabled={!isOwner}
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-mono transition ${
+                    isOwner 
+                      ? 'bg-slate-900 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
+                      : 'bg-slate-950/60 border border-slate-800 text-slate-500 cursor-not-allowed select-none'
+                  }`}
+                  placeholder="username"
+                />
+                <p className={`text-[10px] mt-1 ${isOwner ? 'text-amber-400/80 font-medium' : 'text-slate-500'}`}>
+                  {isOwner 
+                    ? '👑 Owner Authority: You can modify this account username.'
+                    : '🔒 Locked: Only Troop Owner can modify usernames.'
+                  }
+                </p>
               </div>
 
               <div>
