@@ -916,11 +916,52 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             </p>
             <div className="space-y-2">
               {[
-                { label: "General Chat", text: "" },
-                { label: "Meeting Reminder", text: "Salam! This is a reminder about our upcoming Taliʿa Troop meeting. Please be prepared and on time. Shukran!" },
-                { label: "Safeguarding Video Reminder", text: "Salam! Please make sure to watch the required safeguarding / youth protection standard videos under your Taliʿa profile. This is an essential requirement. Shukran!" },
-                { label: "Islamic Knowledge Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Knowledge curriculum checklist under your Taliʿa profile. Shukran!" },
-                { label: "Service Hours Reminder", text: "Salam! Please remember to log your volunteering and community service hours in the Taliʿa Service Log. Shukran!" }
+                {
+                  label: "⭐ Scout Portal Login & Profile Setup Invitation (Predefined)",
+                  text: `⚜️ *Salam ${scout.fullName || scout.username}!*
+
+Welcome to *Dhulfiqār Scouts BSA* (Taliʿa Leadership Portal)!
+
+Here are your official account login credentials:
+🔗 *App Link:* https://taliat-app.vercel.app/
+👤 *Username:* ${scout.username || scout.email}
+🔑 *Temporary Password:* ${scout.tempPassword || scout.username || 'taliat2026'}
+
+📌 *Required Profile Setup Instructions:*
+1. Open the app link above and log in with your credentials.
+2. Go to *"My Profile"* (👤) from the navigation menu.
+3. Please update your profile information:
+   • Change your default username and create your own secure personal password.
+   • Upload your profile picture / photo.
+   • Fill in all required details (personal email, phone number, BSA Member ID, and emergency contact details).
+
+If you have any questions or need help logging in, reach out to your patrol leader.
+Shukran & Khuda Hafiz! ⚜️`
+                },
+                {
+                  label: "👨‍👩‍👧 Parent Portal Invitation & Family Profile Setup",
+                  text: `👨‍👩‍👧 *Salam ${scout.parentName || `${scout.fullName || scout.username}'s Parent`}!*
+
+Welcome to the *Dhulfiqār Scouts Family & Parent Portal*!
+
+Here are your parent portal access details:
+🔗 *App Link:* https://taliat-app.vercel.app/
+👤 *Login Email / Username:* ${scout.parentEmail || scout.username}
+🔑 *Temporary Password:* ${scout.tempPassword || 'taliat2026'}
+⚜️ *Linked Scout:* ${scout.fullName || scout.username}
+
+📌 *Parent Portal Features:*
+• Monitor real-time advancement across all 7 BSA Ranks & Merit Badges.
+• Track meeting attendance hours, camping nights, and volunteer service logs.
+• Sign digital waivers, BSA Health Records, and submit absence notices.
+• Update your dual-parent household profile under *"My Profile"* (👤).
+
+Please log in and complete your household details. Shukran!`
+                },
+                { label: "📅 Meeting Reminder", text: `Salam ${scout.fullName || scout.username}! This is a reminder about our upcoming Dhulfiqār Troop meeting. Please be prepared and on time. App link: https://taliat-app.vercel.app/ Shukran!` },
+                { label: "🛡️ Safeguarding Video Reminder", text: "Salam! Please make sure to watch the required safeguarding / youth protection standard videos under your Taliʿa profile at https://taliat-app.vercel.app/ . This is an essential requirement. Shukran!" },
+                { label: "🕌 Islamic Knowledge Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Knowledge curriculum checklist under your Taliʿa profile at https://taliat-app.vercel.app/ . Shukran!" },
+                { label: "⏱️ Service Hours Reminder", text: "Salam! Please remember to log your volunteering and community service hours in the Taliʿa Service Log at https://taliat-app.vercel.app/ . Shukran!" }
               ].map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
                 const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
@@ -1257,7 +1298,7 @@ export default function PatrolRoster({ currentUser = {} }) {
         }
       }
 
-      setParentMsg(`Parent account created for ${name}! Email: ${email} · Temporary Password: ${password}`);
+      setParentMsg(`✓ Parent account created for ${name}! App Link: https://taliat-app.vercel.app/ · Login Email: ${email} · Temporary Password: ${password}`);
       setParentName('');
       setParentEmail('');
       setParentPassword('');

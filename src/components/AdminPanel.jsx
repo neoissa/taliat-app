@@ -9,6 +9,12 @@ import {
   setDoc, 
   deleteDoc, 
   addDoc,
+  getDocs,
+  getDoc,
+  updateDoc,
+  deleteField,
+  query,
+  where,
   serverTimestamp 
 } from 'firebase/firestore';
 import { 
@@ -36,7 +42,12 @@ import {
   Check, 
   ExternalLink,
   Crown,
-  Bell
+  Bell,
+  RotateCcw,
+  Copy,
+  MessageSquare,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 
@@ -98,6 +109,23 @@ export default function AdminPanel({ currentUser }) {
   const [userUpdating, setUserUpdating] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editErr, setEditErr] = useState('');
+
+  // WhatsApp Share Modal State
+  const [whatsappUser, setWhatsappUser] = useState(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappPassword, setWhatsappPassword] = useState('');
+  const [whatsappTemplate, setWhatsappTemplate] = useState('scout_invite');
+  const [whatsappCustomMsg, setWhatsappCustomMsg] = useState('');
+  const [whatsappCopied, setWhatsappCopied] = useState(false);
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+
+  // Profile Progress Reset Modal State
+  const [resettingUser, setResettingUser] = useState(null);
+  const [resetConfirmationInput, setResetConfirmationInput] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetProgressStep, setResetProgressStep] = useState('');
+  const [resetSuccessMsg, setResetSuccessMsg] = useState('');
+  const [resetErrMsg, setResetErrMsg] = useState('');
 
   // Patrol Creation & Edit State
   const [newPatrolName, setNewPatrolName] = useState('');
@@ -307,6 +335,220 @@ export default function AdminPanel({ currentUser }) {
       await deleteDoc(doc(db, 'users', u.uid));
     } catch (err) {
       alert("Failed to delete user: " + err.message);
+    }
+  };
+
+  // ── 2.4 WHATSAPP LOGIN SHARING HANDLER ──
+  const handleOpenWhatsAppModal = async (u) => {
+    setWhatsappUser(u);
+    const phone = u.scoutPhone || u.parentPhone || u.phone || '';
+    setWhatsappPhone(phone);
+    setWhatsappTemplate(u.role === 'parent' ? 'parent_invite' : 'scout_invite');
+    setWhatsappCustomMsg('');
+    setWhatsappCopied(false);
+    setWhatsappLoading(true);
+
+    let pass = '';
+    try {
+      const snap = await getDoc(doc(db, 'users', u.uid, 'private', 'secrets'));
+      if (snap.exists() && snap.data().password) {
+        pass = snap.data().password;
+      }
+    } catch (e) {
+      console.warn("Could not fetch secrets:", e);
+    }
+    if (!pass) {
+      pass = u.tempPassword || u.username || 'taliat2026';
+    }
+    setWhatsappPassword(pass);
+    setWhatsappLoading(false);
+  };
+
+  const getWhatsAppMessageText = () => {
+    if (!whatsappUser) return '';
+    const name = whatsappUser.fullName || whatsappUser.username || 'Scout';
+    const username = whatsappUser.username || whatsappUser.email || 'username';
+    const password = whatsappPassword || 'taliat2026';
+    const appUrl = 'https://taliat-app.vercel.app/';
+
+    if (whatsappTemplate === 'scout_invite') {
+      return `⚜️ *Salam ${name}!*
+
+Welcome to *Dhulfiqār Scouts BSA* (Taliʿa Leadership Portal)!
+
+Here are your official account login credentials:
+🔗 *App Link:* ${appUrl}
+👤 *Username:* ${username}
+🔑 *Temporary Password:* ${password}
+
+📌 *Required Profile Setup Instructions:*
+1. Open the app link above and log in with your credentials.
+2. Go to *"My Profile"* (👤) from the navigation menu.
+3. Please update your profile information:
+   • Change your default username and create your own secure personal password.
+   • Upload your profile picture / photo.
+   • Fill in all required information (personal email, scout phone, parent contact, BSA Member ID, and emergency contact details).
+
+If you have any questions or need help logging in, reach out to your patrol leader.
+Shukran & Khuda Hafiz! ⚜️`;
+    }
+
+    if (whatsappTemplate === 'parent_invite') {
+      return `👨‍👩‍👧 *Salam ${name}!*
+
+Welcome to the *Dhulfiqār Scouts Family & Parent Portal*!
+
+Here are your account access details:
+🔗 *App Link:* ${appUrl}
+👤 *Login Email / Username:* ${whatsappUser.email || username}
+🔑 *Temporary Password:* ${password}
+
+📌 *What you can do in the Parent Portal:*
+• Monitor real-time advancement across all 7 BSA Ranks & Merit Badges.
+• Track meeting attendance, camping nights, and volunteer service hours.
+• Sign digital permission slips, waivers, and BSA Health Records in the Parent Action Center.
+• Submit event RSVPs and notify leaders of planned absences.
+• Update your dual-parent household profile under *"My Profile"* (👤).
+
+Please log in and complete your family profile details. Shukran!`;
+    }
+
+    if (whatsappTemplate === 'meeting') {
+      return `⚜️ *Salam ${name}!*
+
+This is a reminder about our upcoming Dhulfiqār Troop meeting.
+🔗 *Portal:* ${appUrl}
+
+Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
+    }
+
+    if (whatsappTemplate === 'custom') {
+      return whatsappCustomMsg.trim();
+    }
+
+    return '';
+  };
+
+  const handleCopyWhatsAppMsg = () => {
+    const text = getWhatsAppMessageText();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setWhatsappCopied(true);
+      setTimeout(() => setWhatsappCopied(false), 2500);
+    });
+  };
+
+  // ── 2.5 CLEAR ALL PROGRESS & PROFILE RESET HANDLER ──
+  const handleExecuteResetProgress = async (userToReset) => {
+    if (!userToReset?.uid) return;
+    setIsResetting(true);
+    setResetErrMsg('');
+    setResetSuccessMsg('');
+    setResetProgressStep('Starting profile reset...');
+
+    const uid = userToReset.uid;
+
+    try {
+      // 1. Delete all rank progress docs: /user_progress/{uid}/ranks/*
+      setResetProgressStep('1/9: Clearing BSA Rank advancement & signoffs...');
+      const ranksRef = collection(db, 'user_progress', uid, 'ranks');
+      const ranksSnap = await getDocs(ranksRef);
+      await Promise.all(ranksSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 2. Delete all merit badges progress docs: /user_progress/{uid}/merit_badges/*
+      setResetProgressStep('2/9: Clearing merit badge steps & completions...');
+      const meritRef = collection(db, 'user_progress', uid, 'merit_badges');
+      const meritSnap = await getDocs(meritRef);
+      await Promise.all(meritSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 3. Delete islamic basics progress: /user_progress/{uid}/islamic_basics/*
+      setResetProgressStep('3/9: Clearing Islamic studies test records...');
+      try {
+        await deleteDoc(doc(db, 'user_progress', uid, 'islamic_basics', 'status'));
+      } catch (e) { /* ignore */ }
+      const islamicRef = collection(db, 'user_progress', uid, 'islamic_basics');
+      const islamicSnap = await getDocs(islamicRef);
+      await Promise.all(islamicSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 4. Delete user assignments progress: /user_progress/{uid}/assignments/*
+      setResetProgressStep('4/9: Clearing assignment submissions...');
+      const userAssignRef = collection(db, 'user_progress', uid, 'assignments');
+      const userAssignSnap = await getDocs(userAssignRef);
+      await Promise.all(userAssignSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 5. Delete global scout_homework docs where scoutId == uid
+      setResetProgressStep('5/9: Clearing homework records...');
+      const hwQuery = query(collection(db, 'scout_homework'), where('scoutId', '==', uid));
+      const hwSnap = await getDocs(hwQuery);
+      await Promise.all(hwSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 6. Delete service logs: /service_logs where scoutId == uid or userId == uid
+      setResetProgressStep('6/9: Clearing service hours & volunteering logs...');
+      const srvQuery1 = query(collection(db, 'service_logs'), where('scoutId', '==', uid));
+      const srvSnap1 = await getDocs(srvQuery1);
+      await Promise.all(srvSnap1.docs.map(d => deleteDoc(d.ref)));
+
+      const srvQuery2 = query(collection(db, 'service_logs'), where('userId', '==', uid));
+      const srvSnap2 = await getDocs(srvQuery2);
+      await Promise.all(srvSnap2.docs.map(d => deleteDoc(d.ref)));
+
+      // 7. Delete scout notes: /scout_notes/{uid}
+      setResetProgressStep('7/9: Clearing private leader notes & journal logs...');
+      try {
+        await deleteDoc(doc(db, 'scout_notes', uid));
+      } catch (e) { /* ignore */ }
+
+      // 8. Delete attendance excuses: /attendance_excuses where scoutId == uid
+      setResetProgressStep('8/9: Clearing attendance absence notices...');
+      const excuseQuery = query(collection(db, 'attendance_excuses'), where('scoutId', '==', uid));
+      const excuseSnap = await getDocs(excuseQuery);
+      await Promise.all(excuseSnap.docs.map(d => deleteDoc(d.ref)));
+
+      // 9. Remove scout from attendance_sessions records map
+      setResetProgressStep('9/9: Resetting patrol attendance roll call records...');
+      const sessionsSnap = await getDocs(collection(db, 'attendance_sessions'));
+      const sessionUpdates = [];
+      sessionsSnap.docs.forEach(sessionDoc => {
+        const data = sessionDoc.data();
+        if (data.records && data.records[uid]) {
+          sessionUpdates.push(
+            updateDoc(sessionDoc.ref, {
+              [`records.${uid}`]: deleteField()
+            })
+          );
+        }
+      });
+      await Promise.all(sessionUpdates);
+
+      // 10. Reset user document progress fields: /users/{uid}
+      setResetProgressStep('Finalizing profile reset to Scout rank (0% progress)...');
+      await setDoc(doc(db, 'users', uid), {
+        rank: 'Scout',
+        rankAdvancementPercent: 0,
+        meritBadgesCount: 0,
+        serviceHours: 0,
+        completedRequirements: {},
+        rankProgress: {},
+        badges: [],
+        bio: '',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      setResetProgressStep('✓ Profile reset completed successfully!');
+      setResetSuccessMsg(`✓ All progress for "${userToReset.fullName || userToReset.username}" has been completely cleared and restored to initial standing.`);
+      setTimeout(() => {
+        setResettingUser(null);
+        setResetConfirmationInput('');
+        setResetSuccessMsg('');
+        if (editingUser?.uid === uid) {
+          setEditingUser(null);
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to reset user progress:", err);
+      setResetErrMsg("Error resetting profile: " + err.message);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -619,16 +861,42 @@ export default function AdminPanel({ currentUser }) {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEditUser(u)}
-                              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition"
-                              title="Edit User"
+                              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                              title="Edit User Details"
                             >
                               <Edit3 size={13} />
                             </button>
+
+                            {/* WhatsApp Share Button */}
+                            <button
+                              onClick={() => handleOpenWhatsAppModal(u)}
+                              className="p-2 bg-slate-800 hover:bg-emerald-950/80 text-emerald-400 hover:text-emerald-300 rounded-xl border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                              title="Share Credentials & App Link via WhatsApp"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                              </svg>
+                            </button>
+
+                            {/* Reset Progress Button */}
+                            <button
+                              onClick={() => {
+                                setResettingUser(u);
+                                setResetConfirmationInput('');
+                                setResetErrMsg('');
+                                setResetSuccessMsg('');
+                              }}
+                              className="p-2 bg-slate-800 hover:bg-amber-950/80 text-amber-400 hover:text-amber-200 rounded-xl border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                              title="Clear All Progress & Reset Profile"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+
                             {!isSuper && (
                               <button
                                 onClick={() => handleDeleteUser(u)}
-                                className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition"
-                                title="Delete User"
+                                className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                                title="Delete User Account"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -1138,6 +1406,301 @@ export default function AdminPanel({ currentUser }) {
         </div>
       )}
 
+      {/* ── WHATSAPP PREDEFINED CREDENTIALS & INVITATION MODAL ── */}
+      {whatsappUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                  <svg className="w-5 h-5 fill-emerald-400" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Share Credentials via WhatsApp</h3>
+                  <p className="text-[11px] text-slate-400">Predefined template with login link & profile setup instructions</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setWhatsappUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Target User Info & Editable Phone Number */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <strong className="text-white block font-bold">{whatsappUser.fullName || whatsappUser.username}</strong>
+                  <span className="text-slate-400 text-[11px] font-mono">Username: {whatsappUser.username || whatsappUser.email}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-700 font-mono font-bold block">
+                    Pass: {whatsappPassword || 'taliat2026'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Recipient WhatsApp Phone Number (with Country Code)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 13135551234 or +13135551234"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Template Selector Pills */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Select Message Template:
+              </label>
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('scout_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'scout_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>⚜️ Scout Login & Setup</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('parent_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'parent_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>👨‍👩‍👧 Parent Portal Invite</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('meeting')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'meeting'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>📅 Meeting Reminder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('custom')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'custom'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>✏️ Custom Message</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom message textarea if custom selected */}
+            {whatsappTemplate === 'custom' && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Custom Message Content:
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Type your WhatsApp message..."
+                  value={whatsappCustomMsg}
+                  onChange={(e) => setWhatsappCustomMsg(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none font-sans"
+                />
+              </div>
+            )}
+
+            {/* Message Preview Box */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Live Message Preview:
+                </label>
+                <span className="text-[10px] text-teal-300 font-mono">App Link: https://taliat-app.vercel.app/</span>
+              </div>
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs font-sans text-slate-200 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed scrollbar-thin scrollbar-thumb-slate-800">
+                {getWhatsAppMessageText() || <span className="text-slate-500 italic">Enter message content above...</span>}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleCopyWhatsAppMsg}
+                className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 border border-slate-700"
+              >
+                {whatsappCopied ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" />
+                    <span className="text-emerald-300">✓ Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} className="text-slate-400" />
+                    <span>Copy Text</span>
+                  </>
+                )}
+              </button>
+
+              <a
+                href={`https://wa.me/${whatsappPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(getWhatsAppMessageText())}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  setTimeout(() => setWhatsappUser(null), 1000);
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
+              >
+                <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                </svg>
+                <span>Open in WhatsApp &rarr;</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* ── RESET PROFILE PROGRESS SAFETY CONFIRMATION MODAL ── */}
+      {resettingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-red-500/60 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-bold shrink-0">
+                  <RotateCcw size={20} className="animate-spin-slow" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Reset Profile & Clear All Progress</h3>
+                  <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Permanent Danger Action</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isResetting) {
+                    setResettingUser(null);
+                    setResetConfirmationInput('');
+                    setResetErrMsg('');
+                    setResetSuccessMsg('');
+                  }
+                }}
+                disabled={isResetting}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetErrMsg && (
+              <div className="p-3 bg-red-950/80 border border-red-600 text-red-300 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle size={15} className="shrink-0 text-red-400" />
+                <span>{resetErrMsg}</span>
+              </div>
+            )}
+
+            {resetSuccessMsg && (
+              <div className="p-3 bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs rounded-xl flex items-center gap-2">
+                <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
+                <span>{resetSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Target User Summary Card */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-full bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-sm shrink-0">
+                {resettingUser.fullName?.charAt(0) || resettingUser.username?.charAt(0) || 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-black text-white truncate">{resettingUser.fullName || resettingUser.username}</h4>
+                <p className="text-[11px] text-slate-400 truncate">{resettingUser.email} &bull; <strong className="text-emerald-400 capitalize">{resettingUser.role || 'Scout'}</strong></p>
+                <span className="text-[10px] text-slate-500 font-mono">Current Rank: {resettingUser.rank || 'Scout'}</span>
+              </div>
+            </div>
+
+            {/* Deletion Scope Warning List */}
+            <div className="bg-red-950/20 border border-red-900/50 rounded-2xl p-4 space-y-2 text-xs">
+              <p className="text-red-300 font-bold flex items-center gap-1.5">
+                <AlertCircle size={14} className="text-red-400 shrink-0" />
+                <span>This will permanently wipe and reset the following records:</span>
+              </p>
+              <ul className="space-y-1.5 text-slate-300 text-[11px] pl-5 list-disc">
+                <li><strong>⚜️ Rank Advancement:</strong> All 7 BSA Ranks progress and requirement sign-offs.</li>
+                <li><strong>🏅 Merit Badges:</strong> All earned badges, requirement checkmarks & approvals.</li>
+                <li><strong>🕌 Islamic Knowledge:</strong> All Usul/Furu test submissions and completed topics.</li>
+                <li><strong>🎒 Homework & Tasks:</strong> All submitted homework, proofs, and leader grades.</li>
+                <li><strong>⏱️ Service Logs:</strong> All recorded service hours and volunteering entries.</li>
+                <li><strong>📋 Attendance Records:</strong> All attendance entries for this scout in historical sessions.</li>
+                <li><strong>📝 Notes & Excuses:</strong> Private leader notes and filed absence notices.</li>
+                <li><strong>🔄 Profile Status:</strong> Restored to fresh <strong>"Scout"</strong> rank with 0% progress.</li>
+              </ul>
+            </div>
+
+            {isResetting ? (
+              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-center space-y-3">
+                <div className="w-8 h-8 border-3 border-red-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-xs font-bold text-red-300 animate-pulse">{resetProgressStep}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Type <strong className="text-red-400 font-mono bg-red-950 px-1.5 py-0.5 rounded border border-red-800">RESET</strong> below to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder='Type "RESET" here'
+                    value={resetConfirmationInput}
+                    onChange={(e) => setResetConfirmationInput(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-red-500 placeholder-slate-600"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteResetProgress(resettingUser)}
+                    disabled={resetConfirmationInput.trim() !== 'RESET' || isResetting}
+                    className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-red-950/50"
+                  >
+                    <RotateCcw size={15} />
+                    <span>Confirm & Clear All Progress</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResettingUser(null);
+                      setResetConfirmationInput('');
+                    }}
+                    disabled={isResetting}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── EDIT USER MODAL ── */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -1257,6 +1820,33 @@ export default function AdminPanel({ currentUser }) {
                   onChange={(e) => setEditPassword(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              {/* Danger Zone: Reset Profile Progress */}
+              <div className="bg-red-950/30 border border-red-900/60 p-4 rounded-2xl space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h5 className="text-xs font-black text-red-400 flex items-center gap-1.5">
+                      <RotateCcw size={13} /> Reset Profile Progress
+                    </h5>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Wipe all ranks, merit badges, homework, service hours, and restore to initial Scout standing.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResettingUser(editingUser);
+                      setResetConfirmationInput('');
+                      setResetErrMsg('');
+                      setResetSuccessMsg('');
+                    }}
+                    className="bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-bold px-3.5 py-2 rounded-xl transition cursor-pointer shrink-0 shadow-md flex items-center gap-1 self-start sm:self-center"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Clear All Progress</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
