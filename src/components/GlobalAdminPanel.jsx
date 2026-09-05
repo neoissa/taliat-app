@@ -5,6 +5,14 @@ import { db, firebaseConfig } from '../firebase';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { Users, UserPlus, Shield, ShieldCheck, ShieldAlert, Award, Search, KeyRound, Lock, Trash2, Edit2, Edit3, AlertTriangle, CheckCircle, RefreshCw, X, FolderTree, Camera, Loader2 } from 'lucide-react';
+import { 
+  getKashafGreeting, 
+  getLockedClosing, 
+  generateLeaderInviteMessage, 
+  generateScoutInviteMessage, 
+  generateParentInviteMessage, 
+  applyIslamicTransliteration 
+} from '../utils/kashafVoice';
 
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
@@ -116,6 +124,8 @@ export default function GlobalAdminPanel({ currentUser }) {
   const [editParentLinkedScoutIds, setEditParentLinkedScoutIds] = useState([]);
   const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
   const [activeWhatsappName, setActiveWhatsappName] = useState('');
+  const [activeWhatsappRole, setActiveWhatsappRole] = useState('parent');
+  const [activeWhatsappUser, setActiveWhatsappUser] = useState(null);
 
   useEffect(() => {
     // 1. Listen to all users
@@ -804,6 +814,8 @@ export default function GlobalAdminPanel({ currentUser }) {
                               e.preventDefault();
                               setActiveWhatsappPhone(user.scoutPhone);
                               setActiveWhatsappName(user.fullName || user.username);
+                              setActiveWhatsappRole(user.role === 'leader' || user.role === 'owner' ? 'leader' : 'scout');
+                              setActiveWhatsappUser(user);
                             }}
                             className="text-emerald-450 hover:text-emerald-400 cursor-pointer inline-flex items-center"
                             title="Chat on WhatsApp"
@@ -821,7 +833,9 @@ export default function GlobalAdminPanel({ currentUser }) {
                             onClick={(e) => {
                               e.preventDefault();
                               setActiveWhatsappPhone(user.parentPhone);
-                              setActiveWhatsappName(`${user.fullName || user.username}'s Parent`);
+                              setActiveWhatsappName(user.fullName ? `${user.fullName}'s Parents` : 'Parents');
+                              setActiveWhatsappRole('parent');
+                              setActiveWhatsappUser(user);
                             }}
                             className="text-emerald-450 hover:text-emerald-400 cursor-pointer inline-flex items-center"
                             title="Chat with parent on WhatsApp"
@@ -1186,65 +1200,98 @@ export default function GlobalAdminPanel({ currentUser }) {
               Select a template to send to <strong>{activeWhatsappName}</strong> ({activeWhatsappPhone}):
             </p>
             <div className="space-y-2">
-              {[
-                { label: "General Chat (Blank)", text: "" },
-                { 
-                  label: "📅 Meeting Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+              {(() => {
+                const uPatrol = activeWhatsappUser ? (groups.find(g => g.id === activeWhatsappUser.groupId)?.name || '') : '';
+                const patrolName = uPatrol;
+                const greeting = getKashafGreeting(activeWhatsappRole, activeWhatsappName);
+                const closing = getLockedClosing(patrolName);
+                const appUrl = 'https://taliat-app.vercel.app/';
+
+                const tmpls = [
+                  { label: "General Chat (Blank)", text: "" }
+                ];
+
+                if (activeWhatsappRole === 'leader') {
+                  tmpls.push({
+                    label: "🛡️ Leader Onboarding & Credentials",
+                    text: generateLeaderInviteMessage({
+                      name: activeWhatsappName,
+                      username: activeWhatsappUser?.username || activeWhatsappUser?.email || '',
+                      password: activeWhatsappUser?.tempPassword || activeWhatsappUser?.username || 'taliat2026',
+                      leaderPosition: activeWhatsappUser?.leaderPosition || (activeWhatsappUser?.role === 'owner' ? 'Troop Headmaster / Lead Admin' : 'Scout Leader'),
+                      patrolName,
+                      appUrl
+                    })
+                  });
+                } else if (activeWhatsappRole === 'scout') {
+                  tmpls.push({
+                    label: "⚜️ Scout Login & Onboarding",
+                    text: generateScoutInviteMessage({
+                      name: activeWhatsappName,
+                      username: activeWhatsappUser?.username || activeWhatsappUser?.email || '',
+                      password: activeWhatsappUser?.tempPassword || activeWhatsappUser?.username || 'taliat2026',
+                      patrolName,
+                      appUrl
+                    })
+                  });
+                } else if (activeWhatsappRole === 'parent') {
+                  tmpls.push({
+                    label: "👨‍👩‍👧 Parent Portal Invite",
+                    text: generateParentInviteMessage({
+                      name: activeWhatsappName,
+                      email: activeWhatsappUser?.email || '',
+                      username: activeWhatsappUser?.username || '',
+                      password: activeWhatsappUser?.tempPassword || activeWhatsappUser?.username || 'taliat2026',
+                      patrolName,
+                      appUrl
+                    })
+                  });
+                }
+
+                tmpls.push({
+                  label: "📅 Meeting Reminder",
+                  text: `${greeting}
 
 Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.
+🔗 *Portal Link:* ${appUrl}
+📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.${closing}`
+                });
 
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🛡️ Safeguarding Video Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+                tmpls.push({
+                  label: "🛡️ Safeguarding Video Reminder",
+                  text: `${greeting}
 
-We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT) video modules.
+We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT/YPT) video modules.
 
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-📌 *Instructions:* Access your profile, watch the video modules, and confirm verification with leadership.
+🔗 *Portal Link:* ${appUrl}
+📌 *Instructions:* Access your profile, complete the video modules, and confirm verification with leadership.${closing}`
+                });
 
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🕌 Islamic Knowledge Progress Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+                tmpls.push({
+                  label: "🕌 Islamic Knowledge Progress Reminder",
+                  text: `${greeting}
 
 Just a friendly check-in regarding the Islamic Knowledge modules (Jaʿfarī fiqh, ʿAqāʾid, Akhlāq, and Sīrah of Ahl al-Bayt ʿa).
 
-🔗 *Checklist Portal:* https://taliat-app.vercel.app/
-📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.
+🔗 *Checklist Portal:* ${appUrl}
+📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.${closing}`
+                });
 
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "⏱️ Service Hours Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+                if (activeWhatsappRole === 'scout' || activeWhatsappRole === 'parent') {
+                  tmpls.push({
+                    label: "⏱️ Service Hours Reminder",
+                    text: `${greeting}
 
 We wanted to remind scouts to log their community service and volunteering hours into the portal.
 
-🔗 *Service Log:* https://taliat-app.vercel.app/
-📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
+🔗 *Service Log:* ${appUrl}
+📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.${closing}`
+                  });
                 }
-              ].map((tmpl) => {
+
+                return tmpls;
+              })().map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
                 const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
                 return (

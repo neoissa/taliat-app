@@ -28,7 +28,7 @@
  * 
  * 5️⃣ CLOSING (LOCKED):
  * *Jazākum Allāhu khayran for your continued support 🙏*
- * *✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+ * *✨ [Assigned Patrol Name (optional)] .✨*
  * *⚜️ Dhulfiqār Scouts Team⚜️*
  */
 
@@ -96,9 +96,36 @@ export function applyIslamicTransliteration(text) {
 }
 
 /**
- * 2️⃣ LOCKED GREETING
- * Exactly two lines, followed by a blank line.
+ * 2️⃣ ROLE-AWARE GREETING BUILDER
+ * - Parent: "🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨"
+ * - Leader: "🌿 Assalāmu ʿAlaykum dear Leader ${name},🌿\nHope you are doing well 😊 ✨"
+ * - Scout: "🌿 Assalāmu ʿAlaykum dear Scout ${name},🌿\nHope you are doing well 😊 ✨"
  */
+export function getKashafGreeting(roleOrType = 'parent', name = '') {
+  const cleanName = name ? name.trim() : '';
+  const type = (roleOrType || '').toLowerCase();
+  
+  if (type === 'parent' || type === 'parents') {
+    return '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
+  }
+  
+  if (type === 'leader' || type === 'owner') {
+    const leaderTitle = cleanName ? `dear Leader ${cleanName}` : 'dear Leader';
+    return `🌿 Assalāmu ʿAlaykum ${leaderTitle},🌿\nHope you are doing well 😊 ✨`;
+  }
+  
+  if (type === 'scout') {
+    const scoutTitle = cleanName ? `dear Scout ${cleanName}` : 'dear Scout';
+    return `🌿 Assalāmu ʿAlaykum ${scoutTitle},🌿\nHope you are doing well 😊 ✨`;
+  }
+  
+  if (cleanName) {
+    return `🌿 Assalāmu ʿAlaykum dear ${cleanName},🌿\nHope you are doing well 😊 ✨`;
+  }
+  
+  return '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
+}
+
 export const LOCKED_GREETING = `🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨`;
 
 /**
@@ -116,13 +143,110 @@ export function formatIsolatedQuranBlock(arabic, translation = '') {
 /**
  * 5️⃣ LOCKED CLOSING
  * Uses asterisks for WhatsApp bold on each line, no extra lines.
+ * Only outputs the patrol line if a patrolName is explicitly provided.
  */
 export function getLockedClosing(patrolName = '') {
-  const patrolLine = patrolName && patrolName.trim()
-    ? `*✨ ${patrolName.trim()} .✨*`
-    : '*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*';
+  const patrolClean = patrolName && typeof patrolName === 'string' ? patrolName.trim() : '';
+  const patrolLine = patrolClean ? `\n*✨ ${patrolClean} .✨*` : '';
     
-  return `\n\n*Jazākum Allāhu khayran for your continued support 🙏*\n${patrolLine}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
+  return `\n\n*Jazākum Allāhu khayran for your continued support 🙏*${patrolLine}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
+}
+
+/**
+ * 6️⃣ DEDICATED LEADER ONBOARDING & SETUP MESSAGE GENERATOR
+ */
+export function generateLeaderInviteMessage({
+  name = 'Leader',
+  username = '',
+  password = '',
+  leaderPosition = 'Scout Leader',
+  patrolName = '',
+  appUrl = 'https://taliat-app.vercel.app/'
+}) {
+  const greeting = getKashafGreeting('leader', name);
+  const patrolClosing = getLockedClosing(patrolName);
+  const unitLine = patrolName && patrolName.trim() ? patrolName.trim() : 'Dhulfiqār Leadership HQ';
+  
+  return `${greeting}
+
+We are pleased to provide your leadership access credentials and onboarding details for the *Dhulfiqār Scouts Portal*:
+
+📌 *Leadership Role:* ${leaderPosition || 'Scout Leader'}
+🛡️ *Assigned Unit / Patrol:* ${unitLine}
+
+🔗 *Portal Link:* ${appUrl}
+👤 *Username:* ${username}
+🔑 *Temporary Password:* ${password}
+
+📌 *Required Leader Setup & Action Checklist:*
+1. 📱 Log into the leadership portal using the link above.
+2. 👤 Go to *"My Profile"* (👤) to set your secure personal password and update personal contact details.
+3. 📜 Upload your profile photo and current *Youth Protection Training (YPT) / Safety Protection Training (SPT)* certificate.
+4. 📋 Review and manage your assigned patrol roster, scout attendance records, and advancement verifications.
+
+Jazākum Allāhu khayran for your leadership, dedication, and service to the youth!${patrolClosing}`;
+}
+
+/**
+ * 7️⃣ DEDICATED SCOUT LOGIN & ONBOARDING MESSAGE GENERATOR
+ */
+export function generateScoutInviteMessage({
+  name = 'Scout',
+  username = '',
+  password = '',
+  patrolName = '',
+  appUrl = 'https://taliat-app.vercel.app/'
+}) {
+  const greeting = getKashafGreeting('scout', name);
+  const closing = getLockedClosing(patrolName);
+
+  return `${greeting}
+
+We wanted to share the official login credentials and onboarding access for *${name}* to the *Dhulfiqār Scouts Portal*:
+
+🔗 *Portal Link:* ${appUrl}
+👤 *Username:* ${username}
+🔑 *Temporary Password:* ${password}
+
+📌 *Required Profile Setup Instructions:*
+1. 📱 Open the app link above and log in with your credentials.
+2. 👤 Go to *"My Profile"* (👤) from the navigation menu.
+3. ⚙️ Please complete the following profile updates:
+   • Change your temporary password to your own secure personal password.
+   • Upload your clear scout profile picture / photo.
+   • Fill in all required details (personal email, scout phone, parent contact, BSA Member ID, and emergency contact).
+
+If you have any questions or need help logging in, reach out to your patrol leadership.${closing}`;
+}
+
+/**
+ * 8️⃣ DEDICATED PARENT PORTAL INVITE MESSAGE GENERATOR
+ */
+export function generateParentInviteMessage({
+  name = 'Parents',
+  email = '',
+  username = '',
+  password = '',
+  patrolName = '',
+  appUrl = 'https://taliat-app.vercel.app/'
+}) {
+  const greeting = getKashafGreeting('parent', name);
+  const closing = getLockedClosing(patrolName);
+
+  return `${greeting}
+
+We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
+
+🔗 *Portal Link:* ${appUrl}
+👤 *Email / Username:* ${email || username}
+🔑 *Temporary Password:* ${password}
+
+📌 *Parent Portal Features & Instructions:*
+1. 📱 Log into the portal using the link above.
+2. 📊 Monitor real-time progress across all 7 BSA Ranks, Merit Badges, and Islamic Modules.
+3. 📋 Track attendance records, camping nights, and service hours.
+4. 📝 Access digital medical forms, waivers, and event RSVPs.
+5. 👨‍👩‍👧 Manage family profile details and emergency contacts.${closing}`;
 }
 
 /**
@@ -240,8 +364,8 @@ export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
 /**
  * Refines any raw text into KashafVoice v4.0 WhatsApp format.
  */
-export function formatKashafMessage(rawText, patrolName = '', customPurpose = '') {
-  const greeting = LOCKED_GREETING;
+export function formatKashafMessage(rawText, patrolName = '', customPurpose = '', recipient = { type: 'parent', name: '' }) {
+  const greeting = getKashafGreeting(recipient?.type || 'parent', recipient?.name || '');
   const cleanContent = applyIslamicTransliteration(rawText || '').trim();
   const closing = getLockedClosing(patrolName);
   

@@ -21,6 +21,13 @@ import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
 import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users } from 'lucide-react';
+import { 
+  getKashafGreeting, 
+  getLockedClosing, 
+  generateScoutInviteMessage, 
+  generateParentInviteMessage, 
+  generateLeaderInviteMessage 
+} from '../utils/kashafVoice';
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -915,108 +922,76 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               Select a template to send to <strong>{activeWhatsappName}</strong> ({activeWhatsappPhone}):
             </p>
             <div className="space-y-2">
-              {[
-                {
-                  label: "⭐ Scout Portal Login & Profile Setup Invitation (Predefined)",
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+              {(() => {
+                const isScoutRecipient = activeWhatsappPhone === scout.scoutPhone;
+                const isParentRecipient = activeWhatsappPhone === scout.parentPhone;
+                const recipientRole = isScoutRecipient ? 'scout' : (isParentRecipient ? 'parent' : 'parent');
+                const recipientName = isScoutRecipient ? (scout.fullName || scout.username) : (scout.fullName ? `${scout.fullName}'s Parents` : 'Parents');
+                const patrolName = scout.patrolName || '';
+                const greeting = getKashafGreeting(recipientRole, recipientName);
+                const closing = getLockedClosing(patrolName);
+                const appUrl = 'https://taliat-app.vercel.app/';
 
-We wanted to share the official login credentials and onboarding access for *${scout.fullName || scout.username}* to the *Dhulfiqār Scouts Portal*:
-
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-👤 *Username:* ${scout.username || scout.email}
-🔑 *Temporary Password:* ${scout.tempPassword || scout.username || 'taliat2026'}
-
-📌 *Next Steps for Profile Setup:*
-📱 Log into the portal link above.
-👤 Go to *"My Profile"* to set your private password and username.
-📸 Upload a clear profile picture and complete contact details.
-
-If you have any questions or need login support, please reach out to your patrol leadership.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*`
-                },
-                {
-                  label: "👨‍👩‍👧 Parent Portal Invitation & Family Profile Setup",
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
-
-We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
-
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-👤 *Email / Username:* ${scout.parentEmail || scout.username}
-🔑 *Temporary Password:* ${scout.tempPassword || 'taliat2026'}
-⚜️ *Linked Scout:* ${scout.fullName || scout.username}
-
-📌 *Parent Portal Features:*
-📊 Real-time monitoring of all 7 BSA Ranks & Merit Badges
-📋 Attendance records, camping nights, and service hours
-📝 Digital medical forms, waivers, and event RSVPs
-👨‍👩‍👧 Household family profile management
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*`
-                },
-                { 
-                  label: "📅 Meeting Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+                return [
+                  {
+                    label: "⭐ Scout Portal Login & Profile Setup Invitation",
+                    text: generateScoutInviteMessage({
+                      name: scout.fullName || scout.username || 'Scout',
+                      username: scout.username || scout.email || '',
+                      password: scout.tempPassword || scout.username || 'taliat2026',
+                      patrolName,
+                      appUrl
+                    })
+                  },
+                  {
+                    label: "👨‍👩‍👧 Parent Portal Invitation & Family Profile Setup",
+                    text: generateParentInviteMessage({
+                      name: recipientName,
+                      email: scout.parentEmail || scout.username || '',
+                      username: scout.parentEmail || scout.username || '',
+                      password: scout.tempPassword || 'taliat2026',
+                      patrolName,
+                      appUrl
+                    })
+                  },
+                  { 
+                    label: "📅 Meeting Reminder", 
+                    text: `${greeting}
 
 Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.
+🔗 *Portal Link:* ${appUrl}
+📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.${closing}` 
+                  },
+                  { 
+                    label: "🛡️ Safeguarding Video Reminder", 
+                    text: `${greeting}
 
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🛡️ Safeguarding Video Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT/YPT) video modules.
 
-We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT) video modules.
-
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-📌 *Instructions:* Access your profile, watch the video modules, and confirm verification with leadership.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🕌 Islamic Knowledge Progress Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+🔗 *Portal Link:* ${appUrl}
+📌 *Instructions:* Access your profile, complete the video modules, and confirm verification with leadership.${closing}` 
+                  },
+                  { 
+                    label: "🕌 Islamic Knowledge Progress Reminder", 
+                    text: `${greeting}
 
 Just a friendly check-in regarding the Islamic Knowledge modules (Jaʿfarī fiqh, ʿAqāʾid, Akhlāq, and Sīrah of Ahl al-Bayt ʿa).
 
-🔗 *Checklist Portal:* https://taliat-app.vercel.app/
-📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "⏱️ Service Hours Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+🔗 *Checklist Portal:* ${appUrl}
+📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.${closing}` 
+                  },
+                  { 
+                    label: "⏱️ Service Hours Reminder", 
+                    text: `${greeting}
 
 We wanted to remind scouts to log their community service and volunteering hours into the portal.
 
-🔗 *Service Log:* https://taliat-app.vercel.app/
-📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ ${scout.patrolName ? scout.patrolName : 'Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās)'} .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                }
-              ].map((tmpl) => {
+🔗 *Service Log:* ${appUrl}
+📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.${closing}` 
+                  }
+                ];
+              })().map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
                 const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
                 return (
@@ -2617,65 +2592,53 @@ export default function PatrolRoster({ currentUser = {} }) {
               Select a template to send to <strong>{activeWhatsappName}</strong> ({activeWhatsappPhone}):
             </p>
             <div className="space-y-2">
-              {[
-                { label: "General Chat (Blank)", text: "" },
-                { 
-                  label: "📅 Meeting Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+              {(() => {
+                const currentGroup = groups.find(g => g.id === activeGroupTab);
+                const currentPatrolName = currentGroup ? currentGroup.name : '';
+                const greeting = getKashafGreeting('parent');
+                const closing = getLockedClosing(currentPatrolName);
+                const appUrl = 'https://taliat-app.vercel.app/';
+
+                return [
+                  { label: "General Chat (Blank)", text: "" },
+                  { 
+                    label: "📅 Meeting Reminder", 
+                    text: `${greeting}
 
 Operational directive: Attendance reminder for our upcoming Dhulfiqār Scouting Session.
 
-🔗 *Leadership Portal:* https://taliat-app.vercel.app/
-📍 *Protocol:* Arrive punctually in full uniform with your Scout Handbook and notebook prepared.
+🔗 *Leadership Portal:* ${appUrl}
+📍 *Protocol:* Arrive punctually in full uniform with your Scout Handbook and notebook prepared.${closing}` 
+                  },
+                  { 
+                    label: "🛡️ Safeguarding Video Reminder", 
+                    text: `${greeting}
 
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🛡️ Safeguarding Video Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT/YPT) video modules.
 
-We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT) video modules.
-
-🔗 *Portal Link:* https://taliat-app.vercel.app/
-📌 *Instructions:* Access your profile, watch the video modules, and confirm verification with leadership.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "🕌 Islamic Knowledge Progress Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+🔗 *Portal Link:* ${appUrl}
+📌 *Instructions:* Access your profile, complete the video modules, and confirm verification with leadership.${closing}` 
+                  },
+                  { 
+                    label: "🕌 Islamic Knowledge Progress Reminder", 
+                    text: `${greeting}
 
 Just a friendly check-in regarding the Islamic Knowledge modules (Jaʿfarī fiqh, ʿAqāʾid, Akhlāq, and Sīrah of Ahl al-Bayt ʿa).
 
-🔗 *Checklist Portal:* https://taliat-app.vercel.app/
-📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                },
-                { 
-                  label: "⏱️ Service Hours Reminder", 
-                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
-Hope you are all doing well 😊 ✨
+🔗 *Checklist Portal:* ${appUrl}
+📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.${closing}` 
+                  },
+                  { 
+                    label: "⏱️ Service Hours Reminder", 
+                    text: `${greeting}
 
 We wanted to remind scouts to log their community service and volunteering hours into the portal.
 
-🔗 *Service Log:* https://taliat-app.vercel.app/
-📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.
-
-*Jazākum Allāhu khayran for your continued support 🙏*
-*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
-*⚜️ Dhulfiqār Scouts Team⚜️*` 
-                }
-              ].map((tmpl) => {
+🔗 *Service Log:* ${appUrl}
+📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.${closing}` 
+                  }
+                ];
+              })().map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
                 const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
                 return (

@@ -63,6 +63,14 @@ import {
 } from 'lucide-react';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { RANKS_DATA } from '../data/ranksData';
+import { 
+  getKashafGreeting, 
+  getLockedClosing, 
+  generateLeaderInviteMessage, 
+  generateScoutInviteMessage, 
+  generateParentInviteMessage, 
+  applyIslamicTransliteration 
+} from '../utils/kashafVoice';
 
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
@@ -433,7 +441,16 @@ export default function AdminPanel({ currentUser }) {
     setWhatsappUser(u);
     const phone = u.scoutPhone || u.parentPhone || u.phone || '';
     setWhatsappPhone(phone);
-    setWhatsappTemplate(u.role === 'parent' ? 'parent_invite' : 'scout_invite');
+    
+    // Auto-select template based on recipient role
+    if (u.role === 'leader' || u.role === 'owner') {
+      setWhatsappTemplate('leader_invite');
+    } else if (u.role === 'parent') {
+      setWhatsappTemplate('parent_invite');
+    } else {
+      setWhatsappTemplate('scout_invite');
+    }
+
     setWhatsappCustomMsg('');
     setWhatsappCopied(false);
     setWhatsappLoading(true);
@@ -456,52 +473,57 @@ export default function AdminPanel({ currentUser }) {
 
   const getWhatsAppMessageText = () => {
     if (!whatsappUser) return '';
-    const name = whatsappUser.fullName || whatsappUser.username || 'Scout';
+    const name = whatsappUser.fullName || whatsappUser.username || 'Member';
     const username = whatsappUser.username || whatsappUser.email || 'username';
     const password = whatsappPassword || 'taliat2026';
-    const appUrl = 'https://taliat-app.vercel.app/';
-    const uPatrol = groups.find(g => g.id === whatsappUser.groupId)?.name;
-    const patrolClosing = uPatrol 
-      ? `*✨ ${uPatrol} .✨*` 
-      : '*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*';
-    const lockedGreeting = '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
-    const lockedClosing = `\n\n*Jazākum Allāhu khayran for your continued support 🙏*\n${patrolClosing}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
+    const uPatrol = groups.find(g => g.id === whatsappUser.groupId)?.name || '';
+    const patrolName = uPatrol;
+    const leaderPosition = whatsappUser.leaderPosition || (whatsappUser.role === 'owner' ? 'Troop Headmaster / Lead Admin' : 'Scout Leader');
+
+    if (whatsappTemplate === 'leader_invite') {
+      return generateLeaderInviteMessage({
+        name,
+        username,
+        password,
+        leaderPosition,
+        patrolName,
+        appUrl
+      });
+    }
 
     if (whatsappTemplate === 'scout_invite') {
-      return `${lockedGreeting}
-
-We wanted to share the official login credentials and onboarding access for *${name}* to the *Dhulfiqār Scouts Portal*:
-
-🔗 *Portal Link:* ${appUrl}
-👤 *Username:* ${username}
-🔑 *Temporary Password:* ${password}
-
-📌 *Next Steps for Profile Setup:*
-📱 Log into the portal link above.
-👤 Go to *"My Profile"* to set your private password and username.
-📸 Upload a clear profile picture and complete contact details.
-
-If you have any questions or need login support, please reach out to your patrol leadership.${lockedClosing}`;
+      return generateScoutInviteMessage({
+        name,
+        username,
+        password,
+        patrolName,
+        appUrl
+      });
     }
 
     if (whatsappTemplate === 'parent_invite') {
-      return `${lockedGreeting}
-
-We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
-
-🔗 *Portal Link:* ${appUrl}
-👤 *Email / Username:* ${whatsappUser.email || username}
-🔑 *Temporary Password:* ${password}
-
-📌 *Parent Portal Features:*
-📊 Real-time monitoring of all 7 BSA Ranks & Merit Badges
-📋 Attendance records, camping nights, and service hours
-📝 Digital medical forms, waivers, and event RSVPs
-👨‍👩‍👧 Household family profile management${lockedClosing}`;
+      return generateParentInviteMessage({
+        name,
+        email: whatsappUser.email || '',
+        username,
+        password,
+        patrolName,
+        appUrl
+      });
     }
 
+    // Role-aware greeting for Meeting & Custom messages
+    let recipientType = 'parent';
+    if (whatsappUser.role === 'leader' || whatsappUser.role === 'owner') {
+      recipientType = 'leader';
+    } else if (whatsappUser.role === 'scout') {
+      recipientType = 'scout';
+    }
+    const greeting = getKashafGreeting(recipientType, name);
+    const lockedClosing = getLockedClosing(patrolName);
+
     if (whatsappTemplate === 'meeting') {
-      return `${lockedGreeting}
+      return `${greeting}
 
 Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
@@ -512,7 +534,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
     if (whatsappTemplate === 'custom') {
       const customContent = whatsappCustomMsg.trim();
       return customContent 
-        ? `${lockedGreeting}\n\n${customContent}${lockedClosing}` 
+        ? `${greeting}\n\n${applyIslamicTransliteration(customContent)}${lockedClosing}` 
         : '';
     }
 
@@ -2072,8 +2094,24 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <div>
-                  <strong className="text-white block font-bold">{whatsappUser.fullName || whatsappUser.username}</strong>
-                  <span className="text-slate-400 text-[11px] font-mono">Username: {whatsappUser.username || whatsappUser.email}</span>
+                  <div className="flex items-center gap-1.5">
+                    <strong className="text-white block font-bold">{whatsappUser.fullName || whatsappUser.username}</strong>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${
+                      whatsappUser.role === 'owner' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                      whatsappUser.role === 'leader' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                      whatsappUser.role === 'parent' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' :
+                      'bg-slate-800 text-slate-300 border border-slate-700'
+                    }`}>
+                      {whatsappUser.role || 'scout'}
+                    </span>
+                  </div>
+                  <div className="text-slate-400 text-[11px] font-mono mt-0.5 space-x-2">
+                    <span>User: <strong className="text-slate-200">{whatsappUser.username || whatsappUser.email}</strong></span>
+                    {whatsappUser.leaderPosition && <span>• Pos: <strong className="text-emerald-300">{whatsappUser.leaderPosition}</strong></span>}
+                    {groups.find(g => g.id === whatsappUser.groupId)?.name && (
+                      <span>• Patrol: <strong className="text-slate-300">{groups.find(g => g.id === whatsappUser.groupId)?.name}</strong></span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-700 font-mono font-bold block">
@@ -2101,7 +2139,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Select Message Template:
               </label>
-              <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setWhatsappTemplate('scout_invite')}
@@ -2115,6 +2153,17 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                 </button>
                 <button
                   type="button"
+                  onClick={() => setWhatsappTemplate('leader_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'leader_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🛡️ Leader Onboarding</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setWhatsappTemplate('parent_invite')}
                   className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
                     whatsappTemplate === 'parent_invite'
@@ -2122,7 +2171,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                       : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                   }`}
                 >
-                  <span>👨‍👩‍👧 Parent Portal Invite</span>
+                  <span>👨‍👩‍👧 Parent Invite</span>
                 </button>
                 <button
                   type="button"
@@ -2138,7 +2187,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                 <button
                   type="button"
                   onClick={() => setWhatsappTemplate('custom')}
-                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 col-span-2 sm:col-span-1 ${
                     whatsappTemplate === 'custom'
                       ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
                       : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
