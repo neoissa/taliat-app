@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
+import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -91,7 +92,8 @@ export default function ScoutProfile({ currentUser }) {
   const [sptFileName, setSptFileName] = useState('');
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
-  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security'
+  const [fullUserData, setFullUserData] = useState(null);
+  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'roles-guide' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security'
   
   // Attendance Tracking & Risk States
   const [attendanceStats, setAttendanceStats] = useState({
@@ -131,6 +133,7 @@ export default function ScoutProfile({ currentUser }) {
         const snap = await getDoc(userRef);
         if (snap.exists()) {
           const data = snap.data();
+          setFullUserData(data);
           setFullName(data.fullName || '');
           setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
           setBio(data.bio || '');
@@ -640,6 +643,19 @@ export default function ScoutProfile({ currentUser }) {
           <span>👤 Personal Info</span>
         </button>
 
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('roles-guide')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'roles-guide'
+              ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black shadow-lg shadow-amber-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Crown size={15} className={activeProfileTab === 'roles-guide' ? 'text-slate-950' : 'text-amber-400'} />
+          <span>Role & Leadership Guide</span>
+        </button>
+
         {currentUser.role === 'scout' && (
           <button
             type="button"
@@ -724,6 +740,14 @@ export default function ScoutProfile({ currentUser }) {
       </div>
 
       
+      {/* ── TAB: ROLE & LEADERSHIP GUIDE ── */}
+      {activeProfileTab === 'roles-guide' && (
+        <RoleAndLeadershipGuide
+          currentUser={currentUser}
+          userData={fullUserData}
+        />
+      )}
+
       {/* ── TAB: DEDICATED ATTENDANCE & WARNING TRACKER (FOR SCOUTS) ── */}
       {activeProfileTab === 'attendance' && currentUser.role === 'scout' && (
         <div className="space-y-6">

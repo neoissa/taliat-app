@@ -989,8 +989,17 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
   // Filtered Users List
   const scoutsList = users.filter(u => u.role === 'scout');
   const leadersList = users.filter(u => u.role === 'leader' || u.role === 'owner' || u.role === 'admin');
+  const execLeadersList = leadersList.filter(l => l.role === 'owner' || l.leaderPosition === 'Scoutmaster' || l.leaderPosition === 'Assistant Scoutmaster' || l.role === 'admin');
+  const patrolLeadersList = leadersList.filter(l => l.role !== 'owner' && l.leaderPosition !== 'Scoutmaster' && l.leaderPosition !== 'Assistant Scoutmaster' && l.role !== 'admin');
+
   const filteredUsers = users.filter(u => {
-    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (roleFilter === 'executive') {
+      if (!(u.role === 'owner' || u.leaderPosition === 'Scoutmaster' || u.leaderPosition === 'Assistant Scoutmaster' || u.role === 'admin')) return false;
+    } else if (roleFilter === 'patrol-leader') {
+      if (u.role !== 'leader' || u.leaderPosition === 'Scoutmaster' || u.leaderPosition === 'Assistant Scoutmaster') return false;
+    } else if (roleFilter !== 'all' && u.role !== roleFilter) {
+      return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (u.fullName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
@@ -1101,9 +1110,10 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                 className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
                 <option value="all">All Roles ({users.length})</option>
-                <option value="leader">Leaders ({leadersList.length})</option>
-                <option value="parent">Parents ({users.filter(u => u.role === 'parent').length})</option>
-                <option value="scout">Scouts ({scoutsList.length})</option>
+                <option value="executive">⚜️ Scoutmaster & ASMs ({execLeadersList.length})</option>
+                <option value="patrol-leader">🛡️ Patrol Leaders & Staff ({patrolLeadersList.length})</option>
+                <option value="parent">👨‍👩‍👧 Parents ({users.filter(u => u.role === 'parent').length})</option>
+                <option value="scout">🏕️ Scouts ({scoutsList.length})</option>
               </select>
             </div>
 

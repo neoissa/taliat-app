@@ -1478,7 +1478,9 @@ export default function PatrolRoster({ currentUser = {} }) {
       await secondaryAuth.signOut();
 
       const isOwner = currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com';
-      const assignedLeaderId = isOwner ? newLeader : currentUser.uid;
+      const assignedLeaderId = isOwner ? (newLeader || currentUser.uid) : currentUser.uid;
+      const myPatrolId = currentUser?.groupId || currentUser?.patrolId;
+      const assignedPatrolId = isExecutive ? (newGroup || null) : (myPatrolId || null);
 
       await setDoc(doc(db, 'users', newUid), {
         fullName: newName.trim(),
@@ -1486,8 +1488,8 @@ export default function PatrolRoster({ currentUser = {} }) {
         email,
         role: 'scout',
         leaderId: assignedLeaderId || null,
-        groupId: newGroup || null,
-        patrolId: newGroup || null,
+        groupId: assignedPatrolId,
+        patrolId: assignedPatrolId,
         rank: newRank.trim(),
         bsaId: newBsaId.trim(),
         scoutEmail: newPersonalEmail.trim(),
@@ -1530,9 +1532,11 @@ export default function PatrolRoster({ currentUser = {} }) {
     );
   }
 
-  const visibleGroups = isOwner || isScoutmaster
+  const myPatrolId = currentUser?.groupId || currentUser?.patrolId;
+  const visibleGroups = isExecutive
     ? groups
-    : groups.filter(g => g.leaderId === currentUser.uid || g.id === currentUser.groupId || scouts.some(s => s.groupId === g.id));
+    : groups.filter(g => g.id === myPatrolId || g.leaderId === currentUser.uid || (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(currentUser.uid)) || (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(currentUser.uid)));
+
 
   const filteredScouts = activeGroupTab === 'all'
     ? scouts
@@ -1787,16 +1791,25 @@ export default function PatrolRoster({ currentUser = {} }) {
                 )}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Assign Patrol / Group</label>
-                  <select
-                    value={newGroup}
-                    onChange={(e) => setNewGroup(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    <option value="">No Patrol</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
+                  {isExecutive ? (
+                    <select
+                      value={newGroup}
+                      onChange={(e) => setNewGroup(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="">No Patrol (Unassigned)</option>
+                      {groups.map(g => (
+                        <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 flex items-center justify-between">
+                      <span className="font-bold text-emerald-400">
+                        🛡️ {groups.find(g => g.id === myPatrolId)?.name || 'Your Patrol'}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">🔒 Locked to your assigned patrol</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Initial Rank</label>
@@ -2219,71 +2232,144 @@ export default function PatrolRoster({ currentUser = {} }) {
           })()}
         </>
       ) : rosterSubTab === 'leaders' ? (
-        <div className="space-y-3">
-          {leaders.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-              No leaders registered in the organization.
-            </div>
-          ) : (
-            leaders.map((lead) => (
-              <div key={lead.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow">
-                <div className="px-5 py-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {lead.photoURL ? (
-                      <img
-                        src={lead.photoURL}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full object-cover border border-slate-650 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shrink-0 uppercase">
-                        {(lead.fullName || lead.username).charAt(0)}
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-semibold text-white text-sm">{lead.fullName || lead.username}</h4>
-                      <p className="text-xs text-slate-400 capitalize">{lead.leaderPosition || lead.role}</p>
+        <div className="space-y-6">
+          {(() => {
+            const execLeaders = leaders.filter(l => l.role === 'owner' || l.leaderPosition === 'Scoutmaster' || l.leaderPosition === 'Assistant Scoutmaster' || l.role === 'admin');
+            const unitLeaders = leaders.filter(l => l.role !== 'owner' && l.leaderPosition !== 'Scoutmaster' && l.leaderPosition !== 'Assistant Scoutmaster' && l.role !== 'admin');
+
+            return (
+              <>
+                {/* 1. Troop Executive Leadership Column / Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Crown size={16} className="text-amber-400" />
+                      <h4 className="font-extrabold text-white text-sm">Troop Executive Leadership ({execLeaders.length})</h4>
                     </div>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
+                      Troop-Wide Rights (All Patrols)
+                    </span>
                   </div>
+
+                  {execLeaders.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic p-3">No Scoutmasters registered.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {execLeaders.map((lead) => {
+                        const isSuperOwner = lead.role === 'owner' || lead.email === 'neoissa@gmail.com';
+                        return (
+                          <div key={lead.uid} className="bg-slate-800/90 border-2 border-amber-500/40 rounded-2xl overflow-hidden shadow-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {lead.photoURL ? (
+                                  <img src={lead.photoURL} alt="Avatar" className="w-11 h-11 rounded-full object-cover border border-amber-500/60 shrink-0 shadow-md" />
+                                ) : (
+                                  <div className="w-11 h-11 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-black text-amber-300 text-sm shrink-0">
+                                    {(lead.fullName || lead.username).charAt(0)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-white text-sm truncate">{lead.fullName || lead.username}</h4>
+                                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.2 rounded-full font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 mt-0.5">
+                                    {isSuperOwner ? '👑 Troop Owner' : `⚜️ ${lead.leaderPosition || 'Scoutmaster'}`}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-700/60 px-2 py-0.5 rounded-lg shrink-0">
+                                All Patrols
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-700/60">
+                              <div>
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Username</span>
+                                <span className="font-mono font-semibold text-slate-200 text-[11px]">@{lead.username || lead.email?.split('@')[0]}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Safety (SPT)</span>
+                                <span className="font-semibold text-slate-200 text-[11px]">{lead.spt ? `✓ ${lead.spt}` : 'Pending'}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Contact</span>
+                                <span className="text-slate-300 text-[11px] truncate block">{lead.scoutPhone || lead.personalEmail || lead.email || '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                <div className="px-5 pb-4 border-t border-slate-700/60 pt-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300 col-span-full">
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Email Address</span>
-                      <span className="font-semibold text-slate-200 truncate block max-w-[200px]" title={lead.scoutEmail || lead.email}>
-                        {lead.scoutEmail || lead.email || '—'}
-                      </span>
+                {/* 2. Patrol Unit Staff & Leaders Column / Section */}
+                <div className="space-y-3 pt-4">
+                  <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Shield size={16} className="text-emerald-400" />
+                      <h4 className="font-extrabold text-white text-sm">Patrol Leaders & Unit Staff ({unitLeaders.length})</h4>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Phone Number</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-semibold text-slate-200">{lead.scoutPhone || '—'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block uppercase text-[9px] font-bold">Safety Training (SPT)</span>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="font-semibold text-slate-200">
-                          {lead.spt ? `Done: ${lead.spt}` : '—'}
-                        </span>
-                        {lead.sptFileUrl && (
-                          <a
-                            href={lead.sptFileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1"
-                          >
-                            📄 View Cert
-                          </a>
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/60 px-2 py-0.5 rounded-full font-bold">
+                      Patrol Scoped Rights
+                    </span>
                   </div>
+
+                  {unitLeaders.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic p-3">No patrol unit leaders registered.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {unitLeaders.map((lead) => {
+                        const leadPatrol = groups.find(g => g.id === lead.groupId || g.id === lead.patrolId);
+                        return (
+                          <div key={lead.uid} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {lead.photoURL ? (
+                                  <img src={lead.photoURL} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-650 shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-200 text-xs shrink-0 uppercase">
+                                    {(lead.fullName || lead.username).charAt(0)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-white text-sm truncate">{lead.fullName || lead.username}</h4>
+                                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60 mt-0.5">
+                                    🛡️ {lead.leaderPosition || 'Patrol Leader'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {leadPatrol ? (
+                                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-2.5 py-1 rounded-xl shrink-0">
+                                  👥 {leadPatrol.name}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 italic shrink-0">Unassigned</span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-700/60">
+                              <div>
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Username</span>
+                                <span className="font-mono font-semibold text-slate-200 text-[11px]">@{lead.username || lead.email?.split('@')[0]}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Safety (SPT)</span>
+                                <span className="font-semibold text-slate-200 text-[11px]">{lead.spt ? `✓ ${lead.spt}` : 'Pending'}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-slate-400 block uppercase text-[9px] font-bold">Contact</span>
+                                <span className="text-slate-300 text-[11px] truncate block">{lead.scoutPhone || lead.personalEmail || lead.email || '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
-          )}
+              </>
+            );
+          })()}
         </div>
       ) : rosterSubTab === 'parents' ? (
         <div className="space-y-4">

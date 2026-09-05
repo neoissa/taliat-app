@@ -733,6 +733,7 @@ export default function GlobalAdminPanel({ currentUser }) {
               <option value="all">All Roles</option>
               <option value="owner">Owners</option>
               <option value="leader">Leaders</option>
+              <option value="parent">Parents</option>
               <option value="scout">Scouts</option>
             </select>
           </div>
