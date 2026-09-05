@@ -47,9 +47,22 @@ import {
   Copy,
   MessageSquare,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FolderPlus,
+  CheckSquare,
+  ChevronRight,
+  Image as ImageIcon,
+  Sparkles,
+  Layers,
+  Eye,
+  BarChart3,
+  UserCheck,
+  Archive,
+  Camera,
+  TrendingUp
 } from 'lucide-react';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
+import { RANKS_DATA } from '../data/ranksData';
 
 const BSA_LEADER_POSITIONS = [
   'Scoutmaster',
@@ -64,6 +77,41 @@ const BSA_LEADER_POSITIONS = [
   'Secretary',
   'Patrol Advisor'
 ];
+
+
+function compressImage(file, maxWidth = 300, maxHeight = 300, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
 
 export default function AdminPanel({ currentUser }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -127,12 +175,36 @@ export default function AdminPanel({ currentUser }) {
   const [resetSuccessMsg, setResetSuccessMsg] = useState('');
   const [resetErrMsg, setResetErrMsg] = useState('');
 
+  // Additional Collections for Patrol Progress
+  const [serviceLogs, setServiceLogs] = useState([]);
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
+
+  // Patrol Progress Filtering
+  const [selectedProgressPatrolId, setSelectedProgressPatrolId] = useState('all');
+  const [progressSearchQuery, setProgressSearchQuery] = useState('');
+
   // Patrol Creation & Edit State
   const [newPatrolName, setNewPatrolName] = useState('');
   const [newPatrolMotto, setNewPatrolMotto] = useState('');
   const [newPatrolLeaderId, setNewPatrolLeaderId] = useState('');
+  const [newPatrolPhotoURL, setNewPatrolPhotoURL] = useState('');
   const [patrolCreating, setPatrolCreating] = useState(false);
   const [patrolMsg, setPatrolMsg] = useState('');
+
+  // Editing Patrol Modal State
+  const [editingPatrol, setEditingPatrol] = useState(null);
+  const [editPatrolName, setEditPatrolName] = useState('');
+  const [editPatrolMotto, setEditPatrolMotto] = useState('');
+  const [editPatrolLeaderId, setEditPatrolLeaderId] = useState('');
+  const [editPatrolPhotoURL, setEditPatrolPhotoURL] = useState('');
+  const [editPatrolScoutIds, setEditPatrolScoutIds] = useState([]);
+  const [patrolUpdating, setPatrolUpdating] = useState(false);
+  const [editPatrolMsg, setEditPatrolMsg] = useState('');
+  const [editPatrolErr, setEditPatrolErr] = useState('');
+
+  // Quick Roster Management Modal
+  const [managingPatrolScouts, setManagingPatrolScouts] = useState(null);
+
 
   // Global Announcement / Broadcast Form State
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -174,11 +246,21 @@ export default function AdminPanel({ currentUser }) {
       setParentTasks(list);
     });
 
+    const unsubService = onSnapshot(collection(db, 'service_logs'), (snap) => {
+      setServiceLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      setAttendanceSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     return () => {
       unsubUsers();
       unsubGroups();
       unsubBroadcasts();
       unsubTasks();
+      unsubService();
+      unsubAttendance();
     };
   }, []);
 
@@ -370,60 +452,60 @@ export default function AdminPanel({ currentUser }) {
     const username = whatsappUser.username || whatsappUser.email || 'username';
     const password = whatsappPassword || 'taliat2026';
     const appUrl = 'https://taliat-app.vercel.app/';
+    const uPatrol = groups.find(g => g.id === whatsappUser.groupId)?.name;
+    const patrolClosing = uPatrol 
+      ? `*✨ ${uPatrol} .✨*` 
+      : '*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*';
+    const lockedGreeting = '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
+    const lockedClosing = `\n\n*Jazākum Allāhu khayran for your continued support 🙏*\n${patrolClosing}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
 
     if (whatsappTemplate === 'scout_invite') {
-      return `⚜️ *Salam ${name}!*
+      return `${lockedGreeting}
 
-Welcome to *Dhulfiqār Scouts BSA* (Taliʿa Leadership Portal)!
+We wanted to share the official login credentials and onboarding access for *${name}* to the *Dhulfiqār Scouts Portal*:
 
-Here are your official account login credentials:
-🔗 *App Link:* ${appUrl}
+🔗 *Portal Link:* ${appUrl}
 👤 *Username:* ${username}
 🔑 *Temporary Password:* ${password}
 
-📌 *Required Profile Setup Instructions:*
-1. Open the app link above and log in with your credentials.
-2. Go to *"My Profile"* (👤) from the navigation menu.
-3. Please update your profile information:
-   • Change your default username and create your own secure personal password.
-   • Upload your profile picture / photo.
-   • Fill in all required information (personal email, scout phone, parent contact, BSA Member ID, and emergency contact details).
+📌 *Next Steps for Profile Setup:*
+📱 Log into the portal link above.
+👤 Go to *"My Profile"* to set your private password and username.
+📸 Upload a clear profile picture and complete contact details.
 
-If you have any questions or need help logging in, reach out to your patrol leader.
-Shukran & Khuda Hafiz! ⚜️`;
+If you have any questions or need login support, please reach out to your patrol leadership.${lockedClosing}`;
     }
 
     if (whatsappTemplate === 'parent_invite') {
-      return `👨‍👩‍👧 *Salam ${name}!*
+      return `${lockedGreeting}
 
-Welcome to the *Dhulfiqār Scouts Family & Parent Portal*!
+We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
 
-Here are your account access details:
-🔗 *App Link:* ${appUrl}
-👤 *Login Email / Username:* ${whatsappUser.email || username}
+🔗 *Portal Link:* ${appUrl}
+👤 *Email / Username:* ${whatsappUser.email || username}
 🔑 *Temporary Password:* ${password}
 
-📌 *What you can do in the Parent Portal:*
-• Monitor real-time advancement across all 7 BSA Ranks & Merit Badges.
-• Track meeting attendance, camping nights, and volunteer service hours.
-• Sign digital permission slips, waivers, and BSA Health Records in the Parent Action Center.
-• Submit event RSVPs and notify leaders of planned absences.
-• Update your dual-parent household profile under *"My Profile"* (👤).
-
-Please log in and complete your family profile details. Shukran!`;
+📌 *Parent Portal Features:*
+📊 Real-time monitoring of all 7 BSA Ranks & Merit Badges
+📋 Attendance records, camping nights, and service hours
+📝 Digital medical forms, waivers, and event RSVPs
+👨‍👩‍👧 Household family profile management${lockedClosing}`;
     }
 
     if (whatsappTemplate === 'meeting') {
-      return `⚜️ *Salam ${name}!*
+      return `${lockedGreeting}
 
-This is a reminder about our upcoming Dhulfiqār Troop meeting.
-🔗 *Portal:* ${appUrl}
+Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
-Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
+🔗 *Portal Link:* ${appUrl}
+📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.${lockedClosing}`;
     }
 
     if (whatsappTemplate === 'custom') {
-      return whatsappCustomMsg.trim();
+      const customContent = whatsappCustomMsg.trim();
+      return customContent 
+        ? `${lockedGreeting}\n\n${customContent}${lockedClosing}` 
+        : '';
     }
 
     return '';
@@ -552,7 +634,7 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
     }
   };
 
-  // ── 3. PATROL CREATION HANDLER ──
+  // ── 3. PATROL CREATION & UPDATE HANDLERS ──
   const handleCreatePatrol = async (e) => {
     e.preventDefault();
     if (!newPatrolName.trim()) return;
@@ -566,24 +648,139 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
         name: newPatrolName.trim(),
         motto: newPatrolMotto.trim() || 'Forward with Honor',
         leaderId: newPatrolLeaderId || null,
+        photoURL: newPatrolPhotoURL || null,
         archived: false,
         createdAt: serverTimestamp()
       });
 
       // If leader assigned, update leader's groupId
       if (newPatrolLeaderId) {
-        await setDoc(doc(db, 'users', newPatrolLeaderId), { groupId: patrolId }, { merge: true });
+        await setDoc(doc(db, 'users', newPatrolLeaderId), { groupId: patrolId, patrolId: patrolId }, { merge: true });
       }
 
       setPatrolMsg(`✓ Patrol "${newPatrolName}" created successfully!`);
       setNewPatrolName('');
       setNewPatrolMotto('');
       setNewPatrolLeaderId('');
+      setNewPatrolPhotoURL('');
       setTimeout(() => setPatrolMsg(''), 3000);
     } catch (err) {
       alert("Error creating patrol: " + err.message);
     } finally {
       setPatrolCreating(false);
+    }
+  };
+
+  const handleOpenEditPatrol = (patrol) => {
+    setEditingPatrol(patrol);
+    setEditPatrolName(patrol.name || '');
+    setEditPatrolMotto(patrol.motto || '');
+    setEditPatrolLeaderId(patrol.leaderId || '');
+    setEditPatrolPhotoURL(patrol.photoURL || '');
+    const currentScouts = scoutsList.filter(s => s.groupId === patrol.id || s.patrolId === patrol.id).map(s => s.uid);
+    setEditPatrolScoutIds(currentScouts);
+    setEditPatrolMsg('');
+    setEditPatrolErr('');
+  };
+
+  const handleSaveEditPatrol = async (e) => {
+    e.preventDefault();
+    if (!editingPatrol || !editPatrolName.trim()) return;
+    setPatrolUpdating(true);
+    setEditPatrolMsg('');
+    setEditPatrolErr('');
+
+    try {
+      const patrolRef = doc(db, 'groups', editingPatrol.id);
+      await updateDoc(patrolRef, {
+        name: editPatrolName.trim(),
+        motto: editPatrolMotto.trim() || 'Forward with Honor',
+        leaderId: editPatrolLeaderId || null,
+        photoURL: editPatrolPhotoURL || null,
+        updatedAt: serverTimestamp()
+      });
+
+      // Sync leader assignment
+      if (editPatrolLeaderId) {
+        await setDoc(doc(db, 'users', editPatrolLeaderId), { groupId: editingPatrol.id, patrolId: editingPatrol.id }, { merge: true });
+      }
+      if (editingPatrol.leaderId && editingPatrol.leaderId !== editPatrolLeaderId) {
+        // Clear previous leader's groupId if reassigned
+        await updateDoc(doc(db, 'users', editingPatrol.leaderId), { groupId: null, patrolId: null });
+      }
+
+      // Sync scout assignments
+      const previousScouts = scoutsList.filter(s => s.groupId === editingPatrol.id || s.patrolId === editingPatrol.id).map(s => s.uid);
+      
+      // Add newly assigned scouts
+      for (const sUid of editPatrolScoutIds) {
+        if (!previousScouts.includes(sUid)) {
+          await updateDoc(doc(db, 'users', sUid), { groupId: editingPatrol.id, patrolId: editingPatrol.id });
+        }
+      }
+
+      // Remove unassigned scouts
+      for (const sUid of previousScouts) {
+        if (!editPatrolScoutIds.includes(sUid)) {
+          await updateDoc(doc(db, 'users', sUid), { groupId: null, patrolId: null });
+        }
+      }
+
+      setEditPatrolMsg('✓ Patrol details and scout roster successfully updated!');
+      setTimeout(() => setEditingPatrol(null), 1200);
+    } catch (err) {
+      console.error("Failed to update patrol:", err);
+      setEditPatrolErr("Error updating patrol: " + err.message);
+    } finally {
+      setPatrolUpdating(false);
+    }
+  };
+
+  const handleDirectEmblemUpload = async (file, patrolId) => {
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 250, 250, 0.85);
+      await updateDoc(doc(db, 'groups', patrolId), { photoURL: compressed });
+    } catch (err) {
+      console.error("Failed to upload emblem:", err);
+      alert("Failed to upload emblem image: " + err.message);
+    }
+  };
+
+  const handleDeletePatrol = async (patrol) => {
+    if (!window.confirm(`Are you sure you want to delete the "${patrol.name}" Patrol? All assigned scouts will be unassigned.`)) return;
+    try {
+      // Unassign scouts
+      const assignedScouts = scoutsList.filter(s => s.groupId === patrol.id || s.patrolId === patrol.id);
+      for (const s of assignedScouts) {
+        await updateDoc(doc(db, 'users', s.uid), { groupId: null, patrolId: null });
+      }
+      // Unassign leader
+      if (patrol.leaderId) {
+        await updateDoc(doc(db, 'users', patrol.leaderId), { groupId: null, patrolId: null });
+      }
+      await deleteDoc(doc(db, 'groups', patrol.id));
+    } catch (err) {
+      alert("Failed to delete patrol: " + err.message);
+    }
+  };
+
+  const handleToggleArchivePatrol = async (patrol) => {
+    try {
+      await updateDoc(doc(db, 'groups', patrol.id), { archived: !patrol.archived });
+    } catch (err) {
+      alert("Failed to archive patrol: " + err.message);
+    }
+  };
+
+  const handleQuickAssignScout = async (scoutUid, newGroupId) => {
+    try {
+      await updateDoc(doc(db, 'users', scoutUid), {
+        groupId: newGroupId || null,
+        patrolId: newGroupId || null
+      });
+    } catch (err) {
+      console.error("Failed to assign scout:", err);
     }
   };
 
@@ -742,7 +939,8 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
       <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none">
         {[
           { id: 'users', label: `Global User Directory (${users.length})`, icon: Users },
-          { id: 'patrols', label: `Patrol Architecture (${groups.length})`, icon: FolderTree },
+          { id: 'patrols', label: `Patrol Architecture & Edit (${groups.length})`, icon: FolderTree },
+          { id: 'patrol-progress', label: 'Patrol Progress & Insights', icon: TrendingUp },
           { id: 'broadcasts', label: `Troop Broadcasts (${broadcasts.length})`, icon: Megaphone },
           { id: 'forms', label: `Parent Forms & Waivers (${parentTasks.length})`, icon: FileText }
         ].map(t => {
@@ -913,7 +1111,7 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
         </div>
       )}
 
-      {/* ── 2. PATROL ARCHITECTURE TAB ── */}
+            {/* ── 2. PATROL ARCHITECTURE & EDIT TAB ── */}
       {activeTab === 'patrols' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Create Patrol Form */}
@@ -923,7 +1121,7 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
               <span>Establish New Patrol</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Create a new patrol unit and delegate an operational patrol leader.
+              Create a new patrol unit, upload an emblem, and delegate an operational patrol leader.
             </p>
 
             {patrolMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-700">{patrolMsg}</p>}
@@ -934,7 +1132,7 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Falcon, Eagle, Wolves"
+                  placeholder="e.g. Falcon, Eagle, Wolves, Abu al-Fadl"
                   value={newPatrolName}
                   onChange={(e) => setNewPatrolName(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -957,13 +1155,53 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
                 <select
                   value={newPatrolLeaderId}
                   onChange={(e) => setNewPatrolLeaderId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="">Select Leader...</option>
                   {leadersList.map(l => (
                     <option key={l.uid} value={l.uid}>{l.fullName || l.username} ({l.leaderPosition || 'Leader'})</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Patrol Emblem Upload */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Emblem / Logo (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                    {newPatrolPhotoURL ? (
+                      <img src={newPatrolPhotoURL} alt="Patrol Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">⚜️</span>
+                    )}
+                  </div>
+                  <label className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white px-3 py-2 rounded-xl border border-slate-700 text-xs font-semibold cursor-pointer text-center transition flex items-center justify-center gap-2">
+                    <Camera size={14} className="text-emerald-400" />
+                    <span>{newPatrolPhotoURL ? 'Change Image' : 'Upload Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const base64 = await compressImage(file, 250, 250, 0.85);
+                          setNewPatrolPhotoURL(base64);
+                        }
+                      }}
+                    />
+                  </label>
+                  {newPatrolPhotoURL && (
+                    <button
+                      type="button"
+                      onClick={() => setNewPatrolPhotoURL('')}
+                      className="p-2 text-slate-400 hover:text-red-400 rounded-xl hover:bg-slate-800"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <button
@@ -977,39 +1215,410 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
             </form>
           </div>
 
-          {/* Active Patrols Directory */}
+          {/* Active Patrols Directory with Edit Capabilities */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-extrabold text-white text-base">Active Patrol Units ({groups.length})</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-white text-base">Active Patrol Units ({groups.length})</h3>
+              <span className="text-xs text-slate-400">Click Edit to modify info, emblem, or scout roster</span>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {groups.map(g => {
-                const pScouts = scoutsList.filter(s => s.groupId === g.id);
+                const pScouts = scoutsList.filter(s => s.groupId === g.id || s.patrolId === g.id);
                 const pLeader = leadersList.find(l => l.uid === g.leaderId || l.groupId === g.id);
 
                 return (
-                  <div key={g.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3 shadow-xl">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-extrabold text-white text-base">👥 {g.name} Patrol</h4>
-                        {g.motto && <p className="text-xs text-slate-400 italic">"{g.motto}"</p>}
+                  <div key={g.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3.5 shadow-xl hover:border-emerald-500/40 transition">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Emblem with Hover Upload */}
+                        <div className="relative group w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500/40 flex items-center justify-center text-white font-black text-lg overflow-hidden shrink-0 shadow-md">
+                          {g.photoURL ? (
+                            <img src={g.photoURL} alt={g.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>👥</span>
+                          )}
+                          <label className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition text-emerald-400" title="Change Patrol Emblem">
+                            <Camera size={16} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleDirectEmblemUpload(e.target.files?.[0], g.id)}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="min-w-0">
+                          <h4 className="font-extrabold text-white text-base truncate">{g.name} Patrol</h4>
+                          {g.motto && <p className="text-xs text-slate-400 italic truncate">"{g.motto}"</p>}
+                        </div>
                       </div>
-                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-mono">
+
+                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2.5 py-0.5 rounded-full font-mono shrink-0">
                         {pScouts.length} Scouts
                       </span>
                     </div>
 
+                    {/* Assigned Leader Box */}
                     <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase block">Assigned Patrol Leader:</span>
-                      <p className="text-white font-semibold">{pLeader?.fullName || pLeader?.username || 'No Leader Assigned'}</p>
+                      <p className="text-white font-semibold flex items-center gap-1.5">
+                        <span>{pLeader?.fullName || pLeader?.username || 'No Leader Assigned'}</span>
+                        {pLeader?.leaderPosition && (
+                          <span className="text-[10px] text-emerald-400 font-normal">({pLeader.leaderPosition})</span>
+                        )}
+                      </p>
                     </div>
 
-                    <div className="flex justify-between items-center text-[11px] text-slate-500 pt-2 border-t border-slate-800">
-                      <span>ID: {g.id}</span>
-                      <span className="text-emerald-400 font-bold">Active Standing</span>
+                    {/* Scouts Roster Chips */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
+                        <span>Assigned Scouts ({pScouts.length}):</span>
+                        <button
+                          onClick={() => setManagingPatrolScouts(g)}
+                          className="text-emerald-400 hover:text-emerald-300 lowercase hover:underline font-normal cursor-pointer"
+                        >
+                          + manage roster
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-none">
+                        {pScouts.length === 0 ? (
+                          <span className="text-[11px] text-slate-500 italic">No scouts assigned yet.</span>
+                        ) : (
+                          pScouts.map(s => (
+                            <span key={s.uid} className="inline-flex items-center gap-1 text-[10px] bg-slate-900 border border-slate-750 text-slate-300 px-2 py-0.5 rounded-lg">
+                              <span>{s.fullName || s.username}</span>
+                              <span className="text-emerald-400 font-mono">({s.rank || 'Scout'})</span>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons Toolbar */}
+                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEditPatrol(g)}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Edit3 size={13} />
+                          <span>Edit Patrol</span>
+                        </button>
+
+                        <button
+                          onClick={() => setManagingPatrolScouts(g)}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Users size={13} />
+                          <span>Roster</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleToggleArchivePatrol(g)}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                          title={g.archived ? 'Unarchive Patrol' : 'Archive Patrol'}
+                        >
+                          <Archive size={13} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeletePatrol(g)}
+                          className="p-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                          title="Delete Patrol"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2.5 PATROL PROGRESS & INSIGHTS TAB ── */}
+      {activeTab === 'patrol-progress' && (
+        <div className="space-y-6">
+          {/* Executive Overview Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-850 border border-slate-755 p-4 rounded-2xl shadow-md space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Active Patrols</span>
+              <p className="text-xl font-black text-white">{groups.length}</p>
+              <span className="text-[10px] text-emerald-400">Troop Units</span>
+            </div>
+
+            <div className="bg-slate-850 border border-slate-755 p-4 rounded-2xl shadow-md space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Scouts</span>
+              <p className="text-xl font-black text-white">{scoutsList.length}</p>
+              <span className="text-[10px] text-sky-400 font-medium">
+                {scoutsList.filter(s => s.groupId).length} Assigned / {scoutsList.filter(s => !s.groupId).length} Unassigned
+              </span>
+            </div>
+
+            <div className="bg-slate-850 border border-slate-755 p-4 rounded-2xl shadow-md space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Service Hours Logged</span>
+              <p className="text-xl font-black text-emerald-400">
+                {serviceLogs.reduce((acc, l) => acc + (Number(l.hours) || 0), 0)} hrs
+              </p>
+              <span className="text-[10px] text-slate-400">{serviceLogs.length} verified logs</span>
+            </div>
+
+            <div className="bg-slate-850 border border-slate-755 p-4 rounded-2xl shadow-md space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Attendance Recorded</span>
+              <p className="text-xl font-black text-amber-400">{attendanceSessions.length}</p>
+              <span className="text-[10px] text-slate-400">Total sessions</span>
+            </div>
+          </div>
+
+          {/* Troop Rank Distribution Pills */}
+          <div className="bg-slate-850 border border-slate-755 p-4 rounded-2xl shadow-md space-y-2">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+              Troop Rank Advancement Distribution
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {['Scout', 'Tenderfoot', 'Second Class', 'First Class', 'Star', 'Life', 'Eagle'].map(rk => {
+                const count = scoutsList.filter(s => (s.rank || 'Scout') === rk).length;
+                return (
+                  <div key={rk} className="flex items-center gap-1.5 bg-slate-900 border border-slate-750 px-3 py-1.5 rounded-xl text-xs">
+                    <span className="text-slate-300 font-semibold">{rk}:</span>
+                    <strong className="text-emerald-400 font-mono font-bold">{count}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Patrol Filter Selector & Search */}
+          <div className="bg-slate-850 border border-slate-750 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
+              <button
+                onClick={() => setSelectedProgressPatrolId('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                  selectedProgressPatrolId === 'all'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                All Patrols ({groups.length})
+              </button>
+              {groups.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedProgressPatrolId(g.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                    selectedProgressPatrolId === g.id
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  👥 {g.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+              <input
+                type="text"
+                placeholder="Search scout in patrol..."
+                value={progressSearchQuery}
+                onChange={(e) => setProgressSearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* Patrol Progress Sections */}
+          <div className="space-y-6">
+            {groups
+              .filter(g => selectedProgressPatrolId === 'all' || selectedProgressPatrolId === g.id)
+              .map(g => {
+                const patrolScouts = scoutsList.filter(s => s.groupId === g.id || s.patrolId === g.id);
+                const pLeader = leadersList.find(l => l.uid === g.leaderId || l.groupId === g.id);
+                const pServiceHours = serviceLogs
+                  .filter(l => patrolScouts.some(s => s.uid === l.scoutId || s.uid === l.userId))
+                  .reduce((acc, l) => acc + (Number(l.hours) || 0), 0);
+
+                const filteredScouts = patrolScouts.filter(s => {
+                  if (!progressSearchQuery.trim()) return true;
+                  const q = progressSearchQuery.toLowerCase();
+                  return (s.fullName || '').toLowerCase().includes(q) || (s.username || '').toLowerCase().includes(q) || (s.rank || '').toLowerCase().includes(q);
+                });
+
+                return (
+                  <div key={g.id} className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-5">
+                    {/* Patrol Header Card */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-755 pb-4">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/40 flex items-center justify-center text-white font-black text-xl overflow-hidden shrink-0 shadow-md">
+                          {g.photoURL ? (
+                            <img src={g.photoURL} alt={g.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>👥</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-black text-white">{g.name} Patrol</h3>
+                            <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-mono">
+                              {patrolScouts.length} Scouts
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            Leader: <strong className="text-slate-200">{pLeader?.fullName || pLeader?.username || 'None'}</strong> • Motto: <em className="text-slate-300">"{g.motto || 'Forward'}"</em>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
+                          <span className="text-[10px] text-slate-400 block uppercase font-bold">Patrol Service</span>
+                          <span className="text-xs font-mono font-black text-emerald-400">{pServiceHours} Hours</span>
+                        </div>
+                        <button
+                          onClick={() => handleOpenEditPatrol(g)}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Edit3 size={13} />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Scouts Progress Table */}
+                    {filteredScouts.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic py-4 text-center">No scouts found in this patrol matching your query.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-755">
+                            <tr>
+                              <th className="p-3">Scout Name</th>
+                              <th className="p-3">Current Rank</th>
+                              <th className="p-3">Service Hours</th>
+                              <th className="p-3">Attendance</th>
+                              <th className="p-3 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-755">
+                            {filteredScouts.map(scout => {
+                              const sHours = serviceLogs
+                                .filter(l => l.scoutId === scout.uid || l.userId === scout.uid)
+                                .reduce((acc, l) => acc + (Number(l.hours) || 0), 0);
+                              const sAttCount = attendanceSessions.filter(s => s.records && s.records[scout.uid]).length;
+
+                              return (
+                                <tr key={scout.uid} className="hover:bg-slate-800/40 transition">
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-8 h-8 rounded-full bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-300 font-bold text-xs shrink-0 overflow-hidden">
+                                        {scout.photoURL ? (
+                                          <img src={scout.photoURL} alt={scout.fullName} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span>{scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}</span>
+                                        )}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <strong className="text-white block truncate">{scout.fullName || scout.username}</strong>
+                                        <span className="text-[10px] text-slate-400 block truncate">{scout.email}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  <td className="p-3">
+                                    <span className="inline-flex items-center gap-1 text-[10px] bg-slate-900 border border-slate-700 text-slate-200 px-2.5 py-1 rounded-full font-bold">
+                                      ⚜️ {scout.rank || 'Scout'}
+                                    </span>
+                                  </td>
+
+                                  <td className="p-3 font-mono font-bold text-emerald-400">
+                                    {sHours} hrs
+                                  </td>
+
+                                  <td className="p-3 font-mono text-slate-300">
+                                    {sAttCount} sessions
+                                  </td>
+
+                                  <td className="p-3 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => handleOpenWhatsAppModal(scout)}
+                                        className="p-1.5 bg-slate-800 hover:bg-emerald-950 text-emerald-400 rounded-lg border border-slate-700 transition cursor-pointer"
+                                        title="WhatsApp Onboarding / Message"
+                                      >
+                                        <MessageSquare size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setResettingUser(scout);
+                                          setResetConfirmationInput('');
+                                          setResetErrMsg('');
+                                          setResetSuccessMsg('');
+                                        }}
+                                        className="p-1.5 bg-slate-800 hover:bg-amber-950 text-amber-400 rounded-lg border border-slate-700 transition cursor-pointer"
+                                        title="Clear All Progress / Reset Profile"
+                                      >
+                                        <RotateCcw size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenEditUser(scout)}
+                                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition cursor-pointer"
+                                        title="Edit Scout Details"
+                                      >
+                                        <Edit3 size={12} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+            {/* Unassigned Scouts Card */}
+            {scoutsList.filter(s => !s.groupId).length > 0 && (
+              <div className="bg-amber-950/20 border border-amber-600/40 rounded-3xl p-6 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    <span>Unassigned Scouts ({scoutsList.filter(s => !s.groupId).length})</span>
+                  </h3>
+                  <span className="text-xs text-amber-400/80">Select a patrol below to assign immediately</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {scoutsList.filter(s => !s.groupId).map(s => (
+                    <div key={s.uid} className="bg-slate-900 border border-slate-750 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-md">
+                      <div className="min-w-0">
+                        <strong className="text-white text-xs block truncate">{s.fullName || s.username}</strong>
+                        <span className="text-[10px] text-slate-400 block truncate">{s.rank || 'Scout'} • {s.email}</span>
+                      </div>
+                      <select
+                        onChange={(e) => handleQuickAssignScout(s.uid, e.target.value)}
+                        defaultValue=""
+                        className="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-[11px] text-emerald-400 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="" disabled>Assign...</option>
+                        {groups.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1700,6 +2309,237 @@ Please be prepared with your uniform, handbook, and arrive on time. Shukran!`;
           </div>
         </div>
       )}
+
+            {/* ── EDIT PATROL MODAL ── */}
+      {editingPatrol && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <Edit3 size={18} className="text-emerald-400" />
+                <span>Edit Patrol: {editingPatrol.name}</span>
+              </h3>
+              <button
+                onClick={() => setEditingPatrol(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {editPatrolErr && <p className="text-xs text-red-400 bg-red-950/60 p-3 rounded-xl border border-red-600">{editPatrolErr}</p>}
+            {editPatrolMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{editPatrolMsg}</p>}
+
+            <form onSubmit={handleSaveEditPatrol} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editPatrolName}
+                  onChange={(e) => setEditPatrolName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Motto / Call</label>
+                <input
+                  type="text"
+                  value={editPatrolMotto}
+                  onChange={(e) => setEditPatrolMotto(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Assigned Patrol Leader</label>
+                <select
+                  value={editPatrolLeaderId}
+                  onChange={(e) => setEditPatrolLeaderId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="">No Assigned Leader</option>
+                  {leadersList.map(l => (
+                    <option key={l.uid} value={l.uid}>
+                      {l.fullName || l.username} ({l.leaderPosition || 'Leader'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Emblem Upload */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Emblem / Logo</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                    {editPatrolPhotoURL ? (
+                      <img src={editPatrolPhotoURL} alt="Emblem Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">👥</span>
+                    )}
+                  </div>
+                  <label className="flex-1 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white px-3 py-2 rounded-xl border border-slate-700 text-xs font-semibold cursor-pointer text-center transition flex items-center justify-center gap-2">
+                    <Camera size={14} className="text-emerald-400" />
+                    <span>{editPatrolPhotoURL ? 'Change Emblem' : 'Upload Emblem'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const base64 = await compressImage(file, 250, 250, 0.85);
+                          setEditPatrolPhotoURL(base64);
+                        }
+                      }}
+                    />
+                  </label>
+                  {editPatrolPhotoURL && (
+                    <button
+                      type="button"
+                      onClick={() => setEditPatrolPhotoURL('')}
+                      className="p-2 text-slate-400 hover:text-red-400 rounded-xl hover:bg-slate-800"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Assigned Scouts Selection */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-bold text-slate-300 uppercase">Assigned Scouts ({editPatrolScoutIds.length})</label>
+                  <span className="text-[10px] text-slate-400">Toggle checkboxes to assign scouts</span>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  {scoutsList.map(s => {
+                    const isAssigned = editPatrolScoutIds.includes(s.uid);
+                    const currentGroup = groups.find(g => g.id === s.groupId);
+                    return (
+                      <label
+                        key={s.uid}
+                        className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition ${
+                          isAssigned
+                            ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditPatrolScoutIds(prev => [...prev, s.uid]);
+                              } else {
+                                setEditPatrolScoutIds(prev => prev.filter(id => id !== s.uid));
+                              }
+                            }}
+                            className="rounded text-emerald-600"
+                          />
+                          <span className="truncate">{s.fullName || s.username}</span>
+                          <span className="text-[10px] text-emerald-400 font-mono font-normal">({s.rank || 'Scout'})</span>
+                        </div>
+                        {currentGroup && currentGroup.id !== editingPatrol.id && (
+                          <span className="text-[10px] text-slate-500 font-normal">currently: {currentGroup.name}</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={patrolUpdating}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Check size={15} />
+                  <span>{patrolUpdating ? 'Saving...' : 'Save Patrol Updates'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingPatrol(null)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MANAGE PATROL SCOUTS ROSTER MODAL ── */}
+      {managingPatrolScouts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <Users size={18} className="text-emerald-400" />
+                <span>Manage Roster: {managingPatrolScouts.name} Patrol</span>
+              </h3>
+              <button
+                onClick={() => setManagingPatrolScouts(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Select or deselect scouts to include in <strong>{managingPatrolScouts.name} Patrol</strong>.
+            </p>
+
+            <div className="max-h-72 overflow-y-auto space-y-2 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+              {scoutsList.map(s => {
+                const isAssigned = s.groupId === managingPatrolScouts.id || s.patrolId === managingPatrolScouts.id;
+                const currentGroup = groups.find(g => g.id === s.groupId);
+                return (
+                  <div
+                    key={s.uid}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition ${
+                      isAssigned
+                        ? 'bg-emerald-950/40 border-emerald-600 text-white font-bold'
+                        : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <strong className="truncate">{s.fullName || s.username}</strong>
+                      <span className="text-[10px] text-emerald-400 font-mono">({s.rank || 'Scout'})</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleQuickAssignScout(s.uid, isAssigned ? null : managingPatrolScouts.id)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        isAssigned
+                          ? 'bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                      }`}
+                    >
+                      {isAssigned ? 'Remove' : 'Assign'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setManagingPatrolScouts(null)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ── EDIT USER MODAL ── */}
       {editingUser && (

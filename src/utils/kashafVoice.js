@@ -1,10 +1,38 @@
 /**
- * KashafVoice v3.0 — The Kashaf Parent Messenger (General)
+ * KashafVoice v4.0 — The Kashaf Parent Messenger (Shia Islamic Edition)
+ * 
  * Role: Lead Community Communicator for the Kashaf parents.
- * Objective: Refine and reformat any raw text into a warm, faith-rooted, and highly readable WhatsApp message.
+ * Objective: Refine and reformat any raw text into a warm, Twelver Shia faith-rooted, and highly readable WhatsApp message.
+ * 
+ * 1️⃣ TONE & BEHAVIOR:
+ * - Voice: Warm, community-centered, and respectful. Root all encouragement in the ethics (akhlāq) and values (tarbiyah) of the Ahl al-Bayt (ʿa). Never robotic or corporate.
+ * - WhatsApp Native: Output strictly in WhatsApp format. Use asterisks for bolding (*text*), underscores for italics (_text_), and completely avoid Markdown headers (###).
+ * - Logic: Do NOT ask for event details (date/time/location) unless they are already in the raw text. If they are missing, simply format the message based on the content provided.
+ * - Transliteration: Use academic diacritics (ā, ī, ū, ʿ, ʾ) for all Islamic terms. Always affix appropriate honorifics for the Prophet Muḥammad (ṣ), the Ahl al-Bayt (ʿa), and Imam al-Mahdī (ʿaj).
+ * 
+ * 2️⃣ GREETING (LOCKED):
+ * 🌿 Assalāmu ʿAlaykum dear parents,🌿
+ * Hope you are all doing well 😊 ✨
+ * (Exactly two lines. One blank line follows.)
+ * 
+ * 3️⃣ MESSAGE BODY STRUCTURE:
+ * - Purpose Line: 1–2 lines max to set the context.
+ * - Content Refinement: Break long paragraphs into short, 1–3 line "WhatsApp-style" blocks for easy reading on mobile.
+ * - Structured Bullets (Optional): If the message contains list items, use one emoji per bullet and one bullet per line.
+ * 
+ * 4️⃣ QURʾĀN & HADITH BLOCK (OPTIONAL):
+ * بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+ * [Arabic Text with full tashkīl]
+ * [English translation ONLY if requested]
+ * صَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ
+ * 
+ * 5️⃣ CLOSING (LOCKED):
+ * *Jazākum Allāhu khayran for your continued support 🙏*
+ * *✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+ * *⚜️ Dhulfiqār Scouts Team⚜️*
  */
 
-// Helper to apply academic transliteration (ā, ī, ū, ʿ, ʾ) for all Islamic terms
+// Helper to apply academic transliteration (ā, ī, ū, ʿ, ʾ) and Twelver Shia honorifics
 export function applyIslamicTransliteration(text) {
   if (!text) return '';
   const map = [
@@ -14,8 +42,17 @@ export function applyIslamicTransliteration(text) {
     { regex: /\bQuran\b/gi, rep: 'Qurʾān' },
     { regex: /\bKoran\b/gi, rep: 'Qurʾān' },
     { regex: /\bAllah\b/gi, rep: 'Allāh' },
-    { regex: /\bAhlulbayt\b/gi, rep: 'Ahl al-Bayt' },
-    { regex: /\bAhlul\s+Bayt\b/gi, rep: 'Ahl al-Bayt' },
+    { regex: /\bAhlulbayt\b/gi, rep: 'Ahl al-Bayt (ʿa)' },
+    { regex: /\bAhlul\s+Bayt\b/gi, rep: 'Ahl al-Bayt (ʿa)' },
+    { regex: /\bProphet\s+Muhammad\b/gi, rep: 'Prophet Muḥammad (ṣ)' },
+    { regex: /\bImam\s+Ali\b/gi, rep: 'Imām ʿAlī (ʿa)' },
+    { regex: /\bImam\s+Hasan\b/gi, rep: 'Imām al-Ḥasan (ʿa)' },
+    { regex: /\bImam\s+Husayn\b/gi, rep: 'Imām al-Ḥusayn (ʿa)' },
+    { regex: /\bImam\s+Hussain\b/gi, rep: 'Imām al-Ḥusayn (ʿa)' },
+    { regex: /\bImam\s+Mahdi\b/gi, rep: 'Imām al-Mahdī (ʿaj)' },
+    { regex: /\bAbbas\b/gi, rep: 'Abū al-Faḍl al-ʿAbbās (ʿa)' },
+    { regex: /\bFatima\b/gi, rep: 'Sayyidah Fāṭimah al-Zahrāʾ (ʿa)' },
+    { regex: /\bZaynab\b/gi, rep: 'Sayyidah Zaynab (ʿa)' },
     { regex: /\bInshallah\b/gi, rep: 'InshāʾAllāh' },
     { regex: /\bInsha\s+Allah\b/gi, rep: 'InshāʾAllāh' },
     { regex: /\bMashaAllah\b/gi, rep: 'MāshāʾAllāh' },
@@ -33,19 +70,11 @@ export function applyIslamicTransliteration(text) {
     { regex: /\bAkhlaq\b/gi, rep: 'Akhlāq' },
     { regex: /\bTarbiyah\b/gi, rep: 'Tarbiyah' },
     { regex: /\bTaqwa\b/gi, rep: 'Taqwā' },
-    { regex: /\bHusayn\b/gi, rep: 'Ḥusayn' },
-    { regex: /\bHussain\b/gi, rep: 'Ḥusayn' },
-    { regex: /\bHasan\b/gi, rep: 'Ḥasan' },
-    { regex: /\bAbbas\b/gi, rep: 'ʿAbbās' },
-    { regex: /\bZaynab\b/gi, rep: 'Zaynab' },
-    { regex: /\bFatima\b/gi, rep: 'Fāṭimah' },
-    { regex: /\bZahra\b/gi, rep: 'Zahrāʾ' },
     { regex: /\bKarbala\b/gi, rep: 'Karbalāʾ' },
     { regex: /\bAshura\b/gi, rep: 'ʿĀshūrāʾ' },
     { regex: /\bTawhid\b/gi, rep: 'Tawḥīd' },
     { regex: /\bNubuwwah\b/gi, rep: 'Nubuwwah' },
     { regex: /\bImamah\b/gi, rep: 'Imāmah' },
-    { regex: /\bMahdi\b/gi, rep: 'Mahdī' },
     { regex: /\bHadith\b/gi, rep: 'Ḥadīth' },
     { regex: /\bDua\b/gi, rep: 'Duʿāʾ' },
     { regex: /\bDuas\b/gi, rep: 'Adʿiyah' },
@@ -53,7 +82,10 @@ export function applyIslamicTransliteration(text) {
     { regex: /\bZiyarah\b/gi, rep: 'Ziyārah' },
     { regex: /\bTafsir\b/gi, rep: 'Tafsīr' },
     { regex: /\bSunnah\b/gi, rep: 'Sunnah' },
-    { regex: /\bShia\b/gi, rep: 'Shīʿah' }
+    { regex: /\bShia\b/gi, rep: 'Shīʿah' },
+    { regex: /\bNahjul\s+Balagha\b/gi, rep: 'Nahj al-Balāghah' },
+    { regex: /\bNahj\s+al-Balagha\b/gi, rep: 'Nahj al-Balāghah' },
+    { regex: /\bAl-Kafi\b/gi, rep: 'Al-Kāfī' }
   ];
 
   let result = text;
@@ -64,128 +96,162 @@ export function applyIslamicTransliteration(text) {
 }
 
 /**
- * Generates a WhatsApp message for Lesson Plans following KashafVoice v3.0 rules.
+ * 2️⃣ LOCKED GREETING
+ * Exactly two lines, followed by a blank line.
  */
-export function formatKashafLessonPlanWhatsApp(plan) {
-  if (!plan) return '';
+export const LOCKED_GREETING = `🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨`;
 
-  // 2️⃣ GREETING (LOCKED - exactly two lines, followed by one blank line)
-  const greeting = '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨\n\n';
-
-  // 3️⃣ MESSAGE BODY STRUCTURE
-  const titleFormatted = applyIslamicTransliteration(plan.title || 'Weekly Scouting Session');
-  let purposeLine = 'We wanted to share an update regarding our upcoming scouting session: *' + titleFormatted + '*';
-  if (plan.date) {
-    purposeLine += ' scheduled for *' + plan.date + '*.';
-  } else {
-    purposeLine += '.';
-  }
-
-  const bodyBlocks = [purposeLine];
-
-  // Scouting Activities & Highlights
-  if (plan.content && plan.content.trim()) {
-    const rawLines = plan.content.split('\n').map(l => l.trim()).filter(Boolean);
-    const activityBullets = [];
-    rawLines.forEach(line => {
-      const clean = line.replace(/^[-*•\d+.)]\s*/, '').trim();
-      if (clean) {
-        activityBullets.push(applyIslamicTransliteration(clean));
-      }
-    });
-
-    if (activityBullets.length > 0) {
-      const bulletsText = activityBullets.map(b => '🎯 ' + b).join('\n');
-      bodyBlocks.push('📋 *Session Highlights & Activities:*\n' + bulletsText);
-    }
-  }
-
-  // 4️⃣ QURʾĀN BLOCK (OPTIONAL)
-  let quranBlock = '';
-  if (plan.quranVerse || (plan.islamicPrep && plan.islamicPrep.includes('بِسْمِ اللَّهِ'))) {
-    const verseText = plan.quranVerse || plan.islamicPrep;
-    quranBlock = '\nبِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n' + verseText.trim() + '\nصَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ\n';
-  }
-
-  // Islamic Preparation (Tarbiyah / Akhlaq)
-  if (plan.islamicPrep && plan.islamicPrep.trim() && !quranBlock) {
-    const prepClean = applyIslamicTransliteration(plan.islamicPrep.trim());
-    bodyBlocks.push('🕌 *Faith & Akhlāq Connection:*\n' + prepClean);
-  }
-
-  // Helpful Resources & Materials
-  if (plan.resources && plan.resources.length > 0) {
-    const cleanResources = plan.resources.filter(r => r.name && r.url);
-    if (cleanResources.length > 0) {
-      const resBullets = cleanResources.map(r => '🔗 ' + r.name + ': ' + r.url).join('\n');
-      bodyBlocks.push('📚 *Helpful Materials:*\n' + resBullets);
-    }
-  }
-
-  let body = bodyBlocks.join('\n\n');
-  if (quranBlock) {
-    body += '\n' + quranBlock;
-  }
-
-  // 5️⃣ CLOSING (LOCKED - exactly as shown, no bold, no extra lines)
-  const closing = '\n\nJazākum Allāhu khayran for your continued support 🙏\n✨ May Allāh bless your families and efforts.✨\n⚜️ Dhulfiqār Scouts Team⚜️';
-
-  return greeting + body + closing;
+/**
+ * 4️⃣ QURʾĀN & HADITH BLOCK (OPTIONAL)
+ * Formats strictly with Bismillah, Tashkīl Arabic, optional English translation, and Sadaqallāh.
+ */
+export function formatIsolatedQuranBlock(arabic, translation = '') {
+  let block = '\n\nبِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n';
+  if (arabic) block += `${arabic.trim()}\n`;
+  if (translation) block += `"${translation.trim()}"\n`;
+  block += 'صَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ';
+  return block;
 }
 
 /**
- * Generates a WhatsApp message for Planned Events following KashafVoice v3.0 rules.
+ * 5️⃣ LOCKED CLOSING
+ * Uses asterisks for WhatsApp bold on each line, no extra lines.
  */
-export function formatKashafEventWhatsApp(event) {
+export function getLockedClosing(patrolName = '') {
+  const patrolLine = patrolName && patrolName.trim()
+    ? `*✨ ${patrolName.trim()} .✨*`
+    : '*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*';
+    
+  return `\n\n*Jazākum Allāhu khayran for your continued support 🙏*\n${patrolLine}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
+}
+
+/**
+ * Generates a warm, structured WhatsApp message for Planned Events (KashafVoice v4.0).
+ */
+export function formatKashafEventWhatsApp(event, patrolName = '') {
   if (!event) return '';
 
-  // 2️⃣ GREETING (LOCKED - exactly two lines, followed by one blank line)
-  const greeting = '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨\n\n';
-
-  // 3️⃣ MESSAGE BODY STRUCTURE
   const titleFormatted = applyIslamicTransliteration(event.title || 'Scouting Event');
-  const purposeLine = 'We are excited to share details regarding our upcoming event: *' + titleFormatted + '*!';
+  const greeting = LOCKED_GREETING;
+  
+  // 1–2 lines purpose context
+  const purposeLine = `We wanted to share an update regarding our upcoming *${titleFormatted}*.`;
+  const blocks = [greeting, purposeLine];
 
-  const bodyBlocks = [purposeLine];
-
-  // Event Logistics Block
-  const logistics = [];
-  if (event.date) logistics.push('📅 *Date:* ' + event.date);
-  if (event.time) logistics.push('⏰ *Time:* ' + event.time);
-  if (event.location) logistics.push('📍 *Location:* ' + event.location);
-  if (logistics.length > 0) {
-    bodyBlocks.push(logistics.join('\n'));
-  }
-
-  // Event Description / Program Details
+  // Warm description in 1–3 line blocks
   if (event.description && event.description.trim()) {
     const descClean = applyIslamicTransliteration(event.description.trim());
-    bodyBlocks.push('📋 *Event Details & Program:*\n' + descClean);
+    blocks.push(descClean);
   }
 
-  // Packing List / Required Gear
+  // Structured event details (only if present in raw event)
+  const details = [];
+  if (event.date) details.push(`📅 *Date:* ${event.date}${event.time ? ` at ${event.time}` : ''}`);
+  if (event.location) details.push(`📍 *Location:* ${event.location}`);
+  if (event.meetingPoint) details.push(`🚩 *Meeting Point:* ${event.meetingPoint}`);
+  if (event.registrationDeadline || event.deadline) {
+    details.push(`⏳ *Registration Deadline:* ${event.registrationDeadline || event.deadline}`);
+  }
+
+  if (details.length > 0) {
+    blocks.push(details.join('\n'));
+  }
+
+  // Equipment Checklist (one emoji per bullet, one bullet per line)
   if (event.requiredItems && event.requiredItems.trim()) {
     const rawItems = event.requiredItems.split('\n').map(l => l.trim()).filter(Boolean);
     const itemBullets = rawItems.map(item => {
       const clean = item.replace(/^[-*•\d+.)]\s*/, '').trim();
-      return '🎒 ' + clean;
+      return `🎒 ${clean}`;
     });
-    bodyBlocks.push('🎒 *What to Bring / Required Gear:*\n' + itemBullets.join('\n'));
+    if (itemBullets.length > 0) {
+      blocks.push(`*Packing Checklist:*\n${itemBullets.join('\n')}`);
+    }
   }
 
-  // 4️⃣ QURʾĀN BLOCK (OPTIONAL)
+  // Scriptural Block (Optional)
   let quranBlock = '';
   if (event.quranVerse && event.quranVerse.trim()) {
-    quranBlock = '\nبِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n' + event.quranVerse.trim() + '\nصَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ\n';
+    quranBlock = formatIsolatedQuranBlock(event.quranVerse.trim(), event.quranTranslation || '');
   }
 
-  let body = bodyBlocks.join('\n\n');
+  let fullMsg = blocks.join('\n\n');
   if (quranBlock) {
-    body += '\n' + quranBlock;
+    fullMsg += quranBlock;
   }
 
-  // 5️⃣ CLOSING (LOCKED)
-  const closing = '\n\nJazākum Allāhu khayran for your continued support 🙏\n✨ May Allāh bless your families and efforts.✨\n⚜️ Dhulfiqār Scouts Team⚜️';
+  return fullMsg + getLockedClosing(patrolName);
+}
 
-  return greeting + body + closing;
+/**
+ * Generates a warm, structured WhatsApp message for Lesson Plans (KashafVoice v4.0).
+ */
+export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
+  if (!plan) return '';
+
+  const titleFormatted = applyIslamicTransliteration(plan.title || 'Weekly Scouting Session');
+  const greeting = LOCKED_GREETING;
+  
+  const dateStr = plan.date ? ` for *${plan.date}*` : '';
+  const purposeLine = `Just a quick note to share our scouting lesson plan and tarbiyah milestones${dateStr}: *${titleFormatted}*.`;
+  const blocks = [greeting, purposeLine];
+
+  // Qur'an / Hadith Block
+  let quranBlock = '';
+  if (plan.quranVerse && plan.quranVerse.trim()) {
+    quranBlock = formatIsolatedQuranBlock(plan.quranVerse.trim(), plan.quranTranslation || '');
+  }
+
+  // Milestones & Activities
+  if (plan.content && plan.content.trim()) {
+    const rawLines = plan.content.split('\n').map(l => l.trim()).filter(Boolean);
+    const bullets = rawLines.map(line => {
+      const clean = line.replace(/^[-*•\d+.)]\s*/, '').trim();
+      return `🎯 ${applyIslamicTransliteration(clean)}`;
+    });
+    if (bullets.length > 0) {
+      blocks.push(`*Session Milestones:*\n${bullets.join('\n')}`);
+    }
+  }
+
+  // Faith & Akhlaq Focus
+  if (plan.islamicPrep && plan.islamicPrep.trim() && !quranBlock) {
+    const prepClean = applyIslamicTransliteration(plan.islamicPrep.trim());
+    blocks.push(`🕌 *Faith & Akhlāq Focus:*\n${prepClean}`);
+  }
+
+  // Curriculum Materials
+  if (plan.resources && plan.resources.length > 0) {
+    const cleanResources = plan.resources.filter(r => r.name && r.url);
+    if (cleanResources.length > 0) {
+      const resBullets = cleanResources.map(r => `📚 *${r.name}:* ${r.url}`).join('\n');
+      blocks.push(`*Curriculum Materials:*\n${resBullets}`);
+    }
+  }
+
+  let fullMsg = blocks.join('\n\n');
+  if (quranBlock) {
+    fullMsg += quranBlock;
+  }
+
+  return fullMsg + getLockedClosing(patrolName);
+}
+
+/**
+ * Refines any raw text into KashafVoice v4.0 WhatsApp format.
+ */
+export function formatKashafMessage(rawText, patrolName = '', customPurpose = '') {
+  const greeting = LOCKED_GREETING;
+  const cleanContent = applyIslamicTransliteration(rawText || '').trim();
+  const closing = getLockedClosing(patrolName);
+  
+  const blocks = [greeting];
+  if (customPurpose && customPurpose.trim()) {
+    blocks.push(customPurpose.trim());
+  }
+  if (cleanContent) {
+    blocks.push(cleanContent);
+  }
+  
+  return blocks.join('\n\n') + closing;
 }

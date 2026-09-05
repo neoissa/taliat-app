@@ -1007,6 +1007,7 @@ export default function GlobalAdminPanel({ currentUser }) {
                   </div>
 
                   <div>
+
                     <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Rank</label>
                     <select
                       value={editRank}
@@ -1148,11 +1149,63 @@ export default function GlobalAdminPanel({ currentUser }) {
             </p>
             <div className="space-y-2">
               {[
-                { label: "General Chat", text: "" },
-                { label: "Meeting Reminder", text: "Salam! This is a reminder about our upcoming Taliʿa Troop meeting. Please be prepared and on time. Shukran!" },
-                { label: "Safeguarding Video Reminder", text: "Salam! Please make sure to watch the required safeguarding / youth protection standard videos under your Taliʿa profile. This is an essential requirement. Shukran!" },
-                { label: "Islamic Basics Progress Reminder", text: "Salam! Please review and complete the Shia Islamic Basics checklist under your Taliʿa profile. Shukran!" },
-                { label: "Service Hours Reminder", text: "Salam! Please remember to log your volunteering and community service hours in the Taliʿa Service Log. Shukran!" }
+                { label: "General Chat (Blank)", text: "" },
+                { 
+                  label: "📅 Meeting Reminder", 
+                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
+Hope you are all doing well 😊 ✨
+
+Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
+
+🔗 *Portal Link:* https://taliat-app.vercel.app/
+📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.
+
+*Jazākum Allāhu khayran for your continued support 🙏*
+*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+*⚜️ Dhulfiqār Scouts Team⚜️*` 
+                },
+                { 
+                  label: "🛡️ Safeguarding Video Reminder", 
+                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
+Hope you are all doing well 😊 ✨
+
+We wanted to share a quick reminder to complete the mandatory Youth Protection and Safety Training (SPT) video modules.
+
+🔗 *Portal Link:* https://taliat-app.vercel.app/
+📌 *Instructions:* Access your profile, watch the video modules, and confirm verification with leadership.
+
+*Jazākum Allāhu khayran for your continued support 🙏*
+*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+*⚜️ Dhulfiqār Scouts Team⚜️*` 
+                },
+                { 
+                  label: "🕌 Islamic Knowledge Progress Reminder", 
+                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
+Hope you are all doing well 😊 ✨
+
+Just a friendly check-in regarding the Islamic Knowledge modules (Jaʿfarī fiqh, ʿAqāʾid, Akhlāq, and Sīrah of Ahl al-Bayt ʿa).
+
+🔗 *Checklist Portal:* https://taliat-app.vercel.app/
+📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.
+
+*Jazākum Allāhu khayran for your continued support 🙏*
+*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+*⚜️ Dhulfiqār Scouts Team⚜️*` 
+                },
+                { 
+                  label: "⏱️ Service Hours Reminder", 
+                  text: `🌿 Assalāmu ʿAlaykum dear parents,🌿
+Hope you are all doing well 😊 ✨
+
+We wanted to remind scouts to log their community service and volunteering hours into the portal.
+
+🔗 *Service Log:* https://taliat-app.vercel.app/
+📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.
+
+*Jazākum Allāhu khayran for your continued support 🙏*
+*✨ Patrol 2 (Ṭalīʿat Abū al-Faḍl al-ʿAbbās) .✨*
+*⚜️ Dhulfiqār Scouts Team⚜️*` 
+                }
               ].map((tmpl) => {
                 const encodedText = encodeURIComponent(tmpl.text);
                 const waLink = `https://wa.me/${activeWhatsappPhone.replace(/[^0-9]/g, '')}${tmpl.text ? `?text=${encodedText}` : ''}`;
