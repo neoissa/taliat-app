@@ -58,6 +58,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
   const [linkedScouts, setLinkedScouts] = useState([]);
   const [selectedScoutId, setSelectedScoutId] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'tasks' | 'events' | 'family' | 'reports' | 'notifications'
+  const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'past'
   const [loading, setLoading] = useState(true);
 
   // Child Progress States
@@ -828,45 +829,99 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
       )}
 
       {/* ── 7. TAB 3: TROOP CALENDAR & RSVP ── */}
-      {activeTab === 'events' && (
-        <div className="space-y-5">
-          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-2">
-            <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-              <Calendar size={18} className="text-sky-400" />
-              <span>Troop Calendar & Interactive RSVPs</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Confirm attendance for <strong className="text-white">{scoutFullName}</strong>, log dietary needs, and offer carpool driver assistance.
-            </p>
-          </div>
+      {/* ── 7. TAB 3: TROOP CALENDAR & RSVP ── */}
+      {activeTab === 'events' && (() => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const upcomingList = eventsList
+          .filter(e => (e.date || '') >= todayStr)
+          .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        const pastList = eventsList
+          .filter(e => (e.date || '') < todayStr)
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const displayList = eventSubTab === 'past' ? pastList : upcomingList;
 
-          <div className="space-y-3">
-            {eventsList.map(ev => (
-              <div key={ev.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3 shadow-md">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
-                        {ev.category || 'Event'}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">📅 {ev.date} &bull; ⏰ {ev.time}</span>
-                    </div>
-                    <h4 className="font-extrabold text-white text-base">{ev.title}</h4>
-                    {ev.location && <p className="text-xs text-slate-400 mt-0.5">📍 {ev.location}</p>}
-                  </div>
+        return (
+          <div className="space-y-5">
+            <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                    <Calendar size={18} className="text-sky-400" />
+                    <span>Troop Calendar & Interactive RSVPs</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Confirm attendance for <strong className="text-white">{scoutFullName}</strong>, log dietary needs, and offer carpool driver assistance.
+                  </p>
+                </div>
 
+                {/* Sub Tabs: Upcoming vs Past */}
+                <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
                   <button
-                    onClick={() => onNavigate && onNavigate('events')}
-                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition cursor-pointer"
+                    type="button"
+                    onClick={() => setEventSubTab('upcoming')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      eventSubTab === 'upcoming'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
                   >
-                    View RSVP & Details
+                    <span>Upcoming</span>
+                    <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{upcomingList.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEventSubTab('past')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      eventSubTab === 'past'
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>Past Events</span>
+                    <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{pastList.length}</span>
                   </button>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="space-y-3">
+              {displayList.length === 0 ? (
+                <div className="bg-slate-850 border border-slate-755 p-8 rounded-3xl text-center text-slate-400 text-xs italic">
+                  {eventSubTab === 'past' ? 'No past events found.' : 'No upcoming troop events scheduled right now.'}
+                </div>
+              ) : (
+                displayList.map(ev => (
+                  <div key={ev.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3 shadow-md">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] border px-2 py-0.5 rounded-full font-bold uppercase ${
+                            eventSubTab === 'past' 
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          }`}>
+                            {ev.category || 'Event'}
+                          </span>
+                          <span className="text-xs font-mono font-bold text-slate-300">📅 {ev.date} &bull; ⏰ {ev.time}</span>
+                        </div>
+                        <h4 className="font-extrabold text-white text-base">{ev.title}</h4>
+                        {ev.location && <p className="text-xs text-slate-400 mt-0.5">📍 {ev.location}</p>}
+                      </div>
+
+                      <button
+                        onClick={() => onNavigate && onNavigate('events')}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition cursor-pointer shrink-0"
+                      >
+                        {eventSubTab === 'past' ? 'View Details & Records' : 'View RSVP & Details'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── 8. TAB 4: OFFICIAL PROGRESS REPORTS ── */}
       {activeTab === 'reports' && activeScout && (

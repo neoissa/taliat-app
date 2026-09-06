@@ -124,11 +124,8 @@ function compressImage(file, maxWidth = 300, maxHeight = 300, quality = 0.8) {
   });
 }
 
-export default function AdminPanel({ currentUser }) {
+export default function AdminPanel({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
-  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
 
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'patrols' | 'broadcasts' | 'forms'
   const [users, setUsers] = useState([]);
@@ -278,13 +275,13 @@ export default function AdminPanel({ currentUser }) {
     };
   }, []);
 
-  if (!isExecutive) {
+  if (!isOwner) {
     return (
       <div className="p-8 bg-slate-800 border border-slate-700 rounded-3xl text-center max-w-xl mx-auto space-y-3">
         <ShieldAlert className="text-red-400 mx-auto" size={40} />
-        <h3 className="text-lg font-bold text-white">Executive Access Restricted</h3>
+        <h3 className="text-lg font-bold text-white">Owner Access Restricted</h3>
         <p className="text-xs text-slate-400 leading-relaxed">
-          The Executive Admin Hub is strictly restricted to the Troop Owner, Superadmins, Scoutmaster, and Assistant Scoutmasters.
+          The Admin Hub is strictly restricted to the Troop Owner and Superadministrator.
         </p>
       </div>
     );
@@ -1046,6 +1043,16 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
         </div>
 
         <div className="flex items-center gap-2">
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('events')}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md"
+              title="Open 2026-2027 Calendar Generator & Events Hub"
+            >
+              <Calendar size={15} className="text-emerald-400" />
+              <span>⚡ Calendar Generator</span>
+            </button>
+          )}
           <button
             onClick={() => setShowUserModal(true)}
             className={`font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg ${

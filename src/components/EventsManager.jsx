@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -34,10 +34,100 @@ import {
   CheckCircle2,
   HelpCircle,
   XCircle,
-  Megaphone
+  Megaphone,
+  RefreshCw,
+  Zap,
+  ListOrdered,
+  AlertTriangle,
+  Search,
+  CheckCircle,
+  History,
+  CalendarDays,
+  CheckSquare2,
+  Layers
 } from 'lucide-react';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration } from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
+import { 
+  generateScoutingYearSchedule, 
+  seedCalendarEvents, 
+  purgeGeneratedCalendarEvents, 
+  RECURRING_SCHEDULE_CONFIG 
+} from '../utils/calendarGenerator';
+
+// ── TIME RANGE SELECTOR HELPERS ──
+export function formatTime12h(time24) {
+  if (!time24 || typeof time24 !== 'string') return '';
+  const parts = time24.trim().split(':');
+  if (parts.length < 2) return time24;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1].padStart(2, '0');
+  if (isNaN(h)) return time24;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+export function parseTimeTo24h(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return '10:00';
+  const str = timeStr.trim();
+  const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (match12) {
+    let h = parseInt(match12[1], 10);
+    const m = match12[2];
+    const ampm = (match12[3] || '').toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m}`;
+  }
+  return '10:00';
+}
+
+export function calculateDuration(start24, end24) {
+  if (!start24 || !end24) return '';
+  const [sH, sM] = start24.split(':').map(Number);
+  const [eH, eM] = end24.split(':').map(Number);
+  if (isNaN(sH) || isNaN(sM) || isNaN(eH) || isNaN(eM)) return '';
+  
+  let diffMinutes = (eH * 60 + eM) - (sH * 60 + sM);
+  if (diffMinutes < 0) {
+    diffMinutes += 24 * 60; // Crosses midnight
+  }
+  if (diffMinutes === 0) return '0 min';
+  
+  const hrs = Math.floor(diffMinutes / 60);
+  const mins = diffMinutes % 60;
+  if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
+  if (hrs > 0) return `${hrs} hr${hrs > 1 ? 's' : ''}`;
+  return `${mins} min${mins > 1 ? 's' : ''}`;
+}
+
+export function parseTimeRange(rangeStr) {
+  if (!rangeStr || typeof rangeStr !== 'string') {
+    return { start: '10:00', end: '14:00', isAllDay: false, isCustom: false };
+  }
+  const trimmed = rangeStr.trim();
+  if (/^all[\s-]?day$/i.test(trimmed)) {
+    return { start: '09:00', end: '17:00', isAllDay: true, isCustom: false };
+  }
+  const parts = trimmed.split(/\s*[–—\-]\s*/);
+  if (parts.length === 2) {
+    const s24 = parseTimeTo24h(parts[0]);
+    const e24 = parseTimeTo24h(parts[1]);
+    return { start: s24, end: e24, isAllDay: false, isCustom: false };
+  }
+  return { start: '10:00', end: '14:00', isAllDay: false, isCustom: true };
+}
+
+export const SCOUT_TIME_PRESETS = [
+  { id: 'friday_session', label: '🏕️ Friday Standalone Session', start: '18:30', end: '21:30', desc: '6:30 PM – 9:30 PM (3 hrs)' },
+  { id: 'tuesday_session', label: '🕌 Tuesday Standalone Session', start: '18:30', end: '21:30', desc: '6:30 PM – 9:30 PM (3 hrs)' },
+  { id: 'workshop', label: '🛠️ Weekend Workshop', start: '10:00', end: '14:00', desc: '10:00 AM – 2:00 PM (4 hrs)' },
+  { id: 'day_hike', label: '🥾 Morning Day Hike', start: '08:30', end: '13:00', desc: '8:30 AM – 1:00 PM (4.5 hrs)' },
+  { id: 'ceremony', label: '🎖️ Court of Honor', start: '17:00', end: '19:30', desc: '5:00 PM – 7:30 PM (2.5 hrs)' },
+  { id: 'all_day', label: '🌅 All Day Campout', start: '08:00', end: '18:00', isAllDay: true, desc: 'All Day Event' }
+];
 
 export default function EventsManager({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -48,6 +138,8 @@ export default function EventsManager({ currentUser, onNavigate }) {
   const isParent = currentUser?.role === 'parent';
   const isScout = !isLeader && !isParent;
 
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -57,16 +149,27 @@ export default function EventsManager({ currentUser, onNavigate }) {
   // RSVPs Map: { [eventId]: { [scoutOrParentUid]: rsvpData } }
   const [eventRsvps, setEventRsvps] = useState({});
 
+  // ── TIME HORIZON TABS: 'upcoming' | 'past' | 'all' ──
+  const [timeHorizon, setTimeHorizon] = useState('upcoming');
+
+  // Category Filtering & Search
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'standalone' | 'campouts' | 'service' | 'faith'
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Event Creator Form states
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState('10:00 AM – 2:00 PM');
-  const [location, setLocation] = useState('');
+  const [time, setTime] = useState('6:30 PM – 9:30 PM');
+  const [startTime, setStartTime] = useState('18:30');
+  const [endTime, setEndTime] = useState('21:30');
+  const [timeMode, setTimeMode] = useState('picker'); // 'picker' | 'presets' | 'custom'
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [location, setLocation] = useState('Troop Headquarters / Main Hall');
   const [category, setCategory] = useState('meeting'); // 'campout' | 'meeting' | 'service' | 'faith' | 'ceremony'
   const [description, setDescription] = useState('');
-  const [requiredItems, setRequiredItems] = useState('');
+  const [requiredItems, setRequiredItems] = useState('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
   const [quranVerse, setQuranVerse] = useState('');
   const [groups, setGroups] = useState([]);
   const [targetGroupId, setTargetGroupId] = useState(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
@@ -74,6 +177,17 @@ export default function EventsManager({ currentUser, onNavigate }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+
+  // ── RECURRING CALENDAR GENERATOR STATE ──
+  const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [generatorTab, setGeneratorTab] = useState('overview'); // 'overview' | 'preview'
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [generatorProgress, setGeneratorProgress] = useState(null);
+  const [generatorSuccessMsg, setGeneratorSuccessMsg] = useState('');
+  const [generatorError, setGeneratorError] = useState('');
+  const [previewSearch, setPreviewSearch] = useState('');
+  const [previewFilter, setPreviewFilter] = useState('all'); // 'all' | 'friday' | 'tuesday'
 
   // Parent / Scout RSVP Form State
   const [rsvpStatus, setRsvpStatus] = useState('attending'); // 'attending' | 'not_attending' | 'tentative'
@@ -96,9 +210,6 @@ export default function EventsManager({ currentUser, onNavigate }) {
 
       list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
       setEvents(list);
-      if (list.length > 0 && !selectedEvent && !showForm) {
-        setSelectedEvent(list[0]);
-      }
       setLoading(false);
     }, (err) => {
       console.error("Failed to load events:", err);
@@ -158,15 +269,105 @@ export default function EventsManager({ currentUser, onNavigate }) {
     }
   }, [selectedEvent, isLeader]);
 
+  // Memoized 82 Generated Sessions for Preview
+  const fullYearPlan = useMemo(() => {
+    return generateScoutingYearSchedule();
+  }, []);
+
+  // Map of existing IDs in Firestore for sync check
+  const existingEventIdMap = useMemo(() => {
+    const map = new Set();
+    events.forEach(ev => map.add(ev.id));
+    return map;
+  }, [events]);
+
+  // Standalone session stats
+  const standaloneStats = useMemo(() => {
+    const standaloneEvents = events.filter(e => e.isStandalone);
+    const fridayCount = events.filter(e => e.isStandalone && (e.recurringPattern === 'weekly_friday' || new Date(e.date + 'T12:00:00').getDay() === 5)).length;
+    const tuesdayCount = events.filter(e => e.isStandalone && (e.recurringPattern === 'weekly_tuesday' || new Date(e.date + 'T12:00:00').getDay() === 2)).length;
+    const customCount = events.filter(e => !e.isStandalone).length;
+    
+    const upcomingCount = events.filter(e => (e.date || '') >= todayStr).length;
+    const pastCount = events.filter(e => (e.date || '') < todayStr).length;
+
+    return {
+      totalStandalone: standaloneEvents.length,
+      fridayCount,
+      tuesdayCount,
+      customCount,
+      upcomingCount,
+      pastCount,
+      targetTotal: 82,
+      targetFriday: 39,
+      targetTuesday: 43
+    };
+  }, [events, todayStr]);
+
+  // Split and filter events based on Time Horizon + Subcategory + Search
+  const filteredEvents = useMemo(() => {
+    let list = [...events];
+
+    // 1. Time Horizon Filter
+    if (timeHorizon === 'upcoming') {
+      list = list.filter(ev => (ev.date || '') >= todayStr);
+      // Sort upcoming ascending (nearest first)
+      list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    } else if (timeHorizon === 'past') {
+      list = list.filter(ev => (ev.date || '') < todayStr);
+      // Sort past descending (most recent past session first)
+      list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    } else {
+      // 'all'
+      list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    }
+
+    // 2. Subcategory Filter
+    if (filterTab === 'standalone') list = list.filter(ev => ev.isStandalone);
+    if (filterTab === 'campouts') list = list.filter(ev => ev.category === 'campout');
+    if (filterTab === 'service') list = list.filter(ev => ev.category === 'service');
+    if (filterTab === 'faith') list = list.filter(ev => ev.category === 'faith');
+
+    // 3. Search Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(ev => {
+        const matchesTitle = (ev.title || '').toLowerCase().includes(q);
+        const matchesDate = (ev.date || '').toLowerCase().includes(q);
+        const matchesLoc = (ev.location || '').toLowerCase().includes(q);
+        const matchesDesc = (ev.description || '').toLowerCase().includes(q);
+        return matchesTitle || matchesDate || matchesLoc || matchesDesc;
+      });
+    }
+
+    return list;
+  }, [events, timeHorizon, todayStr, filterTab, searchQuery]);
+
+  // Auto-select first item when list changes or resets
+  useEffect(() => {
+    if (filteredEvents.length > 0) {
+      // If no selection or selected event is not in current list, select first
+      if (!selectedEvent || !filteredEvents.some(e => e.id === selectedEvent.id)) {
+        setSelectedEvent(filteredEvents[0]);
+      }
+    } else {
+      setSelectedEvent(null);
+    }
+  }, [filteredEvents, timeHorizon]);
+
   const handleOpenNew = () => {
     setEditingId(null);
     setTitle('');
     setDate(new Date().toISOString().split('T')[0]);
-    setTime('10:00 AM – 2:00 PM');
-    setLocation('');
+    setStartTime('18:30');
+    setEndTime('21:30');
+    setIsAllDay(false);
+    setTimeMode('picker');
+    setTime('6:30 PM – 9:30 PM');
+    setLocation('Troop Headquarters / Main Hall');
     setCategory('meeting');
     setDescription('');
-    setRequiredItems('');
+    setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
     setQuranVerse('');
     setTargetGroupId(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
     setError('');
@@ -178,22 +379,69 @@ export default function EventsManager({ currentUser, onNavigate }) {
     setEditingId(ev.id);
     setTitle(ev.title || '');
     setDate(ev.date || '');
-    setTime(ev.time || '');
     setLocation(ev.location || '');
     setCategory(ev.category || 'meeting');
     setDescription(ev.description || '');
     setRequiredItems(ev.requiredItems || '');
     setQuranVerse(ev.quranVerse || '');
     setTargetGroupId(ev.targetGroupId || 'all');
+    setTime(ev.time || '6:30 PM – 9:30 PM');
+
+    const parsed = parseTimeRange(ev.time);
+    setStartTime(ev.startTime || parsed.start);
+    setEndTime(ev.endTime || parsed.end);
+    setIsAllDay(!!parsed.isAllDay);
+    setTimeMode(parsed.isCustom ? 'custom' : 'picker');
     setError('');
     setMsg('');
     setShowForm(true);
   };
 
+  const handleStartTimeChange = (newStart) => {
+    setStartTime(newStart);
+    if (!isAllDay) {
+      const formatted = `${formatTime12h(newStart)} – ${formatTime12h(endTime)}`;
+      setTime(formatted);
+    }
+  };
+
+  const handleEndTimeChange = (newEnd) => {
+    setEndTime(newEnd);
+    if (!isAllDay) {
+      const formatted = `${formatTime12h(startTime)} – ${formatTime12h(newEnd)}`;
+      setTime(formatted);
+    }
+  };
+
+  const handleToggleAllDay = (checked) => {
+    setIsAllDay(checked);
+    if (checked) {
+      setTime('All Day Event');
+    } else {
+      setTime(`${formatTime12h(startTime)} – ${formatTime12h(endTime)}`);
+    }
+  };
+
+  const handleSelectPreset = (preset) => {
+    if (preset.isAllDay) {
+      setIsAllDay(true);
+      setTime('All Day Event');
+      setStartTime(preset.start);
+      setEndTime(preset.end);
+    } else {
+      setIsAllDay(false);
+      setStartTime(preset.start);
+      setEndTime(preset.end);
+      setTime(preset.desc || `${formatTime12h(preset.start)} – ${formatTime12h(preset.end)}`);
+    }
+  };
+
+  // Save / Update Event Handler
   const handleSaveEvent = async (e) => {
     e.preventDefault();
     setError('');
     setMsg('');
+
     if (!title.trim() || !date) {
       setError("Event title and date are required.");
       return;
@@ -205,20 +453,24 @@ export default function EventsManager({ currentUser, onNavigate }) {
       title: title.trim(),
       date,
       time: time.trim(),
+      startTime: startTime || '18:30',
+      endTime: endTime || '21:30',
+      durationHours: isAllDay ? 8 : (startTime && endTime ? (calculateDuration(startTime, endTime).includes('hr') ? parseFloat(calculateDuration(startTime, endTime)) : 3) : 3),
       location: location.trim(),
       category,
       description: description.trim(),
       requiredItems: requiredItems.trim(),
       quranVerse: quranVerse.trim(),
       targetGroupId: scope,
-      createdBy: currentUser?.uid || '',
+      createdBy: currentUser?.email || currentUser?.uid || 'neoissa@gmail.com',
       createdByName: currentUser?.fullName || currentUser?.username || 'Leader',
       isGlobalScope: scope === 'all',
+      pushToAllPatrols: scope === 'all',
       updatedAt: serverTimestamp()
     };
 
     try {
-      const docId = editingId || `event_${Date.now()}`;
+      const docId = editingId || `event_${date.replace(/-/g, '')}_${(startTime || '1830').replace(/:/g, '')}`;
       await setDoc(doc(db, 'events', docId), eventData, { merge: true });
 
       // Automatically post announcement alert to patrol stream
@@ -255,6 +507,54 @@ export default function EventsManager({ currentUser, onNavigate }) {
     }
   };
 
+  // ── SEEDING & PURGING CALENDAR SESSIONS ──
+  const handleRunSeeder = async () => {
+    setIsSeeding(true);
+    setGeneratorError('');
+    setGeneratorSuccessMsg('');
+    setGeneratorProgress({ current: 0, total: 82, percentage: 0, status: 'Initializing calendar generator...' });
+
+    try {
+      const res = await seedCalendarEvents({
+        onProgress: (p) => setGeneratorProgress(p),
+        groups,
+        customConfig: {
+          createdBy: currentUser?.email || 'neoissa@gmail.com',
+          createdByName: currentUser?.fullName || 'Scoutmaster Admin'
+        }
+      });
+
+      setGeneratorSuccessMsg(`🎉 Successfully populated the 2026–2027 calendar with all ${res.totalCommitted} standalone sessions! (39 Fridays + 43 Tuesdays)`);
+    } catch (err) {
+      console.error("Seeder failed:", err);
+      setGeneratorError("Failed to seed calendar: " + err.message);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handlePurgeGenerated = async () => {
+    if (!window.confirm("⚠️ Are you sure you want to purge all standalone recurring sessions for 2026–2027? Custom events and campouts will NOT be deleted.")) {
+      return;
+    }
+    setIsPurging(true);
+    setGeneratorError('');
+    setGeneratorSuccessMsg('');
+    setGeneratorProgress({ current: 0, total: 0, percentage: 0, status: 'Scanning standalone sessions...' });
+
+    try {
+      const res = await purgeGeneratedCalendarEvents({
+        onProgress: (p) => setGeneratorProgress(p)
+      });
+      setGeneratorSuccessMsg(`🗑️ Successfully purged ${res.deletedCount} standalone generated events from the calendar.`);
+    } catch (err) {
+      console.error("Purge failed:", err);
+      setGeneratorError("Failed to purge events: " + err.message);
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   // Submit RSVP Handler (For Parents & Scouts)
   const handleSubmitRsvp = async (e) => {
     e.preventDefault();
@@ -265,44 +565,56 @@ export default function EventsManager({ currentUser, onNavigate }) {
     const rsvpData = {
       userId: currentUser.uid,
       userName: currentUser.fullName || currentUser.username || 'Family',
-      userRole: currentUser.role || 'parent',
-      status: rsvpStatus, // 'attending' | 'not_attending' | 'tentative'
+      userRole: currentUser.role || 'scout',
+      status: rsvpStatus,
       dietary: rsvpDietary.trim(),
       driverAvailable: rsvpDriverAvailable,
-      seats: rsvpDriverAvailable ? Number(rsvpSeats) : 0,
+      seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
       notes: rsvpNotes.trim(),
-      submittedAt: new Date().toISOString(),
-      updatedAt: serverTimestamp()
+      submittedAt: new Date().toISOString()
     };
 
     try {
       await setDoc(doc(db, 'events', selectedEvent.id, 'rsvps', currentUser.uid), rsvpData, { merge: true });
-      setRsvpSuccessMsg('✓ RSVP confirmed! Leader roster updated.');
+      setRsvpSuccessMsg('✓ RSVP Submitted Successfully!');
       setTimeout(() => setRsvpSuccessMsg(''), 3000);
     } catch (err) {
-      alert("Failed to submit RSVP: " + err.message);
+      console.error("Failed to submit RSVP:", err);
+      alert("Error saving RSVP: " + err.message);
     } finally {
       setRsvpSaving(false);
     }
   };
 
+  // Copy WhatsApp Broadcast Text
   const handleCopyWhatsApp = () => {
     navigator.clipboard.writeText(customWhatsAppMsg);
     setCopiedSuccess(true);
     setTimeout(() => setCopiedSuccess(false), 2500);
   };
 
-  // RSVP statistics for currently selected event
+  // Preview List filtered in generator modal
+  const filteredPreviewList = useMemo(() => {
+    return fullYearPlan.filter(ev => {
+      if (previewFilter === 'friday' && ev.recurringPattern !== 'weekly_friday') return false;
+      if (previewFilter === 'tuesday' && ev.recurringPattern !== 'weekly_tuesday') return false;
+      if (previewSearch.trim()) {
+        const q = previewSearch.toLowerCase();
+        return ev.date.includes(q) || ev.dayOfWeek.toLowerCase().includes(q) || ev.title.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [fullYearPlan, previewFilter, previewSearch]);
+
   const currentEventRsvpsList = selectedEvent ? Object.values(eventRsvps[selectedEvent.id] || {}) : [];
   const attendingCount = currentEventRsvpsList.filter(r => r.status === 'attending').length;
   const tentativeCount = currentEventRsvpsList.filter(r => r.status === 'tentative').length;
   const notAttendingCount = currentEventRsvpsList.filter(r => r.status === 'not_attending').length;
-  const volunteerDrivers = currentEventRsvpsList.filter(r => r.driverAvailable);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* ── HEADER BANNER ── */}
-      <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+    <div className="space-y-6 animate-fadeIn pb-12">
+      {/* ── TOP BANNER & ACTION BAR ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-emerald-950/50 shrink-0">
             📅
@@ -315,25 +627,417 @@ export default function EventsManager({ currentUser, onNavigate }) {
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
                 {isExecutive ? 'Executive Broadcast Control' : isLeader ? 'Patrol Leader' : 'Family RSVP Portal'}
               </span>
+              <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono">
+                2026–2027 Season
+              </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
               {isParent 
-                ? 'Review upcoming campouts, meetings, and volunteer service events. Confirm your family attendance and carpool seats.'
-                : 'Plan weekly meetings, campouts, and halqas. Track family RSVPs, volunteer drivers, and broadcast announcements.'}
+                ? 'Review upcoming campouts, weekly meetings, and volunteer service events. Confirm your family attendance and carpool seats.'
+                : 'Plan weekly standalone meetings, campouts, and halqas. Track family RSVPs, volunteer drivers, and broadcast announcements.'}
             </p>
           </div>
         </div>
 
-        {isLeader && (
-          <button
-            onClick={handleOpenNew}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 shrink-0"
-          >
-            <Plus size={16} />
-            <span>Publish New Event</span>
-          </button>
-        )}
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isExecutive && (
+            <button
+              onClick={() => {
+                setShowGeneratorModal(true);
+                setGeneratorSuccessMsg('');
+                setGeneratorError('');
+              }}
+              className="bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 shrink-0 border border-amber-400/30"
+              title="Automated Recurring Calendar Generator for 2026-2027"
+            >
+              <Zap size={15} className="text-amber-200 animate-pulse" />
+              <span>⚡ Auto-Generate 2026–2027 Calendar</span>
+            </button>
+          )}
+
+          {isLeader && (
+            <button
+              onClick={handleOpenNew}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 shrink-0"
+            >
+              <Plus size={16} />
+              <span>Publish Event</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── TIME HORIZON TABS: UPCOMING vs PAST vs ALL ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 shadow-lg space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+          {/* Main Time Horizon Tabs */}
+          <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setTimeHorizon('upcoming')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                timeHorizon === 'upcoming'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950/50'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <CalendarDays size={15} />
+              <span>Upcoming Events</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                timeHorizon === 'upcoming' ? 'bg-black/30 text-white' : 'bg-slate-850 text-slate-400'
+              }`}>
+                {standaloneStats.upcomingCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setTimeHorizon('past')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                timeHorizon === 'past'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-950/50'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <History size={15} />
+              <span>Past Events</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                timeHorizon === 'past' ? 'bg-black/30 text-white' : 'bg-slate-850 text-slate-400'
+              }`}>
+                {standaloneStats.pastCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setTimeHorizon('all')}
+              className={`px-3 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                timeHorizon === 'all'
+                  ? 'bg-slate-800 text-white shadow-md border border-slate-700'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <Layers size={14} />
+              <span>All ({events.length})</span>
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-64">
+            <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
+            <input
+              type="text"
+              placeholder={`Search in ${timeHorizon} events...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+        </div>
+
+        {/* Subcategory Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {[
+            { id: 'all', label: 'All Categories' },
+            { id: 'standalone', label: '⚡ Standalone Weekly Meetings' },
+            { id: 'campouts', label: '⛺ Overnight Campouts' },
+            { id: 'service', label: '🤝 Community Service' },
+            { id: 'faith', label: '🕌 Halqas & Faith' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setFilterTab(tab.id)}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                filterTab === tab.id
+                  ? 'bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950 border border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 2026-2027 RECURRING EVENT GENERATOR MODAL ── */}
+      {showGeneratorModal && isExecutive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                    <span>2026–2027 Scouting Year Calendar Generator & Seeder</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Populate the troop calendar with standalone recurring meetings (Fridays & Tuesdays) across the entire scouting year.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGeneratorModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Schedule Specifications Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Friday Sessions */}
+              <div className="bg-slate-950 border border-emerald-500/30 rounded-2xl p-4 space-y-2 relative overflow-hidden">
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    🟢 Every Friday
+                  </span>
+                  <span className="text-xs font-mono font-bold text-emerald-400">39 Sessions</span>
+                </div>
+                <h4 className="font-bold text-white text-sm">Friday Troop Meetings</h4>
+                <div className="space-y-1 text-xs text-slate-300 font-mono">
+                  <div className="flex items-center gap-1.5"><Calendar size={12} className="text-emerald-400" /> Oct 2, 2026 – Jun 25, 2027</div>
+                  <div className="flex items-center gap-1.5"><Clock size={12} className="text-emerald-400" /> 6:30 PM – 9:30 PM (3.0 hrs)</div>
+                </div>
+                <div className="pt-1 text-[11px] text-slate-400">
+                  Status in Live Calendar: <strong className="text-emerald-300">{standaloneStats.fridayCount} / 39 Active</strong>
+                </div>
+              </div>
+
+              {/* Tuesday Sessions */}
+              <div className="bg-slate-950 border border-sky-500/30 rounded-2xl p-4 space-y-2 relative overflow-hidden">
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">
+                    🔵 Every Tuesday
+                  </span>
+                  <span className="text-xs font-mono font-bold text-sky-400">43 Sessions</span>
+                </div>
+                <h4 className="font-bold text-white text-sm">Tuesday Troop Meetings</h4>
+                <div className="space-y-1 text-xs text-slate-300 font-mono">
+                  <div className="flex items-center gap-1.5"><Calendar size={12} className="text-sky-400" /> Sep 8, 2026 – Jun 29, 2027</div>
+                  <div className="flex items-center gap-1.5"><Clock size={12} className="text-sky-400" /> 6:30 PM – 9:30 PM (3.0 hrs)</div>
+                </div>
+                <div className="pt-1 text-[11px] text-slate-400">
+                  Status in Live Calendar: <strong className="text-sky-300">{standaloneStats.tuesdayCount} / 43 Active</strong>
+                </div>
+              </div>
+
+              {/* Total & Target Documents */}
+              <div className="bg-slate-950 border border-amber-500/30 rounded-2xl p-4 space-y-2">
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                    📊 Total Standalone
+                  </span>
+                  <span className="text-xs font-mono font-bold text-amber-400">82 Target</span>
+                </div>
+                <h4 className="font-bold text-white text-sm">Full Season Schedule</h4>
+                <div className="space-y-1 text-xs text-slate-300 font-mono">
+                  <div>• Schema: <code>event_YYYYMMDD_HHMM</code></div>
+                  <div>• Created By: <code>neoissa@gmail.com</code></div>
+                  <div>• Scope: <code>pushToAllPatrols: true</code></div>
+                </div>
+                <div className="pt-1 text-[11px] text-slate-400">
+                  Live Standalone Total: <strong className="text-amber-300">{standaloneStats.totalStandalone} / 82 Committed</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Tabs in Modal */}
+            <div className="flex gap-2 border-b border-slate-800 pb-2">
+              <button
+                onClick={() => setGeneratorTab('overview')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  generatorTab === 'overview'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Zap size={14} />
+                <span>Overview & Actions</span>
+              </button>
+              <button
+                onClick={() => setGeneratorTab('preview')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  generatorTab === 'preview'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <ListOrdered size={14} />
+                <span>Interactive Schedule Preview (82 Dates)</span>
+              </button>
+            </div>
+
+            {/* Feedback Alerts */}
+            {generatorError && (
+              <div className="p-3 bg-rose-950/60 border border-rose-500/60 rounded-xl text-xs text-rose-300 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-rose-400 shrink-0" />
+                <span>{generatorError}</span>
+              </div>
+            )}
+            {generatorSuccessMsg && (
+              <div className="p-3 bg-emerald-950/60 border border-emerald-500/60 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <span>{generatorSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Progress Bar during Seeding/Purging */}
+            {generatorProgress && (
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-300 font-medium">{generatorProgress.status}</span>
+                  <span className="font-mono font-bold text-emerald-400">{generatorProgress.percentage || 0}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                    style={{ width: `${generatorProgress.percentage || 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tab 1: Overview & Seeding Actions */}
+            {generatorTab === 'overview' && (
+              <div className="space-y-4">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs text-slate-300">
+                  <strong className="text-white block text-sm font-bold">How standalone event seeding works:</strong>
+                  <p>
+                    1. Generates 82 independent date documents matching the official 2026–2027 calendar:
+                    <br />&bull; <strong>Fridays (39)</strong>: starting Oct 2, 2026 through June 25, 2027 (6:30 PM – 9:30 PM, 3.0 hrs).
+                    <br />&bull; <strong>Tuesdays (43)</strong>: starting Sep 8, 2026 through June 29, 2027 (6:30 PM – 9:30 PM, 3.0 hrs).
+                  </p>
+                  <p>
+                    2. Each session is saved to Firestore as an independent document in <code>/events</code> with <code>isStandalone: true</code>, <code>pushToAllPatrols: true</code>, and <code>createdBy: neoissa@gmail.com</code>.
+                  </p>
+                  <p>
+                    3. Scouts and parents will immediately see each standalone session in their calendar, and can submit RSVPs for each individual date.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  <button
+                    onClick={handleRunSeeder}
+                    disabled={isSeeding || isPurging}
+                    className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs py-3.5 px-6 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
+                  >
+                    {isSeeding ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="text-amber-200" />}
+                    <span>{isSeeding ? 'Generating & Seeding to Firestore...' : '🚀 Generate & Seed 82 Events to Calendar'}</span>
+                  </button>
+
+                  <button
+                    onClick={handlePurgeGenerated}
+                    disabled={isSeeding || isPurging}
+                    className="w-full sm:w-auto bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 hover:border-rose-700 disabled:opacity-50 text-xs font-semibold py-3.5 px-4 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 border border-slate-700"
+                    title="Remove all standalone recurring sessions if you need to reset"
+                  >
+                    <Trash2 size={15} />
+                    <span>Purge Generated Sessions</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Interactive Schedule Preview */}
+            {generatorTab === 'preview' && (
+              <div className="space-y-3">
+                {/* Search & Filter in Preview */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <button
+                      onClick={() => setPreviewFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        previewFilter === 'all' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      All (82)
+                    </button>
+                    <button
+                      onClick={() => setPreviewFilter('friday')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        previewFilter === 'friday' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Fridays (39)
+                    </button>
+                    <button
+                      onClick={() => setPreviewFilter('tuesday')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        previewFilter === 'tuesday' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Tuesdays (43)
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="Search date (e.g. 2026-10 or Oct)..."
+                      value={previewSearch}
+                      onChange={(e) => setPreviewSearch(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview Table */}
+                <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-900 text-slate-400 font-bold uppercase text-[10px] sticky top-0 border-b border-slate-800">
+                      <tr>
+                        <th className="p-2.5 pl-4">#</th>
+                        <th className="p-2.5">Day</th>
+                        <th className="p-2.5">Date</th>
+                        <th className="p-2.5">Time & Duration</th>
+                        <th className="p-2.5">Document ID</th>
+                        <th className="p-2.5 text-right pr-4">Live Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850">
+                      {filteredPreviewList.map((item, idx) => {
+                        const isLive = existingEventIdMap.has(item.id);
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-900/60 transition">
+                            <td className="p-2.5 pl-4 font-mono text-slate-500">{idx + 1}</td>
+                            <td className="p-2.5">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                item.dayOfWeek === 'Friday' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'
+                              }`}>
+                                {item.dayOfWeek}
+                              </span>
+                            </td>
+                            <td className="p-2.5 font-mono font-bold text-white">{item.date}</td>
+                            <td className="p-2.5 text-slate-300 font-mono text-[11px]">
+                              {item.time} ({item.durationHours} hrs)
+                            </td>
+                            <td className="p-2.5 font-mono text-[10px] text-slate-400 truncate max-w-[120px]">
+                              {item.id}
+                            </td>
+                            <td className="p-2.5 text-right pr-4">
+                              {isLive ? (
+                                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                  <CheckCircle size={10} /> Live
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">
+                                  Pending Seed
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── CREATE / EDIT EVENT MODAL ── */}
       {showForm && isLeader && (
@@ -345,7 +1049,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -367,7 +1071,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date *</label>
                   <input
@@ -380,30 +1084,184 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Time Range</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 10:00 AM – 2:00 PM"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Category</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="meeting">🏕️ Troop Meeting</option>
+                    <option value="meeting">🏕️ Troop Meeting / Standalone Session</option>
                     <option value="campout">⛺ Overnight Campout</option>
                     <option value="service">🤝 Service Project</option>
                     <option value="faith">🕌 Halqa / Spiritual Circle</option>
                     <option value="ceremony">🎖️ Court of Honor / Ceremony</option>
                   </select>
                 </div>
+              </div>
+
+              {/* ── TIME RANGE SELECTOR ── */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-emerald-400" />
+                    <label className="text-xs font-bold text-slate-200 uppercase tracking-wide">
+                      Time Range & Schedule
+                    </label>
+                  </div>
+
+                  {/* Mode Tabs */}
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setTimeMode('picker')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        timeMode === 'picker'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      ⏱️ Time Picker
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimeMode('presets')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        timeMode === 'presets'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      ⚡ Presets
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimeMode('custom')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        timeMode === 'custom'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      ✏️ Custom
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mode 1: Interactive Time Picker */}
+                {timeMode === 'picker' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          Start Time
+                        </label>
+                        <input
+                          type="time"
+                          value={startTime}
+                          disabled={isAllDay}
+                          onChange={(e) => handleStartTimeChange(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          End Time
+                        </label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          disabled={isAllDay}
+                          onChange={(e) => handleEndTimeChange(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-800/60">
+                      <label className="flex items-center gap-2 text-xs text-slate-300 font-medium cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isAllDay}
+                          onChange={(e) => handleToggleAllDay(e.target.checked)}
+                          className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                        />
+                        <span>All Day Event</span>
+                      </label>
+
+                      {/* Live Badge Preview */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-semibold shadow-sm">
+                          <span>🕒</span>
+                          <span>{time}</span>
+                        </span>
+                        {!isAllDay && calculateDuration(startTime, endTime) && (
+                          <span className="text-[11px] font-mono text-slate-300 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg">
+                            ⏱️ {calculateDuration(startTime, endTime)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 2: Quick Presets */}
+                {timeMode === 'presets' && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-slate-400">
+                      Select a standard Kashaf Scout troop schedule to apply instantly:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {SCOUT_TIME_PRESETS.map((p) => {
+                        const isCurrent = (!p.isAllDay && !isAllDay && startTime === p.start && endTime === p.end) || (p.isAllDay && isAllDay);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => handleSelectPreset(p)}
+                            className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                              isCurrent
+                                ? 'bg-emerald-950/50 border-emerald-500 text-white'
+                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-white">{p.label}</span>
+                              {isCurrent && <span className="text-[10px] text-emerald-400 font-bold">✓ Selected</span>}
+                            </div>
+                            <div className="flex justify-between items-center mt-1 text-[11px] text-slate-400 font-mono">
+                              <span>{p.desc}</span>
+                              {!p.isAllDay && (
+                                <span className="text-emerald-400/90 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                  {calculateDuration(p.start, p.end)}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 3: Freeform Custom Text */}
+                {timeMode === 'custom' && (
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase">
+                      Custom Time Text
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. After Maghrib – 9:30 PM, or Overnight Fri-Sun"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-400 italic">
+                      Use this for non-standard schedules, prayer-anchored times, or multi-day campout descriptions.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -489,20 +1347,56 @@ export default function EventsManager({ currentUser, onNavigate }) {
         {/* Left: Events List */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-extrabold text-white text-sm">Scheduled Calendar ({events.length})</h3>
-            <span className="text-[10px] font-mono text-slate-400">Chronological</span>
+            <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+              {timeHorizon === 'upcoming' ? (
+                <>
+                  <CalendarDays size={15} className="text-emerald-400" />
+                  <span>Upcoming Schedule ({filteredEvents.length})</span>
+                </>
+              ) : timeHorizon === 'past' ? (
+                <>
+                  <History size={15} className="text-purple-400" />
+                  <span>Past Events Archive ({filteredEvents.length})</span>
+                </>
+              ) : (
+                <>
+                  <Layers size={15} className="text-slate-400" />
+                  <span>All Events ({filteredEvents.length})</span>
+                </>
+              )}
+            </h3>
+            <span className="text-[10px] font-mono text-slate-400">
+              {timeHorizon === 'past' ? 'Reverse Order (Recent First)' : 'Chronological'}
+            </span>
           </div>
 
-          {events.length === 0 ? (
-            <div className="text-center py-12 bg-slate-850 rounded-3xl border border-slate-750 text-slate-400 text-xs italic">
-              No events scheduled in the calendar.
+          {filteredEvents.length === 0 ? (
+            <div className="text-center py-12 bg-slate-850 rounded-3xl border border-slate-755 text-slate-400 text-xs italic space-y-2">
+              <p>
+                {timeHorizon === 'past'
+                  ? 'No past events found in this category.'
+                  : timeHorizon === 'upcoming'
+                  ? 'No upcoming events scheduled.'
+                  : 'No events match your filter.'}
+              </p>
+              {isExecutive && (
+                <button
+                  onClick={() => setShowGeneratorModal(true)}
+                  className="inline-flex items-center gap-1.5 text-emerald-400 font-bold hover:underline text-xs cursor-pointer"
+                >
+                  <Zap size={13} /> Auto-Generate 2026–2027 Schedule
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
-              {events.map(ev => {
+              {filteredEvents.map(ev => {
                 const isSelected = selectedEvent?.id === ev.id;
                 const rsvps = Object.values(eventRsvps[ev.id] || {});
                 const countAttending = rsvps.filter(r => r.status === 'attending').length;
+                const isPast = (ev.date || '') < todayStr;
+                const isFriday = ev.recurringPattern === 'weekly_friday' || new Date(ev.date + 'T12:00:00').getDay() === 5;
+                const isTuesday = ev.recurringPattern === 'weekly_tuesday' || new Date(ev.date + 'T12:00:00').getDay() === 2;
 
                 return (
                   <button
@@ -510,21 +1404,42 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     onClick={() => setSelectedEvent(ev)}
                     className={`w-full text-left p-4 rounded-2xl border transition cursor-pointer flex flex-col gap-1.5 shadow-sm ${
                       isSelected
-                        ? 'bg-emerald-950/30 border-emerald-500/60 shadow-emerald-950/30'
+                        ? isPast 
+                          ? 'bg-purple-950/40 border-purple-500/60 shadow-purple-950/40'
+                          : 'bg-emerald-950/30 border-emerald-500/60 shadow-emerald-950/30'
                         : 'bg-slate-850 border-slate-755 hover:border-slate-650'
                     }`}
                   >
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        📅 {ev.date}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                          isPast 
+                            ? 'text-purple-300 bg-purple-500/10 border-purple-500/30'
+                            : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                        }`}>
+                          📅 {ev.date}
+                        </span>
+                        {isPast && (
+                          <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
+                            ✓ Past
+                          </span>
+                        )}
+                        {ev.isStandalone && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                            isFriday ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'
+                          }`}>
+                            {isFriday ? 'Fri' : isTuesday ? 'Tue' : 'Weekly'}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-mono">
-                        {countAttending} Going
+                        {countAttending} {isPast ? 'Attended' : 'Going'}
                       </span>
                     </div>
                     <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
                     <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
                       <span>⏰ {ev.time}</span>
+                      {ev.durationHours && <span>&bull; {ev.durationHours} hrs</span>}
                       {ev.location && <span>&bull; 📍 {ev.location}</span>}
                     </div>
                   </button>
@@ -537,22 +1452,43 @@ export default function EventsManager({ currentUser, onNavigate }) {
         {/* Right: Selected Event Detail & RSVP Center */}
         {selectedEvent ? (
           <div className="lg:col-span-2 space-y-5">
-            <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
+            <div className={`border rounded-3xl p-6 sm:p-7 shadow-xl space-y-5 ${
+              (selectedEvent.date || '') < todayStr
+                ? 'bg-slate-850 border-purple-500/30'
+                : 'bg-slate-850 border-slate-755'
+            }`}>
               {/* Event Header */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-750 pb-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">
-                      {selectedEvent.category}
+                      {selectedEvent.category || selectedEvent.eventType || 'meeting'}
                     </span>
+                    {(selectedEvent.date || '') < todayStr ? (
+                      <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <History size={11} /> Completed / Past Session
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <CalendarDays size={11} /> Upcoming Event
+                      </span>
+                    )}
+                    {selectedEvent.isStandalone && (
+                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Zap size={10} /> Standalone Session
+                      </span>
+                    )}
                     <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-700 px-2.5 py-0.5 rounded-full">
-                      {selectedEvent.targetGroupId === 'all' ? '⚡ Troop-Wide Broadcast' : 'Patrol Scoped'}
+                      {selectedEvent.targetGroupId === 'all' || selectedEvent.pushToAllPatrols ? '⚡ Troop-Wide Broadcast' : 'Patrol Scoped'}
                     </span>
                   </div>
                   <h3 className="text-xl font-black text-white">{selectedEvent.title}</h3>
                   <div className="flex items-center gap-4 text-xs text-slate-300 pt-1 flex-wrap font-medium">
                     <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-400" /> {selectedEvent.date}</span>
                     <span className="flex items-center gap-1.5"><Clock size={13} className="text-emerald-400" /> {selectedEvent.time}</span>
+                    {selectedEvent.durationHours && (
+                      <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {selectedEvent.durationHours} hrs duration</span>
+                    )}
                     {selectedEvent.location && (
                       <span className="flex items-center gap-1.5"><MapPin size={13} className="text-emerald-400" /> {selectedEvent.location}</span>
                     )}
@@ -563,14 +1499,14 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => handleOpenEdit(selectedEvent)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition"
+                      className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
                       title="Edit Event"
                     >
                       <Edit3 size={15} />
                     </button>
                     <button
                       onClick={() => handleDeleteEvent(selectedEvent.id)}
-                      className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition"
+                      className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
                       title="Delete Event"
                     >
                       <Trash2 size={15} />
@@ -600,7 +1536,9 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                   <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
                     <CheckSquare size={16} className="text-emerald-400" />
-                    <span>Your Family Event RSVP</span>
+                    <span>
+                      {(selectedEvent.date || '') < todayStr ? 'Your Family Event Attendance Record' : 'Your Family Event RSVP'}
+                    </span>
                   </h4>
                   {rsvpSuccessMsg && <span className="text-xs text-emerald-400 font-bold">{rsvpSuccessMsg}</span>}
                 </div>
@@ -608,9 +1546,9 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 <form onSubmit={handleSubmitRsvp} className="space-y-3.5">
                   <div className="flex gap-2">
                     {[
-                      { id: 'attending', label: '✓ Going / Attending', color: 'bg-emerald-600 text-white' },
-                      { id: 'tentative', label: '❓ Tentative', color: 'bg-amber-600 text-white' },
-                      { id: 'not_attending', label: '✗ Not Attending', color: 'bg-slate-800 text-slate-400' }
+                      { id: 'attending', label: (selectedEvent.date || '') < todayStr ? '✓ Attended' : '✓ Going / Attending', color: 'bg-emerald-600 text-white' },
+                      { id: 'tentative', label: (selectedEvent.date || '') < todayStr ? '❓ Partial' : '❓ Tentative', color: 'bg-amber-600 text-white' },
+                      { id: 'not_attending', label: (selectedEvent.date || '') < todayStr ? '✗ Absent' : '✗ Not Attending', color: 'bg-slate-800 text-slate-400' }
                     ].map(st => (
                       <button
                         type="button"
@@ -671,7 +1609,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Carpool / Additional Notes</label>
                     <input
                       type="text"
-                      placeholder="e.g. Leaving at 9:30 AM from North side..."
+                      placeholder="e.g. Leaving at 6:15 PM from North center..."
                       value={rsvpNotes}
                       onChange={(e) => setRsvpNotes(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -684,7 +1622,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg"
                   >
                     <Check size={14} />
-                    <span>{rsvpSaving ? 'Saving RSVP...' : 'Submit / Update RSVP'}</span>
+                    <span>{rsvpSaving ? 'Saving...' : (selectedEvent.date || '') < todayStr ? 'Update Attendance Note' : 'Submit / Update RSVP'}</span>
                   </button>
                 </form>
               </div>
@@ -695,17 +1633,19 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                     <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
                       <Users size={14} className="text-emerald-400" />
-                      <span>Roster RSVPs ({currentEventRsvpsList.length} Responses)</span>
+                      <span>
+                        {(selectedEvent.date || '') < todayStr ? 'Recorded Attendance / Responses' : 'Roster RSVPs'} ({currentEventRsvpsList.length} Responses)
+                      </span>
                     </h4>
                     <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="text-emerald-400 font-bold">✓ {attendingCount} Attending</span>
+                      <span className="text-emerald-400 font-bold">✓ {attendingCount} { (selectedEvent.date || '') < todayStr ? 'Present' : 'Attending' }</span>
                       <span className="text-amber-400 font-bold">? {tentativeCount} Tentative</span>
                       <span className="text-slate-400">✗ {notAttendingCount} Out</span>
                     </div>
                   </div>
 
                   {currentEventRsvpsList.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic py-2">No RSVPs recorded yet for this event.</p>
+                    <p className="text-xs text-slate-500 italic py-2">No RSVP responses recorded for this event.</p>
                   ) : (
                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                       {currentEventRsvpsList.map((r, idx) => (
@@ -723,7 +1663,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                             r.status === 'tentative' ? 'bg-amber-950 text-amber-300 border-amber-800' :
                             'bg-slate-900 text-slate-400 border-slate-800'
                           }`}>
-                            {r.status === 'attending' ? 'Attending' : r.status === 'tentative' ? 'Tentative' : 'Declined'}
+                            {r.status === 'attending' ? ((selectedEvent.date || '') < todayStr ? 'Present' : 'Attending') : r.status === 'tentative' ? 'Tentative' : 'Declined'}
                           </span>
                         </div>
                       ))}
@@ -734,8 +1674,10 @@ export default function EventsManager({ currentUser, onNavigate }) {
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-2 text-center py-20 bg-slate-850 rounded-3xl border border-slate-750 text-slate-400 text-xs">
-            Select an event from the schedule to view details and submit RSVP.
+          <div className="lg:col-span-2 text-center py-20 bg-slate-850 rounded-3xl border border-slate-755 text-slate-400 text-xs">
+            {timeHorizon === 'past' 
+              ? 'Select a past completed event from the archive to review notes and attendance logs.'
+              : 'Select an event from the schedule to view details and submit RSVP.'}
           </div>
         )}
       </div>

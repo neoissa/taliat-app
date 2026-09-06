@@ -7,17 +7,17 @@ export const ROLES_DATA = {
     id: 'scoutmaster',
     roleKey: 'leader',
     positionName: 'Scoutmaster (SM) & Assistant Scoutmaster (ASM)',
-    shortTitle: 'Executive Leadership (SM / ASM)',
-    badgeLabel: '⚜️ Troop Executive Leadership',
-    colorTheme: 'amber',
-    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    icon: 'Crown',
-    accessScope: 'Troop-Wide (All Patrols & Organizational Units)',
-    tagline: 'Directs youth leadership, mentors the SPL, and administers troop-wide advancement and safety.',
+    shortTitle: 'Troop Scoutmaster (SM / ASM)',
+    badgeLabel: '⚜️ Troop Scoutmaster',
+    colorTheme: 'emerald',
+    badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    icon: 'Shield',
+    accessScope: 'Troop-Wide Program & Advancement (All Patrols)',
+    tagline: 'Directs youth leadership, mentors the SPL, conducts Scoutmaster conferences, and coordinates troop advancement.',
     appPermissions: [
       {
-        title: 'Full Cross-Patrol Visibility',
-        desc: 'Unrestricted visibility across all patrols, rosters, individual scouts, and troop activity metrics.'
+        title: 'Full Cross-Patrol Program Visibility',
+        desc: 'Unrestricted visibility across all troop patrols, rosters, individual scout progress, and activity metrics.'
       },
       {
         title: 'Global Troop Broadcasts & Announcements',
@@ -28,16 +28,16 @@ export const ROLES_DATA = {
         desc: 'Conduct and sign off on all 7 rank tiers, merit badges, Scoutmaster conferences, Board of Review approvals, and Eagle applications.'
       },
       {
-        title: 'Troop Roster & Patrol Architecture Management',
-        desc: 'Create and edit patrol groups, assign or reassign scouts to patrols, and appoint adult unit staff.'
-      },
-      {
         title: 'Universal Testing Queue Sign-Offs',
-        desc: 'Access the Troop Oral Testing and Sign-off queue to review, test, and approve submitted scout milestones.'
+        desc: 'Access the Troop Oral Testing and Sign-off queue to review, test, and approve submitted scout milestones across all units.'
       },
       {
         title: 'Troop-Wide Attendance & Absence Risk Oversight',
         desc: 'Monitor attendance health across all units, identify high-risk absence streaks (Yellow/Red), and initiate parent interventions.'
+      },
+      {
+        title: 'Troop Activity & Advancement Reports',
+        desc: 'Generate comprehensive troop analytics, printable advancement ledgers, and court of honor reports.'
       }
     ],
     unitResponsibilities: [

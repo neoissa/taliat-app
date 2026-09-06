@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import {
@@ -13,7 +13,9 @@ import {
   Tent,
   Flame,
   CheckCircle2,
-  CalendarCheck
+  CalendarCheck,
+  History,
+  CalendarDays
 } from 'lucide-react';
 
 export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
@@ -23,6 +25,9 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
   // Interactive Calendar State
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Feed Tab State: 'day' | 'upcoming' | 'past'
+  const [feedTab, setFeedTab] = useState('day');
 
   // Events & Assignments Data
   const [events, setEvents] = useState([]);
@@ -104,6 +109,7 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
     const now = new Date();
     setCurrentMonthDate(now);
     setSelectedDate(now.toISOString().split('T')[0]);
+    setFeedTab('day');
   };
 
   // Build Calendar Days Matrix
@@ -140,14 +146,29 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
     });
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Events & Tasks on Selected Date
   const selectedDateEvents = events.filter(ev => ev.date === selectedDate);
   const selectedDateTasks = assignments.filter(a => a.dueDate === selectedDate);
 
+  // Upcoming vs Past Events
+  const upcomingEvents = useMemo(() => {
+    return events
+      .filter(ev => (ev.date || '') >= todayStr)
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .slice(0, 10);
+  }, [events, todayStr]);
+
+  const pastEvents = useMemo(() => {
+    return events
+      .filter(ev => (ev.date || '') < todayStr)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .slice(0, 10);
+  }, [events, todayStr]);
+
   return (
-    <div className="bg-slate-850 border border-slate-750 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6">
+    <div className="bg-slate-850 border border-slate-755 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6">
       {/* ── TOP LIVE CLOCK & DATE HERO BANNER ── */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/70 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
         <div className="flex items-center gap-3.5">
@@ -240,7 +261,10 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                 <button
                   type="button"
                   key={idx}
-                  onClick={() => setSelectedDate(cell.dateString)}
+                  onClick={() => {
+                    setSelectedDate(cell.dateString);
+                    setFeedTab('day');
+                  }}
                   className={`h-12 sm:h-14 p-1 rounded-xl transition cursor-pointer relative flex flex-col justify-between items-start border text-left ${
                     isSelected
                       ? 'bg-emerald-600/30 border-emerald-400 text-white shadow-md'
@@ -282,65 +306,185 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
           </div>
         </div>
 
-        {/* Right (4 Cols): Selected Day Schedule & Activity Feed */}
+        {/* Right (4 Cols): Interactive Day & Upcoming/Past Events Tabs */}
         <div className="lg:col-span-4 bg-slate-900/90 border border-slate-750 rounded-2xl p-4 flex flex-col justify-between space-y-4">
           <div className="space-y-3">
-            <div className="border-b border-slate-750 pb-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                Selected Day Schedule:
-              </span>
-              <h5 className="text-xs font-black text-emerald-300 font-mono mt-0.5">
-                {selectedDate === todayStr ? '⭐ Today - ' : ''}{selectedDate}
-              </h5>
+            {/* Feed Tabs Bar */}
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setFeedTab('day')}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer truncate ${
+                  feedTab === 'day'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Selected Day
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedTab('upcoming')}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer truncate ${
+                  feedTab === 'upcoming'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Upcoming ({upcomingEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedTab('past')}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer truncate ${
+                  feedTab === 'past'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Past Events
+              </button>
             </div>
 
-            {/* Scheduled Items List */}
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {selectedDateEvents.length === 0 && selectedDateTasks.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs italic space-y-1">
-                  <p>No troop events or tasks scheduled for this day.</p>
+            {/* Tab 1: Selected Day Schedule */}
+            {feedTab === 'day' && (
+              <div className="space-y-2">
+                <div className="border-b border-slate-800 pb-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                    Schedule for:
+                  </span>
+                  <h5 className="text-xs font-black text-emerald-300 font-mono mt-0.5">
+                    {selectedDate === todayStr ? '⭐ Today - ' : ''}{selectedDate}
+                  </h5>
                 </div>
-              ) : (
-                <>
-                  {selectedDateEvents.map(ev => (
-                    <div
-                      key={ev.id}
-                      onClick={() => onNavigate && onNavigate('events')}
-                      className="p-2.5 rounded-xl bg-slate-800 border border-emerald-500/40 hover:border-emerald-400 transition cursor-pointer text-xs space-y-1"
-                    >
-                      <div className="flex items-center justify-between">
-                        <strong className="text-white font-bold truncate max-w-[150px]">{ev.title}</strong>
-                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.2 rounded-full font-semibold">
-                          {ev.type || 'Event'}
-                        </span>
-                      </div>
-                      {ev.location && (
-                        <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <MapPin size={10} className="text-emerald-400 shrink-0" />
-                          <span className="truncate">{ev.location}</span>
-                        </p>
-                      )}
-                    </div>
-                  ))}
 
-                  {selectedDateTasks.map(t => (
-                    <div
-                      key={t.id}
-                      onClick={() => onNavigate && onNavigate('assignments')}
-                      className="p-2.5 rounded-xl bg-slate-800 border border-amber-500/40 hover:border-amber-400 transition cursor-pointer text-xs space-y-1"
-                    >
-                      <div className="flex items-center justify-between">
-                        <strong className="text-white font-bold truncate max-w-[150px]">🎒 {t.title}</strong>
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.2 rounded-full font-semibold">
-                          Due
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400">Homework task due date</p>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {selectedDateEvents.length === 0 && selectedDateTasks.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500 text-xs italic space-y-1">
+                      <p>No troop events or tasks scheduled for this day.</p>
                     </div>
-                  ))}
-                </>
-              )}
-            </div>
+                  ) : (
+                    <>
+                      {selectedDateEvents.map(ev => (
+                        <div
+                          key={ev.id}
+                          onClick={() => onNavigate && onNavigate('events')}
+                          className="p-2.5 rounded-xl bg-slate-800 border border-emerald-500/40 hover:border-emerald-400 transition cursor-pointer text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <strong className="text-white font-bold truncate max-w-[150px]">{ev.title}</strong>
+                            <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.2 rounded-full font-semibold">
+                              {ev.category || ev.type || 'Event'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 font-mono">⏰ {ev.time}</p>
+                          {ev.location && (
+                            <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <MapPin size={10} className="text-emerald-400 shrink-0" />
+                              <span className="truncate">{ev.location}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+
+                      {selectedDateTasks.map(t => (
+                        <div
+                          key={t.id}
+                          onClick={() => onNavigate && onNavigate('assignments')}
+                          className="p-2.5 rounded-xl bg-slate-800 border border-amber-500/40 hover:border-amber-400 transition cursor-pointer text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <strong className="text-white font-bold truncate max-w-[150px]">🎒 {t.title}</strong>
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.2 rounded-full font-semibold">
+                              Due
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Homework task due date</p>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Upcoming Events List */}
+            {feedTab === 'upcoming' && (
+              <div className="space-y-2">
+                <div className="border-b border-slate-800 pb-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 block">
+                    Next Scheduled Events:
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {upcomingEvents.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500 text-xs italic">
+                      <p>No upcoming events found.</p>
+                    </div>
+                  ) : (
+                    upcomingEvents.map(ev => (
+                      <div
+                        key={ev.id}
+                        onClick={() => {
+                          setSelectedDate(ev.date);
+                          onNavigate && onNavigate('events');
+                        }}
+                        className="p-2 rounded-xl bg-slate-800 border border-emerald-500/30 hover:border-emerald-400 transition cursor-pointer text-xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-emerald-300">📅 {ev.date}</span>
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold uppercase">
+                            {ev.category || 'Meeting'}
+                          </span>
+                        </div>
+                        <strong className="text-white font-bold block truncate">{ev.title}</strong>
+                        <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Past Events Archive */}
+            {feedTab === 'past' && (
+              <div className="space-y-2">
+                <div className="border-b border-slate-800 pb-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 block">
+                    Recently Completed Sessions:
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {pastEvents.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500 text-xs italic">
+                      <p>No past events recorded yet.</p>
+                    </div>
+                  ) : (
+                    pastEvents.map(ev => (
+                      <div
+                        key={ev.id}
+                        onClick={() => {
+                          setSelectedDate(ev.date);
+                          onNavigate && onNavigate('events');
+                        }}
+                        className="p-2 rounded-xl bg-slate-800/80 border border-purple-500/30 hover:border-purple-400 transition cursor-pointer text-xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-purple-300">📅 {ev.date}</span>
+                          <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-bold">
+                            ✓ Past
+                          </span>
+                        </div>
+                        <strong className="text-slate-200 font-bold block truncate">{ev.title}</strong>
+                        <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <button

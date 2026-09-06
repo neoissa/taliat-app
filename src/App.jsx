@@ -112,12 +112,10 @@ export default function App() {
   }, []);
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
-  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
-  const isLeader = !isExecutive && currentUser?.role === 'leader';
-  const isParent = !isExecutive && !isLeader && currentUser?.role === 'parent';
-  const isScout = !isExecutive && !isLeader && !isParent;
+  const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin');
+  const isParent = !isOwner && !isLeader && currentUser?.role === 'parent';
+  const isScout = !isOwner && !isLeader && !isParent;
+  const isLeaderOrOwner = isOwner || isLeader;
 
   // 2. Proactively promote neoissa@gmail.com to owner in the database on load
   useEffect(() => {
@@ -297,10 +295,10 @@ export default function App() {
 
   // ── DEFINE NAVIGATION ITEMS BY ROLE ──
   const getNavItems = () => {
-    if (isExecutive) {
+    if (isOwner) {
       return [
-        { id: 'home', label: 'Executive Hub', icon: '🏠' },
-        { id: 'admin', label: 'Executive Admin Hub', icon: '⚡' },
+        { id: 'home', label: 'Owner Hub', icon: '🏠' },
+        { id: 'admin', label: '👑 Owner Admin Hub', icon: '⚡' },
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
@@ -808,7 +806,7 @@ export default function App() {
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
 
-        {currentTab === 'home' && (isLeader || isExecutive) && (
+        {currentTab === 'home' && isLeaderOrOwner && (
           <LeaderHome 
             currentUser={currentUser} 
             onNavigate={handleNavigate} 
@@ -830,24 +828,24 @@ export default function App() {
           />
         )}
 
-        {(currentTab === 'admin' || currentTab === 'global-admin') && isExecutive && (
-          <AdminPanel currentUser={currentUser} />
+        {(currentTab === 'admin' || currentTab === 'global-admin') && isOwner && (
+          <AdminPanel currentUser={currentUser} onNavigate={handleNavigate} />
         )}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
-        {currentTab === 'roster' && (isLeader || isExecutive) && <PatrolRoster currentUser={currentUser} />}
-        {currentTab === 'scouts' && (isLeader || isExecutive) && <ScoutList currentUser={currentUser} />}
+        {currentTab === 'roster' && isLeaderOrOwner && <PatrolRoster currentUser={currentUser} />}
+        {currentTab === 'scouts' && isLeaderOrOwner && <ScoutList currentUser={currentUser} />}
         {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
-        {currentTab === 'lesson-plans' && (isLeader || isExecutive) && <LessonPlans currentUser={currentUser} />}
+        {currentTab === 'lesson-plans' && isLeaderOrOwner && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
         {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-        {currentTab === 'reports' && (isLeader || isExecutive) && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
-        {currentTab === 'attendance' && (isLeader || isExecutive) && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
+        {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
     </div>

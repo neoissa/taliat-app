@@ -60,7 +60,7 @@ export const EVENT_PROGRAM_CONFIG = {
     label: 'Tuesday Program',
     shortLabel: 'Tuesday Program',
     icon: '📅',
-    description: 'Weekly Tuesday Scouting Program (Default: 1.25 hrs)'
+    description: 'Weekly Tuesday Scouting Program (7:15 PM – 8:30 PM / 1.25 hrs)'
   },
   'Campout': {
     id: 'campout',
