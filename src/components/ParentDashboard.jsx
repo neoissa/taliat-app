@@ -10,7 +10,7 @@ import {
   addDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import RankIcon from './RankIcon';
@@ -449,30 +449,22 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
 
   // ── ADVANCEMENT & ATTENDANCE CALCULATIONS FOR ACTIVE CHILD ──
   const scoutFullName = activeScout?.fullName || activeScout?.username || 'Child Member';
-  const scoutRank = (activeScout?.rank || 'Scout').toLowerCase();
   const groupObj = allGroups.find(g => g.id === activeScout?.groupId) || {};
   const patrolName = groupObj.name || 'Al-Huda';
 
-  const completedRanks = RANKS_DATA.filter(rank => {
-    const rp = ranksProgress[rank.id] || {};
-    const reqs = rp.completedRequirements || rp.steps || {};
-    const total = rank.categories ? rank.categories.reduce((sum, c) => sum + c.requirements.length, 0) : (rank.requirements?.length || 0);
-    const done = rank.categories 
-      ? rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => reqs[r.id]?.completed).length, 0)
-      : (rank.requirements?.filter(r => reqs[r.id]?.completed)?.length || 0);
-    return total > 0 && done === total;
-  });
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, activeScout?.rank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const scoutRank = latestAchievedRank.name;
 
-  const activeRankData = RANKS_DATA.find(r => r.name.toLowerCase() === scoutRank) || RANKS_DATA[0];
+  const completedRanks = RANKS_DATA.filter(rank => isRankCompleted(rank, ranksProgress));
+
+  const activeRankData = nextTargetRank;
+  const targetStats = getRankCompletionPercentage(nextTargetRank.id, ranksProgress);
   const activeProg = ranksProgress[activeRankData.id] || {};
   const activeReqs = activeProg.completedRequirements || activeProg.steps || {};
-  const activeTotal = activeRankData.categories 
-    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0) 
-    : (activeRankData.requirements?.length || 0);
-  const activeDone = activeRankData.categories 
-    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => activeReqs[r.id]?.completed).length, 0)
-    : (activeRankData.requirements?.filter(r => activeReqs[r.id]?.completed)?.length || 0);
-  const rankPercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
+  const activeTotal = targetStats.total;
+  const activeDone = targetStats.completed;
+  const rankPercent = targetStats.percentage;
 
   const earnedBadges = MERIT_BADGES.filter(b => {
     const p = meritProgress[b.id];
@@ -659,11 +651,11 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Rank</span>
-              <strong className="text-lg font-black text-white block truncate">{activeRankData.name}</strong>
+              <strong className="text-lg font-black text-emerald-400 block truncate">{latestAchievedRank.name}</strong>
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
-                <div className="bg-emerald-500 h-full" style={{ width: `${rankPercent}%` }}></div>
+                <div className="bg-amber-400 h-full transition-all duration-300" style={{ width: `${rankPercent}%` }}></div>
               </div>
-              <span className="text-[10px] text-slate-400 block mt-1">{activeDone}/{activeTotal} Req ({rankPercent}%)</span>
+              <span className="text-[10px] text-slate-400 block mt-1">Target: {activeRankData.name} ({rankPercent}%)</span>
             </div>
 
             <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
@@ -696,8 +688,8 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
           <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-750 pb-3">
               <div>
-                <h3 className="font-extrabold text-white text-base">⚜️ {activeRankData.name} Rank Requirements Progress</h3>
-                <p className="text-xs text-slate-400">Requirements verified and certified by unit leaders.</p>
+                <h3 className="font-extrabold text-white text-base">⚜️ Target Rank: {activeRankData.name} Requirements Progress</h3>
+                <p className="text-xs text-slate-400">Current rank: <strong className="text-emerald-400">{latestAchievedRank.name}</strong>. Requirements below are for advancing to {activeRankData.name}.</p>
               </div>
               <span className="text-xs font-mono text-emerald-400 font-bold bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
                 {activeDone} of {activeTotal} Certified

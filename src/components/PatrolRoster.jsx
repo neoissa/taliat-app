@@ -20,7 +20,7 @@ import ServiceLogs from './ServiceLogs';
 import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
 import { 
   Printer, 
   ArrowLeft, 
@@ -271,28 +271,14 @@ function ScoutDetail({ scout, currentUser, onBack }) {
   };
 
   // Derive summary metrics for scout
-  const completedRanksCount = RANKS_DATA.filter(rank => {
-    const rp = ranksProgress[rank.id] || { completedRequirements: {} };
-    const completedReqs = rp.completedRequirements || {};
-    const total = rank.categories ? rank.categories.reduce((sum, c) => sum + c.requirements.length, 0) : (rank.requirements?.length || 0);
-    const done = rank.categories 
-      ? rank.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0)
-      : (rank.requirements?.filter(r => completedReqs[r.id]?.completed)?.length || 0);
-    return total > 0 && done === total;
-  }).length;
+  const completedRanksCount = RANKS_DATA.filter(rank => isRankCompleted(rank, ranksProgress)).length;
 
-  const activeRank = scout.rank || 'Scout';
-  const activeRankId = activeRank.toLowerCase().replace(' ', '_');
-  const activeRankData = RANKS_DATA.find(r => r.id === activeRankId || r.name.toLowerCase() === activeRank.toLowerCase()) || RANKS_DATA[0];
-  const activeProg = ranksProgress[activeRankData.id] || { completedRequirements: {} };
-  const completedReqs = activeProg.completedRequirements || {};
-  const activeTotal = activeRankData.categories 
-    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.length, 0)
-    : (activeRankData.requirements?.length || 0);
-  const activeDone = activeRankData.categories 
-    ? activeRankData.categories.reduce((sum, c) => sum + c.requirements.filter(r => completedReqs[r.id]?.completed).length, 0) 
-    : (activeRankData.requirements?.filter(r => completedReqs[r.id]?.completed)?.length || 0);
-  const activePercent = activeTotal > 0 ? Math.round((activeDone / activeTotal) * 100) : 0;
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout.rank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const activeRank = latestAchievedRank.name;
+
+  const targetStats = getRankCompletionPercentage(nextTargetRank.id, ranksProgress);
+  const activePercent = targetStats.percentage;
 
   // Merit Badge Stats
   const badgesEarned = MERIT_BADGES.filter(b => {
@@ -347,6 +333,24 @@ function ScoutDetail({ scout, currentUser, onBack }) {
     day: 'numeric',
   });
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const sanitizedName = (scout.fullName || scout.username || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    
+    document.title = `${sanitizedName}_Progress_Report_${dateStr}`;
+    window.print();
+    
+    const restore = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Bar (Screen Only) */}
@@ -360,7 +364,7 @@ function ScoutDetail({ scout, currentUser, onBack }) {
         </button>
 
         <button
-          onClick={() => window.print()}
+          onClick={handlePrint}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-900/30"
         >
           <Printer size={14} />
@@ -832,12 +836,16 @@ function ScoutDetail({ scout, currentUser, onBack }) {
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Advancement & Attendance Summary</h2>
           <div className="grid grid-cols-4 gap-3">
             <div className="border border-slate-300 p-3 rounded text-center">
-              <p className="text-xl font-bold text-black">{activePercent}%</p>
-              <p className="text-[10px] text-slate-500">Active Rank Progress ({activeRank})</p>
+              <p className="text-xl font-bold text-black">{activeRank}</p>
+              <p className="text-[10px] text-slate-500">Current Achieved Rank</p>
             </div>
             <div className="border border-slate-300 p-3 rounded text-center">
               <p className="text-xl font-bold text-black">{completedRanksCount} / {RANKS_DATA.length}</p>
               <p className="text-[10px] text-slate-500">Ranks Fully Earned</p>
+            </div>
+            <div className="border border-slate-300 p-3 rounded text-center">
+              <p className="text-xl font-bold text-black">{nextTargetRank.name} ({activePercent}%)</p>
+              <p className="text-[10px] text-slate-500">Target Rank in Progress</p>
             </div>
             <div className="border border-slate-300 p-3 rounded text-center">
               <p className="text-xl font-bold text-black">{badgesEarned.length}</p>

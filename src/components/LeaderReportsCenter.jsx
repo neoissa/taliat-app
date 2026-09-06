@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, query, where, serverTimestamp } from 'firebase/firestore';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage, getRankById, getRankIndex } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import {
@@ -154,16 +154,16 @@ function SingleScoutCustomReport({
     return `Taliʿat ${rawPatrol}`;
   })();
 
-  const rankOrder = ['scout', 'tenderfoot', 'secondclass', 'firstclass', 'star', 'life', 'eagle'];
-  let currentRankIdx = rankOrder.indexOf(scoutRank);
-  if (currentRankIdx === -1) currentRankIdx = 0;
-  const currentRankData = RANKS_DATA[currentRankIdx] || RANKS_DATA[0];
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scoutRank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const currentRankData = latestAchievedRank;
+  const targetRankData = nextTargetRank;
 
   // Filter Ranks to Render
   let ranksToRender = [];
   if (config.ranks.enabled) {
     if (config.ranks.scope === 'current') {
-      ranksToRender = [currentRankData];
+      ranksToRender = [targetRankData];
     } else if (config.ranks.scope === 'all') {
       ranksToRender = RANKS_DATA;
     } else if (config.ranks.scope === 'custom') {
@@ -534,36 +534,50 @@ function SingleScoutCustomReport({
             <strong className="text-sm font-black uppercase text-amber-950 flex items-center gap-1.5">
               <span>🦅 Road to Eagle Capstone Portfolio</span>
             </strong>
+            <span className="text-[10px] font-bold text-amber-900 uppercase bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+              {currentRankData.id === 'life' || currentRankData.id === 'eagle' ? 'Active Eagle Candidate' : currentRankData.id === 'star' ? 'Star Milestone' : 'Prerequisite In Progress'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            {config.eagle.includeTenure && (
-              <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
-                <span className="text-[10px] font-bold text-amber-800 uppercase block">Active Life Tenure</span>
-                <p className="font-bold text-slate-900 mt-0.5">
-                  {eagleData.joinedTroopDate ? `Started: ${eagleData.joinedTroopDate}` : '6 Months Active Service Record'}
-                </p>
-              </div>
-            )}
+          {currentRankData.id === 'star' || currentRankData.id === 'life' || currentRankData.id === 'eagle' || eagleRoadmap.phase1?.projectTitle ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              {config.eagle.includeTenure && (
+                <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Active Life Tenure</span>
+                  <p className="font-bold text-slate-900 mt-0.5">
+                    {eagleData.joinedTroopDate ? `Started: ${eagleData.joinedTroopDate}` : '6 Months Active Leadership Service'}
+                  </p>
+                </div>
+              )}
 
-            {config.eagle.includePhases && (
-              <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
-                <span className="text-[10px] font-bold text-amber-800 uppercase block">Project 5-Phase Status</span>
-                <p className="font-bold text-slate-900 mt-0.5">
-                  {eagleRoadmap.phase1?.projectTitle || 'Eagle Project Proposed'} ({eagleRoadmap.phase5?.completed ? '✓ Final Report Completed' : 'Phase 1–5 Active'})
-                </p>
-              </div>
-            )}
+              {config.eagle.includePhases && (
+                <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Project 5-Phase Status</span>
+                  <p className="font-bold text-slate-900 mt-0.5">
+                    {eagleRoadmap.phase1?.projectTitle || 'Eagle Project Proposed'} ({eagleRoadmap.phase5?.completed ? '✓ Final Report Completed' : 'Phase 1–5 Active'})
+                  </p>
+                </div>
+              )}
 
-            {config.eagle.includeVolunteerHours && (
-              <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
-                <span className="text-[10px] font-bold text-amber-800 uppercase block">Volunteer Service Hours</span>
-                <p className="font-bold text-slate-900 mt-0.5">
-                  {eagleRoadmap.phase4?.totalVolunteerHours || 0} Hours Logged
-                </p>
-              </div>
-            )}
-          </div>
+              {config.eagle.includeVolunteerHours && (
+                <div className="border border-amber-200 p-2.5 rounded-lg bg-white">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Volunteer Service Hours</span>
+                  <p className="font-bold text-slate-900 mt-0.5">
+                    {eagleRoadmap.phase4?.totalVolunteerHours || 0} Hours Logged
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-white border border-amber-200 text-xs text-slate-700 space-y-1">
+              <p className="font-semibold text-slate-900">
+                🎯 Eagle Capstone Milestone Tracker: <span className="text-amber-900 font-bold">In-Progress Journey</span>
+              </p>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Scout is actively advancing through <strong>{currentRankData.name}</strong> rank. Eagle Project proposal, 6-month leadership position tenure, and Eagle Board of Review unlock upon reaching <strong>Life Scout</strong> rank.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -575,34 +589,39 @@ function SingleScoutCustomReport({
               <Heart size={16} />
               <span>Service Hours Log ({totalServiceHours} Total Hours)</span>
             </h3>
+            {filteredService.length > 0 && (
+              <span className="text-xs font-mono font-bold text-slate-700">
+                {filteredService.length} Project{filteredService.length !== 1 ? 's' : ''} Logged
+              </span>
+            )}
           </div>
 
-          <table className="w-full text-xs text-left border border-slate-300">
-            <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
-              <tr>
-                <th className="p-2 w-24">Date</th>
-                <th className="p-2">Project / Organization</th>
-                <th className="p-2 w-28">Conservation</th>
-                <th className="p-2 w-20 text-right">Hours</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredService.length === 0 ? (
+          {filteredService.length === 0 ? (
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+              No community service hours recorded in this reporting period.
+            </div>
+          ) : (
+            <table className="w-full text-xs text-left border border-slate-300">
+              <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
                 <tr>
-                  <td colSpan="4" className="p-3 text-center text-slate-500 italic">No service logs in this timeframe.</td>
+                  <th className="p-2 w-24">Date</th>
+                  <th className="p-2">Project / Organization</th>
+                  <th className="p-2 w-28">Conservation</th>
+                  <th className="p-2 w-20 text-right">Hours</th>
                 </tr>
-              ) : (
-                filteredService.map(l => (
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {filteredService.map(l => (
                   <tr key={l.id}>
                     <td className="p-2 font-mono text-slate-700">{l.date}</td>
                     <td className="p-2 font-bold text-slate-950">{l.description || l.title || 'Community Service'}</td>
                     <td className="p-2 text-slate-600">{l.conservation ? 'Yes (Conservation)' : 'No'}</td>
                     <td className="p-2 text-right font-black font-mono text-slate-950">{l.hours}h</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -616,28 +635,26 @@ function SingleScoutCustomReport({
                   <FileText size={15} />
                   <span>Homework & Assignments ({filteredHomework.length} Total Records)</span>
                 </h4>
-                <span className="text-[10px] font-mono text-slate-600">Strict Status Lifecycle Tracking</span>
+                <span className="text-[10px] font-mono text-slate-600">Status Lifecycle Tracking</span>
               </div>
 
-              <table className="w-full text-xs text-left border border-slate-300">
-                <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
-                  <tr>
-                    <th className="p-2">Assignment Name</th>
-                    <th className="p-2 w-24">Due Date</th>
-                    <th className="p-2 w-32 text-center">Status</th>
-                    <th className="p-2 w-28 text-center">Completion Date</th>
-                    <th className="p-2 w-32 text-right">Leader Sign-off</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredHomework.length === 0 ? (
+              {filteredHomework.length === 0 ? (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+                  No homework tasks or worksheets assigned for this reporting period.
+                </div>
+              ) : (
+                <table className="w-full text-xs text-left border border-slate-300">
+                  <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
                     <tr>
-                      <td colSpan="5" className="p-3 text-center text-slate-500 italic text-[11px]">
-                        No homework assignments recorded for this reporting period.
-                      </td>
+                      <th className="p-2">Assignment Name</th>
+                      <th className="p-2 w-24">Due Date</th>
+                      <th className="p-2 w-32 text-center">Status</th>
+                      <th className="p-2 w-28 text-center">Completion Date</th>
+                      <th className="p-2 w-32 text-right">Leader Sign-off</th>
                     </tr>
-                  ) : (
-                    filteredHomework.map(h => (
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredHomework.map(h => (
                       <tr key={h.id}>
                         <td className="p-2 font-bold text-slate-950">
                           <span>{h.title}</span>
@@ -652,10 +669,10 @@ function SingleScoutCustomReport({
                         <td className="p-2 text-center font-mono text-slate-700">{h.completionDate}</td>
                         <td className="p-2 text-right font-semibold text-slate-900">{h.leaderSignOff}</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
@@ -664,18 +681,20 @@ function SingleScoutCustomReport({
               <h4 className="text-xs font-black uppercase text-slate-950 border-b border-slate-300 pb-1">
                 Islamic Basics & Curriculum Testing ({completedIslamicTopics.length} Passed)
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                {completedIslamicTopics.length === 0 ? (
-                  <p className="text-slate-500 italic text-[11px] p-2 col-span-full">No Islamic tests recorded in this window.</p>
-                ) : (
-                  completedIslamicTopics.map(t => (
+              {completedIslamicTopics.length === 0 ? (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+                  No Islamic curriculum test submissions recorded in this reporting period.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  {completedIslamicTopics.map(t => (
                     <div key={t.id} className="flex justify-between items-center p-2 rounded bg-emerald-50/50 border border-emerald-200">
                       <span className="font-semibold text-slate-900 truncate max-w-[160px]">{t.title}</span>
                       <span className="font-mono text-[10px] text-emerald-800 font-bold">✓ Tested</span>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -720,24 +739,24 @@ function SingleScoutCustomReport({
             </div>
           </div>
 
-          <table className="w-full text-xs text-left border border-slate-300">
-            <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
-              <tr>
-                <th className="p-2 w-24">Date</th>
-                <th className="p-2">Program / Session</th>
-                <th className="p-2 w-20 text-center">Hours</th>
-                <th className="p-2 w-16 text-center">Nights</th>
-                <th className="p-2 w-28 text-center">Status</th>
-                <th className="p-2">Notes / Topic</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredAttendance.length === 0 && filteredEvents.length === 0 ? (
+          {filteredAttendance.length === 0 ? (
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+              No troop meetings or attendance sessions recorded in this reporting period.
+            </div>
+          ) : (
+            <table className="w-full text-xs text-left border border-slate-300">
+              <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[10px] text-slate-700">
                 <tr>
-                  <td colSpan="6" className="p-3 text-center text-slate-500 italic">No attendance or activity logs recorded in this period.</td>
+                  <th className="p-2 w-24">Date</th>
+                  <th className="p-2">Program / Session</th>
+                  <th className="p-2 w-20 text-center">Hours</th>
+                  <th className="p-2 w-16 text-center">Nights</th>
+                  <th className="p-2 w-28 text-center">Status</th>
+                  <th className="p-2">Notes / Topic</th>
                 </tr>
-              ) : (
-                filteredAttendance.map(s => {
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {filteredAttendance.map(s => {
                   const rec = s.records?.[scoutUid] || { status: 'present' };
                   const isAttended = rec.status === 'present' || rec.status === 'late';
                   const sType = s.eventType || '';
@@ -766,10 +785,10 @@ function SingleScoutCustomReport({
                       <td className="p-2 text-slate-700">{rec.note || s.notes || '—'}</td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -1001,8 +1020,69 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
     day: 'numeric'
   });
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const dateStr = new Date().toISOString().split('T')[0];
+    let docTitle = `Progress_Report_${dateStr}`;
+    
+    if (targetScouts.length === 1) {
+      const s = targetScouts[0];
+      const scoutName = (s.fullName || s.username || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+      docTitle = `${scoutName}_Progress_Report_${dateStr}`;
+    } else {
+      const pName = selectedGroupId === 'all' 
+        ? 'All_Patrols' 
+        : (groupsList.find(g => g.id === selectedGroupId)?.name || 'Patrol').replace(/[^a-zA-Z0-9]/g, '_');
+      docTitle = `Troop_313_${pName}_Compiled_Reports_${dateStr}`;
+    }
+
+    document.title = docTitle;
+    window.print();
+    
+    const restore = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 2000);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16 font-sans">
+      {/* ── PRINT CSS FIXES ── */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 10mm 12mm 10mm 12mm;
+            size: auto;
+          }
+          body {
+            background-color: white !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-hide {
+            display: none !important;
+          }
+          .page-break-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .scout-report-container {
+            page-break-after: always !important;
+            break-after: page !important;
+            margin-bottom: 0 !important;
+          }
+          .scout-report-container:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+        }
+      `}</style>
+
       {/* ── SCREEN CONTROL PANEL (HIDDEN IN PRINT) ── */}
       <div className="bg-slate-850 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-6 print-hide">
         {/* Header Title & Print Action */}
@@ -1023,7 +1103,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
 
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02] shrink-0"
           >
             <Printer size={16} />

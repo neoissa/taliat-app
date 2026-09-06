@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage } from '../data/ranksData';
 import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
@@ -334,6 +334,21 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
           [reqId]: reqData
         }
       }, { merge: true });
+
+      // Automatically sync latest achieved rank in users collection
+      const updatedReqs = { ...completedRequirements, [reqId]: reqData };
+      const simulatedProgress = {
+        ...allRanksProgress,
+        [selectedRankId]: {
+          ...activeProgress,
+          completedRequirements: updatedReqs,
+          steps: updatedReqs
+        }
+      };
+      const newAchievedRank = getLatestAchievedRank(simulatedProgress, scoutData?.rank);
+      if (newAchievedRank?.name && newAchievedRank.name !== scoutData?.rank) {
+        await setDoc(doc(db, 'users', scoutId), { rank: newAchievedRank.name }, { merge: true });
+      }
     } catch (err) {
       console.error('Error approving requirement status:', err);
     }
@@ -434,6 +449,21 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
     try {
       await setDoc(docRef, { completedRequirements: updates, steps: updates }, { merge: true });
+
+      // Automatically sync latest achieved rank in users collection
+      const simulatedProgress = {
+        ...allRanksProgress,
+        [selectedRankId]: {
+          ...activeProgress,
+          completedRequirements: updates,
+          steps: updates
+        }
+      };
+      const newAchievedRank = getLatestAchievedRank(simulatedProgress, scoutData?.rank);
+      if (newAchievedRank?.name && newAchievedRank.name !== scoutData?.rank) {
+        await setDoc(doc(db, 'users', scoutId), { rank: newAchievedRank.name }, { merge: true });
+      }
+
       setBatchUpdatesMsg(`✓ Approved all pending requirements in ${selectedRankData.name}!`);
       setTimeout(() => setBatchUpdatesMsg(''), 3000);
     } catch (err) {

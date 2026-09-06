@@ -396,3 +396,143 @@ export const RANKS_DATA = [
     ]
   }
 ];
+
+/**
+ * Normalizes any rank ID or name string into a standard RANKS_DATA id.
+ */
+export function normalizeRankId(rankIdOrName) {
+  if (!rankIdOrName) return 'scout';
+  const str = String(rankIdOrName).toLowerCase().trim().replace(/[-_ ]+/g, '');
+  if (str.includes('arrow') || str === 'aol') return 'arrow_of_light';
+  if (str.includes('tenderfoot')) return 'tenderfoot';
+  if (str.includes('second')) return 'second_class';
+  if (str.includes('first')) return 'first_class';
+  if (str.includes('star')) return 'star';
+  if (str.includes('life')) return 'life';
+  if (str.includes('eagle')) return 'eagle';
+  if (str.includes('scout')) return 'scout';
+  return 'scout';
+}
+
+/**
+ * Safely finds a rank object in RANKS_DATA by id, name, or alias.
+ */
+export function getRankById(rankIdOrName) {
+  if (!rankIdOrName) return RANKS_DATA.find(r => r.id === 'scout') || RANKS_DATA[0];
+  if (typeof rankIdOrName === 'object' && rankIdOrName?.id) return rankIdOrName;
+  const normalizedId = normalizeRankId(rankIdOrName);
+  return (
+    RANKS_DATA.find(r => r.id === normalizedId) ||
+    RANKS_DATA.find(r => r.name.toLowerCase() === String(rankIdOrName).toLowerCase().trim()) ||
+    RANKS_DATA.find(r => r.id === 'scout') ||
+    RANKS_DATA[0]
+  );
+}
+
+/**
+ * Returns the index (0..7) in RANKS_DATA for any rank id or name.
+ */
+export function getRankIndex(rankIdOrName) {
+  const rank = getRankById(rankIdOrName);
+  const idx = RANKS_DATA.findIndex(r => r.id === rank.id);
+  return idx !== -1 ? idx : 0;
+}
+
+/**
+ * Determines whether a given rank is 100% completed based on ranksProgress.
+ */
+export function isRankCompleted(rankOrId, ranksProgress = {}) {
+  if (!ranksProgress) return false;
+  const rank = getRankById(rankOrId);
+  if (!rank) return false;
+
+  const rp = ranksProgress[rank.id] || {};
+  if (rp.completed === true) return true;
+
+  const reqsObj = rp.completedRequirements || rp.steps || {};
+  const allReqs = rank.categories
+    ? rank.categories.flatMap(c => c.requirements || [])
+    : (rank.requirements || []);
+
+  if (!allReqs || allReqs.length === 0) return false;
+
+  return allReqs.every(req => {
+    const s = reqsObj[req.id];
+    return s === true || s?.completed === true || s === 'completed' || s === 'approved' || s?.approved === true;
+  });
+}
+
+/**
+ * Calculates granular completion stats (total, completed, pending, percentage) for a rank.
+ */
+export function getRankCompletionPercentage(rankOrId, ranksProgress = {}) {
+  const rank = getRankById(rankOrId);
+  if (!rank) return { total: 0, completed: 0, pending: 0, percentage: 0 };
+
+  const rp = (ranksProgress && ranksProgress[rank.id]) || {};
+  const reqsObj = rp.completedRequirements || rp.steps || {};
+  const allReqs = rank.categories
+    ? rank.categories.flatMap(c => c.requirements || [])
+    : (rank.requirements || []);
+
+  const total = allReqs.length;
+  if (total === 0) return { total: 0, completed: 0, pending: 0, percentage: 0 };
+
+  let completed = 0;
+  let pending = 0;
+
+  allReqs.forEach(req => {
+    const s = reqsObj[req.id];
+    const isDone = s === true || s?.completed === true || s === 'completed' || s === 'approved' || s?.approved === true;
+    if (isDone) {
+      completed++;
+    } else if (s?.pending === true || s === 'pending') {
+      pending++;
+    }
+  });
+
+  const percentage = Math.round((completed / total) * 100);
+  return { total, completed, pending, percentage };
+}
+
+/**
+ * Returns the latest (highest) rank that is 100% completed/achieved.
+ * If no rank is completed, returns the fallback rank or 'Scout'.
+ */
+export function getLatestAchievedRank(ranksProgress = {}, fallbackRank = 'Scout') {
+  // Check from highest rank (Eagle) down to lowest rank
+  const reversedRanks = [...RANKS_DATA].reverse();
+  for (const rank of reversedRanks) {
+    if (isRankCompleted(rank, ranksProgress)) {
+      return rank;
+    }
+  }
+
+  // If no rank is completed in ranksProgress, check fallback
+  if (fallbackRank) {
+    const matched = getRankById(fallbackRank);
+    if (matched) return matched;
+  }
+
+  return RANKS_DATA.find(r => r.id === 'scout') || RANKS_DATA[0];
+}
+
+/**
+ * Returns the next incomplete rank the scout is currently working towards.
+ */
+export function getNextIncompleteRank(ranksProgress = {}) {
+  const aolHasProgress = ranksProgress['arrow_of_light'] && (
+    ranksProgress['arrow_of_light'].completed ||
+    Object.keys(ranksProgress['arrow_of_light'].completedRequirements || ranksProgress['arrow_of_light'].steps || {}).length > 0
+  );
+
+  const ranksToCheck = aolHasProgress ? RANKS_DATA : RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
+
+  for (const rank of ranksToCheck) {
+    if (!isRankCompleted(rank, ranksProgress)) {
+      return rank;
+    }
+  }
+  return RANKS_DATA[RANKS_DATA.length - 1];
+}
+

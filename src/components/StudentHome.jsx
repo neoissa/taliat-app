@@ -37,7 +37,7 @@ import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
@@ -215,7 +215,10 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     return () => unsub();
   }, [scoutUid]);
 
-  const activeRank = currentUser?.rank || 'Scout';
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, currentUser?.rank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const activeRank = latestAchievedRank.name;
+  const targetRankProgress = getRankCompletionPercentage(nextTargetRank.id, ranksProgress);
 
   // Real-time pending items count
   const pendingIslamicCount = Object.values(islamicProgress).filter(p => (p?.pending && !p?.completed) || p === 'pending').length;
@@ -243,7 +246,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
             <div className="w-18 h-18 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2.5 shadow-xl shadow-emerald-950/50 shrink-0">
-              <RankIcon rankId={activeRank} className="w-14 h-14 text-emerald-400 drop-shadow-md" />
+              <RankIcon rankId={latestAchievedRank.id} className="w-14 h-14 text-emerald-400 drop-shadow-md" />
             </div>
 
             <div>
@@ -251,6 +254,11 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
                   <span>⚜️</span> {activeRank} Rank
                 </span>
+                {nextTargetRank.id !== latestAchievedRank.id && (
+                  <span className="bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span>🎯</span> Target: {nextTargetRank.name} ({targetRankProgress.percentage}%)
+                  </span>
+                )}
                 {currentUser?.patrolName && (
                   <span className="bg-slate-700/70 text-slate-200 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <span>👥</span> {currentUser.patrolName} Patrol
@@ -302,9 +310,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <ShieldCheck size={20} />
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Active Rank</span>
-              <strong className="text-sm font-black text-emerald-400 capitalize block">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Current Achieved</span>
+              <strong className="text-sm font-black text-emerald-400 capitalize block truncate">
                 {activeRank}
               </strong>
             </div>

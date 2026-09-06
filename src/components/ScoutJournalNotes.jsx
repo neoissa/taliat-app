@@ -271,6 +271,24 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
   const scoutRank = scoutProfile?.rank || 'Scout';
   const scoutPatrol = scoutProfile?.patrolName || 'Taliʿa Patrol';
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const sanitizedName = (scoutName || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    
+    document.title = `${sanitizedName}_Journal_Notes_${dateStr}`;
+    window.print();
+    
+    const restore = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans pb-16">
       {/* ── 1. HEADER & HERO CONTROL BANNER ── */}
@@ -298,7 +316,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
             >
               <Printer size={14} className="text-amber-400" />

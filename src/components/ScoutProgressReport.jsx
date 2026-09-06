@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage, getRankById, getRankIndex } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import {
@@ -112,27 +112,19 @@ export function calculateAdvancementPacing({
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const rankOrder = ['scout', 'tenderfoot', 'secondclass', 'firstclass', 'star', 'life', 'eagle'];
-  const rankNames = {
-    scout: 'Scout',
-    tenderfoot: 'Tenderfoot',
-    secondclass: 'Second Class',
-    firstclass: 'First Class',
-    star: 'Star',
-    life: 'Life',
-    eagle: 'Eagle'
-  };
-
-  const currentIdx = Math.max(0, rankOrder.indexOf(currentRankId));
+  const bsaRanks = RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
+  const latestRank = getLatestAchievedRank(ranksProgress, scoutProfile?.rank);
+  const targetRank = getNextIncompleteRank(ranksProgress);
 
   // 1. Rank Milestones Pacing Matrix
-  const rankMilestones = rankOrder.map((rId, idx) => {
+  const rankMilestones = bsaRanks.map((rank) => {
+    const rId = rank.id;
     const targetDateStr = plan?.targetRanks?.[rId] || '';
     const rp = ranksProgress?.[rId] || {};
     const actualDateStr = rp.completedDate || rp.approvedAt || rp.testingCompletedAt || null;
-    const isCompleted = idx < currentIdx || !!actualDateStr;
-    const isActive = rId === currentRankId && !actualDateStr;
-    const isUpcoming = idx > currentIdx && !actualDateStr;
+    const isCompleted = isRankCompleted(rank, ranksProgress);
+    const isActive = rId === targetRank.id && !isCompleted;
+    const isUpcoming = !isCompleted && !isActive;
 
     let statusType = 'planned'; // 'ahead' | 'on_track' | 'behind' | 'delayed' | 'planned'
     let varianceLabel = '—';
@@ -172,7 +164,7 @@ export function calculateAdvancementPacing({
 
     return {
       rankId: rId,
-      rankName: rankNames[rId] || rId,
+      rankName: rank.name,
       targetDate: targetDateStr || 'TBD',
       actualDate: actualDateStr || (isCompleted ? 'Completed' : '—'),
       isCompleted,
@@ -664,25 +656,25 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return dateStr < startDate;
   };
 
-  // Rank Index & Progressive Ranks
-  const rankOrder = ['scout', 'tenderfoot', 'secondclass', 'firstclass', 'star', 'life', 'eagle'];
-  let currentRankIndex = rankOrder.indexOf(scoutRank);
-  if (currentRankIndex === -1) currentRankIndex = 0;
+  // Latest Achieved Rank & Target In-Progress Rank
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout.rank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const currentRankData = latestAchievedRank;
+  const targetRankData = nextTargetRank;
+  const currentRankIndex = getRankIndex(latestAchievedRank.id);
+  const isLifeOrEagle = latestAchievedRank.id === 'life' || latestAchievedRank.id === 'eagle';
 
-  const currentRankData = RANKS_DATA[currentRankIndex] || RANKS_DATA[0];
-  const pastRanksData = RANKS_DATA.slice(0, currentRankIndex);
-  const isLifeOrEagle = scoutRank === 'life' || scoutRank === 'eagle';
-
-  // Current Rank Granular Requirements
-  const currentRankDoc = ranksProgress[currentRankData.id] || {};
-  const currentRankReqs = currentRankData.categories ? currentRankData.categories.flatMap(c => c.requirements) : (currentRankData.requirements || []);
+  // Target Rank Granular Requirements
+  const targetRankDoc = ranksProgress[targetRankData.id] || {};
+  const currentRankDoc = targetRankDoc;
+  const currentRankReqs = targetRankData.categories ? targetRankData.categories.flatMap(c => c.requirements) : (targetRankData.requirements || []);
   
   const currentRankCompletedReqs = currentRankReqs.filter(req => {
-    const s = currentRankDoc.completedRequirements?.[req.id] || currentRankDoc.steps?.[req.id];
+    const s = targetRankDoc.completedRequirements?.[req.id] || targetRankDoc.steps?.[req.id];
     const isDone = s === true || s?.completed === true;
     if (!isDone) return false;
     if (reportMode === 'window') {
-      const d = s?.completedAt || s?.approvedAt || s?.date || currentRankDoc.completedDate || '';
+      const d = s?.completedAt || s?.approvedAt || s?.date || targetRankDoc.completedDate || '';
       return isDateInWindow(d);
     }
     return true;
@@ -692,18 +684,18 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const currentRankTotalCount = currentRankReqs.length || 1;
   const currentRankPercent = Math.round((currentRankCompletedCount / currentRankTotalCount) * 100);
 
-  // Remaining Requirements for Active Rank
+  // Remaining Requirements for Target Rank
   const currentRankRemainingReqs = currentRankReqs.filter(req => {
-    const s = currentRankDoc.completedRequirements?.[req.id] || currentRankDoc.steps?.[req.id];
+    const s = targetRankDoc.completedRequirements?.[req.id] || targetRankDoc.steps?.[req.id];
     return !(s === true || s?.completed === true);
   });
 
   // Starting Baseline Calculation (Mode: Window)
   const baselineRankCompletedCount = currentRankReqs.filter(req => {
-    const s = currentRankDoc.completedRequirements?.[req.id] || currentRankDoc.steps?.[req.id];
+    const s = targetRankDoc.completedRequirements?.[req.id] || targetRankDoc.steps?.[req.id];
     const isDone = s === true || s?.completed === true;
     if (!isDone) return false;
-    const d = s?.completedAt || s?.approvedAt || s?.date || currentRankDoc.completedDate || '';
+    const d = s?.completedAt || s?.approvedAt || s?.date || targetRankDoc.completedDate || '';
     return isDatePriorToStart(d);
   }).length;
   const baselinePercent = Math.round((baselineRankCompletedCount / currentRankTotalCount) * 100);
@@ -840,6 +832,26 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return true;
   });
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const sanitizedName = (scoutFullName || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    
+    // Set suggested filename: e.g. "Hussein_Nehme_Progress_Report_2026-09-06"
+    document.title = `${sanitizedName}_Progress_Report_${dateStr}`;
+    
+    window.print();
+    
+    const restore = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 2000);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-emerald-400">
@@ -851,6 +863,29 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans pb-16 text-slate-900">
+      {/* ── PRINT CSS FIXES ── */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 10mm 12mm 10mm 12mm;
+            size: auto;
+          }
+          body {
+            background-color: white !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-hide {
+            display: none !important;
+          }
+          .page-break-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
       {/* ── 1. SCREEN CONFIGURATION TOOLBAR & DATE FILTER ENGINE ── */}
       <div className="bg-slate-850 border border-slate-700 p-5 rounded-3xl shadow-2xl space-y-4 print-hide">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -890,7 +925,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02]"
             >
               <Printer size={15} />
@@ -1305,10 +1340,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               
-              {/* Box 1: Active Rank Next Steps */}
+              {/* Box 1: Target Rank Next Steps */}
               <div className="bg-white p-3 rounded-lg border border-amber-300 space-y-1 shadow-xs">
                 <strong className="text-[10px] uppercase font-black text-slate-900 block flex items-center gap-1">
-                  <span>1. Active Rank ({currentRankData.name})</span>
+                  <span>1. Target Rank ({targetRankData.name})</span>
                 </strong>
                 {currentRankRemainingReqs.length === 0 ? (
                   <p className="text-emerald-800 font-bold text-[11px]">✓ All requirements completed! Schedule Board of Review.</p>
@@ -1366,11 +1401,11 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
 
         </div>
 
-        {/* ── 4. CURRENT ACTIVE RANK GRANULAR REQUIREMENTS TABLE ── */}
+        {/* ── 4. TARGET RANK REQUIREMENTS CHECKLIST ── */}
         <div className="space-y-4 page-break-avoid">
           <div className="border-b-2 border-slate-800 pb-2 flex justify-between items-center">
             <h3 className="text-base font-black uppercase text-slate-950">
-              Active Rank Requirements Checklist ({currentRankData.name})
+              Target Rank Requirements Checklist ({targetRankData.name})
             </h3>
             <span className="text-xs font-mono font-bold text-slate-700">
               {currentRankCompletedCount} of {currentRankTotalCount} Completed ({currentRankPercent}%)
@@ -1381,10 +1416,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             <div className="flex justify-between items-center border-b border-slate-200 pb-2">
               <div>
                 <h4 className="text-sm font-black uppercase text-slate-950">
-                  {currentRankData.name} Rank Details
+                  {targetRankData.name} Rank Advancement Details
                 </h4>
                 <p className="text-[11px] text-slate-600">
-                  Detailed sign-off and scout reflection log
+                  Current Achieved Rank: <strong className="text-slate-950">{currentRankData.name}</strong> &bull; Sign-off log for {targetRankData.name}
                 </p>
               </div>
               <div className="text-right">
@@ -1564,32 +1599,32 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               <span className="text-[10px] font-mono text-slate-600">{conservationHours} Conservation Hrs</span>
             </div>
 
-            <table className="w-full text-xs text-left border border-slate-300">
-              <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
-                <tr>
-                  <th className="p-1.5">Date</th>
-                  <th className="p-1.5">Project / Org</th>
-                  <th className="p-1.5">Conservation</th>
-                  <th className="p-1.5 text-right">Hrs</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredServiceLogs.length === 0 ? (
+            {filteredServiceLogs.length === 0 ? (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+                No service hours logged in this reporting period.
+              </div>
+            ) : (
+              <table className="w-full text-xs text-left border border-slate-300">
+                <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
                   <tr>
-                    <td colSpan="4" className="p-2 text-center text-slate-500 italic text-[11px]">No service hours logged in this period.</td>
+                    <th className="p-1.5">Date</th>
+                    <th className="p-1.5">Project / Org</th>
+                    <th className="p-1.5">Conservation</th>
+                    <th className="p-1.5 text-right">Hrs</th>
                   </tr>
-                ) : (
-                  filteredServiceLogs.slice(0, 5).map(l => (
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredServiceLogs.slice(0, 5).map(l => (
                     <tr key={l.id}>
                       <td className="p-1.5 font-mono text-slate-700">{l.date}</td>
                       <td className="p-1.5 font-bold text-slate-900 truncate max-w-[120px]">{l.description || l.title || 'Service'}</td>
                       <td className="p-1.5 text-slate-600">{l.conservation ? 'Yes' : 'No'}</td>
                       <td className="p-1.5 text-right font-bold text-slate-950">{l.hours}h</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Educational Homework & Assignments */}
@@ -1601,23 +1636,23 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
               <span className="text-[10px] font-mono text-slate-600">{filteredHomework.length} Tasks</span>
             </div>
 
-            <table className="w-full text-xs text-left border border-slate-300">
-              <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
-                <tr>
-                  <th className="p-1.5">Assignment Name</th>
-                  <th className="p-1.5 w-20">Due Date</th>
-                  <th className="p-1.5 w-28 text-center">Status</th>
-                  <th className="p-1.5 w-24 text-center">Completion Date</th>
-                  <th className="p-1.5 text-right w-28">Leader Sign-off</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredHomework.length === 0 ? (
+            {filteredHomework.length === 0 ? (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-500 italic text-xs text-center">
+                No homework assignments recorded in this reporting period.
+              </div>
+            ) : (
+              <table className="w-full text-xs text-left border border-slate-300">
+                <thead className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-[9px] text-slate-700">
                   <tr>
-                    <td colSpan="5" className="p-2 text-center text-slate-500 italic text-[11px]">No assignments logged in this period.</td>
+                    <th className="p-1.5">Assignment Name</th>
+                    <th className="p-1.5 w-20">Due Date</th>
+                    <th className="p-1.5 w-28 text-center">Status</th>
+                    <th className="p-1.5 w-24 text-center">Completion Date</th>
+                    <th className="p-1.5 text-right w-28">Leader Sign-off</th>
                   </tr>
-                ) : (
-                  filteredHomework.map(h => (
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredHomework.map(h => (
                     <tr key={h.id}>
                       <td className="p-1.5 font-bold text-slate-900 truncate max-w-[120px]">
                         <span>{h.title}</span>
@@ -1632,10 +1667,10 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
                       <td className="p-1.5 text-center font-mono text-[10px] text-slate-700">{h.completionDate}</td>
                       <td className="p-1.5 text-right font-bold text-slate-900 text-[10px]">{h.leaderSignOff}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

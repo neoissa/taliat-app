@@ -8,7 +8,7 @@ import {
   TAQIBAT_AND_DUAS_DATA, 
   INFALLIBLES_FULL_BIOGRAPHIES 
 } from '../data/islamicBasicsData';
-import { RANKS_DATA } from '../data/ranksData';
+import { RANKS_DATA, getLatestAchievedRank, isRankCompleted } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import {
   Clock,
@@ -612,6 +612,25 @@ export default function UniversalPendingQueueModal({
             }, { merge: true })
           );
         });
+
+        // Compute simulated ranks progress for this scout to sync users/{sUid}.rank if a new rank is achieved
+        const currentScoutProgress = scoutMap[sUid]?.ranks || {};
+        const simulatedScoutRanks = { ...currentScoutProgress };
+        Object.entries(ranksMap).forEach(([rankId, reqsMap]) => {
+          const existing = simulatedScoutRanks[rankId] || {};
+          const existingReqs = existing.completedRequirements || existing.steps || {};
+          simulatedScoutRanks[rankId] = {
+            ...existing,
+            completedRequirements: { ...existingReqs, ...reqsMap },
+            steps: { ...existingReqs, ...reqsMap }
+          };
+        });
+        const newAchievedRank = getLatestAchievedRank(simulatedScoutRanks, scoutMap[sUid]?.rank);
+        if (newAchievedRank?.name && newAchievedRank.name !== scoutMap[sUid]?.rank) {
+          updatePromises.push(
+            setDoc(doc(db, 'users', sUid), { rank: newAchievedRank.name }, { merge: true })
+          );
+        }
       });
 
       // 2. Commit Islamic updates

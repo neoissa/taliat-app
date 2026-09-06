@@ -1531,7 +1531,28 @@ export default function PatrolAttendance({ currentUser, initialData }) {
               <button
                 type="button"
                 onClick={() => {
+                  const originalTitle = document.title;
+                  const dateStr = new Date().toISOString().split('T')[0];
+                  let docTitle = `Troop_313_Attendance_Report_${dateStr}`;
+                  if (printMode === 'scout' && selectedPrintScout) {
+                    const sName = (selectedPrintScout.fullName || selectedPrintScout.username || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+                    docTitle = `${sName}_Attendance_Report_${dateStr}`;
+                  } else if (printMode === 'current') {
+                    docTitle = `Troop_313_Session_Attendance_${sessionDate || dateStr}`;
+                  } else if (printMode === 'program') {
+                    const pName = (selectedPrintProgram || 'Program').replace(/[^a-zA-Z0-9]/g, '_');
+                    docTitle = `Troop_313_${pName}_Attendance_Summary_${dateStr}`;
+                  }
+                  document.title = docTitle;
                   window.print();
+                  const restore = () => {
+                    document.title = originalTitle;
+                    window.removeEventListener('afterprint', restore);
+                  };
+                  window.addEventListener('afterprint', restore);
+                  setTimeout(() => {
+                    document.title = originalTitle;
+                  }, 2000);
                 }}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-6 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40"
               >
