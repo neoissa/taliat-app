@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage, getRankById, getRankIndex } from '../data/ranksData';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
+import { publishProgressReport, signPublishedReportByParent, signPublishedReportByScout } from '../services/publishedReportsService';
+import SignaturePadModal from './SignaturePadModal';
+import DigitalVerificationStamp from './DigitalVerificationStamp';
 import {
   Printer,
   ArrowLeft,
@@ -18,6 +21,9 @@ import {
   FileText,
   User,
   Shield,
+  ShieldCheck,
+  PenTool,
+  Send,
   Video,
   Check,
   Filter,
@@ -336,6 +342,13 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const [savingPlan, setSavingPlan] = useState(false);
   const [planSaveMsg, setPlanSaveMsg] = useState('');
 
+  // Published Reports & Digital Signature State
+  const [publishedReports, setPublishedReports] = useState([]);
+  const [showSignModal, setShowSignModal] = useState(false);
+  const [signModalType, setSignModalType] = useState('leader'); // 'leader' | 'parent' | 'scout'
+  const [isSubmittingSignature, setIsSubmittingSignature] = useState(false);
+  const [publishSuccessToast, setPublishSuccessToast] = useState('');
+
   const generationDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -350,6 +363,18 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         setProfileData(snap.data());
       }
     });
+    return () => unsub();
+  }, [scoutUid]);
+
+  // 1.2. Fetch Published Reports for Scout
+  useEffect(() => {
+    if (!scoutUid) return;
+    const qPub = query(collection(db, 'published_reports'), where('scoutId', '==', scoutUid));
+    const unsub = onSnapshot(qPub, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReports(list);
+    }, (err) => console.warn('Published reports listener:', err));
     return () => unsub();
   }, [scoutUid]);
 
@@ -832,6 +857,92 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return true;
   });
 
+  const latestPublishedReport = publishedReports[0] || null;
+
+  const handleOpenSignatureModal = (type) => {
+    setSignModalType(type);
+    setShowSignModal(true);
+  };
+
+  const handleSaveDigitalSignature = async ({ signerName, signerRole, signatureDataUrl, signedAt }) => {
+    setIsSubmittingSignature(true);
+    try {
+      if (signModalType === 'leader') {
+        // Build full snapshot and publish to parent portal
+        const snapshot = {
+          rank: latestAchievedRank.name,
+          rankProgress: targetRankProgress.percentage,
+          attendanceRate: reportAttendanceRate,
+          completedRankSteps: activeStepsList.filter(s => s.isCompleted),
+          meritBadges: Object.values(meritProgress),
+          serviceHours: totalServiceHoursInReport,
+          homeworkRecords: filteredHomework,
+          leaderCommentary: {
+            strengths: strengthsText,
+            focusAreas: focusAreasText,
+            parentActionItems: parentActionItems
+          },
+          advancementPlan: advancementPlan,
+          totalEventsAttended: reportAttendedCount
+        };
+
+        await publishProgressReport({
+          scoutId: scoutUid,
+          scoutName: scoutFullName,
+          groupId: groupData?.id || profileData?.groupId || 'all',
+          patrolName: groupData?.name || profileData?.patrolName || 'Taliʿa Patrol',
+          parentEmail: profileData?.parentEmail || null,
+          parentUid: profileData?.parentUid || null,
+          leaderId: currentUser?.uid || 'leader',
+          leaderName: currentUser?.fullName || currentUser?.username || 'Unit Leader',
+          reportingPeriod: reportMode === 'cumulative' ? 'All-Time Cumulative' : `${startDate} to ${endDate}`,
+          reportSnapshot: snapshot,
+          leaderSignature: {
+            signed: true,
+            signerName,
+            signerRole,
+            signatureDataUrl,
+            signedAt
+          }
+        });
+
+        setPublishSuccessToast(`✓ Official progress report published and sent to ${scoutFullName}'s Parent Portal!`);
+      } else if (signModalType === 'parent') {
+        if (!latestPublishedReport) {
+          alert('No published report found to sign. Ask unit leader to publish the report first.');
+          return;
+        }
+        await signPublishedReportByParent({
+          reportId: latestPublishedReport.id,
+          signerName,
+          signerRole,
+          signatureDataUrl,
+          signerUid: currentUser?.uid || null
+        });
+        setPublishSuccessToast('✓ Parent digital signature verified and securely stamped!');
+      } else if (signModalType === 'scout') {
+        if (!latestPublishedReport) {
+          alert('No published report found to sign. Ask unit leader to publish the report first.');
+          return;
+        }
+        await signPublishedReportByScout({
+          reportId: latestPublishedReport.id,
+          signerName,
+          signatureDataUrl
+        });
+        setPublishSuccessToast('✓ Scout candidate digital signature recorded!');
+      }
+
+      setShowSignModal(false);
+    } catch (err) {
+      console.error('Signature submission error:', err);
+      alert('Error saving signature: ' + err.message);
+    } finally {
+      setIsSubmittingSignature(false);
+      setTimeout(() => setPublishSuccessToast(''), 4000);
+    }
+  };
+
   const handlePrint = () => {
     const originalTitle = document.title;
     const sanitizedName = (scoutFullName || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
@@ -911,6 +1022,28 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {isLeaderOrOwner && (
+              <button
+                type="button"
+                onClick={() => handleOpenSignatureModal('leader')}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/40"
+              >
+                <ShieldCheck size={15} />
+                <span>Sign & Publish to Parent Portal</span>
+              </button>
+            )}
+
+            {(currentUser?.role === 'parent' || currentUser?.parentEmail) && latestPublishedReport && !latestPublishedReport.signatures?.parent?.signed && (
+              <button
+                type="button"
+                onClick={() => handleOpenSignatureModal('parent')}
+                className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-950/40 animate-pulse"
+              >
+                <PenTool size={15} />
+                <span>Review & Sign as Parent</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -933,6 +1066,40 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             </button>
           </div>
         </div>
+
+        {/* Publish / Sign Toast Alert */}
+        {publishSuccessToast && (
+          <div className="p-3.5 bg-emerald-950 border border-emerald-500/60 rounded-2xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-lg">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>{publishSuccessToast}</span>
+          </div>
+        )}
+
+        {/* Published Report Status Banner */}
+        {latestPublishedReport && (
+          <div className="bg-slate-900/90 border border-slate-750 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <ShieldCheck size={14} /> Published Record:
+              </span>
+              <span className="text-slate-300 font-mono">
+                {latestPublishedReport.publishedAt?.split('T')[0]} by {latestPublishedReport.leaderName}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {latestPublishedReport.signatures?.parent?.signed ? (
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold text-[10px] flex items-center gap-1">
+                  <Check size={11} /> Parent Signed ({latestPublishedReport.signatures?.parent?.signerName})
+                </span>
+              ) : (
+                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold text-[10px] flex items-center gap-1">
+                  <Clock size={11} /> Awaiting Parent Signature
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Mode Toggle & Date Filter Controls */}
         <div className="pt-3 border-t border-slate-750 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -1795,24 +1962,34 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         </div>
 
         {/* ── 8. OFFICIAL SIGNATURE & VERIFICATION BLOCK ── */}
-        <div className="pt-6 border-t-2 border-slate-900 grid grid-cols-3 gap-6 text-xs page-break-avoid">
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Scout Candidate Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+        <div className="pt-6 border-t-2 border-slate-900 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs page-break-avoid">
+          {/* Scout Signature */}
+          <DigitalVerificationStamp
+            title="Scout Candidate Signature"
+            signatureData={latestPublishedReport?.signatures?.scout}
+            canSign={(currentUser?.role === 'scout' || isLeaderOrOwner) && !latestPublishedReport?.signatures?.scout?.signed}
+            onSignClick={() => handleOpenSignatureModal('scout')}
+            pendingLabel="Awaiting Scout Signature"
+          />
 
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Unit Leader / Scoutmaster Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+          {/* Leader Signature */}
+          <DigitalVerificationStamp
+            title="Unit Leader / Scoutmaster"
+            signatureData={latestPublishedReport?.signatures?.leader}
+            canSign={isLeaderOrOwner && !latestPublishedReport?.signatures?.leader?.signed}
+            onSignClick={() => handleOpenSignatureModal('leader')}
+            pendingLabel="Awaiting Leader Publication"
+            signerRole="Unit Leader"
+          />
 
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Parent / Guardian Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+          {/* Parent Signature */}
+          <DigitalVerificationStamp
+            title="Parent / Guardian Signature"
+            signatureData={latestPublishedReport?.signatures?.parent}
+            canSign={(currentUser?.role === 'parent' || currentUser?.parentEmail || isLeaderOrOwner) && !latestPublishedReport?.signatures?.parent?.signed}
+            onSignClick={() => handleOpenSignatureModal('parent')}
+            pendingLabel="Awaiting Parent Signature in Portal"
+          />
         </div>
       </div>
 
@@ -2011,6 +2188,43 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── 10. DIGITAL SIGNATURE CANVAS MODAL ── */}
+      {showSignModal && (
+        <SignaturePadModal
+          isOpen={showSignModal}
+          onClose={() => setShowSignModal(false)}
+          onSave={handleSaveDigitalSignature}
+          isSubmitting={isSubmittingSignature}
+          signerType={signModalType}
+          defaultSignerName={
+            signModalType === 'leader'
+              ? (currentUser?.fullName || currentUser?.username || 'Unit Leader')
+              : signModalType === 'parent'
+              ? (currentUser?.parent1Name || currentUser?.fullName || '')
+              : (scoutFullName || '')
+          }
+          defaultSignerRole={
+            signModalType === 'leader'
+              ? 'Scoutmaster / Unit Leader'
+              : signModalType === 'parent'
+              ? (currentUser?.parent1Relation || 'Father')
+              : 'Scout Candidate'
+          }
+          title={
+            signModalType === 'leader'
+              ? 'Leader Signature & Progress Report Publishing'
+              : signModalType === 'parent'
+              ? 'Parent Digital Signature & Verification'
+              : 'Scout Candidate Digital Signature'
+          }
+          subtitle={
+            signModalType === 'leader'
+              ? `Certify and publish the official progress report snapshot for ${scoutFullName} to the Parent Portal.`
+              : `Review and certify the official progress report for ${scoutFullName}.`
+          }
+        />
       )}
     </div>
   );

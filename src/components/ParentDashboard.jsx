@@ -13,8 +13,12 @@ import {
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
+import { signPublishedReportByParent } from '../services/publishedReportsService';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
+import SignaturePadModal from './SignaturePadModal';
+import DigitalVerificationStamp from './DigitalVerificationStamp';
+import PublishedReportViewerModal from './PublishedReportViewerModal';
 import {
   Award,
   Star,
@@ -113,6 +117,14 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
   // In-App Notifications Feed
   const [notifications, setNotifications] = useState([]);
 
+  // Published Reports & Parent Signature State
+  const [publishedReports, setPublishedReports] = useState([]);
+  const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
+  const [signingPublishedReport, setSigningPublishedReport] = useState(null);
+  const [isSubmittingParentSignature, setIsSubmittingParentSignature] = useState(false);
+  const [parentSignSuccessToast, setParentSignSuccessToast] = useState('');
+  const [reportSubTab, setReportSubTab] = useState('published'); // 'published' | 'live'
+
   // 1. Keep Parent Document updated
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -138,7 +150,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
     return () => unsub();
   }, [currentUser?.uid]);
 
-  // 2. Fetch Users and Groups
+  // 2. Fetch Users, Groups & Published Reports
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
@@ -146,11 +158,58 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
       setAllGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
     });
+    const unsubPub = onSnapshot(collection(db, 'published_reports'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReports(list);
+    });
+
     return () => {
       unsubUsers();
       unsubGroups();
+      unsubPub();
     };
   }, []);
+
+  const handleSaveParentSignature = async ({ signerName, signerRole, signatureDataUrl, signedAt }) => {
+    if (!signingPublishedReport) return;
+    setIsSubmittingParentSignature(true);
+    try {
+      await signPublishedReportByParent({
+        reportId: signingPublishedReport.reportId || signingPublishedReport.id,
+        signerName,
+        signerRole,
+        signatureDataUrl,
+        signerUid: currentUser.uid
+      });
+      setParentSignSuccessToast(`✓ Official progress report for ${signingPublishedReport.scoutName} successfully signed and verified!`);
+      setSigningPublishedReport(null);
+
+      // Refresh viewing report if open
+      if (viewingPublishedReport && (viewingPublishedReport.id === signingPublishedReport.id || viewingPublishedReport.reportId === signingPublishedReport.reportId)) {
+        setViewingPublishedReport(prev => ({
+          ...prev,
+          signatures: {
+            ...prev.signatures,
+            parent: {
+              signed: true,
+              signerName,
+              signerRole,
+              signatureDataUrl,
+              signedAt,
+              signerUid: currentUser.uid
+            }
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('Parent signature error:', err);
+      alert('Error saving signature: ' + err.message);
+    } finally {
+      setIsSubmittingParentSignature(false);
+      setTimeout(() => setParentSignSuccessToast(''), 4000);
+    }
+  };
 
   // 3. Resolve Linked Children
   useEffect(() => {
@@ -506,6 +565,12 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
   const attendanceRate = totalSessions > 0 ? Math.round((attendedSessionsCount / totalSessions) * 100) : 100;
   const riskLevel = unexcusedAbsences >= 3 ? 'critical' : unexcusedAbsences === 2 ? 'warning' : 'good';
 
+  // Published Reports Calculations
+  const linkedUids = linkedScouts.map(s => s.uid);
+  const childPublishedReports = publishedReports.filter(r => r.scoutId === activeScoutId);
+  const allPendingReports = publishedReports.filter(r => linkedUids.includes(r.scoutId) && !r.signatures?.parent?.signed);
+  const activeScoutPendingReports = childPublishedReports.filter(r => !r.signatures?.parent?.signed);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-emerald-400">
@@ -616,7 +681,13 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
           { id: 'overview', label: `${scoutFullName}'s Progress`, icon: Award },
           { id: 'tasks', label: 'Parent Action Center (Forms)', icon: Zap, badge: urgentTasks.length > 0 ? `⚡ ${urgentTasks.length} Due` : null, badgeColor: 'bg-red-500 text-white' },
           { id: 'events', label: 'Troop Calendar & RSVP', icon: Calendar },
-          { id: 'reports', label: 'Official Progress Reports', icon: Printer },
+          { 
+            id: 'reports', 
+            label: 'Official Progress Reports', 
+            icon: Printer,
+            badge: allPendingReports.length > 0 ? `✍️ ${allPendingReports.length} To Sign` : null,
+            badgeColor: 'bg-amber-500 text-slate-950 font-black animate-pulse'
+          },
           { id: 'family', label: 'Dual-Parent Household Profile', icon: Home },
           { id: 'notifications', label: 'Alerts & Feed', icon: Bell, badge: unreadNotifsCount > 0 ? unreadNotifsCount : null, badgeColor: 'bg-blue-500 text-white' }
         ].map(t => {
@@ -647,6 +718,42 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
       {/* ── 5. TAB 1: CHILD PROGRESS & ADVANCEMENT (100% READ-ONLY) ── */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* ── PENDING PROGRESS REPORT SIGNATURE ALERT ── */}
+          {activeScoutPendingReports.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/80 to-slate-900 border-2 border-amber-500/80 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-2xl shrink-0">
+                  ✍️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full">
+                      Signature Required
+                    </span>
+                    <span className="text-xs text-amber-200 font-mono">
+                      Published on {activeScoutPendingReports[0].publishedAt?.split('T')[0]}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black text-white mt-1">
+                    Official Progress Report for {scoutFullName}
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Certified by {activeScoutPendingReports[0].leaderName}. Please review and apply your parent digital signature.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setViewingPublishedReport(activeScoutPendingReports[0]);
+                }}
+                className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
+              >
+                Review & Sign Report &rarr;
+              </button>
+            </div>
+          )}
+
           {/* Quick Metrics KPI Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
@@ -921,9 +1028,167 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         );
       })()}
 
-      {/* ── 8. TAB 4: OFFICIAL PROGRESS REPORTS ── */}
+      {/* ── 8. TAB 4: OFFICIAL PROGRESS REPORTS & PUBLISHED SNAPSHOTS ── */}
       {activeTab === 'reports' && activeScout && (
-        <ScoutProgressReport scout={activeScout} currentUser={currentUser} onBack={() => setActiveTab('overview')} />
+        <div className="space-y-6">
+          {/* Header & Sub-tab navigation */}
+          <div className="bg-slate-850 border border-slate-755 p-6 rounded-3xl shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <Printer size={18} className="text-emerald-400" />
+                  <span>Official Progress Reports & Digital Signatures</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  View certified report snapshots for <strong className="text-white">{scoutFullName}</strong>, apply parent digital signatures, and export official records.
+                </p>
+              </div>
+
+              {/* Sub-tabs: Published Snapshots vs Live Interactive Report */}
+              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('published')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    reportSubTab === 'published'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Published Snapshots</span>
+                  <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{childPublishedReports.length}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('live')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    reportSubTab === 'live'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Live Report & Roadmap</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Parent Sign Success Toast */}
+            {parentSignSuccessToast && (
+              <div className="p-3.5 bg-emerald-950 border border-emerald-500/60 rounded-2xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-lg">
+                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <span>{parentSignSuccessToast}</span>
+              </div>
+            )}
+          </div>
+
+          {reportSubTab === 'published' ? (
+            <div className="space-y-4">
+              {childPublishedReports.length === 0 ? (
+                <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-3">
+                  <FileText size={42} className="mx-auto text-slate-500 opacity-50" />
+                  <h4 className="text-sm font-bold text-white">No Published Reports Yet</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Troop leaders publish official progress report snapshots prior to parent conferences and Court of Honor advancement milestones.
+                  </p>
+                  <button
+                    onClick={() => setReportSubTab('live')}
+                    className="mt-2 bg-slate-800 hover:bg-slate-750 text-emerald-400 text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition cursor-pointer"
+                  >
+                    View Real-Time Live Progress Report &rarr;
+                  </button>
+                </div>
+              ) : (
+                childPublishedReports.map(report => {
+                  const isParentSigned = report.signatures?.parent?.signed;
+                  const isScoutSigned = report.signatures?.scout?.signed;
+                  return (
+                    <div
+                      key={report.id}
+                      className={`bg-slate-850 border p-6 rounded-3xl space-y-4 shadow-xl transition ${
+                        !isParentSigned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-755'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                              {report.reportSnapshot?.rank || 'Scout'} Rank Snapshot
+                            </span>
+                            <span className="text-xs font-mono font-bold text-slate-300">
+                              📅 Published {report.publishedAt?.split('T')[0]}
+                            </span>
+                          </div>
+
+                          <h4 className="font-extrabold text-white text-base">
+                            Official Progress Report — {report.reportingPeriod || 'Cumulative'}
+                          </h4>
+
+                          <p className="text-xs text-slate-400">
+                            Certifying Leader: <strong className="text-slate-200">{report.leaderName}</strong> &bull; Patrol: <strong className="text-slate-200">{report.patrolName}</strong>
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                          {!isParentSigned && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSigningPublishedReport(report);
+                              }}
+                              className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 animate-pulse"
+                            >
+                              <PenTool size={14} />
+                              <span>Review & Sign as Parent</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setViewingPublishedReport(report)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                          >
+                            <FileText size={14} />
+                            <span>{isParentSigned ? 'View & Print Signed PDF' : 'Inspect Snapshot'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Summary Metrics & Signature Status Pills */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-755 text-center">
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Advancement</span>
+                          <strong className="text-emerald-400 font-mono text-sm">{report.reportSnapshot?.rankProgress || 0}%</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Attendance</span>
+                          <strong className="text-sky-400 font-mono text-sm">{report.reportSnapshot?.attendanceRate || 100}%</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Service Hours</span>
+                          <strong className="text-amber-400 font-mono text-sm">{report.reportSnapshot?.serviceHours || 0} hrs</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Signing Status</span>
+                          {isParentSigned ? (
+                            <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                              <ShieldCheck size={13} /> Verified
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                              <Clock size={13} /> Action Required
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <ScoutProgressReport scout={activeScout} currentUser={currentUser} onBack={() => setReportSubTab('published')} />
+          )}
+        </div>
       )}
 
       {/* ── 9. TAB 5: DUAL-PARENT FAMILY PROFILE ── */}
@@ -1297,6 +1562,32 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── PUBLISHED REPORT SNAPSHOT VIEWER MODAL ── */}
+      {viewingPublishedReport && (
+        <PublishedReportViewerModal
+          isOpen={!!viewingPublishedReport}
+          report={viewingPublishedReport}
+          onClose={() => setViewingPublishedReport(null)}
+          currentUser={currentUser}
+          onReportUpdated={() => {}}
+        />
+      )}
+
+      {/* ── DIGITAL SIGNATURE PAD MODAL FOR PARENT ── */}
+      {signingPublishedReport && (
+        <SignaturePadModal
+          isOpen={!!signingPublishedReport}
+          onClose={() => setSigningPublishedReport(null)}
+          onSave={handleSaveParentSignature}
+          isSubmitting={isSubmittingParentSignature}
+          signerType="parent"
+          defaultSignerName={parent1Name || parentDoc.fullName || currentUser?.fullName || ''}
+          defaultSignerRole={parent1Relation || 'Father'}
+          title="Parent Digital Signature Certification"
+          subtitle={`Review and certify the official progress report for ${signingPublishedReport.scoutName}`}
+        />
       )}
     </div>
   );

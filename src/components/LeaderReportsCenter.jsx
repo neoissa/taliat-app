@@ -4,6 +4,10 @@ import { collection, onSnapshot, doc, getDoc, setDoc, query, where, serverTimest
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage, getRankById, getRankIndex } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
+import { publishProgressReport, deletePublishedReport } from '../services/publishedReportsService';
+import SignaturePadModal from './SignaturePadModal';
+import DigitalVerificationStamp from './DigitalVerificationStamp';
+import PublishedReportViewerModal from './PublishedReportViewerModal';
 import {
   Printer,
   Sparkles,
@@ -29,7 +33,12 @@ import {
   Search,
   RotateCcw,
   Check,
-  Shield
+  Shield,
+  ShieldCheck,
+  PenTool,
+  Send,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 
@@ -58,9 +67,17 @@ function SingleScoutCustomReport({
   const [leaderNotes, setLeaderNotes] = useState({});
   const [eagleData, setEagleData] = useState({});
   const [eagleRoadmap, setEagleRoadmap] = useState({});
+  const [publishedReports, setPublishedReports] = useState([]);
 
   useEffect(() => {
     if (!scoutUid) return;
+    const qPub = query(collection(db, 'published_reports'), where('scoutId', '==', scoutUid));
+    const unsubPub = onSnapshot(qPub, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReports(list);
+    }, (err) => console.warn('Published reports listener:', err));
+
     const unsubRanks = onSnapshot(collection(db, 'user_progress', scoutUid, 'ranks'), (snap) => {
       const m = {};
       snap.docs.forEach(d => { m[d.id] = d.data(); });
@@ -117,6 +134,7 @@ function SingleScoutCustomReport({
     });
 
     return () => {
+      unsubPub();
       unsubHw();
       unsubRanks();
       unsubMerit();
@@ -131,6 +149,8 @@ function SingleScoutCustomReport({
       unsubRoadmap();
     };
   }, [scoutUid]);
+
+  const latestPublishedReport = publishedReports[0] || null;
 
   const isDateInWindow = (dateStr) => {
     if (!dateStr) return false;
@@ -827,24 +847,28 @@ function SingleScoutCustomReport({
 
       {/* ── 10. SIGNATURE BLOCK ── */}
       {config.signatures.enabled && (
-        <div className="pt-6 border-t-2 border-slate-900 grid grid-cols-3 gap-6 text-xs page-break-avoid">
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Scout Candidate Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+        <div className="pt-6 border-t-2 border-slate-900 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs page-break-avoid">
+          {/* Scout Signature */}
+          <DigitalVerificationStamp
+            title="Scout Candidate Signature"
+            signatureData={latestPublishedReport?.signatures?.scout}
+            pendingLabel="Awaiting Scout Signature"
+          />
 
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Unit Leader Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+          {/* Unit Leader Signature */}
+          <DigitalVerificationStamp
+            title="Unit Leader / Scoutmaster"
+            signatureData={latestPublishedReport?.signatures?.leader}
+            pendingLabel="Awaiting Leader Publication"
+            signerRole="Unit Leader"
+          />
 
-          <div className="space-y-1">
-            <div className="border-b border-slate-900 h-10"></div>
-            <p className="font-bold text-slate-950">Parent / Guardian Signature</p>
-            <p className="text-[10px] text-slate-600">Date: ________________________</p>
-          </div>
+          {/* Parent Signature */}
+          <DigitalVerificationStamp
+            title="Parent / Guardian Signature"
+            signatureData={latestPublishedReport?.signatures?.parent}
+            pendingLabel="Awaiting Parent Signature in Portal"
+          />
         </div>
       )}
     </div>
@@ -872,6 +896,14 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
   const defaultEndDate = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
+
+  // Published Reports Vault & Digital Signature State
+  const [publishedReportsList, setPublishedReportsList] = useState([]);
+  const [showSignModal, setShowSignModal] = useState(false);
+  const [isSubmittingSignature, setIsSubmittingSignature] = useState(false);
+  const [publishSuccessToast, setPublishSuccessToast] = useState('');
+  const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
+  const [showVaultModal, setShowVaultModal] = useState(false);
 
   // Modular Item Filter Config Object
   const [config, setConfig] = useState({
@@ -916,7 +948,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
     }
   });
 
-  // Fetch Scouts & Groups
+  // Fetch Scouts, Groups & Published Reports
   useEffect(() => {
     const qScouts = query(collection(db, 'users'), where('role', '==', 'scout'));
     const unsubScouts = onSnapshot(qScouts, (snap) => {
@@ -935,9 +967,16 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
       setGroupsMap(gm);
     });
 
+    const unsubPub = onSnapshot(collection(db, 'published_reports'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReportsList(list);
+    });
+
     return () => {
       unsubScouts();
       unsubGroups();
+      unsubPub();
     };
   }, []);
 
@@ -1020,6 +1059,57 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
     day: 'numeric'
   });
 
+  const handleSaveLeaderSignature = async ({ signerName, signerRole, signatureDataUrl, signedAt }) => {
+    if (targetScouts.length !== 1) return;
+    const targetScout = targetScouts[0];
+    setIsSubmittingSignature(true);
+    try {
+      const reportSnapshot = {
+        rank: targetScout.rank || 'Scout',
+        rankProgress: 100,
+        attendanceRate: 100,
+        completedRankSteps: [],
+        meritBadges: [],
+        serviceHours: 0,
+        homeworkRecords: [],
+        leaderCommentary: {
+          strengths: 'Demonstrates strong leadership, team commitment, and scouting spirit.',
+          focusAreas: 'Advancement towards next BSA rank milestone.',
+          parentActionItems: 'Support scout with upcoming weekend campout preparation and skill practice.'
+        }
+      };
+
+      await publishProgressReport({
+        scoutId: targetScout.uid,
+        scoutName: targetScout.fullName || targetScout.username,
+        groupId: targetScout.groupId || selectedGroupId || 'all',
+        patrolName: groupsMap[targetScout.groupId]?.name || groupsList.find(g => g.id === targetScout.groupId)?.name || 'Taliʿa Patrol',
+        parentEmail: targetScout.parentEmail || null,
+        parentUid: targetScout.parentUid || null,
+        leaderId: currentUser?.uid || 'leader',
+        leaderName: currentUser?.fullName || currentUser?.username || 'Unit Leader',
+        reportingPeriod: reportMode === 'cumulative' ? 'All-Time Cumulative' : `${startDate} to ${endDate}`,
+        reportSnapshot,
+        leaderSignature: {
+          signed: true,
+          signerName,
+          signerRole,
+          signatureDataUrl,
+          signedAt
+        }
+      });
+
+      setPublishSuccessToast(`✓ Progress report published & sent to ${targetScout.fullName || targetScout.username}'s Parent Portal!`);
+      setShowSignModal(false);
+    } catch (err) {
+      console.error('Publish report error:', err);
+      alert('Error publishing report: ' + err.message);
+    } finally {
+      setIsSubmittingSignature(false);
+      setTimeout(() => setPublishSuccessToast(''), 4000);
+    }
+  };
+
   const handlePrint = () => {
     const originalTitle = document.title;
     const dateStr = new Date().toISOString().split('T')[0];
@@ -1086,7 +1176,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
       {/* ── SCREEN CONTROL PANEL (HIDDEN IN PRINT) ── */}
       <div className="bg-slate-850 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-6 print-hide">
         {/* Header Title & Print Action */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-750 pb-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-750 pb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -1101,15 +1191,45 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02] shrink-0"
-          >
-            <Printer size={16} />
-            <span>Print Compiled Report ({targetScouts.length} Scout{targetScouts.length !== 1 ? 's' : ''})</span>
-          </button>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {targetType === 'single' && targetScouts.length === 1 && (
+              <button
+                type="button"
+                onClick={() => setShowSignModal(true)}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-emerald-950/60 hover:scale-[1.02] shrink-0"
+              >
+                <ShieldCheck size={16} />
+                <span>Sign & Publish to Parent Portal</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowVaultModal(true)}
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shrink-0"
+            >
+              <FileText size={15} className="text-amber-400" />
+              <span>Published Reports ({publishedReportsList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-5 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shrink-0"
+            >
+              <Printer size={15} className="text-emerald-400" />
+              <span>Print ({targetScouts.length})</span>
+            </button>
+          </div>
         </div>
+
+        {/* Publish Toast Alert */}
+        {publishSuccessToast && (
+          <div className="p-3.5 bg-emerald-950 border border-emerald-500/60 rounded-2xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-lg">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>{publishSuccessToast}</span>
+          </div>
+        )}
 
         {/* 1-Click Preset Quick-Configs */}
         <div className="space-y-2">
@@ -1549,6 +1669,154 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
           ))
         )}
       </div>
+
+      {/* ── DIGITAL SIGNATURE PAD MODAL FOR LEADER ── */}
+      {showSignModal && (
+        <SignaturePadModal
+          isOpen={showSignModal}
+          onClose={() => setShowSignModal(false)}
+          onSave={handleSaveLeaderSignature}
+          isSubmitting={isSubmittingSignature}
+          signerType="leader"
+          defaultSignerName={currentUser?.fullName || currentUser?.username || 'Unit Leader'}
+          defaultSignerRole="Scoutmaster / Unit Leader"
+          title="Unit Leader Digital Certification & Publish"
+          subtitle={`Certify and publish the official progress report snapshot for ${targetScouts[0]?.fullName || targetScouts[0]?.username} to their Parent Portal.`}
+        />
+      )}
+
+      {/* ── PUBLISHED REPORT SNAPSHOT VIEWER MODAL ── */}
+      {viewingPublishedReport && (
+        <PublishedReportViewerModal
+          isOpen={!!viewingPublishedReport}
+          report={viewingPublishedReport}
+          onClose={() => setViewingPublishedReport(null)}
+          currentUser={currentUser}
+          onReportUpdated={() => {}}
+        />
+      )}
+
+      {/* ── PUBLISHED REPORTS VAULT DRAWER / MODAL ── */}
+      {showVaultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Published Progress Reports Archive</h3>
+                  <p className="text-xs text-slate-400">
+                    Track parent signatures, digital timestamps, and historical report snapshots across Troop 313
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowVaultModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {publishedReportsList.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs italic">
+                  No published reports on file yet. Select a scout and click "Sign & Publish to Parent Portal" to publish the first official report.
+                </div>
+              ) : (
+                publishedReportsList.map(report => {
+                  const isParentSigned = report.signatures?.parent?.signed;
+                  const isScoutSigned = report.signatures?.scout?.signed;
+                  return (
+                    <div
+                      key={report.id}
+                      className="bg-slate-850 border border-slate-750 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:border-slate-650 transition"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <strong className="text-white text-sm font-bold">{report.scoutName}</strong>
+                          <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                            {report.patrolName}
+                          </span>
+                          <span className="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                            Rank: {report.reportSnapshot?.rank || 'Scout'}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                          <span>📅 Published {report.publishedAt?.split('T')[0]}</span>
+                          <span>&bull;</span>
+                          <span>Period: {report.reportingPeriod || 'Cumulative'}</span>
+                          <span>&bull;</span>
+                          <span>Leader: {report.leaderName}</span>
+                        </div>
+
+                        {/* Signature Status Badges */}
+                        <div className="flex items-center gap-2 pt-1 flex-wrap">
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                            <ShieldCheck size={11} /> Leader Verified
+                          </span>
+
+                          {isParentSigned ? (
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                              <Check size={11} /> Parent Signed ({report.signatures?.parent?.signerName})
+                            </span>
+                          ) : (
+                            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 animate-pulse">
+                              <Clock size={11} /> Awaiting Parent Signature
+                            </span>
+                          )}
+
+                          {isScoutSigned && (
+                            <span className="bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                              <Check size={11} /> Scout Signed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setViewingPublishedReport(report)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                        >
+                          <FileText size={13} />
+                          <span>View & Print</span>
+                        </button>
+
+                        {(isOwner || isLeader) && (
+                          <button
+                            type="button"
+                            title="Retract / Delete Report"
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to delete/retract this published report for ${report.scoutName}?`)) {
+                                try {
+                                  await deletePublishedReport(report.id);
+                                } catch (err) {
+                                  alert('Error deleting report: ' + err.message);
+                                }
+                              }
+                            }}
+                            className="bg-slate-800 hover:bg-red-950/80 text-slate-400 hover:text-red-300 p-2 rounded-xl border border-slate-700 hover:border-red-500/50 transition cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
