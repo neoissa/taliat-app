@@ -199,18 +199,19 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
   // 7. Helper to cross-reference event with recorded attendance sessions
   const getEventAttendanceInfo = (ev) => {
+    if (!ev) return { recorded: false, presentCount: 0, totalCount: 0, turnoutPct: 0, session: null, mappedType: 'Weekly Troop Meeting' };
     const mappedType = mapCategoryToEventType(ev.category || ev.type);
-    const session = attendanceSessions.find(s => 
-      s.date === ev.date && 
-      (s.eventType === mappedType || (s.notes && s.notes.includes(ev.title)))
+    const session = (attendanceSessions || []).find(s => 
+      s && s.date === ev.date && 
+      (s.eventType === mappedType || (typeof s.notes === 'string' && typeof ev.title === 'string' && s.notes.includes(ev.title)))
     );
 
-    if (!session || !session.records) {
+    if (!session || !session.records || typeof session.records !== 'object') {
       return { recorded: false, presentCount: 0, totalCount: 0, turnoutPct: 0, session: null, mappedType };
     }
 
-    const records = Object.values(session.records);
-    const present = records.filter(r => r.status === 'present' || r.status === 'late').length;
+    const records = Object.values(session.records).filter(Boolean);
+    const present = records.filter(r => r && (r.status === 'present' || r.status === 'late')).length;
     const total = records.length;
     const turnout = total > 0 ? Math.round((present / total) * 100) : 0;
 
@@ -228,10 +229,11 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   let patrolYellowRiskCount = 0;
   let patrolRedRiskCount = 0;
 
-  scouts.forEach(scout => {
+  (scouts || []).forEach(scout => {
+    if (!scout?.uid) return;
     let unexcusedCount = 0;
-    attendanceSessions.forEach(sess => {
-      const rec = sess.records?.[scout.uid];
+    (attendanceSessions || []).forEach(sess => {
+      const rec = sess?.records?.[scout.uid];
       if (rec && rec.status === 'absent') {
         unexcusedCount++;
       }
@@ -244,22 +246,23 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   });
 
   // Filter events based on attendance status
-  const filteredEvents = allEvents.filter(ev => {
+  const filteredEvents = (allEvents || []).filter(ev => {
+    if (!ev) return false;
     const info = getEventAttendanceInfo(ev);
     if (eventAttendanceFilter === 'pending') return !info.recorded;
     if (eventAttendanceFilter === 'recorded') return info.recorded;
     return true;
   });
 
-  const pendingRollCallCount = allEvents.filter(ev => !getEventAttendanceInfo(ev).recorded).length;
-  const recordedRollCallCount = allEvents.filter(ev => getEventAttendanceInfo(ev).recorded).length;
+  const pendingRollCallCount = (allEvents || []).filter(ev => ev && !getEventAttendanceInfo(ev).recorded).length;
+  const recordedRollCallCount = (allEvents || []).filter(ev => ev && getEventAttendanceInfo(ev).recorded).length;
 
-  const totalPendingApprovals = Object.values(pendingMap).reduce((sum, item) => sum + (item?.total || 0), 0);
-  const totalRanksPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.ranks || 0), 0);
-  const totalIslamicPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.islamic || 0), 0);
-  const totalMeritPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.merit || 0), 0);
-  const totalHwPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.assignments || 0), 0);
-  const scoutsWithPending = scouts.filter(s => (pendingMap[s.uid]?.total || 0) > 0);
+  const totalPendingApprovals = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.total || 0), 0);
+  const totalRanksPending = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.ranks || 0), 0);
+  const totalIslamicPending = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.islamic || 0), 0);
+  const totalMeritPending = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.merit || 0), 0);
+  const totalHwPending = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.assignments || 0), 0);
+  const scoutsWithPending = (scouts || []).filter(s => s?.uid && (pendingMap[s.uid]?.total || 0) > 0);
 
   return (
     <div className="space-y-6 pb-12 font-sans">
