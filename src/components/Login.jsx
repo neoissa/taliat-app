@@ -73,7 +73,7 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
             meritBadges: [],
           };
           await setDoc(userRef, newProfile);
-          onUserAuthenticated({
+          notifySuccess({
             uid: user.uid,
             email: user.email,
             ...newProfile
@@ -81,7 +81,7 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
         }
       } catch (dbErr) {
         console.warn('Firestore fetch failed, logging in with auth profile:', dbErr);
-        onUserAuthenticated({
+        notifySuccess({
           uid: user.uid,
           email: user.email,
           role: 'scout',

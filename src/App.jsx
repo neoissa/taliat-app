@@ -51,7 +51,7 @@ import {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [currentTab, setCurrentTab] = useState('');
+  const [currentTab, setCurrentTab] = useState('home');
   const [authLoading, setAuthLoading] = useState(true);
   const [userGroupName, setUserGroupName] = useState('');
   const [userGroup, setUserGroup] = useState(null);
@@ -806,14 +806,14 @@ export default function App() {
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
 
-        {currentTab === 'home' && isLeaderOrOwner && (
+        {(!currentTab || currentTab === 'home') && isLeaderOrOwner && (
           <LeaderHome 
             currentUser={currentUser} 
             onNavigate={handleNavigate} 
           />
         )}
         
-        {currentTab === 'home' && isScout && (
+        {(!currentTab || currentTab === 'home') && isScout && (
           <StudentHome 
             currentUser={currentUser} 
             unreadChatCount={unreadChatCount} 
@@ -821,7 +821,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'home' && isParent && (
+        {(!currentTab || currentTab === 'home') && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
             onNavigate={handleNavigate} 
