@@ -112,6 +112,9 @@ export default function App() {
   }, []);
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
+  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scout Master');
+  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
   const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin');
   const isParent = !isOwner && !isLeader && currentUser?.role === 'parent';
   const isScout = !isOwner && !isLeader && !isParent;

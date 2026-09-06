@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { db, firebaseConfig } from '../firebase';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, setDoc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { RANKS_DATA } from '../data/ranksData';
 import { Users, UserPlus, Shield, ShieldCheck, ShieldAlert, Award, Search, KeyRound, Lock, Trash2, Edit2, Edit3, AlertTriangle, CheckCircle, RefreshCw, X, FolderTree, Camera, Loader2 } from 'lucide-react';
 import { 
@@ -1304,6 +1304,7 @@ We wanted to remind scouts to log their community service and volunteering hours
                 return tmpls;
               })().map((tmpl) => {
                 const cleanPhone = (activeWhatsappPhone || '').replace(/[^0-9]/g, '');
+                const encodedText = encodeURIComponent(tmpl.text || '');
                 const waLink = cleanPhone 
                   ? `https://wa.me/${cleanPhone}${tmpl.text ? `?text=${encodedText}` : ''}`
                   : `https://wa.me/?text=${encodedText}`;

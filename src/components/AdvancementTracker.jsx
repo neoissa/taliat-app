@@ -125,7 +125,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
   // Scout Biography states
   const [scoutData, setScoutData] = useState(null);
-      
+  const [bioInput, setBioInput] = useState('');
 
   // 1. Subscribe to scout's specific profile info (including bio)
   useEffect(() => {
