@@ -265,39 +265,80 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                     setSelectedDate(cell.dateString);
                     setFeedTab('day');
                   }}
-                  className={`h-12 sm:h-14 p-1 rounded-xl transition cursor-pointer relative flex flex-col justify-between items-start border text-left ${
+                  className={`min-h-[64px] sm:min-h-[76px] p-1 sm:p-1.5 rounded-xl transition cursor-pointer relative flex flex-col justify-start items-start border text-left gap-1 overflow-hidden ${
                     isSelected
-                      ? 'bg-emerald-600/30 border-emerald-400 text-white shadow-md'
+                      ? 'bg-emerald-600/30 border-emerald-400 text-white shadow-md ring-1 ring-emerald-500/50'
                       : isToday
                       ? 'bg-amber-950/30 border-amber-500/60 text-amber-300'
                       : cell.isCurrentMonth
                       ? 'bg-slate-900/80 border-slate-800 text-slate-200 hover:bg-slate-800'
-                      : 'bg-slate-950/40 border-slate-850 text-slate-600 hover:bg-slate-900'
+                      : 'bg-slate-950/40 border-slate-850/60 text-slate-600 hover:bg-slate-900'
                   }`}
                 >
-                  <span className={`text-[11px] font-bold font-mono px-1 rounded ${
-                    isToday ? 'bg-amber-500 text-slate-950 font-black' : ''
-                  }`}>
-                    {cell.dayNumber}
-                  </span>
+                  <div className="flex items-center justify-between w-full">
+                    <span className={`text-[10px] sm:text-[11px] font-bold font-mono px-1 rounded ${
+                      isToday ? 'bg-amber-500 text-slate-950 font-black' : ''
+                    }`}>
+                      {cell.dayNumber}
+                    </span>
+                    {hasActivity && (
+                      <span className="text-[8px] font-mono text-slate-400 font-bold sm:hidden">
+                        {dayEvents.length + dayTasks.length}
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Activity Indicator Dots / Mini Pills */}
+                  {/* Render Event Chips Directly Under Day Number */}
                   {hasActivity && (
-                    <div className="flex items-center gap-0.5 mt-auto w-full overflow-hidden">
-                      {dayEvents.map(e => (
-                        <span
-                          key={e.id}
-                          className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"
-                          title={e.title}
-                        />
-                      ))}
-                      {dayTasks.map(t => (
-                        <span
+                    <div className="w-full space-y-0.5 overflow-hidden">
+                      {dayEvents.slice(0, 2).map(e => {
+                        const isFriday = e.recurringPattern === 'weekly_friday' || new Date(e.date + 'T12:00:00').getDay() === 5;
+                        const isTuesday = e.recurringPattern === 'weekly_tuesday' || new Date(e.date + 'T12:00:00').getDay() === 2;
+                        
+                        let chipBg = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                        let dotBg = 'bg-amber-400';
+                        if (isFriday) {
+                          chipBg = 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
+                          dotBg = 'bg-emerald-400';
+                        } else if (isTuesday) {
+                          chipBg = 'bg-sky-500/25 text-sky-300 border-sky-500/40';
+                          dotBg = 'bg-sky-400';
+                        }
+
+                        let shortTitle = e.title || 'Event';
+                        if (/friday weekly meeting/i.test(shortTitle)) shortTitle = 'Fri Meeting';
+                        else if (/tuesday youth program/i.test(shortTitle)) shortTitle = 'Tue Youth';
+                        else if (/weekly meeting/i.test(shortTitle)) shortTitle = 'Meeting';
+                        else if (/youth program/i.test(shortTitle)) shortTitle = 'Youth Prog';
+
+                        return (
+                          <div
+                            key={e.id}
+                            className={`w-full text-[8px] sm:text-[9px] font-bold px-1 py-0.5 rounded border truncate leading-tight shadow-sm flex items-center gap-1 ${chipBg}`}
+                            title={`${e.title} (${e.time || ''})`}
+                          >
+                            <span className={`w-1 h-1 rounded-full shrink-0 ${dotBg}`} />
+                            <span className="truncate">{shortTitle}</span>
+                          </div>
+                        );
+                      })}
+
+                      {dayTasks.slice(0, Math.max(0, 2 - dayEvents.length)).map(t => (
+                        <div
                           key={t.id}
-                          className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"
-                          title={t.title}
-                        />
+                          className="w-full text-[8px] sm:text-[9px] font-bold px-1 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 truncate leading-tight shadow-sm flex items-center gap-1"
+                          title={`Task Due: ${t.title}`}
+                        >
+                          <span>🎒</span>
+                          <span className="truncate">{t.title}</span>
+                        </div>
                       ))}
+
+                      {dayEvents.length + dayTasks.length > 2 && (
+                        <span className="text-[8px] text-slate-400 font-bold block truncate pl-0.5">
+                          +{dayEvents.length + dayTasks.length - 2} more
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>

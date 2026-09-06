@@ -107,6 +107,41 @@ export function calculateDuration(start24, end24) {
   return `${mins} min${mins > 1 ? 's' : ''}`;
 }
 
+export function getEventDisplayDuration(ev) {
+  if (!ev) return '';
+
+  // 1. If start and end time exist in 24h format (e.g. "19:15" and "20:30")
+  if (ev.startTime && ev.endTime) {
+    const dur = calculateDuration(ev.startTime, ev.endTime);
+    if (dur) return dur;
+  }
+
+  // 2. If time string is a valid range (e.g. "7:15 PM – 8:30 PM" or "7:00 PM – 8:15 PM")
+  if (ev.time) {
+    const parsed = parseTimeRange(ev.time);
+    if (parsed && parsed.start && parsed.end && !parsed.isCustom) {
+      const dur = calculateDuration(parsed.start, parsed.end);
+      if (dur) return dur;
+    }
+  }
+
+  // 3. If explicit duration string is provided on doc
+  if (ev.duration && typeof ev.duration === 'string') {
+    return ev.duration;
+  }
+
+  // 4. Fallback to numeric durationHours
+  if (typeof ev.durationHours === 'number' && ev.durationHours > 0) {
+    if (ev.durationHours === 1.25) return '1h 15m';
+    if (ev.durationHours === 1.5) return '1h 30m';
+    if (ev.durationHours === 2.5) return '2h 30m';
+    if (ev.durationHours === 3.5) return '3h 30m';
+    return `${ev.durationHours} hr${ev.durationHours > 1 ? 's' : ''}`;
+  }
+
+  return '';
+}
+
 export function parseTimeRange(rangeStr) {
   if (!rangeStr || typeof rangeStr !== 'string') {
     return { start: '10:00', end: '14:00', isAllDay: false, isCustom: false };
@@ -487,13 +522,29 @@ export default function EventsManager({ currentUser, onNavigate }) {
 
     setSaving(true);
     const scope = isExecutive ? targetGroupId : (currentUser?.groupId || 'all');
+    
+    let calculatedDurStr = isAllDay ? '8 hrs' : (startTime && endTime ? calculateDuration(startTime, endTime) : '3 hrs');
+    let calculatedHours = 3;
+    if (isAllDay) {
+      calculatedHours = 8;
+    } else if (startTime && endTime) {
+      const [sH, sM] = startTime.split(':').map(Number);
+      const [eH, eM] = endTime.split(':').map(Number);
+      if (!isNaN(sH) && !isNaN(eH)) {
+        let diff = (eH * 60 + eM) - (sH * 60 + sM);
+        if (diff < 0) diff += 24 * 60;
+        calculatedHours = Math.round((diff / 60) * 100) / 100;
+      }
+    }
+
     const eventData = {
       title: title.trim(),
       date,
       time: time.trim(),
       startTime: startTime || '18:30',
       endTime: endTime || '21:30',
-      durationHours: isAllDay ? 8 : (startTime && endTime ? (calculateDuration(startTime, endTime).includes('hr') ? parseFloat(calculateDuration(startTime, endTime)) : 3) : 3),
+      durationHours: calculatedHours,
+      duration: calculatedDurStr,
       location: location.trim(),
       category,
       description: description.trim(),
@@ -1230,7 +1281,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                             <td className="p-2.5 font-mono font-bold text-white">{item.date}</td>
                             <td className="p-2.5 text-slate-200 font-medium truncate max-w-[160px]">{item.title}</td>
                             <td className="p-2.5 text-slate-300 font-mono text-[11px]">
-                              {item.time} ({item.duration || `${item.durationHours} hrs`})
+                              {item.time} ({item.duration || getEventDisplayDuration(item)})
                             </td>
                             <td className="p-2.5 text-right pr-4">
                               {isLive ? (
@@ -1497,10 +1548,10 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setLocation('Highview Elementary School (Troop Headquarters)')}
+                    onClick={() => setLocation('Highview Elementary School (6514 Kinloch St. Dearborn Heights 48127)')}
                     className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-emerald-950 hover:text-emerald-300 text-slate-300 border border-slate-750 hover:border-emerald-700 rounded-lg transition cursor-pointer"
                   >
-                    🏫 Highview Elementary (Troop HQ)
+                    🏫 Highview Elementary (6514 Kinloch St)
                   </button>
                   <button
                     type="button"
@@ -1752,7 +1803,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                       <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
                         <span>⏰ {ev.time}</span>
-                        {ev.durationHours && <span>&bull; {ev.durationHours} hrs</span>}
+                        {getEventDisplayDuration(ev) && <span>&bull; {getEventDisplayDuration(ev)}</span>}
                       </div>
                       {ev.location && (
                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 px-2.5 py-1 rounded-xl w-fit max-w-full">
@@ -1805,8 +1856,8 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   <div className="flex items-center gap-4 text-xs text-slate-300 pt-1 flex-wrap font-medium">
                     <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-400" /> {selectedEvent.date}</span>
                     <span className="flex items-center gap-1.5"><Clock size={13} className="text-emerald-400" /> {selectedEvent.time}</span>
-                    {selectedEvent.durationHours && (
-                      <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {selectedEvent.durationHours} hrs duration</span>
+                    {getEventDisplayDuration(selectedEvent) && (
+                      <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {getEventDisplayDuration(selectedEvent)} duration</span>
                     )}
                   </div>
                 </div>

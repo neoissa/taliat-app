@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { db, firebaseConfig } from '../firebase';
@@ -20,7 +20,37 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, CheckCheck, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users, Crown, Shield } from 'lucide-react';
+import { 
+  Printer, 
+  ArrowLeft, 
+  Save, 
+  Award, 
+  Star, 
+  BookOpen, 
+  ShieldAlert, 
+  Plus, 
+  Trash2, 
+  Clock, 
+  CheckCircle2, 
+  CheckCheck, 
+  Bell, 
+  Compass, 
+  Calendar, 
+  AlertTriangle, 
+  ShieldCheck, 
+  Users, 
+  Crown, 
+  Shield,
+  Copy,
+  Check,
+  Search,
+  Globe,
+  RefreshCw,
+  KeyRound,
+  ExternalLink,
+  Edit3,
+  X
+} from 'lucide-react';
 import { 
   getKashafGreeting, 
   getLockedClosing, 
@@ -1084,21 +1114,69 @@ export default function PatrolRoster({ currentUser = {} }) {
   const isAssistantLeader = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Leader';
   const canAddOrDeleteScouts = isExecutive || (currentUser?.role === 'leader' && !isAssistantLeader);
 
+  // ── UNIFIED ALL-USERS SUBSCRIPTION STATE ──
+  const [rawAllUsers, setRawAllUsers] = useState([]);
+  const [directorySearch, setDirectorySearch] = useState('');
+  const [copiedUid, setCopiedUid] = useState(null);
+  const [updatingUserRole, setUpdatingUserRole] = useState(null);
+  const [updatingUserGroup, setUpdatingUserGroup] = useState(null);
+  const [quickActionMsg, setQuickActionMsg] = useState('');
+
+  // 1. Unified Subscription to Users, Groups, and Attendance
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
-      
-    const unsub = onSnapshot(q, (snap) => {
-      let list = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-      if (!isExecutive) {
-        // Filter strictly by assigned leaderId OR matching patrol groupId
-        list = list.filter(s => s.leaderId === currentUser?.uid || (currentUser?.groupId && (s.groupId === currentUser?.groupId || s.patrolId === currentUser?.groupId)));
-      }
-      setScouts(list);
-    }, (err) => {
-      console.error("Error listening to scouts in roster:", err);
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
     });
-    return () => unsub();
-  }, [currentUser?.uid, currentUser?.role, currentUser?.email, currentUser?.leaderPosition, currentUser?.groupId, isExecutive]);
+    
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      setRawAllUsers(allUsers);
+
+      // 1. Leaders
+      const leaderList = allUsers.filter(u => {
+        const r = (u.role || '').toLowerCase();
+        return r === 'leader' || r === 'owner' || r === 'admin' || r === 'scoutmaster' || r === 'assistant_scoutmaster';
+      });
+      setLeaders(leaderList);
+
+      // 2. Parents
+      const parentList = allUsers.filter(u => {
+        const r = (u.role || '').toLowerCase();
+        return r === 'parent';
+      });
+      setParents(parentList);
+
+      // 3. Scouts & Registered Members (inclusive of all non-leader/parent accounts)
+      let scoutList = allUsers.filter(u => {
+        const r = (u.role || '').toLowerCase();
+        return r !== 'leader' && r !== 'owner' && r !== 'admin' && r !== 'scoutmaster' && r !== 'assistant_scoutmaster' && r !== 'parent';
+      });
+
+      if (!isExecutive) {
+        // Regular leaders see assigned scouts + unassigned scouts
+        scoutList = scoutList.filter(s => {
+          const matchesLeader = s.leaderId === currentUser?.uid;
+          const matchesPatrol = currentUser?.groupId && (s.groupId === currentUser?.groupId || s.patrolId === currentUser?.groupId);
+          const isUnassigned = !s.groupId && !s.patrolId;
+          return matchesLeader || matchesPatrol || isUnassigned;
+        });
+      }
+
+      setScouts(scoutList);
+    }, (err) => {
+      console.error("Error listening to users in PatrolRoster:", err);
+    });
+
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      setAttendanceSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error("Error loading attendance in PatrolRoster:", err));
+    
+    return () => {
+      unsubGroups();
+      unsubUsers();
+      unsubAttendance();
+    };
+  }, [currentUser?.uid, currentUser?.groupId, isExecutive]);
 
   // Subscribe to real-time pending approvals count for all visible scouts (Ranks + Badges + Islamic + Assignments)
   useEffect(() => {
@@ -1199,27 +1277,106 @@ export default function PatrolRoster({ currentUser = {} }) {
   const totalHwNeeded = Object.values(pendingApprovalsMap).reduce((sum, item) => sum + (item?.assignments || 0), 0);
   const scoutsWithPendingInRoster = scouts.filter(s => (pendingApprovalsMap[s.uid]?.total || 0) > 0);
 
-  useEffect(() => {
-    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
-      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
-    });
-    
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      setLeaders(allUsers.filter(u => u.role === 'leader' || u.role === 'owner'));
-      setParents(allUsers.filter(u => u.role === 'parent'));
-    });
+  const handleCopyUid = (uid, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    navigator.clipboard.writeText(uid);
+    setCopiedUid(uid);
+    setTimeout(() => setCopiedUid(null), 2000);
+  };
 
-    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
-      setAttendanceSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error("Error loading attendance in PatrolRoster:", err));
-    
-    return () => {
-      unsubGroups();
-      unsubUsers();
-      unsubAttendance();
-    };
-  }, []);
+  const handleQuickUpdateUserRole = async (targetUid, newRole) => {
+    setUpdatingUserRole(targetUid);
+    setQuickActionMsg('');
+    try {
+      await setDoc(doc(db, 'users', targetUid), {
+        role: newRole,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setQuickActionMsg(`✓ Role updated to ${newRole}`);
+      setTimeout(() => setQuickActionMsg(''), 2500);
+    } catch (err) {
+      console.error("Failed to update role:", err);
+      alert("Failed to update role: " + err.message);
+    } finally {
+      setUpdatingUserRole(null);
+    }
+  };
+
+  const handleQuickAssignPatrol = async (targetUid, newGroupId) => {
+    setUpdatingUserGroup(targetUid);
+    setQuickActionMsg('');
+    try {
+      await setDoc(doc(db, 'users', targetUid), {
+        groupId: newGroupId || null,
+        patrolId: newGroupId || null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setQuickActionMsg(`✓ Patrol assignment updated`);
+      setTimeout(() => setQuickActionMsg(''), 2500);
+    } catch (err) {
+      console.error("Failed to assign patrol:", err);
+      alert("Failed to assign patrol: " + err.message);
+    } finally {
+      setUpdatingUserGroup(null);
+    }
+  };
+
+  const searchedAllUsers = useMemo(() => {
+    if (!directorySearch.trim()) return rawAllUsers;
+    const q = directorySearch.toLowerCase().trim();
+    return rawAllUsers.filter(u => {
+      const name = (u.fullName || '').toLowerCase();
+      const username = (u.username || '').toLowerCase();
+      const email = (u.email || u.parentEmail || u.scoutEmail || u.personalEmail || '').toLowerCase();
+      const phone = (u.scoutPhone || u.parentPhone || u.phone || '').toLowerCase();
+      const bsaId = (u.bsaId || '').toLowerCase();
+      const uid = (u.uid || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      const groupName = (groups.find(g => g.id === u.groupId || g.id === u.patrolId)?.name || '').toLowerCase();
+      return name.includes(q) || username.includes(q) || email.includes(q) || phone.includes(q) || bsaId.includes(q) || uid.includes(q) || role.includes(q) || groupName.includes(q);
+    });
+  }, [rawAllUsers, directorySearch, groups]);
+
+  const searchedScouts = useMemo(() => {
+    if (!directorySearch.trim()) return scouts;
+    const q = directorySearch.toLowerCase().trim();
+    return scouts.filter(s => {
+      const name = (s.fullName || '').toLowerCase();
+      const username = (s.username || '').toLowerCase();
+      const email = (s.email || s.parentEmail || s.scoutEmail || s.personalEmail || '').toLowerCase();
+      const phone = (s.scoutPhone || s.parentPhone || s.phone || '').toLowerCase();
+      const bsaId = (s.bsaId || '').toLowerCase();
+      const uid = (s.uid || '').toLowerCase();
+      return name.includes(q) || username.includes(q) || email.includes(q) || phone.includes(q) || bsaId.includes(q) || uid.includes(q);
+    });
+  }, [scouts, directorySearch]);
+
+  const searchedLeaders = useMemo(() => {
+    if (!directorySearch.trim()) return leaders;
+    const q = directorySearch.toLowerCase().trim();
+    return leaders.filter(l => {
+      const name = (l.fullName || '').toLowerCase();
+      const username = (l.username || '').toLowerCase();
+      const email = (l.email || l.personalEmail || '').toLowerCase();
+      const phone = (l.scoutPhone || l.phone || '').toLowerCase();
+      const uid = (l.uid || '').toLowerCase();
+      const pos = (l.leaderPosition || '').toLowerCase();
+      return name.includes(q) || username.includes(q) || email.includes(q) || phone.includes(q) || uid.includes(q) || pos.includes(q);
+    });
+  }, [leaders, directorySearch]);
+
+  const searchedParents = useMemo(() => {
+    if (!directorySearch.trim()) return parents;
+    const q = directorySearch.toLowerCase().trim();
+    return parents.filter(p => {
+      const name = (p.fullName || '').toLowerCase();
+      const username = (p.username || '').toLowerCase();
+      const email = (p.email || p.parentEmail || '').toLowerCase();
+      const phone = (p.parentPhone || p.phone || '').toLowerCase();
+      const uid = (p.uid || '').toLowerCase();
+      return name.includes(q) || username.includes(q) || email.includes(q) || phone.includes(q) || uid.includes(q);
+    });
+  }, [parents, directorySearch]);
 
   const getScoutAttendanceStats = (scoutUid) => {
     let totalAttendedHours = 0;
@@ -1545,15 +1702,15 @@ export default function PatrolRoster({ currentUser = {} }) {
 
 
   const filteredScouts = activeGroupTab === 'all'
-    ? scouts
-    : scouts.filter(s => s.groupId === activeGroupTab);
+    ? searchedScouts
+    : searchedScouts.filter(s => s.groupId === activeGroupTab);
 
   return (
     <div className="space-y-6 print-hide">
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-lg text-white">Patrol Roster</h3>
+            <h3 className="font-bold text-lg text-white">Patrol Roster & Directory</h3>
             <span className={`text-[10px] px-2 py-0.2 rounded-full font-black uppercase border ${
               isOwner 
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
@@ -1564,10 +1721,12 @@ export default function PatrolRoster({ currentUser = {} }) {
           </div>
           <p className="text-xs text-slate-400">
             {rosterSubTab === 'scouts' 
-              ? `${scouts.length} scout${scouts.length !== 1 ? 's' : ''} in roster`
+              ? `${searchedScouts.length} scout${searchedScouts.length !== 1 ? 's' : ''} in roster`
               : rosterSubTab === 'leaders'
-              ? `${leaders.length} leader${leaders.length !== 1 ? 's' : ''} in troop`
-              : `${parents.length} parent account${parents.length !== 1 ? 's' : ''} registered`}
+              ? `${searchedLeaders.length} leader${searchedLeaders.length !== 1 ? 's' : ''} in troop`
+              : rosterSubTab === 'parents'
+              ? `${searchedParents.length} parent account${searchedParents.length !== 1 ? 's' : ''} registered`
+              : `${searchedAllUsers.length} total Firebase account${searchedAllUsers.length !== 1 ? 's' : ''} indexed`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1589,6 +1748,37 @@ export default function PatrolRoster({ currentUser = {} }) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── SEARCH BAR & FEEDBACK BANNER ── */}
+      <div className="space-y-2">
+        <div className="relative flex items-center">
+          <Search size={18} className="absolute left-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={directorySearch}
+            onChange={(e) => setDirectorySearch(e.target.value)}
+            placeholder="Search directory by name, @username, BSA ID, email, phone, or User ID (e.g. 5Ib8dwcwB0ZbsCEX8oIYGgvWFIf2)..."
+            className="w-full bg-slate-900/90 border border-slate-700 hover:border-slate-600 focus:border-emerald-500 rounded-2xl pl-11 pr-10 py-3 text-xs sm:text-sm text-white placeholder-slate-450 focus:outline-none shadow-inner transition"
+          />
+          {directorySearch && (
+            <button
+              type="button"
+              onClick={() => setDirectorySearch('')}
+              className="absolute right-3 p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {quickActionMsg && (
+          <div className="p-2.5 bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2 shadow animate-fade-in">
+            <Check size={14} className="text-emerald-400 shrink-0" />
+            <span>{quickActionMsg}</span>
+          </div>
+        )}
       </div>
 
       {/* ── SLEEK ACTIONABLE NOTIFICATION & TESTING CENTER ── */}
@@ -1680,14 +1870,14 @@ export default function PatrolRoster({ currentUser = {} }) {
       )}
 
       {/* Directory Sub-tabs */}
-      <div className="flex gap-4 border-b border-slate-700/60 pb-1">
+      <div className="flex gap-2 sm:gap-4 border-b border-slate-700/60 pb-1 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setRosterSubTab('scouts')}
-          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer flex items-center gap-2 ${
+          className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
             rosterSubTab === 'scouts' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <span>Scouts Roster</span>
+          <span>⚜️ Scouts Roster ({searchedScouts.length})</span>
           {totalApprovalsNeeded > 0 && (
             <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-500 text-slate-950 animate-pulse">
               {totalApprovalsNeeded}
@@ -1696,21 +1886,32 @@ export default function PatrolRoster({ currentUser = {} }) {
         </button>
         <button
           onClick={() => setRosterSubTab('leaders')}
-          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer ${
+          className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 ${
             rosterSubTab === 'leaders' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Leaders Directory ({leaders.length})
+          🎖️ Leaders Directory ({searchedLeaders.length})
         </button>
         <button
           onClick={() => setRosterSubTab('parents')}
-          className={`pb-2 text-sm font-bold border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+          className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
             rosterSubTab === 'parents' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
           <span>👨‍👩‍👧 Parents Directory</span>
           <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-slate-800 text-emerald-300 border border-slate-700">
-            {parents.length}
+            {searchedParents.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setRosterSubTab('all_users')}
+          className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+            rosterSubTab === 'all_users' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>🌐 Global User Directory</span>
+          <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 font-mono">
+            {searchedAllUsers.length}
           </span>
         </button>
       </div>
@@ -1897,11 +2098,11 @@ export default function PatrolRoster({ currentUser = {} }) {
             >
               <span>All Patrols</span>
               <span className="text-[10px] bg-slate-950/60 px-1.5 py-0.2 rounded-full font-mono">
-                {scouts.length}
+                {searchedScouts.length}
               </span>
             </button>
             {visibleGroups.map((g) => {
-              const groupScouts = scouts.filter(s => s.groupId === g.id);
+              const groupScouts = searchedScouts.filter(s => s.groupId === g.id);
               const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
               return (
                 <button
@@ -1933,7 +2134,7 @@ export default function PatrolRoster({ currentUser = {} }) {
             const patrolSections = [];
             if (activeGroupTab === 'all') {
               visibleGroups.forEach(g => {
-                const groupScouts = scouts.filter(s => s.groupId === g.id);
+                const groupScouts = searchedScouts.filter(s => s.groupId === g.id);
                 const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
                 patrolSections.push({
                   id: g.id,
@@ -1948,7 +2149,7 @@ export default function PatrolRoster({ currentUser = {} }) {
                   approvals: groupApprovals
                 });
               });
-              const unassigned = scouts.filter(s => !s.groupId || !visibleGroups.some(g => g.id === s.groupId));
+              const unassigned = searchedScouts.filter(s => !s.groupId || !visibleGroups.some(g => g.id === s.groupId));
               if (unassigned.length > 0) {
                 const unassignedApprovals = unassigned.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
                 patrolSections.push({
@@ -1966,7 +2167,7 @@ export default function PatrolRoster({ currentUser = {} }) {
               }
             } else {
               const selectedGroup = visibleGroups.find(g => g.id === activeGroupTab);
-              const groupScouts = scouts.filter(s => s.groupId === activeGroupTab);
+              const groupScouts = searchedScouts.filter(s => s.groupId === activeGroupTab);
               const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
               patrolSections.push({
                 id: activeGroupTab,
@@ -1982,10 +2183,10 @@ export default function PatrolRoster({ currentUser = {} }) {
               });
             }
 
-            if (patrolSections.length === 0 || scouts.length === 0) {
+            if (patrolSections.length === 0 || searchedScouts.length === 0) {
               return (
                 <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-                  No scouts found. Click "+ Add Scout" to register troop members.
+                  {directorySearch ? `No scouts found matching "${directorySearch}".` : 'No scouts found. Click "+ Add Scout" to register troop members.'}
                 </div>
               );
             }
@@ -2285,8 +2486,8 @@ export default function PatrolRoster({ currentUser = {} }) {
       ) : rosterSubTab === 'leaders' ? (
         <div className="space-y-6">
           {(() => {
-            const execLeaders = leaders.filter(l => l.role === 'owner' || l.leaderPosition === 'Scoutmaster' || l.leaderPosition === 'Assistant Scoutmaster' || l.role === 'admin');
-            const unitLeaders = leaders.filter(l => l.role !== 'owner' && l.leaderPosition !== 'Scoutmaster' && l.leaderPosition !== 'Assistant Scoutmaster' && l.role !== 'admin');
+            const execLeaders = searchedLeaders.filter(l => l.role === 'owner' || l.leaderPosition === 'Scoutmaster' || l.leaderPosition === 'Assistant Scoutmaster' || l.role === 'admin');
+            const unitLeaders = searchedLeaders.filter(l => l.role !== 'owner' && l.leaderPosition !== 'Scoutmaster' && l.leaderPosition !== 'Assistant Scoutmaster' && l.role !== 'admin');
 
             return (
               <>
@@ -2303,7 +2504,9 @@ export default function PatrolRoster({ currentUser = {} }) {
                   </div>
 
                   {execLeaders.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic p-3">No Scoutmasters registered.</p>
+                    <p className="text-xs text-slate-500 italic p-3">
+                      {directorySearch ? `No executive leaders found matching "${directorySearch}".` : 'No Scoutmasters registered.'}
+                    </p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {execLeaders.map((lead) => {
@@ -2547,12 +2750,12 @@ export default function PatrolRoster({ currentUser = {} }) {
 
           {/* Parents List */}
           <div className="space-y-3">
-            {parents.length === 0 ? (
+            {searchedParents.length === 0 ? (
               <div className="text-center py-10 text-slate-400 text-sm bg-slate-800/40 rounded-xl border border-slate-800">
-                No parent accounts registered in the organization. Click "+ Create Parent Account" to register parents.
+                {directorySearch ? `No parent accounts found matching "${directorySearch}".` : 'No parent accounts registered in the organization. Click "+ Create Parent Account" to register parents.'}
               </div>
             ) : (
-              parents.map((p) => {
+              searchedParents.map((p) => {
                 const linkedChildren = scouts.filter(s => {
                   const linkedArr = Array.isArray(p.linkedScoutIds) ? p.linkedScoutIds : [];
                   if (linkedArr.includes(s.uid)) return true;
@@ -2768,6 +2971,213 @@ export default function PatrolRoster({ currentUser = {} }) {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      ) : rosterSubTab === 'all_users' ? (
+        <div className="space-y-4">
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold shrink-0">
+                <Globe size={20} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-white text-sm sm:text-base">
+                  Troop-Wide Firebase User Directory ({rawAllUsers.length})
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Complete real-time index of every registered Firestore profile. Manage roles, patrol assignments, and inspect User IDs (UIDs).
+                </p>
+              </div>
+            </div>
+            {quickActionMsg && (
+              <div className="bg-emerald-950/90 border border-emerald-700/80 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-xl shadow">
+                {quickActionMsg}
+              </div>
+            )}
+          </div>
+
+          {searchedAllUsers.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 text-sm bg-slate-800/40 rounded-2xl border border-slate-800">
+              No users matching "{directorySearch}". Try searching by a different name, email, phone, or User ID.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {searchedAllUsers.map((u) => {
+                const userPatrol = groups.find(g => g.id === u.groupId || g.id === u.patrolId);
+                const roleLower = (u.role || '').toLowerCase();
+                const isScoutUser = roleLower === 'scout' || (!u.role && !['leader', 'admin', 'owner', 'parent'].includes(roleLower));
+                const isLeaderUser = ['leader', 'scoutmaster', 'assistant_scoutmaster'].includes(roleLower);
+                const isParentUser = roleLower === 'parent';
+                const isExecUser = ['owner', 'admin'].includes(roleLower) || u.email === 'neoissa@gmail.com';
+
+                let roleBadgeColor = 'bg-slate-800 text-slate-300 border-slate-700';
+                let roleLabel = u.role || 'Unassigned';
+                if (isExecUser) {
+                  roleBadgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                  roleLabel = u.role === 'owner' ? '👑 Owner' : '⚙️ Admin';
+                } else if (isLeaderUser) {
+                  roleBadgeColor = 'bg-emerald-950 text-emerald-300 border-emerald-700/60';
+                  roleLabel = `⚜️ ${u.leaderPosition || 'Leader'}`;
+                } else if (isParentUser) {
+                  roleBadgeColor = 'bg-purple-950 text-purple-300 border-purple-700/60';
+                  roleLabel = '👨‍👩‍👧 Parent';
+                } else if (isScoutUser) {
+                  roleBadgeColor = 'bg-sky-950 text-sky-300 border-sky-700/60';
+                  roleLabel = `🏕️ Scout (${u.rank || 'Scout'})`;
+                }
+
+                return (
+                  <div
+                    key={u.uid}
+                    className="bg-slate-800/90 border border-slate-700 hover:border-slate-600 rounded-2xl p-4 shadow-md space-y-3 transition"
+                  >
+                    {/* Top Row: User Avatar, Name, Role, and UID */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {u.photoURL ? (
+                          <img
+                            src={u.photoURL}
+                            alt="Avatar"
+                            className="w-10 h-10 rounded-full object-cover border border-slate-600 shrink-0"
+                          />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm uppercase shrink-0 border ${
+                            isExecUser ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                            isLeaderUser ? 'bg-emerald-950 text-emerald-300 border-emerald-700/60' :
+                            isParentUser ? 'bg-purple-950 text-purple-300 border-purple-700/60' :
+                            'bg-sky-950 text-sky-300 border-sky-700/60'
+                          }`}>
+                            {(u.fullName || u.username || 'U').charAt(0)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-white text-sm truncate">
+                            {u.fullName || u.username || 'Unnamed User'}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            @{u.username || (u.email ? u.email.split('@')[0] : 'no-user')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border shrink-0 ${roleBadgeColor}`}>
+                        {roleLabel}
+                      </span>
+                    </div>
+
+                    {/* UID Chip with Copy */}
+                    <div className="bg-slate-900 border border-slate-750/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">User ID (Firebase UID)</span>
+                        <span className="text-[11px] font-mono text-slate-300 truncate block select-all">
+                          {u.uid}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyUid(u.uid, e)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer flex items-center gap-1 shrink-0 ${
+                          copiedUid === u.uid
+                            ? 'bg-emerald-600 text-white border-emerald-500'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                        title="Copy UID to clipboard"
+                      >
+                        {copiedUid === u.uid ? (
+                          <>
+                            <Check size={11} />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={11} />
+                            <span>Copy UID</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Contact info grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-750/60">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Email</span>
+                        <span className="text-[11px] text-slate-300 truncate block font-mono">
+                          {u.email || u.scoutEmail || u.personalEmail || u.parentEmail || '—'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Phone</span>
+                        <span className="text-[11px] text-slate-300 truncate block">
+                          {u.scoutPhone || u.parentPhone || u.phone || '—'}
+                        </span>
+                      </div>
+                      {u.bsaId && (
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-slate-500 block">BSA Member ID</span>
+                          <span className="text-[11px] text-emerald-400 font-mono block">
+                            #{u.bsaId}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Current Patrol</span>
+                        <span className="text-[11px] text-slate-200 font-semibold block">
+                          {userPatrol ? `🛡️ ${userPatrol.name}` : <span className="text-slate-500 italic">Unassigned</span>}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quick Management Actions (Role, Patrol, Profile) */}
+                    {isExecutive && (
+                      <div className="pt-2 border-t border-slate-750/80 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-400 block mb-1">Update Role</label>
+                          <select
+                            value={u.role || 'scout'}
+                            disabled={updatingUserRole === u.uid}
+                            onChange={(e) => handleQuickUpdateUserRole(u.uid, e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="scout">Scout</option>
+                            <option value="leader">Leader</option>
+                            <option value="parent">Parent</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-400 block mb-1">Assign Patrol</label>
+                          <select
+                            value={u.groupId || u.patrolId || ''}
+                            disabled={updatingUserGroup === u.uid}
+                            onChange={(e) => handleQuickAssignPatrol(u.uid, e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="">No Patrol (Unassigned)</option>
+                            {groups.map(g => (
+                              <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {isScoutUser && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelected(u)}
+                          className="w-full bg-slate-750 hover:bg-slate-700 text-emerald-300 hover:text-white text-xs font-semibold py-1.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <ExternalLink size={12} />
+                          <span>Open Scout Advancement & Notes &rarr;</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
