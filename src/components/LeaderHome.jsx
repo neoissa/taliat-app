@@ -22,7 +22,8 @@ import {
   MessageSquare,
   TrendingUp,
   Crown,
-  KeyRound
+  KeyRound,
+  MapPin
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
@@ -752,8 +753,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                           <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
 
                           {ev.location && (
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                              <span>📍 {ev.location}</span>
+                            <p className="text-[11px] text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
+                              <MapPin size={11} className="text-emerald-400 shrink-0" />
+                              <span className="truncate">{ev.location}</span>
                             </p>
                           )}
                         </div>

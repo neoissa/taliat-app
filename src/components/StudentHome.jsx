@@ -563,8 +563,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                       </div>
                       <h4 className="font-extrabold text-sm text-white">{ev.title}</h4>
                       {ev.location && (
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                          <span>📍</span> {ev.location}
+                        <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
+                          <MapPin size={11} className="text-emerald-400 shrink-0" />
+                          <span className="truncate">{ev.location}</span>
                         </p>
                       )}
                     </div>

@@ -170,7 +170,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
   const [endTime, setEndTime] = useState('21:30');
   const [timeMode, setTimeMode] = useState('picker'); // 'picker' | 'presets' | 'custom'
   const [isAllDay, setIsAllDay] = useState(false);
-  const [location, setLocation] = useState('Troop Headquarters / Main Hall');
+  const [location, setLocation] = useState('Highview Elementary School (Troop Headquarters)');
   const [category, setCategory] = useState('meeting'); // 'campout' | 'meeting' | 'service' | 'faith' | 'ceremony'
   const [description, setDescription] = useState('');
   const [requiredItems, setRequiredItems] = useState('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -402,7 +402,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
     setIsAllDay(false);
     setTimeMode('picker');
     setTime('6:30 PM – 9:30 PM');
-    setLocation('Troop Headquarters / Main Hall');
+    setLocation('Highview Elementary School (Troop Headquarters)');
     setCategory('meeting');
     setDescription('');
     setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -551,21 +551,46 @@ export default function EventsManager({ currentUser, onNavigate }) {
   };
 
   // ── MULTI-SELECT BATCH DELETE HANDLERS ──
+  const allFilteredSelected = useMemo(() => {
+    if (!filteredEvents || filteredEvents.length === 0) return false;
+    return filteredEvents.every(e => selectedEventIds.has(e.id));
+  }, [filteredEvents, selectedEventIds]);
+
   const handleToggleSelectEvent = (eventId, e) => {
-    if (e && e.stopPropagation) e.stopPropagation();
+    if (e) {
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+    }
     setSelectedEventIds(prev => {
       const next = new Set(prev);
-      if (next.has(eventId)) next.delete(eventId);
-      else next.add(eventId);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
       return next;
     });
   };
 
-  const handleToggleSelectAll = () => {
-    if (selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0) {
-      setSelectedEventIds(new Set());
+  const handleToggleSelectAll = (e) => {
+    if (e) {
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+    }
+    if (!filteredEvents || filteredEvents.length === 0) return;
+    
+    if (allFilteredSelected) {
+      setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        filteredEvents.forEach(e => next.delete(e.id));
+        return next;
+      });
     } else {
-      setSelectedEventIds(new Set(filteredEvents.map(e => e.id)));
+      setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        filteredEvents.forEach(e => next.add(e.id));
+        return next;
+      });
     }
   };
 
@@ -1456,14 +1481,42 @@ export default function EventsManager({ currentUser, onNavigate }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Location / Venue</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                    <MapPin size={13} className="text-emerald-400" /> Location / Venue Address
+                  </label>
+                  <span className="text-[10px] text-slate-400">Headquarters or venue name</span>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. Camp Alpine / Mosque Community Hall"
+                  placeholder="e.g. Highview Elementary School (Troop Headquarters)"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
                 />
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setLocation('Highview Elementary School (Troop Headquarters)')}
+                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-emerald-950 hover:text-emerald-300 text-slate-300 border border-slate-750 hover:border-emerald-700 rounded-lg transition cursor-pointer"
+                  >
+                    🏫 Highview Elementary (Troop HQ)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation('Campout / Outdoor Campsite')}
+                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-amber-950 hover:text-amber-300 text-slate-300 border border-slate-750 hover:border-amber-700 rounded-lg transition cursor-pointer"
+                  >
+                    🏕️ Campout Site
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation('Masjid / Community Hall')}
+                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-sky-950 hover:text-sky-300 text-slate-300 border border-slate-750 hover:border-sky-700 rounded-lg transition cursor-pointer"
+                  >
+                    🕌 Masjid / Community Hall
+                  </button>
+                </div>
               </div>
 
               {/* Push Scope & Executive Controls */}
@@ -1561,9 +1614,9 @@ export default function EventsManager({ currentUser, onNavigate }) {
               <button
                 type="button"
                 onClick={handleToggleSelectAll}
-                className="text-[11px] font-bold text-slate-400 hover:text-emerald-300 transition cursor-pointer flex items-center gap-1.5"
+                className="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 border border-slate-700/60 shadow-sm"
               >
-                <span>{selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? '✓ Deselect All' : '☑️ Select All'}</span>
+                <span>{allFilteredSelected ? '✓ Deselect All' : '☑️ Select All'}</span>
               </button>
             )}
           </div>
@@ -1589,9 +1642,9 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 <button
                   type="button"
                   onClick={() => setSelectedEventIds(new Set())}
-                  className="flex-1 sm:flex-initial bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer border border-slate-750"
+                  className="flex-1 sm:flex-initial bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer border border-slate-750"
                 >
-                  Clear
+                  Deselect All
                 </button>
                 <button
                   type="button"
@@ -1650,18 +1703,23 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     }`}
                   >
                     {isLeader && (
-                      <div
+                      <button
+                        type="button"
                         onClick={(e) => handleToggleSelectEvent(ev.id, e)}
-                        className="pt-1 shrink-0 cursor-pointer"
-                        title="Select for batch delete"
+                        className="pt-0.5 shrink-0 cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-750/60 transition-colors focus:outline-none"
+                        title={isChecked ? "Deselect event" : "Select event for batch deletion"}
+                        aria-label={isChecked ? `Deselect ${ev.title}` : `Select ${ev.title} for batch delete`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => handleToggleSelectEvent(ev.id, e)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500 cursor-pointer accent-rose-500"
-                        />
-                      </div>
+                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                          isChecked 
+                            ? 'bg-rose-600 border-rose-400 text-white shadow-md shadow-rose-950/80 scale-105' 
+                            : 'border-slate-600 bg-slate-900/90 hover:border-slate-400'
+                        }`}>
+                          {isChecked && (
+                            <Check size={13} strokeWidth={3.5} className="text-white" />
+                          )}
+                        </div>
+                      </button>
                     )}
 
                     <div className="flex-1 min-w-0 space-y-1">
@@ -1692,11 +1750,16 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         </span>
                       </div>
                       <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
                         <span>⏰ {ev.time}</span>
                         {ev.durationHours && <span>&bull; {ev.durationHours} hrs</span>}
-                        {ev.location && <span>&bull; 📍 {ev.location}</span>}
                       </div>
+                      {ev.location && (
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 px-2.5 py-1 rounded-xl w-fit max-w-full">
+                          <MapPin size={11} className="text-emerald-400 shrink-0" />
+                          <span className="truncate">{ev.location}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -1745,9 +1808,6 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     {selectedEvent.durationHours && (
                       <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {selectedEvent.durationHours} hrs duration</span>
                     )}
-                    {selectedEvent.location && (
-                      <span className="flex items-center gap-1.5"><MapPin size={13} className="text-emerald-400" /> {selectedEvent.location}</span>
-                    )}
                   </div>
                 </div>
 
@@ -1769,6 +1829,37 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* ── PROMINENT LOCATION & VENUE CARD ── */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 border border-emerald-500/35 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-lg">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center justify-center shrink-0 shadow-inner">
+                    <MapPin size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-400 flex items-center gap-1">
+                      📍 Event Location & Venue
+                    </span>
+                    <h4 className="text-sm sm:text-base font-black text-white leading-snug mt-0.5">
+                      {selectedEvent.location || 'Highview Elementary School (Troop Headquarters)'}
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Official assembly, meeting, and activity venue for this session.
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location || 'Highview Elementary School')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-950/50 shrink-0 cursor-pointer"
+                >
+                  <MapPin size={13} />
+                  <span>Directions / Map</span>
+                  <ExternalLink size={12} />
+                </a>
               </div>
 
               {/* Description */}

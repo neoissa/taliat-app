@@ -49,7 +49,8 @@ import {
   Send,
   X,
   Car,
-  Utensils
+  Utensils,
+  MapPin
 } from 'lucide-react';
 import { dispatchParentNotification } from '../utils/notificationPipeline';
 
@@ -905,7 +906,12 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
                           <span className="text-xs font-mono font-bold text-slate-300">📅 {ev.date} &bull; ⏰ {ev.time}</span>
                         </div>
                         <h4 className="font-extrabold text-white text-base">{ev.title}</h4>
-                        {ev.location && <p className="text-xs text-slate-400 mt-0.5">📍 {ev.location}</p>}
+                        {ev.location && (
+                          <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
+                            <MapPin size={11} className="text-emerald-400 shrink-0" />
+                            <span className="truncate">{ev.location}</span>
+                          </p>
+                        )}
                       </div>
 
                       <button

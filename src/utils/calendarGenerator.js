@@ -36,7 +36,7 @@ export const RECURRING_SCHEDULE_CONFIG = {
     duration: '3 hrs',
     recurringPattern: 'weekly_friday',
     frequency: 'Every Friday',
-    location: 'Troop Headquarters / Main Hall',
+    location: 'Highview Elementary School (Troop Headquarters)',
     description: 'Friday Weekly Meeting (6:30 PM – 9:30 PM). Focus on outdoor skills, rank advancement, and patrol leadership.',
     requiredItems: 'Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook'
   },
@@ -55,7 +55,7 @@ export const RECURRING_SCHEDULE_CONFIG = {
     duration: '1h 15m',
     recurringPattern: 'weekly_tuesday',
     frequency: 'Every Tuesday',
-    location: 'Troop Headquarters / Main Hall',
+    location: 'Highview Elementary School (Troop Headquarters)',
     description: 'Tuesday Youth Program (7:15 PM – 8:30 PM). Focus on character building, scout skills, and youth development.',
     requiredItems: 'Activity Uniform / Class B, Scout Handbook, Workshop Materials, Water Bottle'
   }

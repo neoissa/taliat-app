@@ -379,7 +379,7 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                           </div>
                           <p className="text-[10px] text-slate-300 font-mono">⏰ {ev.time}</p>
                           {ev.location && (
-                            <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <p className="text-[10px] text-emerald-300 flex items-center gap-1 font-medium truncate bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-lg w-fit max-w-full">
                               <MapPin size={10} className="text-emerald-400 shrink-0" />
                               <span className="truncate">{ev.location}</span>
                             </p>
@@ -439,7 +439,15 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                           </span>
                         </div>
                         <strong className="text-white font-bold block truncate">{ev.title}</strong>
-                        <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                          {ev.location && (
+                            <span className="text-[10px] text-emerald-300/90 flex items-center gap-0.5 truncate max-w-[140px]">
+                              <MapPin size={9} className="text-emerald-400 shrink-0" />
+                              <span className="truncate">{ev.location}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
@@ -478,7 +486,15 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                           </span>
                         </div>
                         <strong className="text-slate-200 font-bold block truncate">{ev.title}</strong>
-                        <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
+                          {ev.location && (
+                            <span className="text-[10px] text-slate-400 flex items-center gap-0.5 truncate max-w-[140px]">
+                              <MapPin size={9} className="text-purple-400 shrink-0" />
+                              <span className="truncate">{ev.location}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
