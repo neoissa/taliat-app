@@ -22,7 +22,7 @@ import {
 
 export const RECURRING_SCHEDULE_CONFIG = {
   friday: {
-    title: 'Troop Meeting / Activity Session',
+    title: 'Friday Weekly Meeting',
     eventType: 'meeting',
     category: 'meeting',
     startDate: '2026-10-02',
@@ -33,28 +33,30 @@ export const RECURRING_SCHEDULE_CONFIG = {
     endTime: '21:30',
     time: '6:30 PM – 9:30 PM',
     durationHours: 3,
+    duration: '3 hrs',
     recurringPattern: 'weekly_friday',
     frequency: 'Every Friday',
     location: 'Troop Headquarters / Main Hall',
-    description: 'Weekly Friday Standalone Troop Session / Skills & Activity Meeting (6:30 PM – 9:30 PM). Focus on outdoor skills, rank advancement, and patrol leadership.',
+    description: 'Friday Weekly Meeting (6:30 PM – 9:30 PM). Focus on outdoor skills, rank advancement, and patrol leadership.',
     requiredItems: 'Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook'
   },
   tuesday: {
-    title: 'Troop Meeting / Activity Session',
+    title: 'Tuesday Youth Program',
     eventType: 'meeting',
     category: 'meeting',
     startDate: '2026-09-08',
     endDate: '2027-06-29',
     dayOfWeek: 2, // Tuesday
     dayName: 'Tuesday',
-    startTime: '18:30',
-    endTime: '21:30',
-    time: '6:30 PM – 9:30 PM',
-    durationHours: 3,
+    startTime: '19:15',
+    endTime: '20:30',
+    time: '7:15 PM – 8:30 PM',
+    durationHours: 1.25,
+    duration: '1h 15m',
     recurringPattern: 'weekly_tuesday',
     frequency: 'Every Tuesday',
     location: 'Troop Headquarters / Main Hall',
-    description: 'Weekly Tuesday Standalone Troop Session / Skills & Activity Meeting (6:30 PM – 9:30 PM). Focus on merit badge workshops, character building, and patrol teamwork.',
+    description: 'Tuesday Youth Program (7:15 PM – 8:30 PM). Focus on character building, scout skills, and youth development.',
     requiredItems: 'Activity Uniform / Class B, Scout Handbook, Workshop Materials, Water Bottle'
   }
 };
@@ -107,80 +109,88 @@ export function generateDateSequence(startDateStr, endDateStr, targetDayOfWeek) 
 }
 
 /**
- * Generate all 82 standalone event objects for the 2026-2027 scouting year
- * @param {Object} customConfig - Optional custom overrides
- * @returns {Array<Object>} List of event document objects
+ * Generate recurring standalone event objects for a specific range or month
+ * @param {Object} options - { startDate, endDate, includeFriday, includeTuesday, customConfig }
  */
-export function generateScoutingYearSchedule(customConfig = {}) {
+export function generateRangeSchedule(options = {}) {
+  const {
+    startDate,
+    endDate,
+    includeFriday = true,
+    includeTuesday = true,
+    customConfig = {}
+  } = options;
+
   const fridayCfg = { ...RECURRING_SCHEDULE_CONFIG.friday, ...(customConfig.friday || {}) };
   const tuesdayCfg = { ...RECURRING_SCHEDULE_CONFIG.tuesday, ...(customConfig.tuesday || {}) };
   const createdBy = customConfig.createdBy || 'neoissa@gmail.com';
   const createdByName = customConfig.createdByName || 'Scoutmaster Admin';
 
-  const fridayDates = generateDateSequence(fridayCfg.startDate, fridayCfg.endDate, fridayCfg.dayOfWeek);
-  const tuesdayDates = generateDateSequence(tuesdayCfg.startDate, tuesdayCfg.endDate, tuesdayCfg.dayOfWeek);
-
   const events = [];
 
   // Generate Friday Sessions
-  fridayDates.forEach((dateStr) => {
-    const docId = generateEventDocId(dateStr, fridayCfg.startTime);
-    events.push({
-      id: docId,
-      title: fridayCfg.title,
-      eventType: fridayCfg.eventType,
-      category: fridayCfg.category,
-      date: dateStr,
-      startTime: fridayCfg.startTime,
-      endTime: fridayCfg.endTime,
-      time: fridayCfg.time,
-      durationHours: fridayCfg.durationHours,
-      duration: `${fridayCfg.durationHours} hrs`,
-      isStandalone: true,
-      recurringPattern: fridayCfg.recurringPattern,
-      dayOfWeek: fridayCfg.dayName,
-      location: fridayCfg.location,
-      description: fridayCfg.description,
-      requiredItems: fridayCfg.requiredItems,
-      createdBy: createdBy,
-      createdByName: createdByName,
-      pushToAllPatrols: true,
-      isGlobalScope: true,
-      targetGroupId: 'all',
-      season: '2026-2027',
-      createdAt: new Date().toISOString()
+  if (includeFriday && startDate && endDate) {
+    const fridayDates = generateDateSequence(startDate, endDate, fridayCfg.dayOfWeek);
+    fridayDates.forEach((dateStr) => {
+      const docId = generateEventDocId(dateStr, fridayCfg.startTime);
+      events.push({
+        id: docId,
+        title: fridayCfg.title,
+        eventType: fridayCfg.eventType,
+        category: fridayCfg.category,
+        date: dateStr,
+        startTime: fridayCfg.startTime,
+        endTime: fridayCfg.endTime,
+        time: fridayCfg.time,
+        durationHours: fridayCfg.durationHours,
+        duration: fridayCfg.duration || `${fridayCfg.durationHours} hrs`,
+        isStandalone: true,
+        recurringPattern: fridayCfg.recurringPattern,
+        dayOfWeek: fridayCfg.dayName,
+        location: fridayCfg.location,
+        description: fridayCfg.description,
+        requiredItems: fridayCfg.requiredItems,
+        createdBy: createdBy,
+        createdByName: createdByName,
+        pushToAllPatrols: true,
+        isGlobalScope: true,
+        targetGroupId: 'all',
+        createdAt: new Date().toISOString()
+      });
     });
-  });
+  }
 
   // Generate Tuesday Sessions
-  tuesdayDates.forEach((dateStr) => {
-    const docId = generateEventDocId(dateStr, tuesdayCfg.startTime);
-    events.push({
-      id: docId,
-      title: tuesdayCfg.title,
-      eventType: tuesdayCfg.eventType,
-      category: tuesdayCfg.category,
-      date: dateStr,
-      startTime: tuesdayCfg.startTime,
-      endTime: tuesdayCfg.endTime,
-      time: tuesdayCfg.time,
-      durationHours: tuesdayCfg.durationHours,
-      duration: `${tuesdayCfg.durationHours} hrs`,
-      isStandalone: true,
-      recurringPattern: tuesdayCfg.recurringPattern,
-      dayOfWeek: tuesdayCfg.dayName,
-      location: tuesdayCfg.location,
-      description: tuesdayCfg.description,
-      requiredItems: tuesdayCfg.requiredItems,
-      createdBy: createdBy,
-      createdByName: createdByName,
-      pushToAllPatrols: true,
-      isGlobalScope: true,
-      targetGroupId: 'all',
-      season: '2026-2027',
-      createdAt: new Date().toISOString()
+  if (includeTuesday && startDate && endDate) {
+    const tuesdayDates = generateDateSequence(startDate, endDate, tuesdayCfg.dayOfWeek);
+    tuesdayDates.forEach((dateStr) => {
+      const docId = generateEventDocId(dateStr, tuesdayCfg.startTime);
+      events.push({
+        id: docId,
+        title: tuesdayCfg.title,
+        eventType: tuesdayCfg.eventType,
+        category: tuesdayCfg.category,
+        date: dateStr,
+        startTime: tuesdayCfg.startTime,
+        endTime: tuesdayCfg.endTime,
+        time: tuesdayCfg.time,
+        durationHours: tuesdayCfg.durationHours,
+        duration: tuesdayCfg.duration || (tuesdayCfg.durationHours === 1.25 ? '1h 15m' : `${tuesdayCfg.durationHours} hrs`),
+        isStandalone: true,
+        recurringPattern: tuesdayCfg.recurringPattern,
+        dayOfWeek: tuesdayCfg.dayName,
+        location: tuesdayCfg.location,
+        description: tuesdayCfg.description,
+        requiredItems: tuesdayCfg.requiredItems,
+        createdBy: createdBy,
+        createdByName: createdByName,
+        pushToAllPatrols: true,
+        isGlobalScope: true,
+        targetGroupId: 'all',
+        createdAt: new Date().toISOString()
+      });
     });
-  });
+  }
 
   // Sort chronologically by date and start time
   events.sort((a, b) => {
@@ -193,21 +203,62 @@ export function generateScoutingYearSchedule(customConfig = {}) {
 }
 
 /**
- * Commit all generated standalone events to Firestore in batches
+ * Generate recurring standalone event objects for a specific single month
+ * @param {number} year - e.g. 2026
+ * @param {number} month - 1 to 12
+ * @param {Object} options - { includeFriday, includeTuesday, customConfig }
+ */
+export function generateMonthSchedule(year, month, options = {}) {
+  const y = Number(year);
+  const m = Number(month);
+  const daysInMonth = new Date(y, m, 0).getDate();
+
+  const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+  const endDate = `${y}-${String(m).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+  return generateRangeSchedule({
+    startDate,
+    endDate,
+    includeFriday: options.includeFriday !== false,
+    includeTuesday: options.includeTuesday !== false,
+    customConfig: options.customConfig
+  });
+}
+
+/**
+ * Generate all 82 standalone event objects for the 2026-2027 scouting year
+ * @param {Object} customConfig - Optional custom overrides
+ * @returns {Array<Object>} List of event document objects
+ */
+export function generateScoutingYearSchedule(customConfig = {}) {
+  return generateRangeSchedule({
+    startDate: '2026-09-08',
+    endDate: '2027-06-29',
+    includeFriday: true,
+    includeTuesday: true,
+    customConfig
+  });
+}
+
+/**
+ * Commit a list of generated standalone events to Firestore in batches
+ * @param {Array<Object>} events - Array of event objects to write
  * @param {Object} options - Configuration and callbacks
  * @returns {Promise<Object>} Summary of committed documents
  */
-export async function seedCalendarEvents(options = {}) {
+export async function seedCalendarEventsList(events, options = {}) {
   const { 
     onProgress, 
-    customConfig,
     batchSize = 200,
     groups = []
   } = options;
 
-  const events = generateScoutingYearSchedule(customConfig);
-  const total = events.length;
+  const total = (events || []).length;
   let committed = 0;
+
+  if (total === 0) {
+    return { success: true, totalCommitted: 0, totalGenerated: 0, fridayCount: 0, tuesdayCount: 0, events: [] };
+  }
 
   if (onProgress) {
     onProgress({ current: 0, total, percentage: 0, status: 'Starting calendar seeding...' });
@@ -275,11 +326,67 @@ export async function seedCalendarEvents(options = {}) {
 }
 
 /**
+ * Legacy wrapper: Commit all 2026-2027 year events
+ */
+export async function seedCalendarEvents(options = {}) {
+  const events = generateScoutingYearSchedule(options.customConfig);
+  return seedCalendarEventsList(events, options);
+}
+
+/**
+ * Delete a list of event IDs in batches
+ * @param {Array<string>} eventIds - Array of document IDs to delete
+ * @param {Object} options - Callbacks and group list
+ */
+export async function deleteEventsBatch(eventIds, options = {}) {
+  const { onProgress, groups = [] } = options;
+  const total = (eventIds || []).length;
+  let deletedCount = 0;
+
+  if (total === 0) return { success: true, deletedCount: 0 };
+
+  if (onProgress) onProgress({ current: 0, total, percentage: 0, status: `Deleting ${total} selected events...` });
+
+  for (let i = 0; i < total; i += 200) {
+    const chunk = eventIds.slice(i, i + 200);
+    const batch = writeBatch(db);
+
+    chunk.forEach(id => {
+      batch.delete(doc(db, 'events', id));
+      if (groups && groups.length > 0) {
+        groups.forEach(g => {
+          if (g.id) {
+            batch.delete(doc(db, 'groups', g.id, 'events', id));
+          }
+        });
+      }
+    });
+
+    await batch.commit();
+    deletedCount += chunk.length;
+
+    if (onProgress) {
+      onProgress({
+        current: deletedCount,
+        total,
+        percentage: Math.round((deletedCount / total) * 100),
+        status: `Deleted ${deletedCount} of ${total} events...`
+      });
+    }
+  }
+
+  return {
+    success: true,
+    deletedCount
+  };
+}
+
+/**
  * Purge previously generated standalone recurring events from Firestore
  * @param {Object} options - Callbacks and filters
  */
 export async function purgeGeneratedCalendarEvents(options = {}) {
-  const { onProgress } = options;
+  const { onProgress, groups = [] } = options;
   if (onProgress) onProgress({ status: 'Scanning for standalone recurring events...' });
 
   const eventsSnap = await getDocs(collection(db, 'events'));
@@ -297,29 +404,5 @@ export async function purgeGeneratedCalendarEvents(options = {}) {
     }
   });
 
-  const total = docsToDelete.length;
-  let deletedCount = 0;
-
-  for (let i = 0; i < total; i += 200) {
-    const chunk = docsToDelete.slice(i, i + 200);
-    const batch = writeBatch(db);
-    chunk.forEach(id => {
-      batch.delete(doc(db, 'events', id));
-    });
-    await batch.commit();
-    deletedCount += chunk.length;
-    if (onProgress) {
-      onProgress({
-        current: deletedCount,
-        total,
-        percentage: Math.round((deletedCount / (total || 1)) * 100),
-        status: `Deleted ${deletedCount} of ${total} events...`
-      });
-    }
-  }
-
-  return {
-    success: true,
-    deletedCount
-  };
+  return deleteEventsBatch(docsToDelete, { onProgress, groups });
 }

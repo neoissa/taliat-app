@@ -50,7 +50,11 @@ import { formatKashafEventWhatsApp, applyIslamicTransliteration } from '../utils
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
   generateScoutingYearSchedule, 
+  generateMonthSchedule,
+  generateRangeSchedule,
+  seedCalendarEventsList,
   seedCalendarEvents, 
+  deleteEventsBatch,
   purgeGeneratedCalendarEvents, 
   RECURRING_SCHEDULE_CONFIG 
 } from '../utils/calendarGenerator';
@@ -121,8 +125,8 @@ export function parseTimeRange(rangeStr) {
 }
 
 export const SCOUT_TIME_PRESETS = [
-  { id: 'friday_session', label: '🏕️ Friday Standalone Session', start: '18:30', end: '21:30', desc: '6:30 PM – 9:30 PM (3 hrs)' },
-  { id: 'tuesday_session', label: '🕌 Tuesday Standalone Session', start: '18:30', end: '21:30', desc: '6:30 PM – 9:30 PM (3 hrs)' },
+  { id: 'friday_session', label: '🏕️ Friday Weekly Meeting', start: '18:30', end: '21:30', desc: '6:30 PM – 9:30 PM (3 hrs)' },
+  { id: 'tuesday_session', label: '🕌 Tuesday Youth Program', start: '19:15', end: '20:30', desc: '7:15 PM – 8:30 PM (1h 15m)' },
   { id: 'workshop', label: '🛠️ Weekend Workshop', start: '10:00', end: '14:00', desc: '10:00 AM – 2:00 PM (4 hrs)' },
   { id: 'day_hike', label: '🥾 Morning Day Hike', start: '08:30', end: '13:00', desc: '8:30 AM – 1:00 PM (4.5 hrs)' },
   { id: 'ceremony', label: '🎖️ Court of Honor', start: '17:00', end: '19:30', desc: '5:00 PM – 7:30 PM (2.5 hrs)' },
@@ -178,9 +182,22 @@ export default function EventsManager({ currentUser, onNavigate }) {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
 
+  // ── MULTI-SELECT BATCH DELETE STATE ──
+  const [selectedEventIds, setSelectedEventIds] = useState(new Set());
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+
   // ── RECURRING CALENDAR GENERATOR STATE ──
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
   const [generatorTab, setGeneratorTab] = useState('overview'); // 'overview' | 'preview'
+  const [generatorMode, setGeneratorMode] = useState('upcoming_month'); // 'upcoming_month' | 'custom_month' | 'next_4_weeks' | 'full_season'
+  
+  // Default to upcoming/current month
+  const initialDate = new Date();
+  const [generatorYear, setGeneratorYear] = useState(initialDate.getFullYear());
+  const [generatorMonth, setGeneratorMonth] = useState(initialDate.getMonth() + 1); // 1-12
+  const [generatorIncludeFriday, setGeneratorIncludeFriday] = useState(true);
+  const [generatorIncludeTuesday, setGeneratorIncludeTuesday] = useState(true);
+
   const [isSeeding, setIsSeeding] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const [generatorProgress, setGeneratorProgress] = useState(null);
@@ -269,10 +286,34 @@ export default function EventsManager({ currentUser, onNavigate }) {
     }
   }, [selectedEvent, isLeader]);
 
-  // Memoized 82 Generated Sessions for Preview
-  const fullYearPlan = useMemo(() => {
-    return generateScoutingYearSchedule();
-  }, []);
+  // Current selected month label for Generator
+  const currentMonthLabel = useMemo(() => {
+    return new Date(generatorYear, generatorMonth - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }, [generatorYear, generatorMonth]);
+
+  // Dynamic Generator Schedule calculated on the fly
+  const targetGeneratedSchedule = useMemo(() => {
+    if (generatorMode === 'full_season') {
+      return generateScoutingYearSchedule();
+    }
+    if (generatorMode === 'next_4_weeks') {
+      const start = todayStr;
+      const endD = new Date();
+      endD.setDate(endD.getDate() + 28);
+      const end = endD.toISOString().split('T')[0];
+      return generateRangeSchedule({
+        startDate: start,
+        endDate: end,
+        includeFriday: generatorIncludeFriday,
+        includeTuesday: generatorIncludeTuesday
+      });
+    }
+    // 'upcoming_month' or 'custom_month'
+    return generateMonthSchedule(generatorYear, generatorMonth, {
+      includeFriday: generatorIncludeFriday,
+      includeTuesday: generatorIncludeTuesday
+    });
+  }, [generatorMode, generatorYear, generatorMonth, generatorIncludeFriday, generatorIncludeTuesday, todayStr]);
 
   // Map of existing IDs in Firestore for sync check
   const existingEventIdMap = useMemo(() => {
@@ -297,10 +338,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
       tuesdayCount,
       customCount,
       upcomingCount,
-      pastCount,
-      targetTotal: 82,
-      targetFriday: 39,
-      targetTuesday: 43
+      pastCount
     };
   }, [events, todayStr]);
 
@@ -502,20 +540,73 @@ export default function EventsManager({ currentUser, onNavigate }) {
       if (selectedEvent?.id === id) {
         setSelectedEvent(null);
       }
+      setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (err) {
       alert("Failed to delete event: " + err.message);
     }
   };
 
+  // ── MULTI-SELECT BATCH DELETE HANDLERS ──
+  const handleToggleSelectEvent = (eventId, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0) {
+      setSelectedEventIds(new Set());
+    } else {
+      setSelectedEventIds(new Set(filteredEvents.map(e => e.id)));
+    }
+  };
+
+  const handleDeleteSelectedEvents = async () => {
+    const count = selectedEventIds.size;
+    if (count === 0) return;
+    if (!window.confirm(`⚠️ Are you sure you want to permanently delete ${count} selected event${count > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    setIsBatchDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedEventIds);
+      await deleteEventsBatch(idsToDelete, { groups });
+      if (selectedEvent && selectedEventIds.has(selectedEvent.id)) {
+        setSelectedEvent(null);
+      }
+      setSelectedEventIds(new Set());
+      setMsg(`✓ Successfully deleted ${count} event${count > 1 ? 's' : ''}!`);
+      setTimeout(() => setMsg(''), 3500);
+    } catch (err) {
+      console.error("Batch delete failed:", err);
+      alert("Failed to delete events: " + err.message);
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
   // ── SEEDING & PURGING CALENDAR SESSIONS ──
   const handleRunSeeder = async () => {
+    if (targetGeneratedSchedule.length === 0) {
+      setGeneratorError("No events to generate based on your current selection.");
+      return;
+    }
     setIsSeeding(true);
     setGeneratorError('');
     setGeneratorSuccessMsg('');
-    setGeneratorProgress({ current: 0, total: 82, percentage: 0, status: 'Initializing calendar generator...' });
+    setGeneratorProgress({ current: 0, total: targetGeneratedSchedule.length, percentage: 0, status: 'Initializing calendar generator...' });
 
     try {
-      const res = await seedCalendarEvents({
+      const res = await seedCalendarEventsList(targetGeneratedSchedule, {
         onProgress: (p) => setGeneratorProgress(p),
         groups,
         customConfig: {
@@ -524,7 +615,11 @@ export default function EventsManager({ currentUser, onNavigate }) {
         }
       });
 
-      setGeneratorSuccessMsg(`🎉 Successfully populated the 2026–2027 calendar with all ${res.totalCommitted} standalone sessions! (39 Fridays + 43 Tuesdays)`);
+      const label = generatorMode === 'upcoming_month' || generatorMode === 'custom_month'
+        ? currentMonthLabel
+        : generatorMode === 'next_4_weeks' ? 'the next 4 weeks' : 'the 2026–2027 season';
+
+      setGeneratorSuccessMsg(`🎉 Successfully generated and seeded ${res.totalCommitted} standalone session${res.totalCommitted > 1 ? 's' : ''} for ${label}! (${res.fridayCount} Fridays + ${res.tuesdayCount} Tuesdays)`);
     } catch (err) {
       console.error("Seeder failed:", err);
       setGeneratorError("Failed to seed calendar: " + err.message);
@@ -534,7 +629,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
   };
 
   const handlePurgeGenerated = async () => {
-    if (!window.confirm("⚠️ Are you sure you want to purge all standalone recurring sessions for 2026–2027? Custom events and campouts will NOT be deleted.")) {
+    if (!window.confirm("⚠️ Are you sure you want to purge all standalone recurring sessions? Custom events and campouts will NOT be deleted.")) {
       return;
     }
     setIsPurging(true);
@@ -544,7 +639,8 @@ export default function EventsManager({ currentUser, onNavigate }) {
 
     try {
       const res = await purgeGeneratedCalendarEvents({
-        onProgress: (p) => setGeneratorProgress(p)
+        onProgress: (p) => setGeneratorProgress(p),
+        groups
       });
       setGeneratorSuccessMsg(`🗑️ Successfully purged ${res.deletedCount} standalone generated events from the calendar.`);
     } catch (err) {
@@ -595,7 +691,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
 
   // Preview List filtered in generator modal
   const filteredPreviewList = useMemo(() => {
-    return fullYearPlan.filter(ev => {
+    return targetGeneratedSchedule.filter(ev => {
       if (previewFilter === 'friday' && ev.recurringPattern !== 'weekly_friday') return false;
       if (previewFilter === 'tuesday' && ev.recurringPattern !== 'weekly_tuesday') return false;
       if (previewSearch.trim()) {
@@ -604,7 +700,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
       }
       return true;
     });
-  }, [fullYearPlan, previewFilter, previewSearch]);
+  }, [targetGeneratedSchedule, previewFilter, previewSearch]);
 
   const currentEventRsvpsList = selectedEvent ? Object.values(eventRsvps[selectedEvent.id] || {}) : [];
   const attendingCount = currentEventRsvpsList.filter(r => r.status === 'attending').length;
@@ -757,7 +853,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
         </div>
       </div>
 
-      {/* ── 2026-2027 RECURRING EVENT GENERATOR MODAL ── */}
+      {/* ── RECURRING EVENT GENERATOR MODAL (MONTHLY & CUSTOM RANGE) ── */}
       {showGeneratorModal && isExecutive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl w-full max-w-4xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -769,10 +865,10 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 </div>
                 <div>
                   <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                    <span>2026–2027 Scouting Year Calendar Generator & Seeder</span>
+                    <span>Recurring Calendar Generator & Seeder</span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Populate the troop calendar with standalone recurring meetings (Fridays & Tuesdays) across the entire scouting year.
+                    Generate standalone Friday Weekly Meetings and Tuesday Youth Programs on a flexible monthly or seasonal schedule.
                   </p>
                 </div>
               </div>
@@ -784,6 +880,104 @@ export default function EventsManager({ currentUser, onNavigate }) {
               </button>
             </div>
 
+            {/* Mode & Target Range Selector */}
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-850 pb-3">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+                  Target Generation Horizon
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: 'upcoming_month', label: '🗓️ Upcoming Month' },
+                    { id: 'custom_month', label: '📅 Pick Month' },
+                    { id: 'next_4_weeks', label: '⏱️ Next 4 Weeks' },
+                    { id: 'full_season', label: '🌐 Full Season' }
+                  ].map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setGeneratorMode(m.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                        generatorMode === m.id
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Month / Year Pickers if in Monthly Mode */}
+              {(generatorMode === 'upcoming_month' || generatorMode === 'custom_month') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Target Month</label>
+                    <select
+                      value={generatorMonth}
+                      onChange={(e) => setGeneratorMonth(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold"
+                    >
+                      {[
+                        { val: 1, name: 'January' },
+                        { val: 2, name: 'February' },
+                        { val: 3, name: 'March' },
+                        { val: 4, name: 'April' },
+                        { val: 5, name: 'May' },
+                        { val: 6, name: 'June' },
+                        { val: 7, name: 'July' },
+                        { val: 8, name: 'August' },
+                        { val: 9, name: 'September' },
+                        { val: 10, name: 'October' },
+                        { val: 11, name: 'November' },
+                        { val: 12, name: 'December' }
+                      ].map(m => (
+                        <option key={m.val} value={m.val}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Target Year</label>
+                    <select
+                      value={generatorYear}
+                      onChange={(e) => setGeneratorYear(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold"
+                    >
+                      <option value={2026}>2026</option>
+                      <option value={2027}>2027</option>
+                      <option value={2028}>2028</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Day Selection Toggles */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-850 text-xs">
+                <span className="text-slate-400 font-semibold mr-1">Include Sessions:</span>
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-emerald-300 font-bold">
+                  <input
+                    type="checkbox"
+                    checked={generatorIncludeFriday}
+                    onChange={(e) => setGeneratorIncludeFriday(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer accent-emerald-500"
+                  />
+                  <span>🟢 Fridays (Friday Weekly Meeting: 6:30 PM – 9:30 PM)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-sky-300 font-bold">
+                  <input
+                    type="checkbox"
+                    checked={generatorIncludeTuesday}
+                    onChange={(e) => setGeneratorIncludeTuesday(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-700 text-sky-500 focus:ring-sky-500 cursor-pointer accent-sky-500"
+                  />
+                  <span>🔵 Tuesdays (Tuesday Youth Program: 7:15 PM – 8:30 PM)</span>
+                </label>
+              </div>
+            </div>
+
             {/* Schedule Specifications Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* Friday Sessions */}
@@ -792,15 +986,16 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                     🟢 Every Friday
                   </span>
-                  <span className="text-xs font-mono font-bold text-emerald-400">39 Sessions</span>
+                  <span className="text-xs font-mono font-bold text-emerald-400">
+                    {targetGeneratedSchedule.filter(e => e.recurringPattern === 'weekly_friday').length} in Selection
+                  </span>
                 </div>
-                <h4 className="font-bold text-white text-sm">Friday Troop Meetings</h4>
+                <h4 className="font-bold text-white text-sm">Friday Weekly Meetings</h4>
                 <div className="space-y-1 text-xs text-slate-300 font-mono">
-                  <div className="flex items-center gap-1.5"><Calendar size={12} className="text-emerald-400" /> Oct 2, 2026 – Jun 25, 2027</div>
                   <div className="flex items-center gap-1.5"><Clock size={12} className="text-emerald-400" /> 6:30 PM – 9:30 PM (3.0 hrs)</div>
                 </div>
                 <div className="pt-1 text-[11px] text-slate-400">
-                  Status in Live Calendar: <strong className="text-emerald-300">{standaloneStats.fridayCount} / 39 Active</strong>
+                  Status: <strong className="text-emerald-300">{generatorIncludeFriday ? 'Active in Generator' : 'Disabled'}</strong>
                 </div>
               </div>
 
@@ -810,15 +1005,16 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">
                     🔵 Every Tuesday
                   </span>
-                  <span className="text-xs font-mono font-bold text-sky-400">43 Sessions</span>
+                  <span className="text-xs font-mono font-bold text-sky-400">
+                    {targetGeneratedSchedule.filter(e => e.recurringPattern === 'weekly_tuesday').length} in Selection
+                  </span>
                 </div>
-                <h4 className="font-bold text-white text-sm">Tuesday Troop Meetings</h4>
+                <h4 className="font-bold text-white text-sm">Tuesday Youth Program</h4>
                 <div className="space-y-1 text-xs text-slate-300 font-mono">
-                  <div className="flex items-center gap-1.5"><Calendar size={12} className="text-sky-400" /> Sep 8, 2026 – Jun 29, 2027</div>
-                  <div className="flex items-center gap-1.5"><Clock size={12} className="text-sky-400" /> 6:30 PM – 9:30 PM (3.0 hrs)</div>
+                  <div className="flex items-center gap-1.5"><Clock size={12} className="text-sky-400" /> 7:15 PM – 8:30 PM (1h 15m)</div>
                 </div>
                 <div className="pt-1 text-[11px] text-slate-400">
-                  Status in Live Calendar: <strong className="text-sky-300">{standaloneStats.tuesdayCount} / 43 Active</strong>
+                  Status: <strong className="text-sky-300">{generatorIncludeTuesday ? 'Active in Generator' : 'Disabled'}</strong>
                 </div>
               </div>
 
@@ -826,18 +1022,18 @@ export default function EventsManager({ currentUser, onNavigate }) {
               <div className="bg-slate-950 border border-amber-500/30 rounded-2xl p-4 space-y-2">
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                    📊 Total Standalone
+                    📊 Selected Total
                   </span>
-                  <span className="text-xs font-mono font-bold text-amber-400">82 Target</span>
+                  <span className="text-xs font-mono font-bold text-amber-400">{targetGeneratedSchedule.length} Sessions</span>
                 </div>
-                <h4 className="font-bold text-white text-sm">Full Season Schedule</h4>
+                <h4 className="font-bold text-white text-sm">
+                  {generatorMode === 'upcoming_month' || generatorMode === 'custom_month' 
+                    ? currentMonthLabel 
+                    : generatorMode === 'next_4_weeks' ? 'Next 4 Weeks' : '2026–2027 Season'}
+                </h4>
                 <div className="space-y-1 text-xs text-slate-300 font-mono">
                   <div>• Schema: <code>event_YYYYMMDD_HHMM</code></div>
-                  <div>• Created By: <code>neoissa@gmail.com</code></div>
                   <div>• Scope: <code>pushToAllPatrols: true</code></div>
-                </div>
-                <div className="pt-1 text-[11px] text-slate-400">
-                  Live Standalone Total: <strong className="text-amber-300">{standaloneStats.totalStandalone} / 82 Committed</strong>
                 </div>
               </div>
             </div>
@@ -864,7 +1060,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 }`}
               >
                 <ListOrdered size={14} />
-                <span>Interactive Schedule Preview (82 Dates)</span>
+                <span>Interactive Preview ({targetGeneratedSchedule.length} Dates)</span>
               </button>
             </div>
 
@@ -902,28 +1098,25 @@ export default function EventsManager({ currentUser, onNavigate }) {
             {generatorTab === 'overview' && (
               <div className="space-y-4">
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs text-slate-300">
-                  <strong className="text-white block text-sm font-bold">How standalone event seeding works:</strong>
+                  <strong className="text-white block text-sm font-bold">Standalone Recurring Session Generator:</strong>
                   <p>
-                    1. Generates 82 independent date documents matching the official 2026–2027 calendar:
-                    <br />&bull; <strong>Fridays (39)</strong>: starting Oct 2, 2026 through June 25, 2027 (6:30 PM – 9:30 PM, 3.0 hrs).
-                    <br />&bull; <strong>Tuesdays (43)</strong>: starting Sep 8, 2026 through June 29, 2027 (6:30 PM – 9:30 PM, 3.0 hrs).
+                    Populates the calendar with independent standalone meetings for <strong>{generatorMode === 'upcoming_month' || generatorMode === 'custom_month' ? currentMonthLabel : generatorMode === 'next_4_weeks' ? 'the next 4 weeks' : 'the full season'}</strong>:
+                    <br />&bull; <strong>Friday Weekly Meetings</strong>: 6:30 PM – 9:30 PM (3.0 hrs).
+                    <br />&bull; <strong>Tuesday Youth Programs</strong>: 7:15 PM – 8:30 PM (1h 15m).
                   </p>
                   <p>
-                    2. Each session is saved to Firestore as an independent document in <code>/events</code> with <code>isStandalone: true</code>, <code>pushToAllPatrols: true</code>, and <code>createdBy: neoissa@gmail.com</code>.
-                  </p>
-                  <p>
-                    3. Scouts and parents will immediately see each standalone session in their calendar, and can submit RSVPs for each individual date.
+                    Each meeting is created as an independent document in Firestore, allowing individual attendance tracking, RSVPs, and customization.
                   </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                   <button
                     onClick={handleRunSeeder}
-                    disabled={isSeeding || isPurging}
+                    disabled={isSeeding || isPurging || targetGeneratedSchedule.length === 0}
                     className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs py-3.5 px-6 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
                   >
                     {isSeeding ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="text-amber-200" />}
-                    <span>{isSeeding ? 'Generating & Seeding to Firestore...' : '🚀 Generate & Seed 82 Events to Calendar'}</span>
+                    <span>{isSeeding ? 'Generating & Publishing to Firestore...' : `🚀 Generate & Publish ${targetGeneratedSchedule.length} Sessions`}</span>
                   </button>
 
                   <button
@@ -951,7 +1144,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         previewFilter === 'all' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      All (82)
+                      All ({targetGeneratedSchedule.length})
                     </button>
                     <button
                       onClick={() => setPreviewFilter('friday')}
@@ -959,7 +1152,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         previewFilter === 'friday' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Fridays (39)
+                      Fridays ({targetGeneratedSchedule.filter(e => e.recurringPattern === 'weekly_friday').length})
                     </button>
                     <button
                       onClick={() => setPreviewFilter('tuesday')}
@@ -967,7 +1160,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         previewFilter === 'tuesday' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Tuesdays (43)
+                      Tuesdays ({targetGeneratedSchedule.filter(e => e.recurringPattern === 'weekly_tuesday').length})
                     </button>
                   </div>
 
@@ -975,7 +1168,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                     <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
                     <input
                       type="text"
-                      placeholder="Search date (e.g. 2026-10 or Oct)..."
+                      placeholder="Search date or title..."
                       value={previewSearch}
                       onChange={(e) => setPreviewSearch(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -991,8 +1184,8 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         <th className="p-2.5 pl-4">#</th>
                         <th className="p-2.5">Day</th>
                         <th className="p-2.5">Date</th>
+                        <th className="p-2.5">Event Title</th>
                         <th className="p-2.5">Time & Duration</th>
-                        <th className="p-2.5">Document ID</th>
                         <th className="p-2.5 text-right pr-4">Live Status</th>
                       </tr>
                     </thead>
@@ -1010,11 +1203,9 @@ export default function EventsManager({ currentUser, onNavigate }) {
                               </span>
                             </td>
                             <td className="p-2.5 font-mono font-bold text-white">{item.date}</td>
+                            <td className="p-2.5 text-slate-200 font-medium truncate max-w-[160px]">{item.title}</td>
                             <td className="p-2.5 text-slate-300 font-mono text-[11px]">
-                              {item.time} ({item.durationHours} hrs)
-                            </td>
-                            <td className="p-2.5 font-mono text-[10px] text-slate-400 truncate max-w-[120px]">
-                              {item.id}
+                              {item.time} ({item.duration || `${item.durationHours} hrs`})
                             </td>
                             <td className="p-2.5 text-right pr-4">
                               {isLive ? (
@@ -1346,7 +1537,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Events List */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
               {timeHorizon === 'upcoming' ? (
                 <>
@@ -1365,10 +1556,55 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 </>
               )}
             </h3>
-            <span className="text-[10px] font-mono text-slate-400">
-              {timeHorizon === 'past' ? 'Reverse Order (Recent First)' : 'Chronological'}
-            </span>
+
+            {isLeader && filteredEvents.length > 0 && (
+              <button
+                type="button"
+                onClick={handleToggleSelectAll}
+                className="text-[11px] font-bold text-slate-400 hover:text-emerald-300 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <span>{selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? '✓ Deselect All' : '☑️ Select All'}</span>
+              </button>
+            )}
           </div>
+
+          {/* ── BATCH MULTI-SELECT ACTION BAR ── */}
+          {isLeader && selectedEventIds.size > 0 && (
+            <div className="bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 border-2 border-rose-500/70 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 flex items-center justify-center font-black text-sm shrink-0 shadow-inner">
+                  {selectedEventIds.size}
+                </div>
+                <div>
+                  <strong className="text-white text-xs sm:text-sm block leading-tight">
+                    {selectedEventIds.size} Event{selectedEventIds.size > 1 ? 's' : ''} Selected
+                  </strong>
+                  <span className="text-[10px] text-slate-300">
+                    Ready for instant batch deletion
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEventIds(new Set())}
+                  className="flex-1 sm:flex-initial bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer border border-slate-750"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedEvents}
+                  disabled={isBatchDeleting}
+                  className="flex-1 sm:flex-initial bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-950/60 disabled:opacity-50"
+                >
+                  {isBatchDeleting ? <RefreshCw size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  <span>Delete Selected ({selectedEventIds.size})</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {filteredEvents.length === 0 ? (
             <div className="text-center py-12 bg-slate-850 rounded-3xl border border-slate-755 text-slate-400 text-xs italic space-y-2">
@@ -1384,7 +1620,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
                   onClick={() => setShowGeneratorModal(true)}
                   className="inline-flex items-center gap-1.5 text-emerald-400 font-bold hover:underline text-xs cursor-pointer"
                 >
-                  <Zap size={13} /> Auto-Generate 2026–2027 Schedule
+                  <Zap size={13} /> Auto-Generate Calendar
                 </button>
               )}
             </div>
@@ -1392,6 +1628,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
             <div className="space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
               {filteredEvents.map(ev => {
                 const isSelected = selectedEvent?.id === ev.id;
+                const isChecked = selectedEventIds.has(ev.id);
                 const rsvps = Object.values(eventRsvps[ev.id] || {});
                 const countAttending = rsvps.filter(r => r.status === 'attending').length;
                 const isPast = (ev.date || '') < todayStr;
@@ -1399,50 +1636,69 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 const isTuesday = ev.recurringPattern === 'weekly_tuesday' || new Date(ev.date + 'T12:00:00').getDay() === 2;
 
                 return (
-                  <button
+                  <div
                     key={ev.id}
                     onClick={() => setSelectedEvent(ev)}
-                    className={`w-full text-left p-4 rounded-2xl border transition cursor-pointer flex flex-col gap-1.5 shadow-sm ${
-                      isSelected
+                    className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border transition cursor-pointer flex items-start gap-3 shadow-sm ${
+                      isChecked
+                        ? 'border-rose-500/70 bg-rose-950/20'
+                        : isSelected
                         ? isPast 
                           ? 'bg-purple-950/40 border-purple-500/60 shadow-purple-950/40'
                           : 'bg-emerald-950/30 border-emerald-500/60 shadow-emerald-950/30'
                         : 'bg-slate-850 border-slate-755 hover:border-slate-650'
                     }`}
                   >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                          isPast 
-                            ? 'text-purple-300 bg-purple-500/10 border-purple-500/30'
-                            : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                        }`}>
-                          📅 {ev.date}
-                        </span>
-                        {isPast && (
-                          <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
-                            ✓ Past
-                          </span>
-                        )}
-                        {ev.isStandalone && (
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                            isFriday ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'
-                          }`}>
-                            {isFriday ? 'Fri' : isTuesday ? 'Tue' : 'Weekly'}
-                          </span>
-                        )}
+                    {isLeader && (
+                      <div
+                        onClick={(e) => handleToggleSelectEvent(ev.id, e)}
+                        className="pt-1 shrink-0 cursor-pointer"
+                        title="Select for batch delete"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleSelectEvent(ev.id, e)}
+                          className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500 cursor-pointer accent-rose-500"
+                        />
                       </div>
-                      <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-mono">
-                        {countAttending} {isPast ? 'Attended' : 'Going'}
-                      </span>
+                    )}
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                            isPast 
+                              ? 'text-purple-300 bg-purple-500/10 border-purple-500/30'
+                              : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                          }`}>
+                            📅 {ev.date}
+                          </span>
+                          {isPast && (
+                            <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
+                              ✓ Past
+                            </span>
+                          )}
+                          {ev.isStandalone && (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                              isFriday ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'
+                            }`}>
+                              {isFriday ? 'Fri' : isTuesday ? 'Tue' : 'Weekly'}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-mono">
+                          {countAttending} {isPast ? 'Attended' : 'Going'}
+                        </span>
+                      </div>
+                      <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
+                        <span>⏰ {ev.time}</span>
+                        {ev.durationHours && <span>&bull; {ev.durationHours} hrs</span>}
+                        {ev.location && <span>&bull; 📍 {ev.location}</span>}
+                      </div>
                     </div>
-                    <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
-                      <span>⏰ {ev.time}</span>
-                      {ev.durationHours && <span>&bull; {ev.durationHours} hrs</span>}
-                      {ev.location && <span>&bull; 📍 {ev.location}</span>}
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
