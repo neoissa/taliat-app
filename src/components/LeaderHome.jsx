@@ -293,6 +293,19 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span>✨</span> Be Prepared &bull; كُن مُسْتَعِدّاً
                 </span>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('profile')}
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border transition cursor-pointer ${
+                    (currentUser?.spt || currentUser?.sptDate || currentUser?.sptFileUrl || currentUser?.yptCompleted)
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 hover:border-emerald-500'
+                      : 'bg-amber-950/80 text-amber-300 border-amber-700/60 hover:border-amber-500'
+                  }`}
+                  title="Click to view or update Safety/Protection Training (SPT) in your profile"
+                >
+                  <Shield size={11} />
+                  <span>SPT: {(currentUser?.spt || currentUser?.sptDate) ? `✓ ${currentUser?.spt || currentUser?.sptDate}` : ((currentUser?.sptFileUrl || currentUser?.yptCompleted) ? '✓ Certified' : 'Pending')}</span>
+                </button>
                 {isOwner && (
                   <span className="bg-yellow-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
                     <Crown size={10} /> Full Superadmin Authority

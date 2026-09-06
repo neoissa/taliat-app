@@ -165,8 +165,7 @@ export default function AdminPanel({ currentUser }) {
   const [editGroupId, setEditGroupId] = useState('');
   const [editParentLinkedScoutIds, setEditParentLinkedScoutIds] = useState([]);
   const [editPassword, setEditPassword] = useState('');
-  const [editYptCompleted, setEditYptCompleted] = useState(false);
-  const [editYptDate, setEditYptDate] = useState('');
+  const [editSpt, setEditSpt] = useState('');
   const [userUpdating, setUserUpdating] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editErr, setEditErr] = useState('');
@@ -404,8 +403,7 @@ export default function AdminPanel({ currentUser }) {
     setEditLeaderPosition(u.leaderPosition || 'Assistant Scoutmaster');
     setEditGroupId(u.groupId || '');
     setEditParentLinkedScoutIds(u.linkedScoutIds || []);
-    setEditYptCompleted(!!u.yptCompleted);
-    setEditYptDate(u.yptDate || '');
+    setEditSpt(u.spt || u.sptDate || u.yptDate || '');
     setEditPassword('');
     setEditMsg('');
     setEditErr('');
@@ -432,10 +430,12 @@ export default function AdminPanel({ currentUser }) {
         updatePayload.username = cleanedUsername;
       }
 
-      if (editRole === 'leader') {
+      if (editRole === 'leader' || editRole === 'owner') {
         updatePayload.leaderPosition = editLeaderPosition;
-        updatePayload.yptCompleted = editYptCompleted;
-        updatePayload.yptDate = editYptDate || null;
+        updatePayload.spt = editSpt.trim() || null;
+        updatePayload.sptDate = editSpt.trim() || null;
+        updatePayload.yptCompleted = !!editSpt.trim();
+        updatePayload.yptDate = editSpt.trim() || null;
       } else if (editRole === 'parent') {
         updatePayload.linkedScoutIds = editParentLinkedScoutIds;
       }
@@ -1182,7 +1182,11 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                           ) : u.role === 'scout' ? (
                             <span>Rank: <strong className="text-white">{u.rank || 'Scout'}</strong></span>
                           ) : (
-                            <span>YPT: <strong className={u.yptCompleted ? 'text-emerald-400' : 'text-amber-400'}>{u.yptCompleted ? '✓ Certified' : 'Pending'}</strong></span>
+                            <span>
+                              SPT: <strong className={(u.spt || u.sptDate || u.sptFileUrl || u.yptCompleted) ? 'text-emerald-400' : 'text-amber-400'}>
+                                {(u.spt || u.sptDate) ? `✓ ${u.spt || u.sptDate}` : ((u.sptFileUrl || u.yptCompleted) ? '✓ Certified' : 'Pending')}
+                              </strong>
+                            </span>
                           )}
                         </td>
 
@@ -3052,14 +3056,16 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                     </select>
                   </div>
 
-                  <label className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Safety/Protection Training (SPT) Date</label>
                     <input
-                      type="checkbox"
-                      checked={editYptCompleted}
-                      onChange={(e) => setEditYptCompleted(e.target.checked)}
+                      type="date"
+                      value={editSpt}
+                      onChange={(e) => setEditSpt(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                     />
-                    <span>Youth Protection Training (YPT) Certified</span>
-                  </label>
+                    <p className="text-[10px] text-slate-400 mt-1">Leave blank if pending or uncertified.</p>
+                  </div>
                 </div>
               )}
 

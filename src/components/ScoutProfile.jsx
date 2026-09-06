@@ -91,6 +91,7 @@ export default function ScoutProfile({ currentUser }) {
   const [sptFileUrl, setSptFileUrl] = useState('');
   const [sptFileName, setSptFileName] = useState('');
   const [uploadingSpt, setUploadingSpt] = useState(false);
+  const [savingSpt, setSavingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
   const [fullUserData, setFullUserData] = useState(null);
   const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'roles-guide' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security'
@@ -127,50 +128,47 @@ export default function ScoutProfile({ currentUser }) {
       setLoading(false);
       return;
     }
-    const loadProfile = async () => {
-      try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setFullUserData(data);
-          setFullName(data.fullName || '');
-          setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
-          setBio(data.bio || '');
-          setScoutEmail(data.scoutEmail || data.email || '');
-          setParentEmail(data.parentEmail || '');
-          setScoutPhone(data.scoutPhone || '');
-          setParentPhone(data.parentPhone || '');
-          setPhotoUrl(data.photoURL || '');
-          setPhotoPreview(data.photoURL || '');
-          setBsaId(data.bsaId || '—');
-          setRankName(data.rank || 'Scout');
-          setSpt(data.spt || '');
-          setSptFileUrl(data.sptFileUrl || '');
-          setSptFileName(data.sptFileName || '');
-          
-          if (data.leaderId) {
-            const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
-            if (leaderSnap.exists()) {
-              setLeaderData(leaderSnap.data());
-            }
-          }
-          
-          if (data.groupId) {
-            const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
-            if (groupSnap.exists()) {
-              setPatrolName(groupSnap.data().name);
-            }
+    const userRef = doc(db, 'users', currentUser.uid);
+    const unsubProfile = onSnapshot(userRef, async (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setFullUserData(data);
+        setFullName(data.fullName || '');
+        setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
+        setBio(data.bio || '');
+        setScoutEmail(data.scoutEmail || data.email || '');
+        setParentEmail(data.parentEmail || '');
+        setScoutPhone(data.scoutPhone || '');
+        setParentPhone(data.parentPhone || '');
+        setPhotoUrl(data.photoURL || '');
+        setPhotoPreview(data.photoURL || '');
+        setBsaId(data.bsaId || '—');
+        setRankName(data.rank || 'Scout');
+        setSpt(data.spt || data.sptDate || data.yptDate || '');
+        setSptFileUrl(data.sptFileUrl || '');
+        setSptFileName(data.sptFileName || '');
+        
+        if (data.leaderId) {
+          const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
+          if (leaderSnap.exists()) {
+            setLeaderData(leaderSnap.data());
           }
         }
-      } catch (err) {
-        console.error("Failed to load user profile:", err);
-      } finally {
-        setLoading(false);
+        
+        if (data.groupId) {
+          const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
+          if (groupSnap.exists()) {
+            setPatrolName(groupSnap.data().name);
+          }
+        }
       }
-    };
+      setLoading(false);
+    }, (err) => {
+      console.error("Failed to listen to user profile:", err);
+      setLoading(false);
+    });
     
-    loadProfile();
+    return () => unsubProfile();
   }, [currentUser?.uid]);
 
   // ── 0. REAL-TIME ATTENDANCE SESSIONS & ABSENCE RISK ENGINE ──
@@ -387,6 +385,7 @@ export default function ScoutProfile({ currentUser }) {
       const userRef = doc(db, 'users', currentUser.uid);
       await setDoc(userRef, {
         spt: defaultDate,
+        sptDate: defaultDate,
         sptFileUrl: finalUrl,
         sptFileName: fileName
       }, { merge: true });
@@ -418,6 +417,33 @@ export default function ScoutProfile({ currentUser }) {
     }
   };
 
+  // ── 2.5 DIRECT SPT DATE SAVE HANDLER ──
+  const handleSaveSptDirectly = async (e) => {
+    if (e) e.preventDefault();
+    setSavingSpt(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      const cleanDate = spt.trim() || null;
+      await setDoc(userRef, {
+        spt: cleanDate,
+        sptDate: cleanDate,
+        sptFileUrl: sptFileUrl || null,
+        sptFileName: sptFileName || null
+      }, { merge: true });
+
+      setProfileSuccess("✓ Safety/Protection Training (SPT) record updated successfully!");
+      setTimeout(() => setProfileSuccess(''), 3500);
+    } catch (err) {
+      console.error("SPT Direct Save error:", err);
+      setProfileError("Failed to save SPT record: " + err.message);
+    } finally {
+      setSavingSpt(false);
+    }
+  };
+
   // ── 3. SAVE PROFILE INFORMATION FORM ──
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -436,6 +462,7 @@ export default function ScoutProfile({ currentUser }) {
         scoutPhone: scoutPhone.trim(),
         photoURL: photoUrl || null,
         spt: spt.trim() || null,
+        sptDate: spt.trim() || null,
         sptFileUrl: sptFileUrl || null,
         sptFileName: sptFileName || null
       };
@@ -1283,16 +1310,44 @@ export default function ScoutProfile({ currentUser }) {
           </h3>
 
           <div className="space-y-4">
+            <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-750 flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Safety Standing</span>
+                <span className={`text-sm font-bold flex items-center gap-1.5 mt-0.5 ${spt ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {spt ? `✓ Safety Protection Training (SPT) Valid: ${spt}` : '⚠️ SPT Status: Pending Completion'}
+                </span>
+              </div>
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase border ${
+                spt 
+                  ? 'bg-emerald-950 text-emerald-300 border-emerald-700/60' 
+                  : 'bg-amber-950 text-amber-300 border-amber-700/60'
+              }`}>
+                {spt ? 'Verified' : 'Action Required'}
+              </span>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
                 SPT Training Completion Date
               </label>
-              <input
-                type="date"
-                value={spt}
-                onChange={(e) => setSpt(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-              />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="date"
+                  value={spt}
+                  onChange={(e) => setSpt(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveSptDirectly}
+                  disabled={savingSpt}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 shrink-0"
+                >
+                  <CheckCircle size={14} />
+                  <span>{savingSpt ? 'Saving...' : 'Save SPT Date'}</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Updates your official compliance record instantly across all troop rosters.</p>
             </div>
 
             <div>

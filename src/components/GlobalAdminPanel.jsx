@@ -328,7 +328,7 @@ export default function GlobalAdminPanel({ currentUser }) {
     setEditScoutPhone(user.scoutPhone || '');
     setEditParentPhone(user.parentPhone || '');
     setEditLeadPosition(user.leaderPosition || 'Scoutmaster');
-    setEditSpt(user.spt || '');
+    setEditSpt(user.spt || user.sptDate || user.yptDate || '');
     setEditSptFileUrl(user.sptFileUrl || '');
     setEditSptFileName(user.sptFileName || '');
     setEditPassword('');
@@ -357,6 +357,9 @@ export default function GlobalAdminPanel({ currentUser }) {
         parentPhone: editRole === 'scout' ? editParentPhone.trim() : null,
         leaderPosition: editRole === 'leader' ? editLeadPosition : null,
         spt: editSpt.trim() || null,
+        sptDate: editSpt.trim() || null,
+        yptCompleted: !!editSpt.trim(),
+        yptDate: editSpt.trim() || null,
         sptFileUrl: editSptFileUrl || null,
         sptFileName: editSptFileName || null
       };
@@ -807,8 +810,12 @@ export default function GlobalAdminPanel({ currentUser }) {
                       {user.role === 'scout' && user.parentEmail && (
                         <span>Parent Email: <span className="text-slate-300 font-semibold">{user.parentEmail}</span></span>
                       )}
-                      {user.role !== 'scout' && user.spt && (
-                        <span>SPT: <span className="text-emerald-400 font-semibold">{user.spt}</span></span>
+                      {user.role !== 'scout' && (
+                        <span>
+                          SPT: <span className={(user.spt || user.sptDate || user.sptFileUrl || user.yptCompleted) ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                            {(user.spt || user.sptDate) ? `✓ ${user.spt || user.sptDate}` : ((user.sptFileUrl || user.yptCompleted) ? '✓ Certified' : 'Pending')}
+                          </span>
+                        </span>
                       )}
                       {user.scoutPhone && (
                         <span className="inline-flex items-center gap-1">

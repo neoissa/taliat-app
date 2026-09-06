@@ -2337,7 +2337,9 @@ export default function PatrolRoster({ currentUser = {} }) {
                               </div>
                               <div>
                                 <span className="text-slate-400 block uppercase text-[9px] font-bold">Safety (SPT)</span>
-                                <span className="font-semibold text-slate-200 text-[11px]">{lead.spt ? `✓ ${lead.spt}` : 'Pending'}</span>
+                                <span className={`text-[11px] font-bold inline-flex items-center gap-1 ${(lead.spt || lead.sptDate || lead.sptFileUrl || lead.yptCompleted) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {(lead.spt || lead.sptDate) ? `✓ ${lead.spt || lead.sptDate}` : ((lead.sptFileUrl || lead.yptCompleted) ? '✓ Certified' : 'Pending')}
+                                </span>
                               </div>
                               <div className="col-span-2">
                                 <span className="text-slate-400 block uppercase text-[9px] font-bold">Contact</span>
@@ -2404,7 +2406,9 @@ export default function PatrolRoster({ currentUser = {} }) {
                               </div>
                               <div>
                                 <span className="text-slate-400 block uppercase text-[9px] font-bold">Safety (SPT)</span>
-                                <span className="font-semibold text-slate-200 text-[11px]">{lead.spt ? `✓ ${lead.spt}` : 'Pending'}</span>
+                                <span className={`text-[11px] font-bold inline-flex items-center gap-1 ${(lead.spt || lead.sptDate || lead.sptFileUrl || lead.yptCompleted) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {(lead.spt || lead.sptDate) ? `✓ ${lead.spt || lead.sptDate}` : ((lead.sptFileUrl || lead.yptCompleted) ? '✓ Certified' : 'Pending')}
+                                </span>
                               </div>
                               <div className="col-span-2">
                                 <span className="text-slate-400 block uppercase text-[9px] font-bold">Contact</span>

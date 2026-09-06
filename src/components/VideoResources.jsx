@@ -52,7 +52,7 @@ const DOCUMENT_RESOURCES = [
   },
   {
     id: 'ypt_policies',
-    title: '🛡️ BSA Youth Protection Guidelines (YPT)',
+    title: '🛡️ BSA Safety & Protection Training Guidelines (SPT / YPT)',
     url: 'https://filestore.scouting.org/filestore/pdf/100-011.pdf',
     description: 'Official guidebook outlining safety barriers, youth supervision rules, reporting protocols, and scouting standards.'
   },
