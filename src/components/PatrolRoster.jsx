@@ -10,6 +10,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import AdvancementTracker from './AdvancementTracker';
@@ -49,6 +50,8 @@ import {
   KeyRound,
   ExternalLink,
   Edit3,
+  RotateCcw,
+  Lock,
   X
 } from 'lucide-react';
 import { 
@@ -58,6 +61,23 @@ import {
   generateParentInviteMessage, 
   generateLeaderInviteMessage 
 } from '../utils/kashafVoice';
+
+const BSA_LEADER_POSITIONS = [
+  'Scoutmaster',
+  'Assistant Scoutmaster',
+  'Patrol Leader',
+  'Assistant Leader',
+  'Senior Patrol Leader',
+  'Assistant Senior Patrol Leader',
+  'Committee Chair',
+  'Committee Member',
+  'Chartered Org Representative',
+  'Advancement Chair',
+  'Outdoor Activity Chair',
+  'Treasurer',
+  'Secretary',
+  'Unit Leader',
+];
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -1112,7 +1132,7 @@ export default function PatrolRoster({ currentUser = {} }) {
   const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
   const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
   const isAssistantLeader = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Leader';
-  const canAddOrDeleteScouts = isExecutive || (currentUser?.role === 'leader' && !isAssistantLeader);
+  const canAddOrDeleteScouts = isExecutive || currentUser?.role === 'leader' || currentUser?.role === 'admin' || isOwner;
 
   // ── UNIFIED ALL-USERS SUBSCRIPTION STATE ──
   const [rawAllUsers, setRawAllUsers] = useState([]);
@@ -1121,6 +1141,40 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [updatingUserRole, setUpdatingUserRole] = useState(null);
   const [updatingUserGroup, setUpdatingUserGroup] = useState(null);
   const [quickActionMsg, setQuickActionMsg] = useState('');
+
+  // ── SCOUT EDIT MODAL STATE ──
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editBsaId, setEditBsaId] = useState('');
+  const [editScoutEmail, setEditScoutEmail] = useState('');
+  const [editScoutPhone, setEditScoutPhone] = useState('');
+  const [editParentEmail, setEditParentEmail] = useState('');
+  const [editParentPhone, setEditParentPhone] = useState('');
+  const [editGroupId, setEditGroupId] = useState('');
+  const [editRank, setEditRank] = useState('Scout');
+  const [editRole, setEditRole] = useState('scout');
+  const [editLeaderPosition, setEditLeaderPosition] = useState('');
+  const [userUpdating, setUserUpdating] = useState(false);
+  const [editMsg, setEditMsg] = useState('');
+  const [editErr, setEditErr] = useState('');
+
+  // ── WHATSAPP SHARE MODAL STATE ──
+  const [whatsappUser, setWhatsappUser] = useState(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappTemplate, setWhatsappTemplate] = useState('scout_invite');
+  const [whatsappPassword, setWhatsappPassword] = useState('');
+  const [whatsappCustomMsg, setWhatsappCustomMsg] = useState('');
+  const [whatsappCopied, setWhatsappCopied] = useState(false);
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+
+  // ── RESET PASSWORD / CREDENTIALS MODAL STATE ──
+  const [resettingUser, setResettingUser] = useState(null);
+  const [resetPasswordVal, setResetPasswordVal] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetErr, setResetErr] = useState('');
 
   // 1. Unified Subscription to Users, Groups, and Attendance
   useEffect(() => {
@@ -1177,6 +1231,13 @@ export default function PatrolRoster({ currentUser = {} }) {
       unsubAttendance();
     };
   }, [currentUser?.uid, currentUser?.groupId, isExecutive]);
+
+  // Ensure non-executive leaders cannot access Global User Directory
+  useEffect(() => {
+    if (!isExecutive && rosterSubTab === 'all_users') {
+      setRosterSubTab('scouts');
+    }
+  }, [isExecutive, rosterSubTab]);
 
   // Subscribe to real-time pending approvals count for all visible scouts (Ranks + Badges + Islamic + Assignments)
   useEffect(() => {
@@ -1318,6 +1379,266 @@ export default function PatrolRoster({ currentUser = {} }) {
       alert("Failed to assign patrol: " + err.message);
     } finally {
       setUpdatingUserGroup(null);
+    }
+  };
+
+  // ── SCOUT EDIT MODAL HANDLERS ──
+  const handleOpenEditUser = async (u) => {
+    setEditingUser(u);
+    setEditFullName(u.fullName || '');
+    setEditUsername(u.username || (u.email ? u.email.split('@')[0] : ''));
+    setEditPassword('');
+    setEditBsaId(u.bsaId || '');
+    setEditScoutEmail(u.scoutEmail || u.personalEmail || (u.role === 'scout' ? u.email : '') || '');
+    setEditScoutPhone(u.scoutPhone || (u.role === 'scout' ? u.phone : '') || '');
+    setEditParentEmail(u.parentEmail || '');
+    setEditParentPhone(u.parentPhone || '');
+    setEditGroupId(u.groupId || u.patrolId || '');
+    setEditRank(u.rank || 'Scout');
+    setEditRole(u.role || 'scout');
+    setEditLeaderPosition(u.leaderPosition || 'Patrol Leader');
+    setEditMsg('');
+    setEditErr('');
+
+    try {
+      const snap = await getDoc(doc(db, 'users', u.uid, 'private', 'secrets'));
+      if (snap.exists() && snap.data().password) {
+        setEditPassword(snap.data().password);
+      }
+    } catch (e) {
+      console.log('No secrets read access:', e);
+    }
+  };
+
+  const handleSaveEditUser = async (e) => {
+    e?.preventDefault?.();
+    if (!editingUser) return;
+    setUserUpdating(true);
+    setEditErr('');
+    setEditMsg('');
+
+    try {
+      const updatePayload = {
+        fullName: editFullName.trim(),
+        role: editRole,
+        bsaId: editBsaId.trim() || null,
+        scoutEmail: editScoutEmail.trim() || null,
+        personalEmail: editScoutEmail.trim() || null,
+        scoutPhone: editScoutPhone.trim() || null,
+        parentEmail: editParentEmail.trim() || null,
+        parentPhone: editParentPhone.trim() || null,
+        groupId: editGroupId || null,
+        patrolId: editGroupId || null,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editUsername.trim()) {
+        const cleaned = editUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+        updatePayload.username = cleaned;
+      }
+
+      if (editRole === 'scout') {
+        updatePayload.rank = editRank;
+      } else if (editRole === 'leader' || editRole === 'owner') {
+        updatePayload.leaderPosition = editLeaderPosition;
+      }
+
+      await setDoc(doc(db, 'users', editingUser.uid), updatePayload, { merge: true });
+
+      if (editPassword.trim().length >= 6) {
+        await setDoc(doc(db, 'users', editingUser.uid, 'private', 'secrets'), { password: editPassword.trim() }, { merge: true });
+      }
+
+      setEditMsg('✓ Scout account updated successfully!');
+      setTimeout(() => {
+        setEditingUser(null);
+      }, 1200);
+    } catch (err) {
+      console.error("Failed to update user:", err);
+      setEditErr("Error updating user: " + err.message);
+    } finally {
+      setUserUpdating(false);
+    }
+  };
+
+  // ── SCOUT DELETION HANDLER ──
+  const handleDeleteScout = async (u) => {
+    if (!window.confirm(`Are you sure you want to delete ${u.fullName || u.username} (${u.email || u.uid})? This action cannot be undone.`)) return;
+    try {
+      await deleteDoc(doc(db, 'users', u.uid));
+      setQuickActionMsg(`✓ Deleted ${u.fullName || u.username}`);
+      setTimeout(() => setQuickActionMsg(''), 2500);
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+      alert("Failed to delete user: " + err.message);
+    }
+  };
+
+  // ── WHATSAPP SHARE MODAL HANDLERS ──
+  const handleOpenWhatsAppModal = async (u) => {
+    setWhatsappUser(u);
+    const phone = u.scoutPhone || u.parentPhone || u.phone || '';
+    setWhatsappPhone(phone);
+    
+    if (u.role === 'leader' || u.role === 'owner') {
+      setWhatsappTemplate('leader_invite');
+    } else if (u.role === 'parent') {
+      setWhatsappTemplate('parent_invite');
+    } else {
+      setWhatsappTemplate('scout_invite');
+    }
+
+    setWhatsappCustomMsg('');
+    setWhatsappCopied(false);
+    setWhatsappLoading(true);
+
+    let pass = '';
+    try {
+      const snap = await getDoc(doc(db, 'users', u.uid, 'private', 'secrets'));
+      if (snap.exists() && snap.data().password) {
+        pass = snap.data().password;
+      }
+    } catch (e) {
+      console.log('No secrets read:', e);
+    }
+    setWhatsappPassword(pass || 'taliat2026');
+    setWhatsappLoading(false);
+  };
+
+  const getWhatsAppMessageText = () => {
+    if (!whatsappUser) return '';
+    const name = whatsappUser.fullName || whatsappUser.username || 'Member';
+    const username = whatsappUser.username || (whatsappUser.email ? whatsappUser.email.split('@')[0] : 'username');
+    const password = whatsappPassword || 'taliat2026';
+    const appUrl = 'https://taliat-app.vercel.app/';
+    const uPatrol = groups.find(g => g.id === whatsappUser.groupId || g.id === whatsappUser.patrolId)?.name || '';
+    const patrolName = uPatrol;
+    const leaderPosition = whatsappUser.leaderPosition || (whatsappUser.role === 'owner' ? 'Troop Headmaster / Lead Admin' : 'Scout Leader');
+
+    if (whatsappTemplate === 'leader_invite') {
+      return generateLeaderInviteMessage({
+        name,
+        username,
+        password,
+        leaderPosition,
+        patrolName,
+        appUrl
+      });
+    }
+
+    if (whatsappTemplate === 'scout_invite') {
+      return generateScoutInviteMessage({
+        name,
+        username,
+        password,
+        patrolName,
+        appUrl
+      });
+    }
+
+    if (whatsappTemplate === 'parent_invite') {
+      return generateParentInviteMessage({
+        name,
+        email: whatsappUser.email || '',
+        username,
+        password,
+        patrolName,
+        appUrl
+      });
+    }
+
+    let recipientType = 'parent';
+    if (whatsappUser.role === 'leader' || whatsappUser.role === 'owner') {
+      recipientType = 'leader';
+    } else if (whatsappUser.role === 'scout') {
+      recipientType = 'scout';
+    }
+    const greeting = getKashafGreeting(recipientType, name);
+    const lockedClosing = getLockedClosing(patrolName);
+
+    if (whatsappTemplate === 'meeting') {
+      return `${greeting}
+
+Attendance reminder for our upcoming Dhulfiqār Scouting Session.
+
+🔗 *Leadership Portal:* ${appUrl}
+📍 *Protocol:* Arrive punctually in full uniform with your Scout Handbook and notebook prepared.${lockedClosing}`;
+    }
+
+    if (whatsappTemplate === 'video') {
+      return `${greeting}
+
+Reminder to complete your mandatory Youth Protection and Safety Training (SPT/YPT) video modules.
+
+🔗 *Portal Link:* ${appUrl}
+📌 *Instructions:* Access your profile, complete the video modules, and confirm verification with leadership.${lockedClosing}`;
+    }
+
+    if (whatsappTemplate === 'islamic') {
+      return `${greeting}
+
+Friendly check-in regarding the Islamic Knowledge modules (Jaʿfarī fiqh, ʿAqāʾid, Akhlāq, and Sīrah of Ahl al-Bayt ʿa).
+
+🔗 *Checklist Portal:* ${appUrl}
+📌 *Instructions:* Review unit milestones and prepare for oral/written leader assessment.${lockedClosing}`;
+    }
+
+    if (whatsappTemplate === 'service') {
+      return `${greeting}
+
+Reminder to log your community service and volunteering hours into the portal.
+
+🔗 *Service Log:* ${appUrl}
+📌 *Instructions:* Log the project title, date, duration, and beneficiary for verification.${lockedClosing}`;
+    }
+
+    if (whatsappTemplate === 'custom') {
+      const customContent = whatsappCustomMsg.trim();
+      return customContent ? `${greeting}\n\n${customContent}${lockedClosing}` : '';
+    }
+
+    return '';
+  };
+
+  const handleCopyWhatsAppMsg = () => {
+    const text = getWhatsAppMessageText();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setWhatsappCopied(true);
+      setTimeout(() => setWhatsappCopied(false), 2500);
+    });
+  };
+
+  // ── RESET PASSWORD / CREDENTIALS MODAL HANDLERS ──
+  const handleOpenResetModal = (u) => {
+    setResettingUser(u);
+    setResetPasswordVal('');
+    setResetMsg('');
+    setResetErr('');
+  };
+
+  const handleExecuteResetPassword = async (e) => {
+    e?.preventDefault?.();
+    if (!resettingUser || resetPasswordVal.trim().length < 6) {
+      setResetErr('Password must be at least 6 characters.');
+      return;
+    }
+    setResetLoading(true);
+    setResetMsg('');
+    setResetErr('');
+    try {
+      await setDoc(doc(db, 'users', resettingUser.uid, 'private', 'secrets'), {
+        password: resetPasswordVal.trim(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setResetMsg('✓ Password updated successfully!');
+      setTimeout(() => {
+        setResettingUser(null);
+      }, 1500);
+    } catch (err) {
+      setResetErr('Failed to reset password: ' + err.message);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1726,7 +2047,9 @@ export default function PatrolRoster({ currentUser = {} }) {
               ? `${searchedLeaders.length} leader${searchedLeaders.length !== 1 ? 's' : ''} in troop`
               : rosterSubTab === 'parents'
               ? `${searchedParents.length} parent account${searchedParents.length !== 1 ? 's' : ''} registered`
-              : `${searchedAllUsers.length} total Firebase account${searchedAllUsers.length !== 1 ? 's' : ''} indexed`}
+              : isExecutive
+              ? `${searchedAllUsers.length} total Firebase account${searchedAllUsers.length !== 1 ? 's' : ''} indexed`
+              : `${searchedScouts.length} scout${searchedScouts.length !== 1 ? 's' : ''} in roster`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1903,17 +2226,20 @@ export default function PatrolRoster({ currentUser = {} }) {
             {searchedParents.length}
           </span>
         </button>
-        <button
-          onClick={() => setRosterSubTab('all_users')}
-          className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-            rosterSubTab === 'all_users' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>🌐 Global User Directory</span>
-          <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 font-mono">
-            {searchedAllUsers.length}
-          </span>
-        </button>
+
+        {isExecutive && (
+          <button
+            onClick={() => setRosterSubTab('all_users')}
+            className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+              rosterSubTab === 'all_users' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>🌐 Global User Directory</span>
+            <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 font-mono">
+              {searchedAllUsers.length}
+            </span>
+          </button>
+        )}
       </div>
 
       {rosterSubTab === 'scouts' ? (
@@ -2375,6 +2701,62 @@ export default function PatrolRoster({ currentUser = {} }) {
                                         <Clock size={11} /> {scoutApprovals} Needs Review
                                       </button>
                                     )}
+
+                                    {/* ── SCOUT QUICK ACTIONS CLUSTER ── */}
+                                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenEditUser(scout);
+                                        }}
+                                        className="p-1.5 bg-slate-900/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition cursor-pointer"
+                                        title="Edit Scout Account"
+                                      >
+                                        <Edit3 size={13} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenWhatsAppModal(scout);
+                                        }}
+                                        className="p-1.5 bg-slate-900/90 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-300 rounded-lg border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                                        title="Share Message via WhatsApp"
+                                      >
+                                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                                        </svg>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenResetModal(scout);
+                                        }}
+                                        className="p-1.5 bg-slate-900/90 hover:bg-amber-950 text-amber-400 hover:text-amber-200 rounded-lg border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                                        title="Reset Password / Credentials"
+                                      >
+                                        <RotateCcw size={13} />
+                                      </button>
+
+                                      {canAddOrDeleteScouts && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteScout(scout);
+                                          }}
+                                          className="p-1.5 bg-slate-900/90 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-red-500/50 transition cursor-pointer"
+                                          title="Delete Scout Account"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      )}
+                                    </div>
+
                                     <span className="text-slate-400 text-sm">{expanded === scout.uid ? '▲' : '▼'}</span>
                                   </div>
                                 </button>
@@ -2529,9 +2911,47 @@ export default function PatrolRoster({ currentUser = {} }) {
                                   </span>
                                 </div>
                               </div>
-                              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-700/60 px-2 py-0.5 rounded-lg shrink-0">
-                                All Patrols
-                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-700/60 px-2 py-0.5 rounded-lg shrink-0">
+                                  All Patrols
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUser(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition cursor-pointer"
+                                  title="Edit Leader Account"
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenWhatsAppModal(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-300 rounded-lg border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                                  title="Share Message via WhatsApp"
+                                >
+                                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenResetModal(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-amber-950 text-amber-400 hover:text-amber-200 rounded-lg border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                                  title="Reset Password"
+                                >
+                                  <RotateCcw size={13} />
+                                </button>
+                                {isOwner && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteScout(lead)}
+                                    className="p-1 bg-slate-900 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-red-500/50 transition cursor-pointer"
+                                    title="Delete Leader Account"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-700/60">
@@ -2594,13 +3014,51 @@ export default function PatrolRoster({ currentUser = {} }) {
                                 </div>
                               </div>
 
-                              {leadPatrol ? (
-                                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-2.5 py-1 rounded-xl shrink-0">
-                                  👥 {leadPatrol.name}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-500 italic shrink-0">Unassigned</span>
-                              )}
+                              <div className="flex items-center gap-1 shrink-0">
+                                {leadPatrol ? (
+                                  <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-2.5 py-1 rounded-xl shrink-0">
+                                    👥 {leadPatrol.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 italic shrink-0">Unassigned</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUser(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition cursor-pointer"
+                                  title="Edit Leader Account"
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenWhatsAppModal(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-300 rounded-lg border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                                  title="Share Message via WhatsApp"
+                                >
+                                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenResetModal(lead)}
+                                  className="p-1 bg-slate-900 hover:bg-amber-950 text-amber-400 hover:text-amber-200 rounded-lg border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                                  title="Reset Password"
+                                >
+                                  <RotateCcw size={13} />
+                                </button>
+                                {isOwner && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteScout(lead)}
+                                    className="p-1 bg-slate-900 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-red-500/50 transition cursor-pointer"
+                                    title="Delete Leader Account"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-700/60">
@@ -2786,6 +3244,17 @@ export default function PatrolRoster({ currentUser = {} }) {
                       {/* Quick Actions */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
+                          onClick={() => handleOpenWhatsAppModal(p)}
+                          className="bg-slate-900 hover:bg-emerald-950 border border-slate-700 hover:border-emerald-500/50 text-emerald-400 hover:text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                          title="Share Message via WhatsApp"
+                        >
+                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                          </svg>
+                          <span>WhatsApp</span>
+                        </button>
+
+                        <button
                           onClick={() => {
                             setEditingParent(p);
                             setEditParentLinkedIds(Array.isArray(p.linkedScoutIds) ? p.linkedScoutIds : linkedChildren.map(c => c.uid));
@@ -2808,6 +3277,24 @@ export default function PatrolRoster({ currentUser = {} }) {
                         >
                           <span>🔑 Reset Password</span>
                         </button>
+
+                        <button
+                          onClick={() => handleOpenEditUser(p)}
+                          className="p-1.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-300 hover:text-white rounded-xl transition cursor-pointer"
+                          title="Edit Parent Account Details"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+
+                        {canAddOrDeleteScouts && (
+                          <button
+                            onClick={() => handleDeleteScout(p)}
+                            className="p-1.5 bg-slate-900 hover:bg-red-600/80 border border-slate-700 hover:border-red-500/50 text-slate-400 hover:text-white rounded-xl transition cursor-pointer"
+                            title="Delete Parent Account"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -2974,7 +3461,7 @@ export default function PatrolRoster({ currentUser = {} }) {
             </div>
           )}
         </div>
-      ) : rosterSubTab === 'all_users' ? (
+      ) : (rosterSubTab === 'all_users' && isExecutive) ? (
         <div className="space-y-4">
           <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -3061,9 +3548,47 @@ export default function PatrolRoster({ currentUser = {} }) {
                         </div>
                       </div>
 
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border shrink-0 ${roleBadgeColor}`}>
-                        {roleLabel}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border shrink-0 ${roleBadgeColor}`}>
+                          {roleLabel}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditUser(u)}
+                          className="p-1 bg-slate-900 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition cursor-pointer"
+                          title="Edit Account Details"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWhatsAppModal(u)}
+                          className="p-1 bg-slate-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-300 rounded-lg border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                          title="Share Message via WhatsApp"
+                        >
+                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResetModal(u)}
+                          className="p-1 bg-slate-900 hover:bg-amber-950 text-amber-400 hover:text-amber-200 rounded-lg border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                          title="Reset Password"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                        {canAddOrDeleteScouts && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteScout(u)}
+                            className="p-1 bg-slate-900 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-lg border border-slate-700 hover:border-red-500/50 transition cursor-pointer"
+                            title="Delete User Account"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* UID Chip with Copy */}
@@ -3182,6 +3707,570 @@ export default function PatrolRoster({ currentUser = {} }) {
           )}
         </div>
       ) : null}
+
+      {/* ── 1. SCOUT / USER EDIT MODAL ── */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className={`bg-slate-900 border-2 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto ${
+            isOwner ? 'border-amber-500/60 shadow-amber-950/50' : 'border-emerald-500/50'
+          }`}>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                {isOwner ? <Crown size={18} className="text-amber-400" /> : <Edit3 size={18} className="text-emerald-400" />}
+                <span>Edit User: {editingUser.fullName || editingUser.username}</span>
+                {isOwner && (
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black">
+                    👑 OWNER EDIT
+                  </span>
+                )}
+              </h3>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {editErr && <p className="text-xs text-red-400 bg-red-950/60 p-3 rounded-xl border border-red-600">{editErr}</p>}
+            {editMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{editMsg}</p>}
+
+            <form onSubmit={handleSaveEditUser} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`block text-xs font-bold uppercase flex items-center gap-1 ${
+                      isOwner ? 'text-amber-300' : 'text-slate-400'
+                    }`}>
+                      {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
+                      <span>Username</span>
+                    </label>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
+                      isOwner 
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`}>
+                      {isOwner ? '👑 Editable' : '🔒 Locked'}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    disabled={!isOwner}
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                    className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
+                      isOwner 
+                        ? 'bg-slate-950 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
+                        : 'bg-slate-950/60 border border-slate-800 text-slate-500 cursor-not-allowed select-none'
+                    }`}
+                    placeholder="username"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Role Elevation</label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="scout">Scout</option>
+                    <option value="parent">Parent</option>
+                    <option value="leader">Leader</option>
+                    <option value="admin">Admin</option>
+                    {isOwner && <option value="owner">Troop Owner</option>}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Assignment</label>
+                  <select
+                    value={editGroupId}
+                    onChange={(e) => setEditGroupId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="">Unassigned</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {editRole === 'scout' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Current Rank</label>
+                    <select
+                      value={editRank}
+                      onChange={(e) => setEditRank(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="Scout">Scout</option>
+                      <option value="Tenderfoot">Tenderfoot</option>
+                      <option value="Second Class">Second Class</option>
+                      <option value="First Class">First Class</option>
+                      <option value="Star">Star</option>
+                      <option value="Life">Life</option>
+                      <option value="Eagle Scout">Eagle Scout</option>
+                      <option value="Arrow of Light">Arrow of Light</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 13579246"
+                      value={editBsaId}
+                      onChange={(e) => setEditBsaId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editRole === 'leader' && (
+                <div className="space-y-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Leader Position</label>
+                    <select
+                      value={editLeaderPosition}
+                      onChange={(e) => setEditLeaderPosition(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      {BSA_LEADER_POSITIONS.map(pos => (
+                        <option key={pos} value={pos}>{pos}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 13579246"
+                      value={editBsaId}
+                      onChange={(e) => setEditBsaId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              <div className="space-y-3 bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Contact Details</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Scout Email</label>
+                    <input
+                      type="email"
+                      placeholder="scout@example.com"
+                      value={editScoutEmail}
+                      onChange={(e) => setEditScoutEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Scout Phone</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. (313) 555-0199"
+                      value={editScoutPhone}
+                      onChange={(e) => setEditScoutPhone(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Parent Email</label>
+                    <input
+                      type="email"
+                      placeholder="parent@example.com"
+                      value={editParentEmail}
+                      onChange={(e) => setEditParentEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Parent Phone</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. (313) 555-0188"
+                      value={editParentPhone}
+                      onChange={(e) => setEditParentPhone(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Reset Password (Optional)</label>
+                <input
+                  type="password"
+                  placeholder="Leave empty to keep existing password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="submit"
+                  disabled={userUpdating}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Check size={15} />
+                  <span>{userUpdating ? 'Saving Changes...' : 'Save User Updates'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. WHATSAPP SHARE MODAL ── */}
+      {whatsappUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                  </svg>
+                </div>
+                <h3 className="font-extrabold text-white text-base">Send WhatsApp Message</h3>
+              </div>
+              <button
+                onClick={() => setWhatsappUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Target User Info & Editable Phone Number */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <strong className="text-white block font-bold">{whatsappUser.fullName || whatsappUser.username}</strong>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${
+                      whatsappUser.role === 'owner' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                      whatsappUser.role === 'leader' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                      whatsappUser.role === 'parent' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' :
+                      'bg-slate-800 text-slate-300 border border-slate-700'
+                    }`}>
+                      {whatsappUser.role || 'scout'}
+                    </span>
+                  </div>
+                  <div className="text-slate-400 text-[11px] font-mono mt-0.5 space-x-2">
+                    <span>User: <strong className="text-slate-200">{whatsappUser.username || (whatsappUser.email ? whatsappUser.email.split('@')[0] : '')}</strong></span>
+                    {whatsappUser.leaderPosition && <span>• Pos: <strong className="text-emerald-300">{whatsappUser.leaderPosition}</strong></span>}
+                    {groups.find(g => g.id === whatsappUser.groupId || g.id === whatsappUser.patrolId)?.name && (
+                      <span>• Patrol: <strong className="text-slate-300">{groups.find(g => g.id === whatsappUser.groupId || g.id === whatsappUser.patrolId)?.name}</strong></span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] bg-slate-800 text-teal-300 px-2.5 py-1 rounded-lg border border-slate-700 font-mono font-bold block">
+                    Pass: {whatsappPassword || 'taliat2026'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Recipient WhatsApp Phone Number (with Country Code)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 13135551234 or +13135551234"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Template Selector Pills */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Select Message Template:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('scout_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'scout_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>⚜️ Scout Login & Setup</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('leader_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'leader_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🛡️ Leader Onboarding</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('parent_invite')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'parent_invite'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>👨‍👩‍👧 Parent Invite</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('meeting')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'meeting'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>📅 Meeting Reminder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('video')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'video'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🛡️ Safety SPT/YPT</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('islamic')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'islamic'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🕌 Islamic Knowledge</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('service')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 ${
+                    whatsappTemplate === 'service'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>⏱️ Service Hours</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappTemplate('custom')}
+                  className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-1.5 col-span-2 sm:col-span-1 ${
+                    whatsappTemplate === 'custom'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>✏️ Custom Message</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom message textarea if custom selected */}
+            {whatsappTemplate === 'custom' && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Custom Message Content:
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Type your WhatsApp message..."
+                  value={whatsappCustomMsg}
+                  onChange={(e) => setWhatsappCustomMsg(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none font-sans"
+                />
+              </div>
+            )}
+
+            {/* Message Preview Box */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Live Message Preview:
+                </label>
+                <span className="text-[10px] text-teal-300 font-mono">App Link: https://taliat-app.vercel.app/</span>
+              </div>
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs font-sans text-slate-200 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                {getWhatsAppMessageText() || <span className="text-slate-500 italic">Enter message content above...</span>}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={handleCopyWhatsAppMsg}
+                className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 border border-slate-700"
+              >
+                {whatsappCopied ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" />
+                    <span className="text-emerald-300">✓ Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} className="text-slate-400" />
+                    <span>Copy Text</span>
+                  </>
+                )}
+              </button>
+
+              <a
+                href={(whatsappPhone && whatsappPhone.replace(/[^0-9]/g, '')) 
+                  ? `https://wa.me/${whatsappPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(getWhatsAppMessageText())}`
+                  : `https://wa.me/?text=${encodeURIComponent(getWhatsAppMessageText())}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  setTimeout(() => setWhatsappUser(null), 1000);
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
+              >
+                <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                </svg>
+                <span>Open in WhatsApp &rarr;</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. RESET PASSWORD MODAL ── */}
+      {resettingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/60 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <RotateCcw size={16} />
+                </div>
+                <h3 className="font-extrabold text-white text-base">Reset Password / Credentials</h3>
+              </div>
+              <button
+                onClick={() => setResettingUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetErr && (
+              <div className="p-3 bg-red-950/80 border border-red-600 text-red-300 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle size={15} className="shrink-0 text-red-400" />
+                <span>{resetErr}</span>
+              </div>
+            )}
+
+            {resetMsg && (
+              <div className="p-3 bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs rounded-xl flex items-center gap-2">
+                <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
+                <span>{resetMsg}</span>
+              </div>
+            )}
+
+            {/* Target User Summary Card */}
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-black text-amber-400 text-sm shrink-0">
+                {resettingUser.fullName?.charAt(0) || resettingUser.username?.charAt(0) || 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-black text-white truncate">{resettingUser.fullName || resettingUser.username}</h4>
+                <p className="text-[11px] text-slate-400 truncate">
+                  @{resettingUser.username || (resettingUser.email ? resettingUser.email.split('@')[0] : '')} &bull; <strong className="text-emerald-400 capitalize">{resettingUser.role || 'Scout'}</strong>
+                </p>
+                {resettingUser.rank && (
+                  <span className="text-[10px] text-slate-500 font-mono">Rank: {resettingUser.rank}</span>
+                )}
+              </div>
+            </div>
+
+            <form onSubmit={handleExecuteResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                  New Password (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter new password"
+                  value={resetPasswordVal}
+                  onChange={(e) => setResetPasswordVal(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  This will securely update the user's login password in Firestore credentials.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="submit"
+                  disabled={resetLoading || resetPasswordVal.trim().length < 6}
+                  className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <RotateCcw size={14} className={resetLoading ? 'animate-spin' : ''} />
+                  <span>{resetLoading ? 'Updating Password...' : 'Save New Password'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResettingUser(null)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Universal Pending Queue Modal */}
       {showPendingModal && (
