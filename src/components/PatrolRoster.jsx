@@ -20,7 +20,7 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA } from '../data/ranksData';
-import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users, Crown, Shield } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Award, Star, BookOpen, ShieldAlert, Plus, Trash2, Clock, CheckCircle2, CheckCheck, Bell, Compass, Calendar, AlertTriangle, ShieldCheck, Users, Crown, Shield } from 'lucide-react';
 import { 
   getKashafGreeting, 
   getLockedClosing, 

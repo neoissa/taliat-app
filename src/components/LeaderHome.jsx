@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Shield,
   CheckCircle2,
+  CheckCheck,
   AlertTriangle,
   Plus,
   MessageSquare,

@@ -1343,7 +1343,7 @@ export default function ScoutProfile({ currentUser }) {
                   disabled={savingSpt}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 shrink-0"
                 >
-                  <CheckCircle size={14} />
+                  <CheckCircle2 size={14} />
                   <span>{savingSpt ? 'Saving...' : 'Save SPT Date'}</span>
                 </button>
               </div>
