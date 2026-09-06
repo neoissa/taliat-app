@@ -266,6 +266,49 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   // Leader approves requirement -> marks complete & approved (green) or resets
   const handleApproveRequirementLeader = async (reqId) => {
     if (readOnly) return;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (isBatchMode) {
+      if (targetBatchScouts.length === 0) {
+        setBatchUpdatesMsg('⚠️ No scouts found in selected patrol.');
+        setTimeout(() => setBatchUpdatesMsg(''), 3000);
+        return;
+      }
+      
+      const reqData = {
+        completed: true,
+        pending: false,
+        notes: '',
+        approvedAt: today,
+        approvedBy: currentUser.uid,
+        approvedByName: currentUser.fullName || currentUser.username || 'Leader',
+        completedAt: today
+      };
+
+      setBatchUpdatesMsg(`Signing off Requirement ${reqId} for ${targetBatchScouts.length} scouts...`);
+      try {
+        await Promise.all(
+          targetBatchScouts.map(s => 
+            setDoc(doc(db, 'user_progress', s.uid, 'ranks', selectedRankId), {
+              completedRequirements: {
+                [reqId]: reqData
+              },
+              steps: {
+                [reqId]: reqData
+              }
+            }, { merge: true })
+          )
+        );
+        setBatchUpdatesMsg(`✓ Successfully signed off Requirement ${reqId} for ${targetBatchScouts.length} scouts in ${batchPatrolName}!`);
+        setTimeout(() => setBatchUpdatesMsg(''), 4000);
+      } catch (err) {
+        console.error('Error batch approving requirement for patrol:', err);
+        setBatchUpdatesMsg(`❌ Error: ${err.message}`);
+      }
+      return;
+    }
+
+    // Single scout mode:
     const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
     const existingReq = completedRequirements[reqId] || {};
     
@@ -276,15 +319,18 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       completed: newCompleted,
       pending: false,
       notes: existingReq.notes || '',
-      approvedAt: newCompleted ? new Date().toISOString().split('T')[0] : '',
+      approvedAt: newCompleted ? today : '',
       approvedBy: newCompleted ? currentUser.uid : '',
       approvedByName: newCompleted ? (currentUser.fullName || currentUser.username || 'Leader') : '',
-      completedAt: newCompleted ? (existingReq.completedAt || new Date().toISOString().split('T')[0]) : ''
+      completedAt: newCompleted ? (existingReq.completedAt || today) : ''
     };
 
     try {
       await setDoc(docRef, {
         completedRequirements: {
+          [reqId]: reqData
+        },
+        steps: {
           [reqId]: reqData
         }
       }, { merge: true });
@@ -315,7 +361,9 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     });
 
     try {
-      await setDoc(docRef, { completedRequirements: updates }, { merge: true });
+      await setDoc(docRef, { completedRequirements: updates, steps: updates }, { merge: true });
+      setBatchUpdatesMsg(`✓ Submitted all requirements in ${selectedRankData.name} for leader testing!`);
+      setTimeout(() => setBatchUpdatesMsg(''), 3000);
     } catch (err) {
       console.error("Failed to batch submit requirements:", err);
     }
@@ -324,8 +372,47 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   // Batch approve all pending requirements in active rank (for leaders)
   const handleBatchApproveLeader = async () => {
     if (readOnly) return;
-    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
     const today = new Date().toISOString().split('T')[0];
+
+    if (isBatchMode) {
+      if (targetBatchScouts.length === 0) return;
+      if (!window.confirm(`Sign off all requirements in ${selectedRankData.name} rank for all ${targetBatchScouts.length} scouts in ${batchPatrolName}?`)) return;
+
+      const rankAllCompletedMap = {};
+      selectedRankData.categories.forEach(cat => {
+        cat.requirements.forEach(req => {
+          rankAllCompletedMap[req.id] = {
+            completed: true,
+            pending: false,
+            approvedAt: today,
+            approvedBy: currentUser.uid,
+            approvedByName: currentUser.fullName || currentUser.username || 'Leader',
+            completedAt: today
+          };
+        });
+      });
+
+      setBatchUpdatesMsg(`Signing off all requirements in ${selectedRankData.name} for ${targetBatchScouts.length} scouts...`);
+      try {
+        await Promise.all(
+          targetBatchScouts.map(s => 
+            setDoc(doc(db, 'user_progress', s.uid, 'ranks', selectedRankId), {
+              completedRequirements: rankAllCompletedMap,
+              steps: rankAllCompletedMap
+            }, { merge: true })
+          )
+        );
+        setBatchUpdatesMsg(`✓ Successfully signed off all requirements in ${selectedRankData.name} for ${targetBatchScouts.length} scouts in ${batchPatrolName}!`);
+        setTimeout(() => setBatchUpdatesMsg(''), 4500);
+      } catch (err) {
+        console.error('Error batch approving all requirements for patrol:', err);
+        setBatchUpdatesMsg(`❌ Error: ${err.message}`);
+      }
+      return;
+    }
+
+    // Single scout mode:
+    const docRef = doc(db, 'user_progress', scoutId, 'ranks', selectedRankId);
     const updates = { ...completedRequirements };
 
     selectedRankData.categories.forEach(cat => {
@@ -346,7 +433,9 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     });
 
     try {
-      await setDoc(docRef, { completedRequirements: updates }, { merge: true });
+      await setDoc(docRef, { completedRequirements: updates, steps: updates }, { merge: true });
+      setBatchUpdatesMsg(`✓ Approved all pending requirements in ${selectedRankData.name}!`);
+      setTimeout(() => setBatchUpdatesMsg(''), 3000);
     } catch (err) {
       console.error("Failed to batch approve requirements:", err);
     }
@@ -447,18 +536,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setShowEaglePortal(!showEaglePortal)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md ${
-              showEaglePortal
-                ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
-                : 'bg-amber-600/80 hover:bg-amber-600 text-white border border-amber-400/40'
-            }`}
-          >
-            <span className="text-base">🦅</span>
-            <span>{showEaglePortal ? 'Back to Ranks Checklist' : 'Road to Eagle & Palms'}</span>
-          </button>
                 <h3 className="font-extrabold text-white text-sm">
                   Patrol Batch Sign-off Active: {batchPatrolName}
                 </h3>

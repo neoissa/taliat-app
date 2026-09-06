@@ -254,6 +254,10 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const recordedRollCallCount = allEvents.filter(ev => getEventAttendanceInfo(ev).recorded).length;
 
   const totalPendingApprovals = Object.values(pendingMap).reduce((sum, item) => sum + (item?.total || 0), 0);
+  const totalRanksPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.ranks || 0), 0);
+  const totalIslamicPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.islamic || 0), 0);
+  const totalMeritPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.merit || 0), 0);
+  const totalHwPending = Object.values(pendingMap).reduce((sum, item) => sum + (item?.assignments || 0), 0);
   const scoutsWithPending = scouts.filter(s => (pendingMap[s.uid]?.total || 0) > 0);
 
   return (
@@ -435,62 +439,104 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
       <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
 
-      {/* ── 2. PENDING SUBMISSIONS & NOTIFICATIONS BANNER ── */}
+      {/* ── 2. SLEEK ACTIONABLE NOTIFICATION & TESTING CENTER ── */}
       {totalPendingApprovals > 0 ? (
-        <div
-          onClick={() => {
-            setSelectedPendingScoutId(null);
-            setShowPendingModal(true);
-          }}
-          className="bg-gradient-to-r from-amber-950/60 via-slate-900 to-amber-950/40 border-2 border-amber-500/60 hover:border-amber-400 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-amber-950/40 cursor-pointer group transition duration-300 hover:scale-[1.01]"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-md group-hover:scale-110 transition">
-              <Bell size={24} className="animate-bounce" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-base font-black text-amber-300 flex items-center gap-2">
-                  <span>{totalPendingApprovals} Submissions Awaiting Testing & Sign-Off</span>
-                </h4>
-                <span className="text-[10px] bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm">
-                  Action Required
-                </span>
+        <div className="bg-slate-850/90 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750/80 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold shrink-0 shadow-sm">
+                <Clock size={18} />
               </div>
-              <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
-                {scoutsWithPending.length} scout{scoutsWithPending.length !== 1 ? 's have' : ' has'} submitted rank requirements, Islamic knowledge oral tests, or merit badge tasks for verification.
-              </p>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-extrabold text-sm sm:text-base text-white">
+                    Pending Submissions & Oral Testing ({totalPendingApprovals})
+                  </h4>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {scoutsWithPending.length} scout{scoutsWithPending.length !== 1 ? 's' : ''} awaiting leader verification and oral sign-off.
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPendingScoutId(null);
+                setShowPendingModal(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/40 self-start sm:self-auto shrink-0"
+            >
+              <CheckCheck size={14} />
+              <span>Open Testing Queue & Batch Sign-off &rarr;</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedPendingScoutId(null);
-              setShowPendingModal(true);
-            }}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/50 shrink-0 self-start sm:self-auto"
-          >
-            <Clock size={15} />
-            <span>Open Testing Queue ({totalPendingApprovals}) &rarr;</span>
-          </button>
+          {/* Breakdown Pills: Domains & Scouts */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+            {/* Category Breakdown Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mr-0.5">Awaiting:</span>
+              {totalRanksPending > 0 && (
+                <span className="bg-slate-900 border border-slate-750 text-emerald-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
+                  ⚜️ {totalRanksPending} Rank Reqs
+                </span>
+              )}
+              {totalIslamicPending > 0 && (
+                <span className="bg-slate-900 border border-slate-750 text-teal-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
+                  🕌 {totalIslamicPending} Islamic Tests
+                </span>
+              )}
+              {totalHwPending > 0 && (
+                <span className="bg-slate-900 border border-slate-750 text-sky-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
+                  🎒 {totalHwPending} Homework
+                </span>
+              )}
+              {totalMeritPending > 0 && (
+                <span className="bg-slate-900 border border-slate-750 text-amber-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
+                  🏅 {totalMeritPending} Badges
+                </span>
+              )}
+            </div>
+
+            {/* Scout Direct Jump Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mr-0.5">Scouts:</span>
+              {scoutsWithPending.slice(0, 6).map(s => (
+                <button
+                  key={s.uid}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPendingScoutId(s.uid);
+                    setShowPendingModal(true);
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  title="Click to review this scout's queue directly"
+                >
+                  <span>{s.fullName?.split(' ')[0] || s.username}</span>
+                  <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                    {pendingMap[s.uid]?.total || 1}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="bg-slate-800/80 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={24} className="text-emerald-400 shrink-0" />
-            <div>
-              <h4 className="text-xs font-bold text-white">All Submissions Up-to-Date</h4>
-              <p className="text-[11px] text-slate-400">There are no pending oral exams or rank sign-offs waiting in your review queue.</p>
-            </div>
+        <div className="bg-slate-850/60 border border-slate-750 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-300">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>All submissions up-to-date (0 pending sign-offs in your queue).</span>
           </div>
           <button
             type="button"
             onClick={() => onNavigate && onNavigate('reports')}
             className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
           >
-            <span>View Reports Center</span>
+            <span>Reports Center</span>
             <ChevronRight size={13} />
           </button>
         </div>
