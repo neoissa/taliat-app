@@ -30,7 +30,10 @@ import {
   Filter,
   HeartPulse,
   MapPin,
-  Users
+  Users,
+  Award,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
@@ -76,7 +79,15 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
 }
 
 export default function ScoutProfile({ currentUser, onNavigate }) {
-  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
+  const [fullUserData, setFullUserData] = useState(null);
+
+  // Accurate Role Flags
+  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com' || fullUserData?.role === 'owner';
+  const isExecutive = isOwner || currentUser?.role === 'admin' || fullUserData?.role === 'admin';
+  const isLeader = !isOwner && !isExecutive && (currentUser?.role === 'leader' || currentUser?.role === 'assistant_leader' || fullUserData?.role === 'leader' || fullUserData?.role === 'assistant_leader');
+  const isParent = !isOwner && !isExecutive && !isLeader && (currentUser?.role === 'parent' || fullUserData?.role === 'parent');
+  const isScout = !isOwner && !isExecutive && !isLeader && !isParent;
+
   // Profile information states
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -88,6 +99,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  
   // Extended Profile fields
   const [bsaId, setBsaId] = useState('');
   const [schoolGrade, setSchoolGrade] = useState('');
@@ -105,6 +117,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
   const [homeAddress, setHomeAddress] = useState('');
   const [cityStateZip, setCityStateZip] = useState('');
   const [parentLinkedScouts, setParentLinkedScouts] = useState([]);
+  const [leaderPosition, setLeaderPosition] = useState('Assistant Scoutmaster');
 
   const [patrolName, setPatrolName] = useState('Taliʿa');
   const [rankName, setRankName] = useState('Scout');
@@ -114,8 +127,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [savingSpt, setSavingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
-  const [fullUserData, setFullUserData] = useState(null);
-  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'roles-guide' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security'
+  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'roles-guide' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security' | 'calendar'
   
   // Attendance Tracking & Risk States
   const [attendanceStats, setAttendanceStats] = useState({
@@ -180,6 +192,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         setCityStateZip(data.cityStateZip || '');
 
         setRankName(data.rank || 'Scout');
+        setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
         setSpt(data.spt || data.sptDate || data.yptDate || '');
         setSptFileUrl(data.sptFileUrl || '');
         setSptFileName(data.sptFileName || '');
@@ -501,7 +514,6 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
     setProfileError('');
 
     try {
-      const isScout = currentUser.role === 'scout';
       const userRef = doc(db, 'users', currentUser.uid);
       const updates = {
         fullName: fullName.trim(),
@@ -513,20 +525,14 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         phone: scoutPhone.trim(),
         photoURL: photoUrl || null,
         bsaId: bsaId.trim() || null,
-        schoolGrade: schoolGrade.trim() || null,
-        birthDate: birthDate.trim() || null,
-        allergies: allergies.trim() || null,
-        medicalNotes: medicalNotes.trim() || null,
-        dietaryRestrictions: dietaryRestrictions.trim() || null,
-        parent1Name: parent1Name.trim() || null,
-        parent1Relation: parent1Relation.trim() || 'Father',
-        parent2Name: parent2Name.trim() || null,
-        parent2Relation: parent2Relation.trim() || 'Mother',
         emergencyContactName: emergencyContactName.trim() || null,
         emergencyContactPhone: emergencyContactPhone.trim() || null,
         emergencyContactRelation: emergencyContactRelation.trim() || null,
         homeAddress: homeAddress.trim() || null,
         cityStateZip: cityStateZip.trim() || null,
+        allergies: allergies.trim() || null,
+        medicalNotes: medicalNotes.trim() || null,
+        dietaryRestrictions: dietaryRestrictions.trim() || null,
         spt: spt.trim() || null,
         sptDate: spt.trim() || null,
         sptFileUrl: sptFileUrl || null,
@@ -534,8 +540,20 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
       };
 
       if (isScout) {
-        updates.parentEmail = parentEmail.trim();
-        updates.parentPhone = parentPhone.trim();
+        updates.schoolGrade = schoolGrade.trim() || null;
+        updates.birthDate = birthDate.trim() || null;
+        updates.parent1Name = parent1Name.trim() || null;
+        updates.parent1Relation = parent1Relation.trim() || 'Father';
+        updates.parent2Name = parent2Name.trim() || null;
+        updates.parent2Relation = parent2Relation.trim() || 'Mother';
+        updates.parentEmail = parentEmail.trim() || null;
+        updates.parentPhone = parentPhone.trim() || null;
+      }
+
+      if (isLeader || isExecutive) {
+        if (leaderPosition) {
+          updates.leaderPosition = leaderPosition;
+        }
       }
 
       await setDoc(userRef, updates, { merge: true });
@@ -659,12 +677,45 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
 
         <div className="text-center md:text-left space-y-1.5 flex-1">
           <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap mb-1">
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              {currentUser.role === 'owner' ? 'Troop Owner / Admin' : currentUser.role === 'leader' ? (currentUser?.leaderPosition || 'Troop Leader') : 'Scout'}
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+              isOwner 
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                : currentUser?.role === 'admin'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                : isLeader
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                : isParent
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+            }`}>
+              {isOwner 
+                ? '👑 Troop Owner & Superadmin' 
+                : currentUser?.role === 'admin' 
+                ? '⚜️ Executive Admin' 
+                : isLeader 
+                ? (leaderPosition || currentUser?.leaderPosition || 'Troop Leader') 
+                : isParent 
+                ? '👨‍👩‍👧 Dhulfiqār Parent / Guardian' 
+                : '⚜️ Scout'}
             </span>
-            {patrolName && (
+            {isScout && patrolName && (
               <span className="bg-slate-700 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                 {patrolName} Patrol
+              </span>
+            )}
+            {isLeader && (
+              <span className="bg-slate-700 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                {patrolName ? `${patrolName} Unit Leader` : 'Troop Leadership'}
+              </span>
+            )}
+            {isParent && parentLinkedScouts.length > 0 && (
+              <span className="bg-indigo-950 text-indigo-300 border border-indigo-700/50 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                {parentLinkedScouts.length} Linked Scout{parentLinkedScouts.length === 1 ? '' : 's'}
+              </span>
+            )}
+            {isOwner && (
+              <span className="bg-amber-950 text-amber-300 border border-amber-500/40 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                Supreme Troop HQ
               </span>
             )}
           </div>
@@ -673,10 +724,12 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
             Username: <span className="text-slate-300 font-mono">@{currentUser.username}</span> &bull; 
             Email: <span className="text-emerald-400 font-medium">{currentUser.email}</span>
           </p>
-          {currentUser.role === 'scout' && (
+
+          {/* Scout-Specific Status in Header */}
+          {isScout && (
             <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap pt-1 text-xs">
               <span className="text-slate-400">
-                Active Rank: <strong className="text-white">{rankName}</strong> &bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId}</strong>
+                Active Rank: <strong className="text-white">{rankName}</strong> &bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId || '—'}</strong>
               </span>
 
               {/* Attendance Risk Warning Badge in Header */}
@@ -717,6 +770,48 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
               )}
             </div>
           )}
+
+          {/* Leader-Specific Status in Header */}
+          {(isLeader || isExecutive) && (
+            <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap pt-1 text-xs">
+              <span className="text-slate-400">
+                Position: <strong className="text-white">{leaderPosition || 'Troop Leader'}</strong>
+              </span>
+              <span className="text-slate-600">&bull;</span>
+              <button
+                type="button"
+                onClick={() => setActiveProfileTab('spt')}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border cursor-pointer transition ${
+                  spt 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' 
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 animate-pulse'
+                }`}
+              >
+                {spt ? `✓ SPT Valid: ${spt}` : '⚠️ SPT Required'}
+              </button>
+            </div>
+          )}
+
+          {/* Parent-Specific Status in Header */}
+          {isParent && (
+            <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap pt-1 text-xs">
+              <span className="text-slate-400">
+                Children Linked: <strong className="text-white">{parentLinkedScouts.length}</strong>
+              </span>
+              <span className="text-slate-600">&bull;</span>
+              <button
+                type="button"
+                onClick={() => setActiveProfileTab('spt')}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border cursor-pointer transition ${
+                  spt 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' 
+                    : 'bg-slate-700 text-slate-300 border-slate-600 hover:text-white'
+                }`}
+              >
+                {spt ? `✓ SPT Chaperone Valid: ${spt}` : '🛡️ SPT Volunteer: Optional'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -733,23 +828,25 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           }`}
         >
           <User size={15} />
-          <span>👤 Personal Info</span>
+          <span>{isParent ? '👨‍👩‍👧 Family Profile' : '👤 Personal Info'}</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveProfileTab('roles-guide')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'roles-guide'
-              ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black shadow-lg shadow-amber-950/50'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-          }`}
-        >
-          <Crown size={15} className={activeProfileTab === 'roles-guide' ? 'text-slate-950' : 'text-amber-400'} />
-          <span>Role & Leadership Guide</span>
-        </button>
+        {!isParent && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('roles-guide')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'roles-guide'
+                ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black shadow-lg shadow-amber-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Crown size={15} className={activeProfileTab === 'roles-guide' ? 'text-slate-950' : 'text-amber-400'} />
+            <span>Role & Leadership Guide</span>
+          </button>
+        )}
 
-        {currentUser.role === 'scout' && (
+        {isScout && (
           <button
             type="button"
             onClick={() => setActiveProfileTab('attendance')}
@@ -773,7 +870,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           </button>
         )}
 
-        {currentUser.role === 'scout' && (
+        {isScout && (
           <button
             type="button"
             onClick={() => setActiveProfileTab('eagle')}
@@ -788,7 +885,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           </button>
         )}
 
-        {currentUser.role === 'scout' && (
+        {isScout && (
           <button
             type="button"
             onClick={() => setActiveProfileTab('homework')}
@@ -803,7 +900,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           </button>
         )}
 
-        {(currentUser.role === 'leader' || currentUser.role === 'owner') && (
+        {!isScout && (
           <button
             type="button"
             onClick={() => setActiveProfileTab('spt')}
@@ -814,22 +911,9 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
             }`}
           >
             <Shield size={15} />
-            <span>SPT Certificate</span>
+            <span>{isParent ? '🛡️ Safety Training (SPT - Volunteer)' : '🛡️ SPT Certificate'}</span>
           </button>
         )}
-
-        <button
-          type="button"
-          onClick={() => setActiveProfileTab('calendar')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'calendar'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/50'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-          }`}
-        >
-          <Calendar size={15} />
-          <span>📅 Troop Calendar</span>
-        </button>
 
         <button
           type="button"
@@ -844,13 +928,6 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           <span>Security & Password</span>
         </button>
       </div>
-
-      {/* ── TAB: TROOP CALENDAR & LIVE AGENDA ── */}
-      {activeProfileTab === 'calendar' && (
-        <div className="space-y-4">
-          <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
-        </div>
-      )}
       
       {/* ── TAB: ROLE & LEADERSHIP GUIDE ── */}
       {activeProfileTab === 'roles-guide' && (
@@ -1168,14 +1245,34 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
               <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
-                <User size={16} className="text-emerald-400" /> Personal Information
+                {isParent ? (
+                  <>
+                    <Users size={16} className="text-indigo-400" />
+                    <span>Family Guardian Information</span>
+                  </>
+                ) : isLeader ? (
+                  <>
+                    <Shield size={16} className="text-emerald-400" />
+                    <span>Leader Credentials & Profile</span>
+                  </>
+                ) : isExecutive ? (
+                  <>
+                    <Crown size={16} className="text-amber-400" />
+                    <span>Executive Profile & Administration</span>
+                  </>
+                ) : (
+                  <>
+                    <User size={16} className="text-emerald-400" />
+                    <span>Scout Personal Information</span>
+                  </>
+                )}
               </h3>
 
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Legal Name</label>
                       <input
                         type="text"
                         required
@@ -1221,32 +1318,81 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                       </p>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
-                      <input
-                        type="text"
-                        disabled={currentUser.role === 'scout' && !isOwner}
-                        value={bsaId}
-                        onChange={(e) => setBsaId(e.target.value)}
-                        placeholder="e.g. 13894210"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+                    {/* Official Leader Position (Leader / Executive Only) */}
+                    {(isLeader || isExecutive) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1.5">
+                          <Briefcase size={12} className="text-emerald-400" />
+                          <span>Official Leadership Position</span>
+                        </label>
+                        <select
+                          value={leaderPosition}
+                          onChange={(e) => setLeaderPosition(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="Scoutmaster">Scoutmaster</option>
+                          <option value="Assistant Scoutmaster">Assistant Scoutmaster</option>
+                          <option value="Committee Chair">Committee Chair</option>
+                          <option value="Committee Member">Committee Member</option>
+                          <option value="Chartered Org Rep">Chartered Org Rep</option>
+                          <option value="Troop Leader">Troop Leader</option>
+                          <option value="Activity Coordinator">Activity Coordinator</option>
+                          <option value="Quartermaster Advisor">Quartermaster Advisor</option>
+                        </select>
+                      </div>
+                    )}
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">School Grade Level</label>
-                      <input
-                        type="text"
-                        value={schoolGrade}
-                        onChange={(e) => setSchoolGrade(e.target.value)}
-                        placeholder="e.g. 8th Grade, High School"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+                    {/* BSA Member ID (Scout or Adult Leader) */}
+                    {isScout && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                        <input
+                          type="text"
+                          disabled={!isOwner}
+                          value={bsaId}
+                          onChange={(e) => setBsaId(e.target.value)}
+                          placeholder="e.g. 13894210"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    )}
+
+                    {(isLeader || isExecutive) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                          <Award size={12} className="text-emerald-400" />
+                          <span>Adult BSA Member ID</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={bsaId}
+                          onChange={(e) => setBsaId(e.target.value)}
+                          placeholder="e.g. 13894210"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    )}
+
+                    {/* School Grade Level (Scout Only) */}
+                    {isScout && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                          <GraduationCap size={12} className="text-sky-400" />
+                          <span>School Grade Level</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolGrade}
+                          onChange={(e) => setSchoolGrade(e.target.value)}
+                          placeholder="e.g. 8th Grade, High School"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                        <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
+                        <Mail size={12} /> {isScout ? 'Scout Email' : isParent ? 'Guardian Email' : 'Contact Email'}
                       </label>
                       <input
                         type="email"
@@ -1259,7 +1405,7 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                        <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
+                        <Phone size={12} /> {isScout ? 'Scout Phone' : isParent ? 'Guardian Phone' : 'Contact Phone'}
                       </label>
                       <input
                         type="tel"
@@ -1307,91 +1453,212 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                     />
                   </div>
 
-                  {/* ── FAMILY & EMERGENCY CONTACTS SECTION ── */}
-                  <div className="pt-3 border-t border-slate-700/60 space-y-3">
-                    <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Users size={14} /> Family & Emergency Contacts
-                    </h4>
+                  {/* ── FAMILY & EMERGENCY CONTACTS SECTION (FOR SCOUTS) ── */}
+                  {isScout && (
+                    <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                      <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Users size={14} /> Family & Emergency Contacts
+                      </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Primary Guardian / Parent 1 Name</label>
-                        <input
-                          type="text"
-                          value={parent1Name}
-                          onChange={(e) => setParent1Name(e.target.value)}
-                          placeholder="e.g. Ahmad Nehme"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Primary Guardian / Parent 1 Name</label>
+                          <input
+                            type="text"
+                            value={parent1Name}
+                            onChange={(e) => setParent1Name(e.target.value)}
+                            placeholder="e.g. Ahmad Nehme"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
+                          <select
+                            value={parent1Relation}
+                            onChange={(e) => setParent1Relation(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                          >
+                            <option value="Father">Father</option>
+                            <option value="Mother">Mother</option>
+                            <option value="Guardian">Guardian</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Email</label>
+                          <input
+                            type="email"
+                            value={parentEmail}
+                            onChange={(e) => setParentEmail(e.target.value)}
+                            placeholder="parent@example.com"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Phone</label>
+                          <input
+                            type="tel"
+                            value={parentPhone}
+                            onChange={(e) => setParentPhone(e.target.value)}
+                            placeholder="+1234567890"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
-                        <select
-                          value={parent1Relation}
-                          onChange={(e) => setParent1Relation(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                        >
-                          <option value="Father">Father</option>
-                          <option value="Mother">Mother</option>
-                          <option value="Guardian">Guardian</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
+                          <input
+                            type="text"
+                            value={emergencyContactName}
+                            onChange={(e) => setEmergencyContactName(e.target.value)}
+                            placeholder="e.g. Uncle Ali"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Email</label>
-                        <input
-                          type="email"
-                          value={parentEmail}
-                          onChange={(e) => setParentEmail(e.target.value)}
-                          placeholder="parent@example.com"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Phone</label>
-                        <input
-                          type="tel"
-                          value={parentPhone}
-                          onChange={(e) => setParentPhone(e.target.value)}
-                          placeholder="+1234567890"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
+                          <input
+                            type="tel"
+                            value={emergencyContactPhone}
+                            onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                            placeholder="+1234567890"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
-                        <input
-                          type="text"
-                          value={emergencyContactName}
-                          onChange={(e) => setEmergencyContactName(e.target.value)}
-                          placeholder="e.g. Uncle Ali"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
+                  {/* ── PARENT LINKED CHILDREN SECTION (FOR PARENTS) ── */}
+                  {isParent && (
+                    <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Users size={14} /> My Linked Scout Children ({parentLinkedScouts.length})
+                        </h4>
+                        <span className="text-[10px] text-slate-400">
+                          Managed by Troop Admin
+                        </span>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
-                        <input
-                          type="tel"
-                          value={emergencyContactPhone}
-                          onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                          placeholder="+1234567890"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
+                      {parentLinkedScouts.length === 0 ? (
+                        <div className="bg-slate-950/60 p-4 rounded-2xl border border-dashed border-slate-750 text-center space-y-1">
+                          <p className="text-xs text-slate-400">No scouts currently linked to this guardian account.</p>
+                          <p className="text-[10px] text-slate-500">Please reach out to your Troop Leader or Administrator to connect your children's profiles.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {parentLinkedScouts.map((scout) => (
+                            <div 
+                              key={scout.uid}
+                              className="bg-slate-950/70 p-3.5 rounded-2xl border border-indigo-500/30 flex items-center justify-between gap-3 shadow-md"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-teal-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold text-sm shrink-0">
+                                  {scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}
+                                </div>
+                                <div className="min-w-0">
+                                  <h5 className="text-xs font-bold text-white truncate">{scout.fullName || '@' + scout.username}</h5>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                                    <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span>
+                                    {scout.schoolGrade && <span>&bull; {scout.schoolGrade}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                Active Scout
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750 mt-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Secondary Emergency Contact</label>
+                          <input
+                            type="text"
+                            value={emergencyContactName}
+                            onChange={(e) => setEmergencyContactName(e.target.value)}
+                            placeholder="e.g. Uncle / Aunt Name"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
+                          <input
+                            type="tel"
+                            value={emergencyContactPhone}
+                            onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                            placeholder="+1234567890"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* ── EMERGENCY CONTACTS FOR LEADERS & EXECUTIVES ── */}
+                  {(isLeader || isExecutive) && (
+                    <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                      <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Phone size={14} /> Emergency Contact Details
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
+                          <input
+                            type="text"
+                            value={emergencyContactName}
+                            onChange={(e) => setEmergencyContactName(e.target.value)}
+                            placeholder="e.g. Spouse / Sibling Name"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
+                          <input
+                            type="text"
+                            value={emergencyContactRelation}
+                            onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                            placeholder="e.g. Spouse, Brother"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
+                          <input
+                            type="tel"
+                            value={emergencyContactPhone}
+                            onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                            placeholder="+1234567890"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* ── HEALTH & MEDICAL NOTES SECTION ── */}
                   <div className="pt-3 border-t border-slate-700/60 space-y-3">
-                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <HeartPulse size={14} /> Health, Allergies & Dietary Restrictions
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <HeartPulse size={14} /> Health, Allergies & Dietary Restrictions
+                      </h4>
+                      <span className="text-[10px] text-slate-400">
+                        {isScout ? 'Confidential Scout Record' : 'For Campouts & Troop Catering'}
+                      </span>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
@@ -1411,11 +1678,24 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                           rows={2}
                           value={dietaryRestrictions}
                           onChange={(e) => setDietaryRestrictions(e.target.value)}
-                          placeholder="e.g. Strictly Zabiha Halal, Gluten-free..."
+                          placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
                           className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
                         />
                       </div>
                     </div>
+
+                    {isScout && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Confidential Medical & Health Notes</label>
+                        <textarea
+                          rows={2}
+                          value={medicalNotes}
+                          onChange={(e) => setMedicalNotes(e.target.value)}
+                          placeholder="Confidential health notes visible only to Troop Leadership and Medical First Aiders..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* ── ABOUT ME SECTION ── */}
@@ -1425,9 +1705,15 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                         <User size={15} />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
+                        <label className="block text-xs font-bold text-white uppercase tracking-wider">
+                          {isLeader || isExecutive ? 'Leadership Bio & Background' : isParent ? 'Family Bio & Notes' : 'About Me'}
+                        </label>
                         <p className="text-[11px] text-slate-400">
-                          Share facts about yourself, your hobbies, interests, and scouting goals.
+                          {isLeader || isExecutive 
+                            ? 'Share your scouting experience, certifications, and leadership background.' 
+                            : isParent 
+                            ? 'Share notes about your family, availability to chaperone, and volunteer interests.' 
+                            : 'Share facts about yourself, your hobbies, interests, and scouting goals.'}
                         </p>
                       </div>
                     </div>
@@ -1435,7 +1721,11 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
+                      placeholder={isLeader || isExecutive 
+                        ? 'Write about your scouting history, wood badge status, professional skills, or leadership philosophy...' 
+                        : isParent 
+                        ? 'Write about your family, camping experience, volunteer interests, or general notes...' 
+                        : 'Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro...'}
                       rows={3}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
                     />
@@ -1454,88 +1744,173 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
               </form>
             </div>
 
-            {/* Troop Affiliation & Attendance Card */}
+            {/* Troop Affiliation & Standing Card (Role-Specific) */}
             <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4">
               <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
                 <Shield size={16} className="text-emerald-400" /> Troop Standing
               </h3>
+              
               <div className="space-y-3 text-xs">
-                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
-                  <strong className="text-white text-sm">{patrolName} Patrol</strong>
-                </div>
-                {currentUser.role === 'scout' && (
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
-                    <strong className="text-emerald-400 text-sm">{rankName}</strong>
-                  </div>
-                )}
-
-                {/* Linked Children Card for Parents */}
-                {(currentUser.role === 'parent' || parentLinkedScouts.length > 0) && (
-                  <div className="bg-slate-900/70 p-4 rounded-xl border border-indigo-500/40 space-y-2">
-                    <span className="text-[10px] text-indigo-400 uppercase font-bold block flex items-center gap-1">
-                      <Users size={12} /> Linked Scout Children ({parentLinkedScouts.length})
-                    </span>
-                    {parentLinkedScouts.length === 0 ? (
-                      <p className="text-[11px] text-slate-400 italic">No scout children linked yet.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {parentLinkedScouts.map(scout => (
-                          <div key={scout.uid} className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
-                            <span className="font-bold text-white text-xs">{scout.fullName || scout.username}</span>
-                            <span className="text-[10px] text-emerald-400 font-mono font-bold">
-                              {scout.rank || 'Scout'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Attendance Summary Tile */}
-                {currentUser.role === 'scout' && (
-                  <div 
-                    onClick={() => setActiveProfileTab('attendance')}
-                    className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-2 ${
-                      attendanceStats.riskLevel === 'red'
-                        ? 'bg-red-950/30 border-red-500/50 hover:border-red-400'
-                        : attendanceStats.riskLevel === 'yellow'
-                        ? 'bg-amber-950/30 border-amber-500/50 hover:border-amber-400'
-                        : 'bg-slate-900/60 border-slate-750 hover:border-teal-500/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Attendance & Hours Standing</span>
-                      <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                {/* Scout Standing */}
+                {isScout && (
+                  <>
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
+                      <strong className="text-white text-sm">{patrolName} Patrol</strong>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <strong className={`text-sm font-black font-mono ${
+
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
+                      <strong className="text-emerald-400 text-sm">{rankName}</strong>
+                    </div>
+
+                    {/* Attendance Summary Tile */}
+                    <div 
+                      onClick={() => setActiveProfileTab('attendance')}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-2 ${
                         attendanceStats.riskLevel === 'red'
-                          ? 'text-red-400'
+                          ? 'bg-red-950/30 border-red-500/50 hover:border-red-400'
                           : attendanceStats.riskLevel === 'yellow'
-                          ? 'text-amber-400'
-                          : 'text-teal-300'
-                      }`}>
-                        {attendanceStats.attendanceRate}% Rate
+                          ? 'bg-amber-950/30 border-amber-500/50 hover:border-amber-400'
+                          : 'bg-slate-900/60 border-slate-750 hover:border-teal-500/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Attendance & Hours Standing</span>
+                        <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <strong className={`text-sm font-black font-mono ${
+                          attendanceStats.riskLevel === 'red'
+                            ? 'text-red-400'
+                            : attendanceStats.riskLevel === 'yellow'
+                            ? 'text-amber-400'
+                            : 'text-teal-300'
+                        }`}>
+                          {attendanceStats.attendanceRate}% Rate
+                        </strong>
+                        <span className="text-[10px] text-teal-300 font-mono font-bold">
+                          {attendanceStats.totalHours || 0} Hours Earned
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                        <span>{attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions</span>
+                        <span>{attendanceStats.campingNights || 0} Camping Nights</span>
+                      </div>
+                      {attendanceStats.absentCount > 0 && (
+                        <p className={`text-[10px] font-semibold pt-1 border-t border-slate-800 ${
+                          attendanceStats.riskLevel === 'red' ? 'text-red-400' : 'text-amber-400'
+                        }`}>
+                          {attendanceStats.riskLevel === 'red' ? '🚨' : '⚠️'} {attendanceStats.absentCount} Unexcused Absence{attendanceStats.absentCount === 1 ? '' : 's'}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Leader Standing */}
+                {isLeader && (
+                  <>
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Leadership Role</span>
+                      <strong className="text-white text-sm">{leaderPosition || 'Troop Leader'}</strong>
+                    </div>
+
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Patrol Assignment</span>
+                      <strong className="text-emerald-400 text-sm">{patrolName ? `${patrolName} Patrol` : 'General Leadership'}</strong>
+                    </div>
+
+                    <div 
+                      onClick={() => setActiveProfileTab('spt')}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
+                        spt 
+                          ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-500' 
+                          : 'bg-amber-950/20 border-amber-500/40 hover:border-amber-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Safety Compliance (SPT)</span>
+                        <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                      </div>
+                      <strong className={`text-xs font-bold block ${spt ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {spt ? `✓ Verified: ${spt}` : '⚠️ SPT Status: Action Required'}
                       </strong>
-                      <span className="text-[10px] text-teal-300 font-mono font-bold">
-                        {attendanceStats.totalHours || 0} Hours Earned
+                      <span className="text-[10px] text-slate-400 block">Click to upload or review certificate</span>
+                    </div>
+                  </>
+                )}
+
+                {/* Parent Standing */}
+                {isParent && (
+                  <>
+                    <div className="bg-slate-900/70 p-4 rounded-xl border border-indigo-500/40 space-y-2">
+                      <span className="text-[10px] text-indigo-400 uppercase font-bold block flex items-center gap-1">
+                        <Users size={12} /> Linked Children ({parentLinkedScouts.length})
                       </span>
+                      {parentLinkedScouts.length === 0 ? (
+                        <p className="text-[11px] text-slate-400 italic">No scout children linked yet.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {parentLinkedScouts.map(scout => (
+                            <div key={scout.uid} className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                              <span className="font-bold text-white text-xs">{scout.fullName || scout.username}</span>
+                              <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                                {scout.rank || 'Scout'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span>{attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions</span>
-                      <span>{attendanceStats.campingNights || 0} Camping Nights</span>
+
+                    <div 
+                      onClick={() => setActiveProfileTab('spt')}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
+                        spt 
+                          ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-500' 
+                          : 'bg-slate-900/60 border-slate-750 hover:border-indigo-500/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Volunteer Training (SPT)</span>
+                        <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                      </div>
+                      <strong className={`text-xs font-bold block ${spt ? 'text-emerald-300' : 'text-slate-300'}`}>
+                        {spt ? `✓ Chaperone Verified: ${spt}` : '🛡️ Optional for Campouts'}
+                      </strong>
+                      <span className="text-[10px] text-slate-400 block">Click to upload volunteer certificate</span>
                     </div>
-                    {attendanceStats.absentCount > 0 && (
-                      <p className={`text-[10px] font-semibold pt-1 border-t border-slate-800 ${
-                        attendanceStats.riskLevel === 'red' ? 'text-red-400' : 'text-amber-400'
-                      }`}>
-                        {attendanceStats.riskLevel === 'red' ? '🚨' : '⚠️'} {attendanceStats.absentCount} Unexcused Absence{attendanceStats.absentCount === 1 ? '' : 's'}
-                      </p>
-                    )}
-                  </div>
+                  </>
+                )}
+
+                {/* Executive / Owner Standing */}
+                {isExecutive && (
+                  <>
+                    <div className="bg-gradient-to-r from-amber-950/40 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 space-y-1">
+                      <span className="text-amber-400 block text-[10px] uppercase font-black tracking-wider">Supreme Authority</span>
+                      <strong className="text-white text-xs block">{isOwner ? '👑 Troop Owner & Superadmin' : '⚜️ Executive Troop Admin'}</strong>
+                      <span className="text-[10px] text-slate-400">Full system override privileges enabled</span>
+                    </div>
+
+                    <div 
+                      onClick={() => setActiveProfileTab('spt')}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
+                        spt 
+                          ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-500' 
+                          : 'bg-amber-950/20 border-amber-500/40 hover:border-amber-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Safety Compliance (SPT)</span>
+                        <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
+                      </div>
+                      <strong className={`text-xs font-bold block ${spt ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {spt ? `✓ Verified: ${spt}` : '⚠️ SPT Status: Action Required'}
+                      </strong>
+                      <span className="text-[10px] text-slate-400 block">Click to manage certificate</span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1543,29 +1918,40 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         </div>
       )}
 
-      {/* ── TAB 4: SPT CERTIFICATE ── */}
-      {activeProfileTab === 'spt' && (currentUser.role === 'leader' || currentUser.role === 'owner') && (
+      {/* ── TAB 4: SPT CERTIFICATE (FOR LEADERS, EXECUTIVES, OWNERS, AND PARENTS) ── */}
+      {activeProfileTab === 'spt' && !isScout && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-4 max-w-2xl">
           <h3 className="font-bold text-white text-sm flex items-center gap-1.5 border-b border-slate-700/60 pb-3">
-            <Shield size={16} className="text-emerald-400" /> Safety/Protection Training (SPT)
+            <Shield size={16} className="text-emerald-400" /> 
+            <span>{isParent ? 'Safety Protection Training (SPT - Volunteer)' : 'Safety/Protection Training (SPT) Compliance'}</span>
           </h3>
 
           <div className="space-y-4">
             <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-750 flex items-center justify-between gap-3">
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Safety Standing</span>
-                <span className={`text-sm font-bold flex items-center gap-1.5 mt-0.5 ${spt ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {spt ? `✓ Safety Protection Training (SPT) Valid: ${spt}` : '⚠️ SPT Status: Pending Completion'}
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                  {isParent ? 'Volunteer Safety Standing' : 'Mandatory Safety Compliance'}
+                </span>
+                <span className={`text-sm font-bold flex items-center gap-1.5 mt-0.5 ${spt ? 'text-emerald-400' : isParent ? 'text-slate-300' : 'text-amber-400'}`}>
+                  {spt ? `✓ Safety Protection Training (SPT) Valid: ${spt}` : isParent ? 'ℹ️ SPT Status: Optional (Recommended for Chaperones)' : '⚠️ SPT Status: Action Required'}
                 </span>
               </div>
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase border ${
                 spt 
                   ? 'bg-emerald-950 text-emerald-300 border-emerald-700/60' 
+                  : isParent
+                  ? 'bg-slate-800 text-slate-400 border-slate-700'
                   : 'bg-amber-950 text-amber-300 border-amber-700/60'
               }`}>
-                {spt ? 'Verified' : 'Action Required'}
+                {spt ? (isParent ? 'Verified Chaperone' : 'Verified Leader') : isParent ? 'Optional' : 'Action Required'}
               </span>
             </div>
+
+            {isParent && (
+              <p className="text-xs text-slate-300 bg-indigo-950/40 p-3 rounded-xl border border-indigo-500/30 leading-relaxed">
+                Parents volunteering to chaperone overnight campouts, participate in high-adventure activities, or transport youth scouts are encouraged to complete BSA Youth Safety/Protection Training and submit their certificate here.
+              </p>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">

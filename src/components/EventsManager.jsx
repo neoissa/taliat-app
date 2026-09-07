@@ -428,6 +428,30 @@ export default function EventsManager({ currentUser, onNavigate }) {
     }
   }, [filteredEvents, timeHorizon]);
 
+  const mapCategoryToEventType = (cat) => {
+    const c = (cat || '').toLowerCase();
+    if (c.includes('camp') || c === 'campout') return 'Campout';
+    if (c.includes('faith') || c.includes('halqa') || c.includes('study')) return 'Halqa / Study Circle';
+    if (c.includes('service') || c.includes('volunteer')) return 'Service Project';
+    if (c.includes('hike') || c.includes('outdoor')) return 'Day Hike';
+    if (c.includes('ceremony') || c.includes('court')) return 'Special Workshop';
+    return 'Weekly Troop Meeting';
+  };
+
+  const canUserEditEvent = (ev) => {
+    if (!ev || !currentUser) return false;
+    if (isExecutive) return true;
+    if (!isLeader) return false;
+
+    // An event set for the whole troop cannot be edited or deleted by normal leaders
+    const isTroopWide = !ev.targetGroupId || ev.targetGroupId === 'all' || ev.isGlobalScope || ev.pushToAllPatrols;
+    if (isTroopWide) return false;
+
+    // Regular leaders can ONLY edit events that are scoped specifically to their group / patrol
+    const userPatrolId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
+    return Boolean(userPatrolId && (ev.targetGroupId === userPatrolId || ev.targetGroupId === currentUser?.groupId || ev.targetGroupId === currentUser?.patrolId));
+  };
+
   const handleOpenNew = () => {
     setEditingId(null);
     setTitle('');
@@ -442,13 +466,18 @@ export default function EventsManager({ currentUser, onNavigate }) {
     setDescription('');
     setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
     setQuranVerse('');
-    setTargetGroupId(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
+    const defaultScope = isExecutive ? 'all' : (currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol || 'all');
+    setTargetGroupId(defaultScope);
     setError('');
     setMsg('');
     setShowForm(true);
   };
 
   const handleOpenEdit = (ev) => {
+    if (!canUserEditEvent(ev)) {
+      alert("You only have permission to edit events scoped specifically to your assigned patrol unit. Troop-wide events can only be modified by the Scoutmaster or Troop Administrators.");
+      return;
+    }
     setEditingId(ev.id);
     setTitle(ev.title || '');
     setDate(ev.date || '');
@@ -520,8 +549,17 @@ export default function EventsManager({ currentUser, onNavigate }) {
       return;
     }
 
+    if (editingId) {
+      const existingEv = events.find(ev => ev.id === editingId);
+      if (existingEv && !canUserEditEvent(existingEv)) {
+        setError("Permission denied: You cannot edit a troop-wide event.");
+        return;
+      }
+    }
+
     setSaving(true);
-    const scope = isExecutive ? targetGroupId : (currentUser?.groupId || 'all');
+    const userPatrolId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
+    const scope = isExecutive ? targetGroupId : (userPatrolId || 'all');
     
     let calculatedDurStr = isAllDay ? '8 hrs' : (startTime && endTime ? calculateDuration(startTime, endTime) : '3 hrs');
     let calculatedHours = 3;
@@ -585,6 +623,11 @@ export default function EventsManager({ currentUser, onNavigate }) {
   };
 
   const handleDeleteEvent = async (id) => {
+    const evToDelete = events.find(e => e.id === id) || selectedEvent;
+    if (!canUserEditEvent(evToDelete)) {
+      alert("Permission denied: You do not have permission to delete a troop-wide event.");
+      return;
+    }
     if (!window.confirm("Are you sure you want to cancel and delete this event?")) return;
     try {
       await deleteDoc(doc(db, 'events', id));
@@ -1863,21 +1906,44 @@ export default function EventsManager({ currentUser, onNavigate }) {
                 </div>
 
                 {isLeader && (
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Take Attendance (Enabled for all leaders on all events) */}
                     <button
-                      onClick={() => handleOpenEdit(selectedEvent)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
-                      title="Edit Event"
+                      type="button"
+                      onClick={() => onNavigate && onNavigate('attendance', { 
+                        date: selectedEvent.date, 
+                        eventType: mapCategoryToEventType(selectedEvent.category || selectedEvent.eventType), 
+                        notes: selectedEvent.title 
+                      })}
+                      className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-teal-950/40 hover:scale-[1.02]"
+                      title="Take Roll Call / Attendance for this event"
                     >
-                      <Edit3 size={15} />
+                      <CheckSquare size={14} />
+                      <span>📋 Take Attendance</span>
                     </button>
-                    <button
-                      onClick={() => handleDeleteEvent(selectedEvent.id)}
-                      className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
-                      title="Delete Event"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+
+                    {canUserEditEvent(selectedEvent) ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEdit(selectedEvent)}
+                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                          title="Edit Patrol Event"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(selectedEvent.id)}
+                          className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                          title="Delete Patrol Event"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 bg-slate-900 border border-slate-750 px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 shadow-inner" title="Troop-wide event managed by Scoutmaster or Troop Administrator">
+                        <span>🔒</span> Troop-Wide Event
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

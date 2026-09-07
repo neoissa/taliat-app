@@ -307,7 +307,7 @@ export default function App() {
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
-        { id: 'events', label: 'Planned Events', icon: '📅' },
+        { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
         { id: 'journal', label: 'Scout Journal & Notes', icon: '📝' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
@@ -323,7 +323,7 @@ export default function App() {
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
-        { id: 'events', label: 'Planned Events', icon: '📅' },
+        { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
         { id: 'journal', label: 'Scout Journal & Notes', icon: '📝' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
@@ -334,7 +334,7 @@ export default function App() {
     } else if (isParent) {
       return [
         { id: 'home', label: 'Parent Portal', icon: '👨‍👩‍👧' },
-        { id: 'events', label: 'Troop Calendar & Events', icon: '📅' },
+        { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'resources', label: 'Safety & Guides', icon: '📚' },
         { id: 'profile', label: 'Family Profile', icon: '👤' }
       ];
@@ -346,7 +346,7 @@ export default function App() {
         { id: 'assignments', label: 'My Homework', icon: '🎒' },
         { id: 'merit-badges', label: 'My Merit Badges', icon: '🏅' },
         { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
-        { id: 'events', label: 'Upcoming Events', icon: '📅' },
+        { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
         { id: 'journal', label: 'My Journal & Notes', icon: '📝' },
         { id: 'service-log', label: 'Service Log', icon: '⏱️' },
