@@ -40,11 +40,45 @@ export default function PublishedReportViewerModal({
   const isScout = currentUser?.role === 'scout';
   const isLeader = currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
 
+  const linkedIds = currentUser?.linkedScoutIds || [];
+  const parentEmails = [currentUser?.email, currentUser?.parent1Email, currentUser?.parent2Email].filter(Boolean).map(e => e.toLowerCase().trim());
+  
+  // Guard: if viewer is a parent (and not a troop leader/admin), report must be for their linked child or parent email/UID
+  const isAuthorizedViewer = !isParent || isLeader || (
+    (report.scoutId && linkedIds.includes(report.scoutId)) ||
+    (report.parentUid && report.parentUid === currentUser?.uid) ||
+    (report.parentEmail && parentEmails.includes(report.parentEmail.toLowerCase().trim())) ||
+    linkedIds.length === 0 // fallback if parent has no linked IDs loaded yet
+  );
+
+  if (isParent && !isLeader && !isAuthorizedViewer) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="bg-slate-900 border border-red-500/40 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+            <Lock size={24} />
+          </div>
+          <h3 className="text-base font-bold text-white">Access Restricted</h3>
+          <p className="text-xs text-slate-400">
+            This progress report belongs to another scout and cannot be viewed from this family portal account.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const snapshot = report.reportSnapshot || {};
   const commentary = snapshot.leaderCommentary || {};
   const signatures = report.signatures || {};
 
-  const canParentSign = (isParent || isLeader) && !signatures.parent?.signed;
+  const canParentSign = (isParent || isLeader) && isAuthorizedViewer && !signatures.parent?.signed;
   const canScoutSign = (isScout || isLeader) && !signatures.scout?.signed;
 
   const handlePrint = () => {

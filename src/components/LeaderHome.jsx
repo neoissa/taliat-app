@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
+import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -893,6 +894,15 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                           <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-bold px-2 py-0.5 rounded-md">
                             {ev.category || ev.type || 'Event'}
                           </span>
+                          {(() => {
+                            const aud = getEventAudienceInfo(ev, currentUser, groups);
+                            return (
+                              <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
+                                <span>{aud.icon}</span>
+                                <span className="font-bold">{aud.badge}</span>
+                              </span>
+                            );
+                          })()}
                           {info.recorded ? (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                               <span>🟢 Logged:</span> {info.presentCount}/{info.totalCount} Scouts ({info.turnoutPct}%)

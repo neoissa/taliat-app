@@ -39,10 +39,12 @@ import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
+import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
@@ -78,15 +80,24 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     return () => unsub();
   }, [scoutUid]);
 
-  // 2. Subscribe to upcoming events
+  // 2. Subscribe to upcoming events and groups
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'events'), (snap) => {
+    const today = new Date().toISOString().split('T')[0];
+    const unsubEvents = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
-      setUpcomingEvents(list.slice(0, 3)); // show top 3 upcoming
+      const upcoming = list.filter(ev => (ev.date || '9999-12-31') >= today);
+      upcoming.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
+      setUpcomingEvents(upcoming.slice(0, 4));
     }, (err) => console.warn("Events load fallback:", err));
 
-    return () => unsub();
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    }, (err) => console.warn("Groups load fallback:", err));
+
+    return () => {
+      unsubEvents();
+      unsubGroups();
+    };
   }, []);
 
   // 3. Subscribe to merit badges completed
@@ -566,6 +577,15 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                           🔥 TODAY!
                         </span>
                       )}
+                      {(() => {
+                        const aud = getEventAudienceInfo(ev, currentUser, groups);
+                        return (
+                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
+                            <span>{aud.icon}</span>
+                            <span className="font-bold">{aud.badge}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     <h4 className="font-extrabold text-sm text-white">{ev.title}</h4>
                     {ev.location && (

@@ -83,41 +83,10 @@ function getRelativeDueDate(dateStr) {
   }
 }
 
-function getEventTargeting(event, scout, allGroups = []) {
-  const targetGroupId = event.targetGroupId || event.groupId || 'all';
-  const category = (event.category || '').toLowerCase();
-  const title = (event.title || '').toLowerCase();
-  const notes = (event.notes || event.description || '').toLowerCase();
-  
-  if (category.includes('court of honor') || category.includes('family') || notes.includes('parent') || notes.includes('family') || title.includes('family')) {
-    return {
-      type: 'family',
-      badge: '👨‍👩‍👧 Family Event',
-      label: 'Parents & Siblings Invited (Court of Honor / Potluck)',
-      color: 'bg-teal-950/80 text-teal-300 border-teal-500/50'
-    };
-  }
-  
-  if (!targetGroupId || targetGroupId === 'all' || targetGroupId === 'troop') {
-    return {
-      type: 'troop',
-      badge: '🎯 Entire Troop',
-      label: 'All Scouts & Patrols Welcome',
-      color: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
-    };
-  }
-  
-  // Patrol-specific
-  const group = allGroups.find(g => g.id === targetGroupId);
-  const groupName = group?.name || 'Patrol Unit';
-  const isForActiveScout = scout && scout.groupId === targetGroupId;
-  
-  return {
-    type: 'patrol',
-    badge: `🎯 ${groupName} Patrol`,
-    label: isForActiveScout ? `Tagged: ${scout.fullName || scout.username} (Your Patrol)` : `Specific to ${groupName} Patrol`,
-    color: isForActiveScout ? 'bg-amber-950/80 text-amber-300 border-amber-500/50' : 'bg-slate-900 text-slate-400 border-slate-700'
-  };
+import { getEventAudienceInfo, formatKashafEventWhatsApp } from '../utils/kashafVoice';
+
+function getEventTargeting(event, activeScout, allGroups = [], linkedScouts = []) {
+  return getEventAudienceInfo(event, activeScout, allGroups, linkedScouts);
 }
 
 export default function ParentDashboard({ currentUser = {}, initialTab = 'overview', onNavigate }) {
@@ -562,7 +531,23 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const urgentTasks = evaluatedTasks.filter(t => !t.isDone && (t.isUrgent || t.isOverdue));
   
   const linkedUids = linkedScouts.map(s => s.uid);
-  const pendingReportsToSign = publishedReports.filter(r => linkedUids.includes(r.scoutId) && !r.signatures?.parent?.signed);
+  const parentEmails = [parentDoc?.email, parentDoc?.parent1Email, parentDoc?.parent2Email, currentUser?.email].filter(Boolean).map(e => e.toLowerCase().trim());
+
+  // Strict privacy filter: only reports that belong to this parent's linked children
+  const isReportForFamily = (r) => {
+    if (!r) return false;
+    if (r.scoutId && linkedUids.includes(r.scoutId)) return true;
+    if (r.parentUid && (r.parentUid === currentUser?.uid || r.parentUid === parentDoc?.uid)) return true;
+    if (r.parentEmail && parentEmails.includes(r.parentEmail.toLowerCase().trim())) return true;
+    return false;
+  };
+
+  const familyPublishedReports = publishedReports.filter(r => isReportForFamily(r));
+  const filteredPublishedReports = familyPublishedReports.filter(r => {
+    if (selectedScoutId !== 'all' && r.scoutId !== selectedScoutId) return false;
+    return true;
+  });
+  const pendingReportsToSign = familyPublishedReports.filter(r => !r.signatures?.parent?.signed);
   const unreadNotifsCount = notifications.filter(n => !n.read).length + pendingReportsToSign.length;
 
   // Build Homework List for Scoped Scouts
@@ -909,28 +894,34 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 {activeHomework.slice(0, 2).map((hw, idx) => {
                   const relDue = getRelativeDueDate(hw.dueDate);
                   return (
-                    <div key={`${hw.id}_${idx}`} className="bg-slate-900 border border-slate-755 p-4 rounded-2xl space-y-2.5 shadow-md">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold bg-slate-800 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">
-                            {hw.category || 'Scouting Skills'}
-                          </span>
-                          <h4 className="font-bold text-white text-xs sm:text-sm">{hw.title}</h4>
-                          <span className="text-[10px] text-slate-400 block font-medium">For: {hw.scoutName}</span>
+                    <div key={`${hw.id}_${idx}`} className="bg-slate-900 border border-slate-755 p-5 rounded-2xl space-y-3 shadow-md">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        {/* Prominent Scout Name Badge */}
+                        <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 px-3 py-1.5 rounded-xl shadow-sm">
+                          <span className="text-base">👦</span>
+                          <span className="text-[11px] uppercase font-black tracking-wider text-slate-300">Child:</span>
+                          <strong className="text-sm sm:text-base font-black text-white">{hw.scoutName}</strong>
                         </div>
 
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 border ${
                           hw.status === 'in_review'
-                            ? 'bg-sky-950 text-sky-300 border border-sky-500/40'
-                            : 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                            ? 'bg-sky-950 text-sky-300 border-sky-500/40'
+                            : 'bg-amber-950 text-amber-300 border-amber-500/40'
                         }`}>
                           {hw.status === 'in_review' ? '📤 Under Review' : '⏳ Needs Submission'}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-slate-800">
-                        <span className="font-mono text-amber-300 flex items-center gap-1">
-                          <Clock size={11} /> {relDue}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold bg-slate-800 text-sky-300 border border-sky-500/30 px-2.5 py-0.5 rounded-full inline-block">
+                          {hw.category || 'Scouting Skills'}
+                        </span>
+                        <h4 className="font-extrabold text-white text-sm sm:text-base">{hw.title}</h4>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-800">
+                        <span className="font-mono text-amber-300 font-bold flex items-center gap-1">
+                          <Clock size={12} /> {relDue}
                         </span>
                         <button
                           type="button"
@@ -1107,45 +1098,54 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     key={`${hw.id}_${idx}`}
                     className="bg-slate-850 border border-slate-755 p-5 rounded-2xl space-y-3 shadow-md hover:border-slate-700 transition"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold bg-slate-900 border border-slate-700 text-sky-300 px-2.5 py-0.5 rounded-full">
-                            {hw.category || 'Scouting Skills'}
-                          </span>
-                          <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-semibold">
-                            👤 {hw.scoutName}
-                          </span>
+                    {/* Prominent Large Scout Name Header Banner */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/40 p-3.5 rounded-2xl shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border-2 border-emerald-400/60 flex items-center justify-center text-base font-black text-emerald-300 shrink-0 shadow-md">
+                          👦
                         </div>
-
-                        <h4 className="font-extrabold text-white text-base mt-1">{hw.title}</h4>
-                        {hw.description && (
-                          <p className="text-xs text-slate-300 leading-relaxed font-sans">{hw.description}</p>
-                        )}
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block leading-tight">
+                            Assigned Scout:
+                          </span>
+                          <h3 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">
+                            {hw.scoutName}
+                          </h3>
+                        </div>
                       </div>
 
-                      <div className="flex flex-col sm:items-end gap-1 shrink-0">
-                        {/* Status Indicator */}
-                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${
+                      <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                        <span className="text-xs font-bold bg-slate-800 border border-slate-700 text-sky-300 px-3 py-1 rounded-xl">
+                          {hw.category || 'Scouting Skills'}
+                        </span>
+                        <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${
                           hw.status === 'in_review'
                             ? 'bg-sky-950 text-sky-300 border-sky-500/50'
                             : 'bg-amber-950 text-amber-300 border-amber-500/50'
                         }`}>
-                          {hw.status === 'in_review' ? '📤 Submitted — Awaiting Leader Review' : '⏳ Pending Scout Submission'}
-                        </span>
-
-                        {/* Relative Due Date */}
-                        <span className="text-xs font-mono font-bold text-amber-300 flex items-center gap-1 mt-1">
-                          <Clock size={12} />
-                          <span>{relDue}</span>
+                          {hw.status === 'in_review' ? '📤 Submitted — Awaiting Review' : '⏳ Pending Scout Submission'}
                         </span>
                       </div>
                     </div>
 
+                    <div className="space-y-1.5 px-1">
+                      <h4 className="font-black text-white text-base sm:text-lg">{hw.title}</h4>
+                      {hw.description && (
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">{hw.description}</p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-755 px-1">
+                      <span className="font-mono font-bold text-amber-300 flex items-center gap-1.5">
+                        <Clock size={13} />
+                        <span>{relDue}</span>
+                      </span>
+                    </div>
+
                     {/* Leader Feedback Quote Bubble */}
                     {hw.leaderFeedback && (
-                      <div className="bg-slate-900/90 border border-slate-750 p-3 rounded-xl text-xs text-slate-300 italic flex items-start gap-2">
-                        <MessageSquare size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="bg-slate-900/90 border border-slate-750 p-3.5 rounded-2xl text-xs text-slate-300 italic flex items-start gap-2.5">
+                        <MessageSquare size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                         <div>
                           <strong className="text-emerald-400 font-bold not-italic block text-[11px]">💬 Leader Instructions & Feedback:</strong>
                           <p className="mt-0.5 leading-relaxed">"{hw.leaderFeedback}"</p>
@@ -1176,13 +1176,18 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               {completedHomeworkOpen && (
                 <div className="p-5 space-y-2.5 border-t border-slate-800">
                   {completedHomework.map((hw, idx) => (
-                    <div key={`comp_${hw.id}_${idx}`} className="p-3.5 bg-slate-900/70 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
-                      <div>
-                        <strong className="text-slate-200 block">{hw.title}</strong>
-                        <span className="text-[11px] text-slate-400">{hw.scoutName} &bull; {hw.category || 'General'}</span>
+                    <div key={`comp_${hw.id}_${idx}`} className="p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg">
+                            👦 {hw.scoutName}
+                          </span>
+                          <span className="text-[11px] text-slate-400">{hw.category || 'General'}</span>
+                        </div>
+                        <strong className="text-white text-sm block font-bold">{hw.title}</strong>
                       </div>
-                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                        <Check size={11} /> Completed & Signed Off
+                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-3 py-1 rounded-full font-bold flex items-center gap-1 shrink-0 self-start sm:self-auto">
+                        <Check size={12} /> Completed & Signed Off
                       </span>
                     </div>
                   ))}
@@ -1393,7 +1398,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                   }`}
                 >
                   <span>Published Snapshots</span>
-                  <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{publishedReports.filter(r => linkedUids.includes(r.scoutId)).length}</span>
+                  <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{filteredPublishedReports.length}</span>
                 </button>
                 <button
                   type="button"
@@ -1419,7 +1424,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
           {reportSubTab === 'published' ? (
             <div className="space-y-4">
-              {publishedReports.filter(r => linkedUids.includes(r.scoutId)).length === 0 ? (
+              {filteredPublishedReports.length === 0 ? (
                 <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-3">
                   <FileText size={42} className="mx-auto text-slate-500 opacity-50" />
                   <h4 className="text-sm font-bold text-white">No Published Reports Yet</h4>
@@ -1428,7 +1433,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                   </p>
                 </div>
               ) : (
-                publishedReports.filter(r => linkedUids.includes(r.scoutId)).map(report => {
+                filteredPublishedReports.map(report => {
                   const isParentSigned = report.signatures?.parent?.signed;
                   return (
                     <div

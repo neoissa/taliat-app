@@ -53,10 +53,23 @@ export default function ParentAlertsFeed({ currentUser, linkedScouts = [], onNav
   useEffect(() => {
     if (!currentUser?.uid) return;
 
+    const parentEmails = [currentUser?.email, currentUser?.parent1Email, currentUser?.parent2Email].filter(Boolean).map(e => e.toLowerCase().trim());
+    const linkedUids = linkedScouts.map(s => s.uid);
+
     const unsubNotifs = onSnapshot(collection(db, 'parent_notifications'), (snap) => {
       const list = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(n => !n.recipientUid || n.recipientUid === currentUser?.uid || n.parentEmail === currentUser?.email);
+        .filter(n => {
+          if (n.recipientUid && n.recipientUid !== currentUser?.uid) return false;
+          const targetScoutId = n.scoutId || n.childUid || n.metadata?.scoutId;
+          if (targetScoutId && linkedUids.length > 0 && !linkedUids.includes(targetScoutId)) {
+            return false;
+          }
+          if (n.parentEmail && !parentEmails.includes(n.parentEmail.toLowerCase().trim())) {
+            return false;
+          }
+          return true;
+        });
       list.sort((a, b) => new Date(b.createdAt || b.timestamp || '1970-01-01') - new Date(a.createdAt || a.timestamp || '1970-01-01'));
       setNotifications(list);
       setLoading(false);
@@ -91,14 +104,23 @@ export default function ParentAlertsFeed({ currentUser, linkedScouts = [], onNav
       unsubTasks();
       unsubSubs();
     };
-  }, [currentUser?.uid, currentUser?.email]);
+  }, [currentUser?.uid, currentUser?.email, linkedScouts]);
 
   // Combine real-time notifications with dynamic urgent activity items
   const linkedUids = linkedScouts.map(s => s.uid);
+  const parentEmails = [currentUser?.email, currentUser?.parent1Email, currentUser?.parent2Email].filter(Boolean).map(e => e.toLowerCase().trim());
+
+  const isReportForFamily = (r) => {
+    if (!r) return false;
+    if (r.scoutId && linkedUids.includes(r.scoutId)) return true;
+    if (r.parentUid && r.parentUid === currentUser?.uid) return true;
+    if (r.parentEmail && parentEmails.includes(r.parentEmail.toLowerCase().trim())) return true;
+    return false;
+  };
 
   // Dynamic Item 1: Pending Progress Reports needing signature
   const dynamicReportAlerts = publishedReports
-    .filter(r => linkedUids.includes(r.scoutId) && !r.signatures?.parent?.signed)
+    .filter(r => isReportForFamily(r) && !r.signatures?.parent?.signed)
     .map(r => ({
       id: `dyn_report_${r.id}`,
       type: 'report_signature',
@@ -148,7 +170,13 @@ export default function ParentAlertsFeed({ currentUser, linkedScouts = [], onNav
   const combinedFeed = [
     ...dynamicReportAlerts,
     ...dynamicTaskAlerts,
-    ...notifications.map(n => {
+    ...notifications.filter(n => {
+      const targetScoutId = n.scoutId || n.childUid || n.metadata?.scoutId;
+      if (targetScoutId && linkedUids.length > 0 && !linkedUids.includes(targetScoutId)) {
+        return false;
+      }
+      return true;
+    }).map(n => {
       // Categorize notification
       let cat = 'broadcasts';
       const t = (n.type || '').toLowerCase();

@@ -46,7 +46,7 @@ import {
   CheckSquare2,
   Layers
 } from 'lucide-react';
-import { formatKashafEventWhatsApp, applyIslamicTransliteration } from '../utils/kashafVoice';
+import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
   generateScoutingYearSchedule, 
@@ -168,7 +168,7 @@ export const SCOUT_TIME_PRESETS = [
   { id: 'all_day', label: '🌅 All Day Campout', start: '08:00', end: '18:00', isAllDay: true, desc: 'All Day Event' }
 ];
 
-export default function EventsManager({ currentUser, onNavigate }) {
+export default function EventsManager({ currentUser, onNavigate, linkedScouts: propsLinkedScouts = [] }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
   const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
@@ -178,6 +178,30 @@ export default function EventsManager({ currentUser, onNavigate }) {
   const isScout = !isLeader && !isParent;
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const [linkedScouts, setLinkedScouts] = useState(propsLinkedScouts || []);
+
+  // Listen to linked scouts for parents if not passed as prop
+  useEffect(() => {
+    if (propsLinkedScouts && propsLinkedScouts.length > 0) {
+      setLinkedScouts(propsLinkedScouts);
+      return;
+    }
+    if (!isParent || !currentUser?.uid) return;
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      const linkedIds = currentUser.linkedScoutIds || [];
+      const matching = allUsers.filter(u => {
+        if (u.role !== 'scout') return false;
+        if (linkedIds.includes(u.uid)) return true;
+        if (Array.isArray(u.parentUids) && u.parentUids.includes(currentUser.uid)) return true;
+        if (currentUser.email && u.parentEmail && u.parentEmail.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+        return false;
+      });
+      setLinkedScouts(matching);
+    });
+    return () => unsubUsers();
+  }, [isParent, currentUser, propsLinkedScouts]);
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -271,15 +295,13 @@ export default function EventsManager({ currentUser, onNavigate }) {
     return () => unsub();
   }, [isExecutive, currentUser?.groupId]);
 
-  // 2. Subscribe to groups for leader filter
+  // 2. Subscribe to groups for leader filter & patrol badge resolution across all user roles
   useEffect(() => {
-    if (isLeader) {
-      const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
-        setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
-      });
-      return () => unsubGroups();
-    }
-  }, [isLeader]);
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    });
+    return () => unsubGroups();
+  }, []);
 
   // 3. Subscribe to RSVPs for the selected event
   useEffect(() => {
@@ -1844,6 +1866,17 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         </span>
                       </div>
                       <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
+                      {(() => {
+                        const aud = getEventAudienceInfo(ev, currentUser, groups, linkedScouts);
+                        return (
+                          <div className="pt-0.5">
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${aud.colorClass}`}>
+                              <span>{aud.icon}</span>
+                              <span className="font-bold">{aud.badge}</span>
+                            </span>
+                          </div>
+                        );
+                      })()}
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
                         <span>⏰ {ev.time}</span>
                         {getEventDisplayDuration(ev) && <span>&bull; {getEventDisplayDuration(ev)}</span>}
@@ -1872,7 +1905,7 @@ export default function EventsManager({ currentUser, onNavigate }) {
             }`}>
               {/* Event Header */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-750 pb-4">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">
                       {selectedEvent.category || selectedEvent.eventType || 'meeting'}
@@ -1891,11 +1924,23 @@ export default function EventsManager({ currentUser, onNavigate }) {
                         <Zap size={10} /> Standalone Session
                       </span>
                     )}
-                    <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-700 px-2.5 py-0.5 rounded-full">
-                      {selectedEvent.targetGroupId === 'all' || selectedEvent.pushToAllPatrols ? '⚡ Troop-Wide Broadcast' : 'Patrol Scoped'}
-                    </span>
                   </div>
                   <h3 className="text-xl font-black text-white">{selectedEvent.title}</h3>
+                  
+                  {/* High Visibility Target Audience Banner */}
+                  {(() => {
+                    const aud = getEventAudienceInfo(selectedEvent, currentUser, groups, linkedScouts);
+                    return (
+                      <div className={`p-3 rounded-2xl border flex items-center gap-2.5 text-xs ${aud.colorClass}`}>
+                        <span className="text-xl shrink-0">{aud.icon}</span>
+                        <div className="min-w-0">
+                          <strong className="block text-xs uppercase tracking-wider font-black">{aud.badge}</strong>
+                          <span className="text-[11px] opacity-90 block">{aud.label}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center gap-4 text-xs text-slate-300 pt-1 flex-wrap font-medium">
                     <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-400" /> {selectedEvent.date}</span>
                     <span className="flex items-center gap-1.5"><Clock size={13} className="text-emerald-400" /> {selectedEvent.time}</span>

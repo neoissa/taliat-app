@@ -384,3 +384,86 @@ export function formatKashafMessage(rawText, patrolName = '', customPurpose = ''
   
   return blocks.join('\n\n') + closing;
 }
+
+/**
+ * Resolves high-visibility audience and targeting badge for any event
+ * across Scout, Leader, Parent, and Admin roles.
+ */
+export function getEventAudienceInfo(event, currentUser = {}, groups = [], linkedScouts = []) {
+  if (!event) {
+    return {
+      type: 'troop',
+      badge: '⚜️ All Scouts & Patrols (Troop-Wide)',
+      label: 'Troop-Wide Event',
+      icon: '⚜️',
+      colorClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 font-black shadow-sm'
+    };
+  }
+
+  const category = (event.category || event.eventType || '').toLowerCase();
+  const title = (event.title || '').toLowerCase();
+  const notes = (event.notes || event.description || '').toLowerCase();
+  const targetGroupId = event.targetGroupId || event.groupId || 'all';
+
+  // 1. Family Event (Court of Honor / Potluck / Parent invited)
+  if (
+    category.includes('court of honor') || 
+    category.includes('family') || 
+    category.includes('ceremony') || 
+    notes.includes('parent') || 
+    notes.includes('family') || 
+    notes.includes('potluck') || 
+    title.includes('family') || 
+    title.includes('court of honor')
+  ) {
+    return {
+      type: 'family',
+      badge: '👨‍👩‍👧 Family Event (Parents & Scouts)',
+      label: 'Parents, Scouts, and Siblings are warmly invited to attend',
+      icon: '👨‍👩‍👧',
+      colorClass: 'bg-teal-500/20 text-teal-300 border-teal-500/50 font-black shadow-sm'
+    };
+  }
+
+  // 2. Troop-Wide / All Patrols Event
+  if (!targetGroupId || targetGroupId === 'all' || targetGroupId === 'troop' || event.pushToAllPatrols || event.isGlobalScope) {
+    return {
+      type: 'troop',
+      badge: '⚜️ All Scouts & Patrols (Troop-Wide)',
+      label: 'Open to all scouts across all Dhulfiqār patrol units',
+      icon: '⚜️',
+      colorClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 font-black shadow-sm'
+    };
+  }
+
+  // 3. Patrol-Specific Event
+  const group = (groups || []).find(g => g.id === targetGroupId);
+  const groupName = group?.name || 'Patrol Unit';
+
+  // Check if current user or any linked child belongs to this patrol
+  const userGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
+  const isUserPatrol = userGroupId === targetGroupId;
+  const matchingLinkedScout = (linkedScouts || []).find(s => s.groupId === targetGroupId || s.patrolId === targetGroupId);
+
+  if (isUserPatrol || matchingLinkedScout) {
+    const scoutName = matchingLinkedScout ? (matchingLinkedScout.fullName || matchingLinkedScout.username) : null;
+    return {
+      type: 'patrol',
+      badge: scoutName 
+        ? `🛡️ ${groupName} Patrol (${scoutName}'s Patrol)` 
+        : `🛡️ ${groupName} Patrol (Your Patrol)`,
+      label: `Scheduled specifically for ${groupName} Patrol members`,
+      icon: '🛡️',
+      colorClass: 'bg-amber-500/25 text-amber-300 border-amber-500/70 font-black shadow-md'
+    };
+  }
+
+  return {
+    type: 'patrol',
+    badge: `🛡️ ${groupName} Patrol Only`,
+    label: `Scheduled specifically for ${groupName} Patrol`,
+    icon: '🛡️',
+    colorClass: 'bg-slate-800 text-slate-300 border-slate-700 font-bold'
+  };
+}
+

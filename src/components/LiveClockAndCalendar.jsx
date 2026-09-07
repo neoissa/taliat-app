@@ -17,6 +17,7 @@ import {
   History,
   CalendarDays
 } from 'lucide-react';
+import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
   // Live Clock State
@@ -32,6 +33,7 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
   // Events & Assignments Data
   const [events, setEvents] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [groups, setGroups] = useState([]);
 
   // 1. Live Clock Ticking Effect (Updates every second)
   useEffect(() => {
@@ -41,13 +43,21 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Fetch Events from Firestore
+  // 2. Fetch Events & Groups from Firestore
   useEffect(() => {
     const unsubEvents = onSnapshot(collection(db, 'events'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setEvents(list);
     }, (err) => console.warn('Events listener fallback in calendar:', err));
-    return () => unsubEvents();
+
+    const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    }, (err) => console.warn('Groups listener fallback in calendar:', err));
+
+    return () => {
+      unsubEvents();
+      unsubGroups();
+    };
   }, []);
 
   // 3. Fetch Assignments for Due Dates
@@ -412,12 +422,23 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                           onClick={() => onNavigate && onNavigate('events')}
                           className="p-2.5 rounded-xl bg-slate-800 border border-emerald-500/40 hover:border-emerald-400 transition cursor-pointer text-xs space-y-1"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
                             <strong className="text-white font-bold truncate max-w-[150px]">{ev.title}</strong>
                             <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.2 rounded-full font-semibold">
                               {ev.category || ev.type || 'Event'}
                             </span>
                           </div>
+                          {(() => {
+                            const aud = getEventAudienceInfo(ev, currentUser, groups);
+                            return (
+                              <div>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${aud.colorClass}`}>
+                                  <span>{aud.icon}</span>
+                                  <span className="font-bold truncate max-w-[130px]">{aud.badge}</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
                           <p className="text-[10px] text-slate-300 font-mono">⏰ {ev.time}</p>
                           {ev.location && (
                             <p className="text-[10px] text-emerald-300 flex items-center gap-1 font-medium truncate bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-lg w-fit max-w-full">
@@ -473,13 +494,24 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                         }}
                         className="p-2 rounded-xl bg-slate-800 border border-emerald-500/30 hover:border-emerald-400 transition cursor-pointer text-xs space-y-1"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-1 flex-wrap">
                           <span className="text-[10px] font-mono font-bold text-emerald-300">📅 {ev.date}</span>
                           <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold uppercase">
                             {ev.category || 'Meeting'}
                           </span>
                         </div>
                         <strong className="text-white font-bold block truncate">{ev.title}</strong>
+                        {(() => {
+                          const aud = getEventAudienceInfo(ev, currentUser, groups);
+                          return (
+                            <div>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${aud.colorClass}`}>
+                                <span>{aud.icon}</span>
+                                <span className="font-bold truncate max-w-[130px]">{aud.badge}</span>
+                              </span>
+                            </div>
+                          );
+                        })()}
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
                           {ev.location && (
@@ -520,13 +552,24 @@ export default function LiveClockAndCalendar({ currentUser, onNavigate }) {
                         }}
                         className="p-2 rounded-xl bg-slate-800/80 border border-purple-500/30 hover:border-purple-400 transition cursor-pointer text-xs space-y-1"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-1 flex-wrap">
                           <span className="text-[10px] font-mono font-bold text-purple-300">📅 {ev.date}</span>
                           <span className="text-[9px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-bold">
                             ✓ Past
                           </span>
                         </div>
                         <strong className="text-slate-200 font-bold block truncate">{ev.title}</strong>
+                        {(() => {
+                          const aud = getEventAudienceInfo(ev, currentUser, groups);
+                          return (
+                            <div>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${aud.colorClass}`}>
+                                <span>{aud.icon}</span>
+                                <span className="font-bold truncate max-w-[130px]">{aud.badge}</span>
+                              </span>
+                            </div>
+                          );
+                        })()}
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[10px] text-slate-400 font-mono">⏰ {ev.time}</p>
                           {ev.location && (
