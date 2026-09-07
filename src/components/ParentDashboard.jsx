@@ -18,6 +18,7 @@ import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import ParentAlertsFeed from './ParentAlertsFeed';
 import ParentEagleTracker from './ParentEagleTracker';
+import ParentPatrolResources from './ParentPatrolResources';
 import {
   Award,
   Star,
@@ -575,7 +576,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
   const allScopedHomework = scopedScouts.flatMap(s => buildScoutHomework(s));
   const activeHomework = allScopedHomework.filter(h => h.status !== 'completed');
-  const completedHomework = allScopedHomework.filter(h => h.status === 'completed');
+  const primaryScopedScout = (!isAllView ? linkedScouts.find(s => s.uid === selectedScoutId) : null) || linkedScouts[0] || null;
+  const primaryPatrolName = primaryScopedScout?.patrol || primaryScopedScout?.patrolName || primaryScopedScout?.talia || allGroups.find(g => g.id === primaryScopedScout?.groupId)?.name || 'Patrol';
+  const resourcesTabTitle = primaryScopedScout ? `📚 ${primaryPatrolName.replace('Taliʿat ', '')} Resources` : '📚 Patrol Resources';
 
   if (loading) {
     return (
@@ -714,6 +717,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             badgeColor: 'bg-red-500 text-white font-black' 
           },
           { id: 'eagle', label: '🦅 Road to Eagle', icon: Target },
+          { id: 'resources', label: resourcesTabTitle, icon: Compass },
           { id: 'advancement', label: 'Advancement & Badges', icon: Award },
           { id: 'family', label: 'Household Profile', icon: User }
         ].map(t => {
@@ -1627,6 +1631,18 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           allGroups={allGroups}
           ranksProgressMap={ranksProgressMap}
           meritProgressMap={meritProgressMap}
+        />
+      )}
+
+      {/* ── TAB: PATROL-SCOPED RESOURCES & SAFETY DIRECTORY ── */}
+      {activeTab === 'resources' && (
+        <ParentPatrolResources
+          linkedScouts={linkedScouts}
+          selectedScoutId={selectedScoutId}
+          onSelectScout={(sId) => setSelectedScoutId(sId)}
+          allGroups={allGroups}
+          allUsers={allUsers}
+          onNavigate={onNavigate}
         />
       )}
 

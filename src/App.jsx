@@ -853,8 +853,15 @@ export default function App() {
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
       <main className="flex-1 min-w-0 bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        {currentTab === 'road-to-eagle' && (
+        {currentTab === 'road-to-eagle' && !isParent && (
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
+        )}
+        {currentTab === 'road-to-eagle' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="eagle"
+            onNavigate={handleNavigate} 
+          />
         )}
 
         {(!currentTab || currentTab === 'home') && isLeaderOrOwner && (
@@ -895,21 +902,59 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'events' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="events"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {currentTab === 'resources' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="resources"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {currentTab === 'profile' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="family"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
         {(currentTab === 'admin' || currentTab === 'global-admin') && isOwner && (
           <AdminPanel currentUser={currentUser} onNavigate={handleNavigate} />
         )}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && isLeaderOrOwner && <PatrolRoster currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeaderOrOwner && <ScoutList currentUser={currentUser} />}
-        {currentTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
+        {currentTab === 'advancement' && !isParent && <AdvancementTracker currentUser={currentUser} />}
+        {currentTab === 'advancement' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="advancement"
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
-        {currentTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
-        {currentTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'assignments' && !isParent && <AssignmentsManager currentUser={currentUser} />}
+        {currentTab === 'assignments' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="homework"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {currentTab === 'events' && !isParent && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'lesson-plans' && isLeaderOrOwner && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && <ServiceLogs currentUser={currentUser} />}
-        {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
-        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} initialTab={profileInitialTab} onNavigate={handleNavigate} />}
+        {currentTab === 'resources' && !isParent && <VideoResources currentUser={currentUser} />}
+        {currentTab === 'profile' && !isParent && <ScoutProfile currentUser={currentUser} initialTab={profileInitialTab} onNavigate={handleNavigate} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}

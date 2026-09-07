@@ -83,6 +83,12 @@ service cloud.firestore {
       allow write: if isAuthenticated() && !isParent();
     }
 
+    // Specific Road to Eagle lock: Strictly deny all parent update/write requests
+    match /user_progress/{scoutId}/road_to_eagle/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if (request.auth.uid == scoutId || isLeader() || isExecutive()) && !isParent();
+    }
+
     // 4. Attendance Sessions
     match /attendance_sessions/{sessionId} {
       allow read: if isAuthenticated();
