@@ -97,12 +97,13 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [groups, setGroups] = useState([]);
   const [batchUpdatesMsg, setBatchUpdatesMsg] = useState('');
 
-  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = currentUser?.role === 'leader';
-  const isLeaderOrOwner = isOwner || isLeader;
-  const isScoutmaster = isLeader && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantLeader = isLeader && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
-  const isScout = currentUser?.role === 'scout' || (!isLeaderOrOwner && currentUser?.uid);
+  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
+  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster') && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantLeader = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'assistant_leader') && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader' || currentUser?.leaderPosition === 'Assistant Scout Master');
+  const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster || isAssistantLeader;
+  const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isExecutive);
+  const isLeaderOrOwner = isOwner || isLeader || isExecutive;
+  const isScout = !isLeaderOrOwner && currentUser?.role === 'scout';
   const isBatchMode = isLeaderOrOwner && String(selectedScoutId).startsWith('patrol:');
   const scoutId = customScoutId || (isLeaderOrOwner ? (isBatchMode ? (scoutsList[0]?.uid || currentUser?.uid) : (selectedScoutId || currentUser?.uid)) : currentUser?.uid);
 

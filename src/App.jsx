@@ -349,6 +349,7 @@ export default function App() {
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
+        { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: '🏅' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
@@ -366,6 +367,7 @@ export default function App() {
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
+        { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: '🏅' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
         { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
@@ -940,7 +942,7 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'merit-badges' && isScout && <MeritBadgeDashboard currentUser={currentUser} />}
+        {currentTab === 'merit-badges' && !isParent && <MeritBadgeDashboard currentUser={currentUser} />}
         {currentTab === 'assignments' && !isParent && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'assignments' && isParent && (
           <ParentDashboard 

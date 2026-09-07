@@ -63,7 +63,11 @@ import {
   HelpCircle,
   PenTool,
   Lock,
-  Filter
+  Filter,
+  Search,
+  Download,
+  Circle,
+  Trophy
 } from 'lucide-react';
 
 function getRelativeDueDate(dateStr) {
@@ -93,6 +97,121 @@ import { getEventAudienceInfo, formatKashafEventWhatsApp } from '../utils/kashaf
 function getEventTargeting(event, activeScout, allGroups = [], linkedScouts = []) {
   return getEventAudienceInfo(event, activeScout, allGroups, linkedScouts);
 }
+
+// Helper to evaluate badge status and detailed progress
+export function getBadgeStatusAndProgress(badge, sMerit = {}) {
+  if (!badge) {
+    return {
+      status: 'not_started',
+      isEarned: false,
+      isPlanned: false,
+      isInProgress: false,
+      approvedCount: 0,
+      pendingCount: 0,
+      total: 0,
+      percentage: 0,
+      mbData: {}
+    };
+  }
+
+  const rawId = badge.id;
+  const normId = (rawId || '').toLowerCase().replace(/_/g, '-');
+  const underId = (rawId || '').toLowerCase().replace(/-/g, '_');
+  const mbData = sMerit[rawId] || sMerit[normId] || sMerit[underId] || {};
+
+  const total = badge.requirements ? badge.requirements.length : 0;
+  const steps = mbData.steps || mbData.completedRequirements || mbData.requirements || {};
+
+  let approvedCount = 0;
+  let pendingCount = 0;
+
+  if (badge.requirements && badge.requirements.length > 0) {
+    badge.requirements.forEach(req => {
+      const val = steps[req.id];
+      if (val === true || val?.completed === true || val === 'approved' || val?.approved === true || val === 'completed') {
+        approvedCount++;
+      } else if (val === 'pending' || val?.pending === true) {
+        pendingCount++;
+      }
+    });
+  } else {
+    approvedCount = Object.values(steps).filter(v => v === true || v?.completed === true || v === 'approved' || v?.approved === true || v === 'completed').length;
+  }
+
+  const isExplicitlyEarned = mbData.completed === true || mbData.earned === true;
+  const isAllApproved = total > 0 && approvedCount >= total;
+  const isEarned = isExplicitlyEarned || isAllApproved;
+
+  const isPlanned = (mbData.planned === true || mbData.isPlanned === true) && !isEarned;
+  const isInProgress = !isEarned && (approvedCount > 0 || pendingCount > 0 || mbData.inProgress === true);
+
+  let status = 'not_started';
+  if (isEarned) status = 'earned';
+  else if (isInProgress) status = 'in_progress';
+  else if (isPlanned) status = 'planned';
+
+  const percentage = total > 0 ? Math.round((approvedCount / total) * 100) : (isEarned ? 100 : 0);
+
+  return {
+    mbData,
+    status,
+    isEarned,
+    isPlanned,
+    isInProgress,
+    approvedCount,
+    pendingCount,
+    total,
+    percentage,
+    plannedTarget: mbData.plannedTarget || null,
+    plannedAt: mbData.plannedAt || null,
+    earnedDate: mbData.completedDate || mbData.dateCompleted || mbData.earnedDate || mbData.completedAt || null,
+    counselor: mbData.counselorName || mbData.counselor || mbData.approvedBy || null,
+    notes: mbData.notes || null,
+    steps
+  };
+}
+
+const EAGLE_MANDATORY_SOLOS = [
+  { id: 'first-aid', name: 'First Aid', icon: '🩹', timeAlert: null },
+  { id: 'citizenship-in-society', name: 'Citizenship in Society', icon: '🤝', timeAlert: null },
+  { id: 'citizenship-in-the-community', name: 'Citizenship in the Community', icon: '🏛️', timeAlert: null },
+  { id: 'citizenship-in-the-nation', name: 'Citizenship in the Nation', icon: '🇺🇸', timeAlert: null },
+  { id: 'citizenship-in-the-world', name: 'Citizenship in the World', icon: '🌐', timeAlert: null },
+  { id: 'communication', name: 'Communication', icon: '📢', timeAlert: null },
+  { id: 'cooking', name: 'Cooking', icon: '🍳', timeAlert: null },
+  { id: 'personal-fitness', name: 'Personal Fitness', icon: '🏃', timeAlert: 'Requires 90-day physical fitness tracking log' },
+  { id: 'personal-management', name: 'Personal Management', icon: '📊', timeAlert: 'Requires 90-day personal budget & finance tracking log' },
+  { id: 'camping', name: 'Camping', icon: '⛺', timeAlert: 'Requires 20 days and nights of logged campouts' },
+  { id: 'family-life', name: 'Family Life', icon: '🏡', timeAlert: 'Requires 90-day family chore & project tracking log' },
+];
+
+const EAGLE_CHOICE_GROUPS = [
+  {
+    groupId: 'group1',
+    groupName: 'Emergency Preparedness OR Lifesaving',
+    badges: [
+      { id: 'emergency-preparedness', name: 'Emergency Preparedness', icon: '🚨' },
+      { id: 'lifesaving', name: 'Lifesaving', icon: '🛟' }
+    ]
+  },
+  {
+    groupId: 'group2',
+    groupName: 'Environmental Science OR Sustainability',
+    badges: [
+      { id: 'environmental-science', name: 'Environmental Science', icon: '🔬' },
+      { id: 'sustainability', name: 'Sustainability', icon: '🌱' }
+    ]
+  },
+  {
+    groupId: 'group3',
+    groupName: 'Swimming OR Hiking OR Cycling',
+    badges: [
+      { id: 'swimming', name: 'Swimming', icon: '🏊' },
+      { id: 'hiking', name: 'Hiking', icon: '🥾' },
+      { id: 'cycling', name: 'Cycling', icon: '🚴' }
+    ]
+  }
+];
 
 export default function ParentDashboard({ currentUser = {}, initialTab = 'overview', onNavigate }) {
   const [parentDoc, setParentDoc] = useState(currentUser);
@@ -160,6 +279,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [completedHomeworkOpen, setCompletedHomeworkOpen] = useState(false);
   const [selectedRankMap, setSelectedRankMap] = useState({}); // { [scoutUid]: rankId }
   const [advancementViewFilter, setAdvancementViewFilter] = useState('all'); // 'all' | 'completed' | 'inprogress' | 'merit' | 'islamic'
+  const [meritSubTabMap, setMeritSubTabMap] = useState({}); // { [scoutUid]: 'planned' | 'earned' | 'in_progress' | 'eagle_required' | 'all' }
+  const [expandedBadgeMap, setExpandedBadgeMap] = useState({}); // { [badgeKey]: boolean }
+  const [badgeSearchMap, setBadgeSearchMap] = useState({}); // { [scoutUid]: string }
 
   // Sync initial tab when changed by parent container
   useEffect(() => {
@@ -890,7 +1012,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                                   ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900'
                                   : isActiveNext
                                   ? 'bg-amber-950 text-amber-300 border border-amber-600 animate-pulse hover:bg-amber-900'
-                                  : 'bg-slate-800/80 text-slate-500 border border-slate-750 hover:text-slate-400'
+                                  : 'bg-slate-800/80 text-slate-500 border border-slate-755 hover:text-slate-400'
                               }`}
                             >
                               <RankIcon rankId={rank.id} size={11} />
@@ -901,6 +1023,40 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                         })}
                       </div>
                     </div>
+
+                    {/* Merit Badges Earned & Planned Quick Row */}
+                    {(() => {
+                      const plannedCount = MERIT_BADGES.filter(b => {
+                        const ed = getBadgeStatusAndProgress(b, sMerit);
+                        return ed.isPlanned;
+                      }).length;
+                      return (
+                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-black uppercase text-amber-400">Merit Badges:</span>
+                            <span className="text-[11px] bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 px-2.5 py-0.5 rounded-lg font-bold">
+                              ✓ {earnedBadgesCount} Earned
+                            </span>
+                            {plannedCount > 0 && (
+                              <span className="text-[11px] bg-sky-950/80 text-sky-300 border border-sky-700/60 px-2.5 py-0.5 rounded-lg font-bold">
+                                🎯 {plannedCount} Planned
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdvancementViewFilter('merit');
+                              setMeritSubTabMap(prev => ({ ...prev, [scout.uid]: plannedCount > 0 ? 'planned' : 'earned' }));
+                              setActiveTab('advancement');
+                            }}
+                            className="text-emerald-400 hover:text-emerald-300 text-xs font-bold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <span>Inspect Badges &rarr;</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -1722,16 +1878,27 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               totalReqsAllRanks += st.total;
             });
 
-            // Merit Badges metrics
-            const earnedBadges = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true);
-            const eagleRequiredEarned = earnedBadges.filter(b => b.eagleRequired).length;
-            const electiveEarned = earnedBadges.filter(b => !b.eagleRequired).length;
-            const inProgressBadges = MERIT_BADGES.filter(b => {
-              const mb = sMerit[b.id];
-              if (!mb || mb.completed === true) return false;
-              const reqs = mb.completedRequirements || mb.requirements || {};
-              return Object.keys(reqs).length > 0 || mb.inProgress;
+            // Evaluate all merit badges for this scout using helper
+            const evaluatedBadges = MERIT_BADGES.map(badge => {
+              const evalData = getBadgeStatusAndProgress(badge, sMerit);
+              return {
+                badge,
+                ...evalData
+              };
             });
+
+            const plannedBadges = evaluatedBadges.filter(b => b.isPlanned);
+            const earnedBadges = evaluatedBadges.filter(b => b.isEarned);
+            const inProgressBadges = evaluatedBadges.filter(b => b.isInProgress);
+
+            const eagleRequiredEarned = earnedBadges.filter(b => b.badge.eagleRequired).length;
+            const eagleRequiredPlanned = plannedBadges.filter(b => b.badge.eagleRequired).length;
+            const electiveEarned = earnedBadges.filter(b => !b.badge.eagleRequired).length;
+            const electivePlanned = plannedBadges.filter(b => !b.badge.eagleRequired).length;
+            const totalEagleTracked = Math.min(14, eagleRequiredEarned + eagleRequiredPlanned) + Math.min(7, electiveEarned + electivePlanned);
+
+            const activeMeritTab = meritSubTabMap[scout.uid] || (plannedBadges.length > 0 ? 'planned' : earnedBadges.length > 0 ? 'earned' : 'eagle_required');
+            const scoutSearchTerm = (badgeSearchMap[scout.uid] || '').toLowerCase().trim();
 
             // Islamic Topics metrics
             const completedIslamicTopics = ISLAMIC_BASICS_TOPICS.filter(t => {
@@ -1784,7 +1951,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     </div>
                     <div className="bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-center">
                       <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Merit Badges</span>
-                      <span className="text-sm font-black text-amber-300 font-mono">{earnedBadges.length} Earned</span>
+                      <span className="text-sm font-black text-amber-300 font-mono">
+                        {earnedBadges.length} Earned &bull; {plannedBadges.length} Planned
+                      </span>
                     </div>
                     <div className="bg-slate-900/90 border border-purple-500/30 p-2.5 rounded-xl text-center">
                       <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Islamic Topics</span>
@@ -1799,7 +1968,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     { id: 'all', label: '🗺️ Full 7-Rank Pathway' },
                     { id: 'completed', label: `✓ Completed Ranks (${completedRanks.length})` },
                     { id: 'inprogress', label: `⚡ In Progress (${nextRank.name})` },
-                    { id: 'merit', label: `🏅 Earned Merit Badges (${earnedBadges.length})` },
+                    { id: 'merit', label: `🏅 Planned & Earned Merit Badges (${earnedBadges.length + plannedBadges.length})` },
                     { id: 'islamic', label: `📖 Islamic Foundations (${completedIslamicTopics.length})` }
                   ].map(tab => (
                     <button
@@ -2045,124 +2214,737 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                   </div>
                 )}
 
-                {/* 5. Dedicated Earned & In-Progress Merit Badges Section */}
+                {/* 5. Dedicated Planned, Earned & In-Progress Merit Badges Section */}
                 {(currentFilter === 'all' || currentFilter === 'merit') && (
-                  <div className="bg-slate-900 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-5 shadow-lg">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                  <div className="bg-slate-900 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-6 shadow-lg">
+                    
+                    {/* Header with KPI and Eagle Pacing */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                       <div>
-                        <h4 className="text-base font-black text-white flex items-center gap-2">
-                          <Award size={18} className="text-amber-400" />
-                          <span>Earned & In-Progress Merit Badges</span>
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Official Scouting America merit badges certified for {scout.fullName || scout.username}.
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-lg font-black text-white flex items-center gap-2">
+                            <Award size={20} className="text-amber-400" />
+                            <span>Merit Badges & Planned Advancement</span>
+                          </h4>
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                            Eagle Pathway
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Track planned target dates, requirement steps progress, and officially earned badges for {scout.fullName || scout.username}.
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-950/80 text-amber-300 border border-amber-700">
-                          🦅 {eagleRequiredEarned} / 14 Eagle-Required
-                        </span>
-                        <span className="text-xs font-bold px-3 py-1 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-700">
-                          ⭐ {electiveEarned} Elective
-                        </span>
+                      {/* Eagle Readiness Stats Box */}
+                      <div className="bg-slate-950/80 border border-slate-755 p-3 rounded-2xl flex items-center gap-3.5 shrink-0 text-xs">
+                        <div className="text-center pr-3 border-r border-slate-800">
+                          <span className="text-[10px] uppercase font-black text-amber-400 block">Eagle Reqs</span>
+                          <span className="text-xs font-mono font-bold text-white">
+                            {eagleRequiredEarned} Earned + {eagleRequiredPlanned} Planned
+                          </span>
+                        </div>
+                        <div className="text-center pr-3 border-r border-slate-800">
+                          <span className="text-[10px] uppercase font-black text-sky-400 block">Electives</span>
+                          <span className="text-xs font-mono font-bold text-white">
+                            {electiveEarned} Earned + {electivePlanned} Planned
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] uppercase font-black text-emerald-400 block">21-Badge Total</span>
+                          <span className="text-xs font-mono font-black text-emerald-300">
+                            {totalEagleTracked} / 21 Tracked
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Earned Badges Grid */}
-                    {earnedBadges.length === 0 ? (
-                      <div className="bg-slate-850 border border-slate-800 p-6 rounded-2xl text-center text-xs text-slate-400 italic">
-                        🏅 No merit badges officially completed yet. The scout is working towards initial badge completions.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
-                          ✓ Officially Earned Badges ({earnedBadges.length})
+                    {/* Progress Bar toward 21 Eagle Badges */}
+                    <div className="space-y-1.5 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex justify-between text-xs font-bold text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <Target size={14} className="text-amber-400" />
+                          <span>Road to 21 Merit Badges for Eagle:</span>
                         </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {earnedBadges.map(badge => {
-                            const mbData = sMerit[badge.id] || {};
-                            const earnedDate = mbData.completedDate || mbData.dateCompleted || mbData.earnedDate || mbData.completedAt || null;
-                            const counselor = mbData.counselorName || mbData.counselor || mbData.approvedBy || null;
+                        <span className="font-mono text-amber-300">
+                          {earnedBadges.length} Earned ({Math.round((earnedBadges.length / 21) * 100)}%) &bull; {plannedBadges.length} Selected Planned
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden flex">
+                        <div
+                          className="bg-emerald-500 h-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, (earnedBadges.length / 21) * 100)}%` }}
+                          title={`${earnedBadges.length} Earned`}
+                        />
+                        <div
+                          className="bg-sky-500/80 h-full transition-all duration-500"
+                          style={{ width: `${Math.min(100 - (earnedBadges.length / 21) * 100, (plannedBadges.length / 21) * 100)}%` }}
+                          title={`${plannedBadges.length} Planned`}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400 font-mono pt-0.5">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> {earnedBadges.length} Officially Completed</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-500 inline-block"></span> {plannedBadges.length} Selected to Complete</span>
+                        <span>{Math.max(0, 21 - earnedBadges.length - plannedBadges.length)} Remaining to Plan</span>
+                      </div>
+                    </div>
+
+                    {/* Sub-Tab Navigation Bar & Search */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                        {[
+                          { id: 'planned', label: `🎯 Planned Badges (${plannedBadges.length})` },
+                          { id: 'earned', label: `✓ Completed (${earnedBadges.length})` },
+                          { id: 'in_progress', label: `⚡ In Progress (${inProgressBadges.length})` },
+                          { id: 'eagle_required', label: `🦅 14 Eagle-Required` },
+                          { id: 'all', label: `🔍 All Catalog (${MERIT_BADGES.length})` }
+                        ].map(subTab => (
+                          <button
+                            key={subTab.id}
+                            type="button"
+                            onClick={() => setMeritSubTabMap(prev => ({ ...prev, [scout.uid]: subTab.id }))}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                              activeMeritTab === subTab.id
+                                ? 'bg-amber-500 text-slate-950 shadow-md font-black scale-[1.02]'
+                                : 'bg-slate-850 text-slate-400 hover:text-white border border-slate-755 hover:bg-slate-800'
+                            }`}
+                          >
+                            <span>{subTab.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Search Bar for Badges */}
+                      <div className="relative shrink-0 sm:w-60">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Search badges..."
+                          value={badgeSearchMap[scout.uid] || ''}
+                          onChange={(e) => setBadgeSearchMap(prev => ({ ...prev, [scout.uid]: e.target.value }))}
+                          className="w-full bg-slate-950 border border-slate-755 text-white placeholder-slate-500 text-xs pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* ── SUB-TAB 1: PLANNED BADGES ── */}
+                    {activeMeritTab === 'planned' && (
+                      <div className="space-y-3">
+                        {plannedBadges.length === 0 ? (
+                          <div className="bg-slate-850 border border-slate-800 p-8 rounded-2xl text-center space-y-2">
+                            <Target size={36} className="mx-auto text-sky-400 opacity-60" />
+                            <h5 className="text-sm font-bold text-white">No Planned Badges Selected Yet</h5>
+                            <p className="text-xs text-slate-400 max-w-md mx-auto">
+                              Scouts can designate badges as planned in their Merit Badge Dashboard. You can also explore the <strong>🦅 14 Eagle-Required</strong> tab above to view the mandatory badge pathway.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {plannedBadges
+                              .filter(b => !scoutSearchTerm || b.badge.name.toLowerCase().includes(scoutSearchTerm))
+                              .map(b => {
+                                const badgeKey = `${scout.uid}_${b.badge.id}`;
+                                const isExpanded = !!expandedBadgeMap[badgeKey];
+
+                                return (
+                                  <div
+                                    key={b.badge.id}
+                                    className="bg-slate-850/90 border border-sky-500/40 p-4 rounded-2xl space-y-3 shadow-md hover:border-sky-400 transition flex flex-col justify-between"
+                                  >
+                                    <div className="space-y-2.5">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                            b.badge.eagleRequired
+                                              ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                              : 'bg-sky-950 text-sky-300 border border-sky-600'
+                                          }`}>
+                                            {b.badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective Badge'}
+                                          </span>
+                                          <h5 className="font-extrabold text-white text-sm mt-1">{b.badge.name}</h5>
+                                        </div>
+                                        <span className="text-[10px] bg-sky-950 text-sky-300 border border-sky-600 px-2.5 py-0.5 rounded-full font-bold shrink-0">
+                                          🎯 Planned
+                                        </span>
+                                      </div>
+
+                                      {/* Target Completion & Timing */}
+                                      <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
+                                        <div className="flex items-center justify-between text-[11px]">
+                                          <span className="text-slate-400">Target Timeframe:</span>
+                                          <strong className="text-amber-300 font-mono">
+                                            {b.plannedTarget || (b.plannedAt ? `Added ${b.plannedAt.split('T')[0]}` : 'Assigned in Plan')}
+                                          </strong>
+                                        </div>
+                                        {b.counselor && (
+                                          <div className="flex items-center justify-between text-[11px]">
+                                            <span className="text-slate-400">Counselor:</span>
+                                            <strong className="text-slate-200">{b.counselor}</strong>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Requirement Steps Progress Bar */}
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-slate-400">Requirements Progress:</span>
+                                          <span className="font-mono text-emerald-400 font-bold">
+                                            {b.approvedCount} of {b.total} Certified ({b.percentage}%)
+                                          </span>
+                                        </div>
+                                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                          <div
+                                            className="bg-gradient-to-r from-sky-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                                            style={{ width: `${b.percentage}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Expandable Requirements Details */}
+                                    <div className="pt-2 border-t border-slate-800 space-y-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedBadgeMap(prev => ({ ...prev, [badgeKey]: !prev[badgeKey] }))}
+                                        className="w-full text-left text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center justify-between cursor-pointer py-1"
+                                      >
+                                        <span>{isExpanded ? 'Hide Requirements' : `View Requirements Checklist (${b.approvedCount}/${b.total})`}</span>
+                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                      </button>
+
+                                      {isExpanded && (
+                                        <div className="pt-2 space-y-2 border-t border-slate-755 animate-fadeIn">
+                                          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                                            {(b.badge.requirements || []).map(req => {
+                                              const stepVal = b.steps[req.id];
+                                              const isReqDone = stepVal === true || stepVal?.completed === true || stepVal === 'approved' || stepVal?.approved === true || stepVal === 'completed';
+                                              const isReqPending = !isReqDone && (stepVal === 'pending' || stepVal?.pending === true);
+
+                                              return (
+                                                <div
+                                                  key={req.id}
+                                                  className={`p-2.5 rounded-xl border text-xs flex items-start justify-between gap-2.5 ${
+                                                    isReqDone
+                                                      ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200'
+                                                      : isReqPending
+                                                      ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                                                      : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                                                  }`}
+                                                >
+                                                  <div className="space-y-0.5 min-w-0">
+                                                    <strong className="text-white text-[11px] block">Req {req.id}</strong>
+                                                    <p className="text-[11px] leading-relaxed line-clamp-2">{req.text}</p>
+                                                  </div>
+                                                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 ${
+                                                    isReqDone
+                                                      ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700'
+                                                      : isReqPending
+                                                      ? 'bg-amber-900/80 text-amber-300 border border-amber-600 animate-pulse'
+                                                      : 'bg-slate-800 text-slate-500'
+                                                  }`}>
+                                                    {isReqDone ? <><Check size={10} /> Certified</> : isReqPending ? <><Clock size={10} /> In Review</> : 'Incomplete'}
+                                                  </span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+
+                                          {/* Worksheets & Official Links */}
+                                          <div className="flex items-center gap-2 pt-2 border-t border-slate-800 flex-wrap text-[11px]">
+                                            {b.badge.packetPdfUrl && (
+                                              <a
+                                                href={b.badge.packetPdfUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1 font-bold"
+                                              >
+                                                <Download size={11} className="text-amber-400" />
+                                                <span>Worksheet (PDF)</span>
+                                              </a>
+                                            )}
+                                            {b.badge.pageUrl && (
+                                              <a
+                                                href={b.badge.pageUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1 font-bold"
+                                              >
+                                                <ExternalLink size={11} className="text-emerald-400" />
+                                                <span>Official Guide</span>
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── SUB-TAB 2: EARNED / COMPLETED BADGES ── */}
+                    {activeMeritTab === 'earned' && (
+                      <div className="space-y-3">
+                        {earnedBadges.length === 0 ? (
+                          <div className="bg-slate-850 border border-slate-800 p-8 rounded-2xl text-center space-y-2 text-xs text-slate-400">
+                            🏅 No merit badges officially completed yet. Badges in progress and planned will appear here once certified.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {earnedBadges
+                              .filter(b => !scoutSearchTerm || b.badge.name.toLowerCase().includes(scoutSearchTerm))
+                              .map(b => {
+                                const badgeKey = `${scout.uid}_${b.badge.id}`;
+                                const isExpanded = !!expandedBadgeMap[badgeKey];
+
+                                return (
+                                  <div
+                                    key={b.badge.id}
+                                    className="bg-slate-850/90 border border-emerald-500/40 p-4 rounded-2xl space-y-3 shadow-md hover:border-emerald-400 transition flex flex-col justify-between"
+                                  >
+                                    <div className="space-y-2.5">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                            b.badge.eagleRequired
+                                              ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                              : 'bg-sky-950 text-sky-300 border border-sky-600'
+                                          }`}>
+                                            {b.badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective Badge'}
+                                          </span>
+                                          <h5 className="font-extrabold text-white text-sm mt-1">{b.badge.name}</h5>
+                                        </div>
+                                        <span className="text-xs bg-emerald-950 text-emerald-300 border border-emerald-600 px-2.5 py-0.5 rounded-full font-bold shrink-0">
+                                          ✓ Earned
+                                        </span>
+                                      </div>
+
+                                      {/* Earned Metadata */}
+                                      <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
+                                        <div className="flex items-center justify-between text-[11px]">
+                                          <span className="text-slate-400">Certified Date:</span>
+                                          <strong className="text-emerald-300 font-mono">
+                                            {b.earnedDate ? b.earnedDate.split('T')[0] : 'Certified by Troop'}
+                                          </strong>
+                                        </div>
+                                        {b.counselor && (
+                                          <div className="flex items-center justify-between text-[11px]">
+                                            <span className="text-slate-400">Counselor:</span>
+                                            <strong className="text-slate-200">{b.counselor}</strong>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* 100% Bar */}
+                                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-emerald-400 h-full rounded-full w-full" />
+                                      </div>
+                                    </div>
+
+                                    {/* Expandable Details */}
+                                    <div className="pt-2 border-t border-slate-800 space-y-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedBadgeMap(prev => ({ ...prev, [badgeKey]: !prev[badgeKey] }))}
+                                        className="w-full text-left text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center justify-between cursor-pointer py-1"
+                                      >
+                                        <span>{isExpanded ? 'Hide Requirements' : 'View Certified Requirements'}</span>
+                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                      </button>
+
+                                      {isExpanded && (
+                                        <div className="pt-2 space-y-2 border-t border-slate-755 animate-fadeIn">
+                                          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                                            {(b.badge.requirements || []).map(req => (
+                                              <div
+                                                key={req.id}
+                                                className="p-2.5 rounded-xl border border-emerald-800/40 bg-emerald-950/20 text-xs flex items-start justify-between gap-2.5"
+                                              >
+                                                <div className="space-y-0.5 min-w-0">
+                                                  <strong className="text-emerald-300 text-[11px] block">Req {req.id}</strong>
+                                                  <p className="text-[11px] leading-relaxed text-slate-300">{req.text}</p>
+                                                </div>
+                                                <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700 shrink-0 flex items-center gap-1">
+                                                  <Check size={10} /> Certified
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── SUB-TAB 3: IN-PROGRESS BADGES ── */}
+                    {activeMeritTab === 'in_progress' && (
+                      <div className="space-y-3">
+                        {inProgressBadges.length === 0 ? (
+                          <div className="bg-slate-850 border border-slate-800 p-8 rounded-2xl text-center space-y-2 text-xs text-slate-400">
+                            ⚡ No merit badges currently marked in progress. Badges with partially approved requirements will appear here.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {inProgressBadges
+                              .filter(b => !scoutSearchTerm || b.badge.name.toLowerCase().includes(scoutSearchTerm))
+                              .map(b => {
+                                const badgeKey = `${scout.uid}_${b.badge.id}`;
+                                const isExpanded = !!expandedBadgeMap[badgeKey];
+
+                                return (
+                                  <div
+                                    key={b.badge.id}
+                                    className="bg-slate-850/90 border border-amber-500/40 p-4 rounded-2xl space-y-3 shadow-md hover:border-amber-400 transition flex flex-col justify-between"
+                                  >
+                                    <div className="space-y-2.5">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                            b.badge.eagleRequired
+                                              ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                              : 'bg-sky-950 text-sky-300 border border-sky-600'
+                                          }`}>
+                                            {b.badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective Badge'}
+                                          </span>
+                                          <h5 className="font-extrabold text-white text-sm mt-1">{b.badge.name}</h5>
+                                        </div>
+                                        <span className="text-[10px] bg-amber-950 text-amber-300 border border-amber-600 px-2.5 py-0.5 rounded-full font-bold shrink-0">
+                                          In Progress
+                                        </span>
+                                      </div>
+
+                                      {/* Requirements Counters */}
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-slate-400">Steps Approved:</span>
+                                          <span className="font-mono text-amber-300 font-bold">
+                                            {b.approvedCount} of {b.total} ({b.percentage}%)
+                                          </span>
+                                        </div>
+                                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                          <div
+                                            className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                                            style={{ width: `${b.percentage}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Expandable Details */}
+                                    <div className="pt-2 border-t border-slate-800 space-y-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedBadgeMap(prev => ({ ...prev, [badgeKey]: !prev[badgeKey] }))}
+                                        className="w-full text-left text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center justify-between cursor-pointer py-1"
+                                      >
+                                        <span>{isExpanded ? 'Hide Requirements' : `Inspect Requirements (${b.approvedCount}/${b.total})`}</span>
+                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                      </button>
+
+                                      {isExpanded && (
+                                        <div className="pt-2 space-y-2 border-t border-slate-755 animate-fadeIn">
+                                          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                                            {(b.badge.requirements || []).map(req => {
+                                              const stepVal = b.steps[req.id];
+                                              const isReqDone = stepVal === true || stepVal?.completed === true || stepVal === 'approved' || stepVal?.approved === true || stepVal === 'completed';
+                                              const isReqPending = !isReqDone && (stepVal === 'pending' || stepVal?.pending === true);
+
+                                              return (
+                                                <div
+                                                  key={req.id}
+                                                  className={`p-2.5 rounded-xl border text-xs flex items-start justify-between gap-2.5 ${
+                                                    isReqDone
+                                                      ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200'
+                                                      : isReqPending
+                                                      ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                                                      : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                                                  }`}
+                                                >
+                                                  <div className="space-y-0.5 min-w-0">
+                                                    <strong className="text-white text-[11px] block">Req {req.id}</strong>
+                                                    <p className="text-[11px] leading-relaxed line-clamp-2">{req.text}</p>
+                                                  </div>
+                                                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 ${
+                                                    isReqDone
+                                                      ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700'
+                                                      : isReqPending
+                                                      ? 'bg-amber-900/80 text-amber-300 border border-amber-600 animate-pulse'
+                                                      : 'bg-slate-800 text-slate-500'
+                                                  }`}>
+                                                    {isReqDone ? <><Check size={10} /> Certified</> : isReqPending ? <><Clock size={10} /> In Review</> : 'Incomplete'}
+                                                  </span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── SUB-TAB 4: 14 EAGLE-REQUIRED MATRIX ── */}
+                    {activeMeritTab === 'eagle_required' && (
+                      <div className="space-y-5">
+                        
+                        {/* 11 Solo Mandatory Badges */}
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider">
+                              11 Mandatory Solo Badges ({eagleRequiredEarned} Earned &bull; {eagleRequiredPlanned} Planned)
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">No substitutions permitted</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {EAGLE_MANDATORY_SOLOS.map(solo => {
+                              const bObj = MERIT_BADGES.find(mb => mb.id === solo.id || mb.id === solo.id.replace(/-/g, '_')) || { id: solo.id, name: solo.name, eagleRequired: true, requirements: [] };
+                              const evalData = getBadgeStatusAndProgress(bObj, sMerit);
+                              const badgeKey = `${scout.uid}_${bObj.id}`;
+                              const isExpanded = !!expandedBadgeMap[badgeKey];
+
+                              return (
+                                <div
+                                  key={solo.id}
+                                  className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-2.5 ${
+                                    evalData.isEarned
+                                      ? 'bg-emerald-950/20 border-emerald-800/50 text-emerald-200'
+                                      : evalData.isPlanned
+                                      ? 'bg-sky-950/20 border-sky-800/50 text-sky-200'
+                                      : evalData.isInProgress
+                                      ? 'bg-amber-950/20 border-amber-800/50 text-amber-200'
+                                      : 'bg-slate-900/60 border-slate-755 text-slate-400'
+                                  }`}
+                                >
+                                  <div className="space-y-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        <span className="text-xl shrink-0">{solo.icon}</span>
+                                        <div className="min-w-0">
+                                          <strong className="text-white text-xs block truncate">{solo.name}</strong>
+                                          <span className="text-[10px] text-slate-400 block font-mono">
+                                            {evalData.isEarned 
+                                              ? `✓ Earned ${evalData.earnedDate ? evalData.earnedDate.split('T')[0] : ''}` 
+                                              : evalData.isPlanned 
+                                              ? `🎯 Target: ${evalData.plannedTarget || 'Planned'}`
+                                              : evalData.isInProgress
+                                              ? `⚡ ${evalData.approvedCount} of ${evalData.total} Approved`
+                                              : '○ Needed for Eagle'}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                        evalData.isEarned
+                                          ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700'
+                                          : evalData.isPlanned
+                                          ? 'bg-sky-900/80 text-sky-300 border border-sky-700'
+                                          : evalData.isInProgress
+                                          ? 'bg-amber-900/80 text-amber-300 border border-amber-700'
+                                          : 'bg-slate-800 text-slate-500'
+                                      }`}>
+                                        {evalData.isEarned ? '✓ Earned' : evalData.isPlanned ? '🎯 Planned' : evalData.isInProgress ? '⚡ In Progress' : 'Needed'}
+                                      </span>
+                                    </div>
+
+                                    {solo.timeAlert && (
+                                      <div className="text-[10px] bg-black/30 px-2 py-1 rounded-lg text-amber-300/90 flex items-center gap-1.5">
+                                        <Clock size={11} className="shrink-0 text-amber-400" />
+                                        <span className="truncate">{solo.timeAlert}</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Expand requirements */}
+                                  {bObj.requirements && bObj.requirements.length > 0 && (
+                                    <div className="pt-2 border-t border-slate-800/80">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedBadgeMap(prev => ({ ...prev, [badgeKey]: !prev[badgeKey] }))}
+                                        className="text-[11px] text-slate-300 hover:text-white font-bold flex items-center justify-between w-full cursor-pointer"
+                                      >
+                                        <span>{isExpanded ? 'Hide Checklist' : `Checklist (${evalData.approvedCount}/${evalData.total})`}</span>
+                                        {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                      </button>
+
+                                      {isExpanded && (
+                                        <div className="pt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1 border-t border-slate-755 mt-1.5">
+                                          {bObj.requirements.map(req => {
+                                            const stepVal = evalData.steps[req.id];
+                                            const isReqDone = stepVal === true || stepVal?.completed === true || stepVal === 'approved' || stepVal?.approved === true || stepVal === 'completed';
+                                            return (
+                                              <div key={req.id} className="p-2 bg-slate-950/80 rounded-lg text-[10px] flex justify-between gap-2 border border-slate-800">
+                                                <span className="text-slate-300 truncate">Req {req.id}: {req.text}</span>
+                                                <span className={`font-mono font-bold shrink-0 ${isReqDone ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                                  {isReqDone ? '✓ Certified' : '○ Pending'}
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 3 Alternate Choice Groups */}
+                        <div className="space-y-3 pt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider">
+                              3 Choice Groups (1 Required From Each Group)
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">Excess badges count as Electives</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {EAGLE_CHOICE_GROUPS.map(group => {
+                              return (
+                                <div key={group.groupId} className="bg-slate-950/70 border border-slate-755 p-4 rounded-2xl space-y-3">
+                                  <h6 className="text-xs font-black text-white">{group.groupName}</h6>
+                                  <div className="space-y-2">
+                                    {group.badges.map(bInfo => {
+                                      const bObj = MERIT_BADGES.find(mb => mb.id === bInfo.id || mb.id === bInfo.id.replace(/-/g, '_')) || { id: bInfo.id, name: bInfo.name, eagleRequired: true, requirements: [] };
+                                      const evalData = getBadgeStatusAndProgress(bObj, sMerit);
+
+                                      return (
+                                        <div
+                                          key={bInfo.id}
+                                          className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                                            evalData.isEarned
+                                              ? 'bg-emerald-950/30 border-emerald-700/60 text-emerald-200'
+                                              : evalData.isPlanned
+                                              ? 'bg-sky-950/30 border-sky-700/60 text-sky-200'
+                                              : evalData.isInProgress
+                                              ? 'bg-amber-950/30 border-amber-700/60 text-amber-200'
+                                              : 'bg-slate-900 border-slate-800 text-slate-400'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span>{bInfo.icon}</span>
+                                            <span className="font-bold text-white text-[11px]">{bInfo.name}</span>
+                                          </div>
+                                          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/40">
+                                            {evalData.isEarned ? '✓ Earned' : evalData.isPlanned ? '🎯 Planned' : evalData.isInProgress ? '⚡ Active' : 'Needed'}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SUB-TAB 5: ALL MERIT BADGES DIRECTORY ── */}
+                    {activeMeritTab === 'all' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {evaluatedBadges
+                          .filter(b => !scoutSearchTerm || b.badge.name.toLowerCase().includes(scoutSearchTerm))
+                          .map(b => {
+                            const badgeKey = `${scout.uid}_${b.badge.id}`;
+                            const isExpanded = !!expandedBadgeMap[badgeKey];
 
                             return (
                               <div
-                                key={badge.id}
-                                className="bg-slate-850/90 border border-emerald-500/30 p-4 rounded-2xl space-y-2.5 shadow-sm hover:border-emerald-500 transition"
+                                key={b.badge.id}
+                                className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-2.5 ${
+                                  b.isEarned
+                                    ? 'bg-emerald-950/20 border-emerald-800/50 text-emerald-200'
+                                    : b.isPlanned
+                                    ? 'bg-sky-950/20 border-sky-800/50 text-sky-200'
+                                    : b.isInProgress
+                                    ? 'bg-amber-950/20 border-amber-800/50 text-amber-200'
+                                    : 'bg-slate-850/60 border-slate-755 text-slate-400'
+                                }`}
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="space-y-0.5">
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                      badge.eagleRequired
-                                        ? 'bg-amber-950 text-amber-300 border border-amber-600'
-                                        : 'bg-sky-950 text-sky-300 border border-sky-600'
+                                <div className="space-y-1.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                        b.badge.eagleRequired
+                                          ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                          : 'bg-slate-800 text-slate-400'
+                                      }`}>
+                                        {b.badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective'}
+                                      </span>
+                                      <h5 className="font-extrabold text-white text-xs sm:text-sm mt-1">{b.badge.name}</h5>
+                                    </div>
+                                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                      b.isEarned
+                                        ? 'bg-emerald-900 text-emerald-200 border border-emerald-600'
+                                        : b.isPlanned
+                                        ? 'bg-sky-900 text-sky-200 border border-sky-600'
+                                        : b.isInProgress
+                                        ? 'bg-amber-900 text-amber-200 border border-amber-600'
+                                        : 'bg-slate-800 text-slate-500'
                                     }`}>
-                                      {badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective Badge'}
+                                      {b.isEarned ? '✓ Earned' : b.isPlanned ? '🎯 Planned' : b.isInProgress ? 'In Progress' : 'Not Started'}
                                     </span>
-                                    <h5 className="font-extrabold text-white text-sm mt-1">{badge.name}</h5>
                                   </div>
-                                  <span className="text-xs bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.5 rounded-full font-bold shrink-0">
-                                    ✓ Earned
-                                  </span>
-                                </div>
 
-                                {badge.description && (
-                                  <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
-                                    {badge.description}
-                                  </p>
-                                )}
-
-                                <div className="pt-2 border-t border-slate-755 text-[10px] text-slate-400 flex justify-between items-center font-mono">
-                                  <span>{earnedDate ? `Date: ${earnedDate.split('T')[0]}` : 'Certified by Troop'}</span>
-                                  {counselor && <span>Counselor: {counselor}</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* In-Progress Badges Grid */}
-                    {inProgressBadges.length > 0 && (
-                      <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
-                          ⚡ Merit Badges In Progress ({inProgressBadges.length})
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {inProgressBadges.map(badge => {
-                            const mbData = sMerit[badge.id] || {};
-                            const reqs = mbData.completedRequirements || mbData.requirements || {};
-                            const doneCount = Object.values(reqs).filter(v => v === true || v?.completed === true).length;
-                            const totalCount = badge.requirements ? badge.requirements.length : 0;
-
-                            return (
-                              <div
-                                key={`prog_${badge.id}`}
-                                className="bg-slate-850/60 border border-slate-755 p-4 rounded-2xl space-y-2.5 shadow-sm"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
-                                      {badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective'}
+                                  {b.plannedTarget && (
+                                    <span className="text-[10px] text-sky-300 font-mono block">
+                                      🎯 Target: {b.plannedTarget}
                                     </span>
-                                    <h5 className="font-extrabold text-white text-sm mt-1">{badge.name}</h5>
-                                  </div>
-                                  <span className="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-700 px-2 py-0.5 rounded-full font-bold">
-                                    In Progress
-                                  </span>
+                                  )}
+
+                                  {b.total > 0 && (
+                                    <div className="text-[10px] text-slate-400 font-mono pt-1">
+                                      {b.approvedCount} of {b.total} requirements completed ({b.percentage}%)
+                                    </div>
+                                  )}
                                 </div>
-                                {totalCount > 0 && (
-                                  <div className="text-[10px] text-slate-400 font-mono">
-                                    Progress: {doneCount} of {totalCount} requirements completed
+
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedBadgeMap(prev => ({ ...prev, [badgeKey]: !prev[badgeKey] }))}
+                                  className="text-[11px] font-bold text-slate-300 hover:text-white pt-2 border-t border-slate-800 flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>{isExpanded ? 'Hide Details' : 'View Requirements'}</span>
+                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                </button>
+
+                                {isExpanded && (
+                                  <div className="pt-2 space-y-1.5 max-h-48 overflow-y-auto pr-1 border-t border-slate-755 mt-1">
+                                    {(b.badge.requirements || []).map(req => {
+                                      const stepVal = b.steps[req.id];
+                                      const isReqDone = stepVal === true || stepVal?.completed === true || stepVal === 'approved' || stepVal?.approved === true || stepVal === 'completed';
+                                      return (
+                                        <div key={req.id} className="p-2 bg-slate-950/80 rounded-lg text-[10px] flex justify-between gap-2 border border-slate-800">
+                                          <span className="text-slate-300 truncate">Req {req.id}: {req.text}</span>
+                                          <span className={`font-mono font-bold shrink-0 ${isReqDone ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                            {isReqDone ? '✓ Certified' : '○ Pending'}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
                             );
                           })}
-                        </div>
                       </div>
                     )}
+
                   </div>
                 )}
 

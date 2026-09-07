@@ -4,7 +4,7 @@ import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK, TOTAL_MERIT_BADGES_FOR_EAGLE } from '../data/meritBadges';
 import {
   Award, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp,
-  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle
+  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle, Users, CheckCheck, Shield
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -182,7 +182,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
 
 // ── Badge Detail Modal ────────────────────────────────────────────────────────
 
-function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep, onTogglePlanned, onSaveMeta, readOnly, isLeaderOrOwner, isScout }) {
+function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep, onApproveAllSteps, onApproveAllPendingSteps, onTogglePlanned, onSaveMeta, readOnly, isLeaderOrOwner, isScout }) {
   const [dateCompleted, setDateCompleted] = useState(progressEntry?.dateCompleted || '');
   const [counselor, setCounselor] = useState(progressEntry?.counselor || '');
   const [notes, setNotes] = useState(progressEntry?.notes || '');
@@ -353,6 +353,45 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
             </div>
           </div>
 
+          {/* Leader Sign-off Controls Header Banner */}
+          {isLeaderOrOwner && !readOnly && (
+            <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-2xl p-4 shadow-md space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Shield size={16} className="text-emerald-400" />
+                  <span className="text-xs font-black text-white uppercase tracking-wider">
+                    Leader / Executive Sign-Off Controls
+                  </span>
+                </div>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                  {approvedCount} / {steps.length} Requirements Certified ({pct}%)
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {pendingCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onApproveAllPendingSteps && onApproveAllPendingSteps(badge.id)}
+                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md hover:scale-[1.02]"
+                  >
+                    <CheckCheck size={14} />
+                    <span>⚡ Approve All Pending ({pendingCount})</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => onApproveAllSteps && onApproveAllSteps(badge.id)}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/50 hover:scale-[1.02]"
+                >
+                  <Award size={14} />
+                  <span>✓ Sign Off Entire Badge (All {steps.length} Reqs)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Official Pamphlet Specification Card */}
           <div className="bg-slate-900/90 border border-teal-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
             <div className="flex items-center gap-3">
@@ -470,6 +509,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                         }
                       }}
                       className="mt-0.5 text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+                      title={isLeaderOrOwner ? (isApproved ? "Click to un-approve" : "Click to approve & sign off") : (isPending ? "Click to cancel pending" : "Click to submit for review")}
                     >
                       {isApproved ? (
                         <CheckCircle2 size={18} className="text-emerald-400" />
@@ -485,16 +525,41 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                       <p className="text-slate-200 leading-relaxed">{req.text}</p>
                     </div>
 
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex items-center gap-2">
                       {isApproved && (
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                          Approved
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30 flex items-center gap-1">
+                          <Check size={10} /> Approved
                         </span>
                       )}
                       {isPending && (
-                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
-                          Pending Leader
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30 flex items-center gap-1">
+                          <Clock size={10} className="animate-pulse" /> Pending Leader
                         </span>
+                      )}
+
+                      {/* Direct Leader Sign-Off Action Button */}
+                      {isLeaderOrOwner && !readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => onApproveStep(badge.id, req.id, state)}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer shadow-sm ${
+                            isPending
+                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white font-black'
+                              : isApproved
+                              ? 'bg-slate-800 hover:bg-red-950/60 text-slate-300 hover:text-red-300 border border-slate-700'
+                              : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40'
+                          }`}
+                        >
+                          {isPending ? (
+                            <>
+                              <Check size={12} /> Sign Off
+                            </>
+                          ) : isApproved ? (
+                            <span>Undo</span>
+                          ) : (
+                            <span>+ Sign Off</span>
+                          )}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -672,13 +737,63 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
 
 // ── Main Merit Badge Dashboard ────────────────────────────────────────────────
 
-export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutId, readOnly = false }) {
-  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = currentUser?.role === 'leader';
-  const isLeaderOrOwner = isOwner || isLeader;
-  const isScout = !isLeaderOrOwner;
+// ── Main Merit Badge Dashboard ────────────────────────────────────────────────
 
-  const scoutId = customScoutId || currentUser?.uid;
+export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutId, readOnly = false }) {
+  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
+  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster') && currentUser?.leaderPosition === 'Scoutmaster';
+  const isAssistantScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'assistant_leader') && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scout Master');
+  const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster || isAssistantScoutmaster;
+  const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isExecutive);
+  const isLeaderOrOwner = isOwner || isLeader || isExecutive;
+  const isParent = !isLeaderOrOwner && currentUser?.role === 'parent';
+  const isScout = !isLeaderOrOwner && !isParent;
+
+  // Multi-Scout state for Leader / Executive selection
+  const [scoutsList, setScoutsList] = useState([]);
+  const [selectedLeaderScoutId, setSelectedLeaderScoutId] = useState('');
+  const [activeScoutProfile, setActiveScoutProfile] = useState(null);
+  const [scoutSearchQuery, setScoutSearchQuery] = useState('');
+
+  // Fetch scouts list if leader or owner and customScoutId is not provided
+  useEffect(() => {
+    if (!isLeaderOrOwner || customScoutId) return;
+
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      const scouts = allUsers.filter(u => {
+        if (u.role !== 'scout') return false;
+        if (isOwner || isExecutive) return true;
+        return u.leaderId === currentUser?.uid || (currentUser?.groupId && u.groupId === currentUser?.groupId) || (currentUser?.assignedPatrol && (u.patrol === currentUser.assignedPatrol || u.patrolName === currentUser.assignedPatrol));
+      });
+      setScoutsList(scouts);
+      if (scouts.length > 0 && !selectedLeaderScoutId) {
+        setSelectedLeaderScoutId(scouts[0].uid);
+      }
+    }, (err) => {
+      console.error('Error listening to users in merit badges:', err);
+    });
+
+    return () => unsub();
+  }, [isLeaderOrOwner, customScoutId, currentUser, isOwner, isExecutive]);
+
+  const scoutId = customScoutId || (isLeaderOrOwner ? (selectedLeaderScoutId || scoutsList[0]?.uid || currentUser?.uid) : currentUser?.uid);
+
+  // Subscribe to active scout profile details
+  useEffect(() => {
+    if (!scoutId) {
+      setActiveScoutProfile(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'users', scoutId), (snap) => {
+      if (snap.exists()) {
+        setActiveScoutProfile({ uid: snap.id, ...snap.data() });
+      } else {
+        setActiveScoutProfile(null);
+      }
+    });
+    return () => unsub();
+  }, [scoutId]);
 
   const [progress, setProgress] = useState({});
   const [filter, setFilter] = useState('planned');
@@ -746,6 +861,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
     const ref = doc(db, progressCol, badgeId);
     const existing = progress[badgeId] || {};
     const currentSteps = existing.steps || {};
+    const badgeObj = MERIT_BADGES.find(b => b.id === badgeId);
     
     let nextVal = true;
     if (currentState === 'approved') {
@@ -754,16 +870,118 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
     }
 
     const steps = { ...currentSteps, [reqId]: nextVal };
+    const today = new Date().toISOString().split('T')[0];
+    const leaderUid = currentUser?.uid || 'leader';
+    const leaderName = currentUser?.fullName || currentUser?.username || 'Leader';
+
+    // Check if all requirements in badge are now approved
+    const totalReqs = badgeObj?.requirements?.length || 0;
+    const approvedCount = badgeObj?.requirements?.filter(r => {
+      const val = steps[r.id] || steps[String(r.id)];
+      return val === true || (typeof val === 'object' && (val?.completed === true || val?.approved === true));
+    }).length || 0;
+
+    const isFullyDone = totalReqs > 0 && approvedCount === totalReqs;
+
     try {
       await setDoc(ref, {
         ...existing,
         steps,
-        approvedBy: currentUser?.uid || 'leader',
-        approvedByName: currentUser?.fullName || currentUser?.username || 'Leader',
+        completed: isFullyDone ? true : (existing.completed && nextVal !== false ? true : false),
+        pending: isFullyDone ? false : (existing.pending || false),
+        dateCompleted: isFullyDone ? (existing.dateCompleted || today) : (nextVal === false ? '' : (existing.dateCompleted || '')),
+        completedDate: isFullyDone ? (existing.completedDate || today) : (nextVal === false ? '' : (existing.completedDate || '')),
+        counselorName: existing.counselor || existing.counselorName || leaderName,
+        approvedBy: leaderUid,
+        approvedByName: leaderName,
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (err) {
       console.error('Error approving step:', err);
+    }
+  };
+
+  // Leader batch approves all requirements in a badge
+  const handleApproveAllStepsLeader = async (badgeId) => {
+    if (readOnly) return;
+    const badgeObj = MERIT_BADGES.find(b => b.id === badgeId);
+    if (!badgeObj) return;
+
+    if (!window.confirm(`Sign off and certify ALL ${badgeObj.requirements.length} requirements for "${badgeObj.name}" as 100% completed?`)) return;
+
+    const ref = doc(db, progressCol, badgeId);
+    const existing = progress[badgeId] || {};
+    const existingSteps = existing.steps || {};
+    const today = new Date().toISOString().split('T')[0];
+    const leaderUid = currentUser?.uid || 'leader';
+    const leaderName = currentUser?.fullName || currentUser?.username || 'Leader';
+
+    const allSteps = { ...existingSteps };
+    badgeObj.requirements.forEach(r => {
+      allSteps[r.id] = true;
+    });
+
+    try {
+      await setDoc(ref, {
+        ...existing,
+        steps: allSteps,
+        completed: true,
+        pending: false,
+        dateCompleted: today,
+        completedDate: today,
+        counselorName: existing.counselor || existing.counselorName || leaderName,
+        approvedBy: leaderUid,
+        approvedByName: leaderName,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error batch approving badge:', err);
+    }
+  };
+
+  // Leader approves all pending requirements in a badge
+  const handleApproveAllPendingStepsLeader = async (badgeId) => {
+    if (readOnly) return;
+    const badgeObj = MERIT_BADGES.find(b => b.id === badgeId);
+    if (!badgeObj) return;
+
+    const ref = doc(db, progressCol, badgeId);
+    const existing = progress[badgeId] || {};
+    const existingSteps = existing.steps || {};
+    const today = new Date().toISOString().split('T')[0];
+    const leaderUid = currentUser?.uid || 'leader';
+    const leaderName = currentUser?.fullName || currentUser?.username || 'Leader';
+
+    const nextSteps = { ...existingSteps };
+    badgeObj.requirements.forEach(r => {
+      const sVal = nextSteps[r.id];
+      if (sVal === 'pending' || (typeof sVal === 'object' && sVal?.pending)) {
+        nextSteps[r.id] = true;
+      }
+    });
+
+    const totalReqs = badgeObj.requirements.length;
+    const approvedCount = badgeObj.requirements.filter(r => {
+      const val = nextSteps[r.id];
+      return val === true || (typeof val === 'object' && (val?.completed === true || val?.approved === true));
+    }).length;
+    const isFullyDone = totalReqs > 0 && approvedCount === totalReqs;
+
+    try {
+      await setDoc(ref, {
+        ...existing,
+        steps: nextSteps,
+        completed: isFullyDone ? true : (existing.completed || false),
+        pending: isFullyDone ? false : (existing.pending || false),
+        dateCompleted: isFullyDone ? (existing.dateCompleted || today) : (existing.dateCompleted || ''),
+        completedDate: isFullyDone ? (existing.completedDate || today) : (existing.completedDate || ''),
+        counselorName: existing.counselor || existing.counselorName || leaderName,
+        approvedBy: leaderUid,
+        approvedByName: leaderName,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error approving pending steps:', err);
     }
   };
 
@@ -831,6 +1049,59 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
 
   return (
     <div className="space-y-6">
+      {/* Scout Selector Banner for Leaders / Executives */}
+      {isLeaderOrOwner && !customScoutId && (
+        <div className="bg-slate-850 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+                <Users size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                    ⚜️ Leader Oversight & Sign-Off
+                  </span>
+                  {activeScoutProfile?.rank && (
+                    <span className="text-[10px] bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono font-bold">
+                      ⚜️ {activeScoutProfile.rank}
+                    </span>
+                  )}
+                  {activeScoutProfile?.patrol && (
+                    <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-bold">
+                      🛡️ {activeScoutProfile.patrol}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-black text-white">
+                  Active Scout: <span className="text-emerald-400">{activeScoutProfile?.fullName || activeScoutProfile?.username || 'Select a Scout'}</span>
+                </h3>
+              </div>
+            </div>
+
+            {/* Scout Dropdown Selector */}
+            <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+              <label htmlFor="scout-select-dropdown" className="text-xs font-bold text-slate-400 shrink-0">
+                Switch Scout:
+              </label>
+              <select
+                id="scout-select-dropdown"
+                aria-label="Select Scout to inspect merit badges"
+                value={selectedLeaderScoutId || scoutId}
+                onChange={(e) => setSelectedLeaderScoutId(e.target.value)}
+                className="bg-slate-900 border-2 border-emerald-500/50 hover:border-emerald-400 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition cursor-pointer w-full sm:min-w-[220px]"
+              >
+                {scoutsList.map(s => (
+                  <option key={s.uid} value={s.uid}>
+                    {s.fullName || s.username} ({s.rank || 'Scout'} • {s.patrolName || s.groupName || s.patrol || 'Patrol'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       <KPIHeader progress={progress} activeTab={filter} onSelectTab={setFilter} />
 
       {/* Top Quick Resource Reference Banner */}
@@ -985,6 +1256,8 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
           onClose={() => setSelectedBadge(null)}
           onToggleStep={handleToggleStepScout}
           onApproveStep={handleApproveStepLeader}
+          onApproveAllSteps={handleApproveAllStepsLeader}
+          onApproveAllPendingSteps={handleApproveAllPendingStepsLeader}
           onTogglePlanned={handleTogglePlanned}
           onSaveMeta={saveMeta}
           readOnly={readOnly}

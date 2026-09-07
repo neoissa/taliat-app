@@ -425,22 +425,63 @@ export default function UniversalPendingQueueModal({
 
     // C. MERIT BADGES REQUIREMENTS
     MERIT_BADGES.forEach(b => {
-      const mp = meritProgress[b.id] || {};
-      const uniqueKey = `${sUid}_badge_${b.id}`;
-      if (isEntryPending(mp) && !approvedItemIds.has(uniqueKey)) {
+      const mp = meritProgress[b.id] || meritProgress[b.id.replace(/-/g, '_')] || meritProgress[b.id.replace(/_/g, '-')] || {};
+      if (mp.completed === true) return;
+
+      const steps = mp.steps || mp.completedSteps || {};
+      let hasReqPending = false;
+
+      (b.requirements || []).forEach(req => {
+        const stepVal = steps[req.id] || steps[String(req.id)];
+        const isStepPending = stepVal === 'pending' || (typeof stepVal === 'object' && stepVal?.pending === true && !stepVal?.completed && !stepVal?.approved);
+        const isStepApproved = stepVal === true || (typeof stepVal === 'object' && (stepVal?.completed === true || stepVal?.approved === true));
+
+        if (isStepPending && !isStepApproved) {
+          hasReqPending = true;
+          const uniqueKey = `${sUid}_badge_${b.id}_req_${req.id}`;
+          if (!approvedItemIds.has(uniqueKey)) {
+            allPendingItems.push({
+              id: uniqueKey,
+              scoutUid: sUid,
+              scoutName,
+              scoutPatrolName,
+              rawId: b.id,
+              badgeId: b.id,
+              badgeName: b.name,
+              reqId: req.id,
+              domain: 'badges',
+              domainLabel: `🏅 ${b.name} Req ${req.id}`,
+              domainColor: 'border-amber-500/50 bg-amber-950/30 text-amber-300',
+              title: `${b.name} — Req ${req.id}`,
+              subtitle: `${b.eagleRequired ? '⭐ Eagle-Required' : 'Elective'} • Requirement Step`,
+              description: req.text,
+              submittedDate: (typeof stepVal === 'object' && stepVal?.submittedDate) ? stepVal.submittedDate : (mp.updatedAt ? mp.updatedAt.split('T')[0] : 'Awaiting Leader Sign-off'),
+              targetTab: 'merit-badges',
+              testPrompt: `Verify scout demonstration for ${b.name} Requirement ${req.id}: ${req.text}`
+            });
+          }
+        }
+      });
+
+      // Also support whole badge pending flag if no specific requirement was flagged
+      const uniqueBadgeKey = `${sUid}_badge_${b.id}`;
+      if ((mp.pending === true || isEntryPending(mp)) && !approvedItemIds.has(uniqueBadgeKey) && !hasReqPending) {
         allPendingItems.push({
-          id: uniqueKey,
+          id: uniqueBadgeKey,
           scoutUid: sUid,
           scoutName,
           scoutPatrolName,
           rawId: b.id,
+          badgeId: b.id,
+          badgeName: b.name,
+          isEntireBadge: true,
           domain: 'badges',
           domainLabel: '🏅 Merit Badge',
           domainColor: 'border-amber-500/50 bg-amber-950/30 text-amber-300',
           title: `${b.name} Merit Badge`,
           subtitle: b.eagleRequired ? 'Eagle-Required' : 'Elective',
-          description: 'Scout has finished workbook and requested counselor conference.',
-          submittedDate: mp?.submittedDate || 'Recently',
+          description: 'Scout has requested full merit badge review and counselor sign-off.',
+          submittedDate: mp?.submittedDate || (mp.updatedAt ? mp.updatedAt.split('T')[0] : 'Recently'),
           targetTab: 'merit-badges',
           testPrompt: `Conduct Scoutmaster/Counselor conference for ${b.name}.`
         });
@@ -524,7 +565,7 @@ export default function UniversalPendingQueueModal({
     try {
       const rankUpdatesByScoutAndRank = {};
       const islamicUpdatesByScout = {};
-      const meritUpdates = [];
+      const meritUpdatesByScoutAndBadge = {};
       const homeworkUpdates = [];
       const eagleUpdates = [];
       const newApprovedIds = new Set(approvedItemIds);
@@ -554,16 +595,14 @@ export default function UniversalPendingQueueModal({
             approvedByName: leaderName
           };
         } else if (item.domain === 'badges') {
-          meritUpdates.push({
-            scoutUid: sUid,
-            badgeId: item.rawId,
-            data: {
-              completed: true,
-              pending: false,
-              dateCompleted: today,
-              counselorName: leaderName
-            }
-          });
+          const bId = item.rawId || item.badgeId;
+          if (!meritUpdatesByScoutAndBadge[sUid]) meritUpdatesByScoutAndBadge[sUid] = {};
+          if (!meritUpdatesByScoutAndBadge[sUid][bId]) meritUpdatesByScoutAndBadge[sUid][bId] = { reqIds: [], isEntire: false };
+          if (item.reqId) {
+            meritUpdatesByScoutAndBadge[sUid][bId].reqIds.push(item.reqId);
+          } else {
+            meritUpdatesByScoutAndBadge[sUid][bId].isEntire = true;
+          }
         } else if (item.domain === 'homework') {
           homeworkUpdates.push({
             scoutUid: sUid,
@@ -614,7 +653,7 @@ export default function UniversalPendingQueueModal({
         });
 
         // Compute simulated ranks progress for this scout to sync users/{sUid}.rank if a new rank is achieved
-        const currentScoutProgress = scoutMap[sUid]?.ranks || {};
+        const currentScoutProgress = scoutsDataMap[sUid]?.ranks || {};
         const simulatedScoutRanks = { ...currentScoutProgress };
         Object.entries(ranksMap).forEach(([rankId, reqsMap]) => {
           const existing = simulatedScoutRanks[rankId] || {};
@@ -625,8 +664,8 @@ export default function UniversalPendingQueueModal({
             steps: { ...existingReqs, ...reqsMap }
           };
         });
-        const newAchievedRank = getLatestAchievedRank(simulatedScoutRanks, scoutMap[sUid]?.rank);
-        if (newAchievedRank?.name && newAchievedRank.name !== scoutMap[sUid]?.rank) {
+        const newAchievedRank = getLatestAchievedRank(simulatedScoutRanks, scoutsDataMap[sUid]?.profile?.rank);
+        if (newAchievedRank?.name && newAchievedRank.name !== scoutsDataMap[sUid]?.profile?.rank) {
           updatePromises.push(
             setDoc(doc(db, 'users', sUid), { rank: newAchievedRank.name }, { merge: true })
           );
@@ -641,10 +680,49 @@ export default function UniversalPendingQueueModal({
       });
 
       // 3. Commit Merit Badge updates
-      meritUpdates.forEach(({ scoutUid, badgeId, data }) => {
-        updatePromises.push(
-          setDoc(doc(db, 'user_progress', scoutUid, 'merit_badges', badgeId), data, { merge: true })
-        );
+      Object.entries(meritUpdatesByScoutAndBadge).forEach(([sUid, badgesMap]) => {
+        const sData = scoutsDataMap[sUid] || {};
+        const sMerit = sData.merit || {};
+
+        Object.entries(badgesMap).forEach(([bId, updateInfo]) => {
+          const badgeObj = MERIT_BADGES.find(mb => mb.id === bId || mb.id === bId.replace(/_/g, '-'));
+          const currentBadgeDoc = sMerit[bId] || {};
+          const existingSteps = currentBadgeDoc.steps || currentBadgeDoc.completedSteps || {};
+          
+          let nextSteps = { ...existingSteps };
+          if (updateInfo.isEntire) {
+            (badgeObj?.requirements || []).forEach(r => {
+              nextSteps[r.id] = true;
+            });
+          } else {
+            updateInfo.reqIds.forEach(reqId => {
+              nextSteps[reqId] = true;
+            });
+          }
+
+          const totalReqs = badgeObj?.requirements?.length || 0;
+          const approvedCount = badgeObj?.requirements?.filter(r => {
+            const val = nextSteps[r.id] || nextSteps[String(r.id)];
+            return val === true || (typeof val === 'object' && (val?.completed === true || val?.approved === true));
+          }).length || 0;
+
+          const isFullyDone = updateInfo.isEntire || (totalReqs > 0 && approvedCount === totalReqs);
+
+          updatePromises.push(
+            setDoc(doc(db, 'user_progress', sUid, 'merit_badges', bId), {
+              ...currentBadgeDoc,
+              steps: nextSteps,
+              completed: isFullyDone ? true : (currentBadgeDoc.completed || false),
+              pending: isFullyDone ? false : (currentBadgeDoc.pending || false),
+              dateCompleted: isFullyDone ? (currentBadgeDoc.dateCompleted || today) : (currentBadgeDoc.dateCompleted || ''),
+              completedDate: isFullyDone ? (currentBadgeDoc.completedDate || today) : (currentBadgeDoc.completedDate || ''),
+              counselorName: currentBadgeDoc.counselorName || leaderName,
+              approvedBy: leaderUid,
+              approvedByName: leaderName,
+              updatedAt: new Date().toISOString()
+            }, { merge: true })
+          );
+        });
       });
 
       // 4. Commit Homework updates
@@ -687,6 +765,7 @@ export default function UniversalPendingQueueModal({
     const leaderUid = currentUser?.uid || 'leader';
     const leaderName = currentUser?.fullName || currentUser?.username || 'Troop Leader';
     const sUid = item.scoutUid;
+    const sData = scoutsDataMap[sUid] || {};
 
     try {
       if (item.domain === 'ranks') {
@@ -723,12 +802,58 @@ export default function UniversalPendingQueueModal({
           }
         }, { merge: true });
       } else if (item.domain === 'badges') {
-        await setDoc(doc(db, 'user_progress', sUid, 'merit_badges', item.rawId), {
-          completed: true,
-          pending: false,
-          dateCompleted: today,
-          counselorName: leaderName
-        }, { merge: true });
+        const badgeId = item.rawId || item.badgeId;
+        const badgeObj = MERIT_BADGES.find(mb => mb.id === badgeId || mb.id === badgeId.replace(/_/g, '-'));
+        const currentBadgeDoc = sData?.merit?.[badgeId] || {};
+        const existingSteps = currentBadgeDoc.steps || currentBadgeDoc.completedSteps || {};
+
+        if (item.reqId) {
+          // Approving specific requirement step
+          const nextSteps = {
+            ...existingSteps,
+            [item.reqId]: true
+          };
+          
+          const totalReqs = badgeObj?.requirements?.length || 0;
+          const approvedCount = badgeObj?.requirements?.filter(r => {
+            const val = nextSteps[r.id] || nextSteps[String(r.id)];
+            return val === true || (typeof val === 'object' && (val?.completed === true || val?.approved === true));
+          }).length || 0;
+
+          const isFullyDone = totalReqs > 0 && approvedCount === totalReqs;
+
+          await setDoc(doc(db, 'user_progress', sUid, 'merit_badges', badgeId), {
+            ...currentBadgeDoc,
+            steps: nextSteps,
+            completed: isFullyDone ? true : (currentBadgeDoc.completed || false),
+            pending: isFullyDone ? false : (currentBadgeDoc.pending || false),
+            dateCompleted: isFullyDone ? (currentBadgeDoc.dateCompleted || today) : (currentBadgeDoc.dateCompleted || ''),
+            completedDate: isFullyDone ? (currentBadgeDoc.completedDate || today) : (currentBadgeDoc.completedDate || ''),
+            counselorName: currentBadgeDoc.counselorName || leaderName,
+            approvedBy: leaderUid,
+            approvedByName: leaderName,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        } else {
+          // Approving entire badge
+          const allStepsMap = {};
+          (badgeObj?.requirements || []).forEach(r => {
+            allStepsMap[r.id] = true;
+          });
+
+          await setDoc(doc(db, 'user_progress', sUid, 'merit_badges', badgeId), {
+            ...currentBadgeDoc,
+            steps: { ...existingSteps, ...allStepsMap },
+            completed: true,
+            pending: false,
+            dateCompleted: today,
+            completedDate: today,
+            counselorName: currentBadgeDoc.counselorName || leaderName,
+            approvedBy: leaderUid,
+            approvedByName: leaderName,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }
       } else if (item.domain === 'homework') {
         const hData = {
           completed: true,
