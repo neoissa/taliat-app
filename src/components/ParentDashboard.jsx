@@ -17,10 +17,12 @@ import SignaturePadModal from './SignaturePadModal';
 import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import ParentAlertsFeed from './ParentAlertsFeed';
+import ParentEagleTracker from './ParentEagleTracker';
 import {
   Award,
   Star,
   Compass,
+  Target,
   Calendar,
   Clock,
   BookOpen,
@@ -711,6 +713,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             badge: urgentTasks.length > 0 ? `⚡ ${urgentTasks.length}` : null, 
             badgeColor: 'bg-red-500 text-white font-black' 
           },
+          { id: 'eagle', label: '🦅 Road to Eagle', icon: Target },
           { id: 'advancement', label: 'Advancement & Badges', icon: Award },
           { id: 'family', label: 'Household Profile', icon: User }
         ].map(t => {
@@ -1613,6 +1616,18 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             )}
           </div>
         </div>
+      )}
+
+      {/* ── TAB: ROAD TO EAGLE CAPSTONE TRACKER ── */}
+      {activeTab === 'eagle' && (
+        <ParentEagleTracker
+          linkedScouts={linkedScouts}
+          selectedScoutId={selectedScoutId}
+          onSelectScout={(sId) => setSelectedScoutId(sId)}
+          allGroups={allGroups}
+          ranksProgressMap={ranksProgressMap}
+          meritProgressMap={meritProgressMap}
+        />
       )}
 
       {/* ── 10. TAB 7: ADVANCEMENT & BADGES (Read-Only) ── */}

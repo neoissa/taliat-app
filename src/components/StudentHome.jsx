@@ -40,11 +40,14 @@ import LiveClockAndCalendar from './LiveClockAndCalendar';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
+import PublishedReportViewerModal from './PublishedReportViewerModal';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [publishedReports, setPublishedReports] = useState([]);
+  const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
@@ -99,6 +102,19 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       unsubGroups();
     };
   }, []);
+
+  // 2.5. Subscribe to published progress reports for scout
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsubPub = onSnapshot(collection(db, 'published_reports'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(r => r.scoutId === scoutUid);
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReports(list);
+    }, (err) => console.warn("Scout published reports listener fallback:", err));
+    return () => unsubPub();
+  }, [scoutUid]);
 
   // 3. Subscribe to merit badges completed
   useEffect(() => {
@@ -495,6 +511,57 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
       </div>
 
+      {/* ── NOTIFICATION BANNER: OFFICIAL PROGRESS REPORT PUBLISHED ── */}
+      {publishedReports.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border-2 border-emerald-500/50 p-5 rounded-3xl shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-2xl shrink-0 shadow-lg">
+              📜
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
+                  Official Progress Report Published
+                </span>
+                {!publishedReports[0].signatures?.scout?.signed ? (
+                  <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full animate-pulse">
+                    ✍️ Scout Signature Requested
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
+                    ✓ Candidate Signed
+                  </span>
+                )}
+              </div>
+              <h3 className="text-base font-black text-white mt-1">
+                Unit Leader {publishedReports[0].leaderName} certified your {publishedReports[0].reportSnapshot?.rank || activeRank} Rank Advancement Snapshot
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Published {publishedReports[0].publishedAt?.split('T')[0]} &bull; Parent Status: {publishedReports[0].signatures?.parent?.signed ? '✓ Signed by Parent' : '⏳ Awaiting Parent Review'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setViewingPublishedReport(publishedReports[0])}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+            >
+              <FileText size={14} />
+              <span>{!publishedReports[0].signatures?.scout?.signed ? 'Review & Sign Report' : 'Inspect Certified PDF'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('profile', { tab: 'reports' })}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-750 transition cursor-pointer"
+            >
+              View in Profile
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -560,7 +627,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               return (
                 <div
                   key={ev.id}
-                  className="bg-slate-900/60 border border-slate-750 hover:border-emerald-500/40 p-4 rounded-xl flex items-center justify-between gap-3 transition shadow-sm"
+                  className="bg-slate-900/60 border border-slate-755 hover:border-emerald-500/40 p-4 rounded-xl flex items-center justify-between gap-3 transition shadow-sm"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -608,6 +675,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
         )}
       </div>
+
       {/* Universal Pending Items Modal */}
       <UniversalPendingQueueModal
         isOpen={showPendingModal}
@@ -616,6 +684,16 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         currentUser={currentUser}
         onNavigate={onNavigate}
       />
+
+      {/* Published Report Viewer Modal */}
+      {viewingPublishedReport && (
+        <PublishedReportViewerModal
+          isOpen={!!viewingPublishedReport}
+          onClose={() => setViewingPublishedReport(null)}
+          report={viewingPublishedReport}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }

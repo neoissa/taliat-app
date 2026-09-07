@@ -1082,6 +1082,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
       await publishProgressReport({
         scoutId: targetScout.uid,
         scoutName: targetScout.fullName || targetScout.username,
+        scoutEmail: targetScout.personalEmail || targetScout.scoutEmail || targetScout.email || null,
         groupId: targetScout.groupId || selectedGroupId || 'all',
         patrolName: groupsMap[targetScout.groupId]?.name || groupsList.find(g => g.id === targetScout.groupId)?.name || 'Taliʿa Patrol',
         parentEmail: targetScout.parentEmail || null,
@@ -1099,7 +1100,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
         }
       });
 
-      setPublishSuccessToast(`✓ Progress report published & sent to ${targetScout.fullName || targetScout.username}'s Parent Portal!`);
+      setPublishSuccessToast(`✓ Progress report published! Notifications sent to ${targetScout.fullName || targetScout.username} and parents.`);
       setShowSignModal(false);
     } catch (err) {
       console.error('Publish report error:', err);

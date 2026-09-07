@@ -889,6 +889,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         await publishProgressReport({
           scoutId: scoutUid,
           scoutName: scoutFullName,
+          scoutEmail: profileData?.personalEmail || profileData?.scoutEmail || profileData?.email || null,
           groupId: groupData?.id || profileData?.groupId || 'all',
           patrolName: groupData?.name || profileData?.patrolName || 'Taliʿa Patrol',
           parentEmail: profileData?.parentEmail || null,
@@ -906,7 +907,7 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
           }
         });
 
-        setPublishSuccessToast(`✓ Official progress report published and sent to ${scoutFullName}'s Parent Portal!`);
+        setPublishSuccessToast(`✓ Official progress report published! Notifications sent to ${scoutFullName} and parents.`);
       } else if (signModalType === 'parent') {
         if (!latestPublishedReport) {
           alert('No published report found to sign. Ask unit leader to publish the report first.');

@@ -7,7 +7,7 @@ import {
   deleteDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { dispatchParentNotification } from '../utils/notificationPipeline';
+import { dispatchParentNotification, dispatchScoutNotification } from '../utils/notificationPipeline';
 
 /**
  * Publishes a versioned progress report snapshot to /published_reports
@@ -15,6 +15,7 @@ import { dispatchParentNotification } from '../utils/notificationPipeline';
 export async function publishProgressReport({
   scoutId,
   scoutName,
+  scoutEmail = null,
   groupId = 'default',
   patrolName = 'Taliʿa Patrol',
   parentEmail = null,
@@ -38,6 +39,7 @@ export async function publishProgressReport({
       reportId,
       scoutId,
       scoutName: scoutName || 'Scout',
+      scoutEmail: scoutEmail || null,
       groupId: groupId || 'all',
       patrolName: patrolName || 'Taliʿa Patrol',
       leaderId: leaderId || 'leader',
@@ -89,24 +91,46 @@ export async function publishProgressReport({
 
     await setDoc(doc(db, 'published_reports', reportId), reportData);
 
-    // Notify parent via notification pipeline
+    // 1. Notify parent via notification pipeline
     try {
       await dispatchParentNotification({
         recipientUid: parentUid,
         parentEmail: parentEmail,
         title: `Official Progress Report Published for ${scoutName}`,
-        message: `Unit Leader ${leaderName || 'Scoutmaster'} has published an official progress report for ${scoutName}. Please log in to your Parent Portal to review, provide feedback, and apply your digital signature.`,
+        message: `Unit Leader ${leaderName || 'Scoutmaster'} has certified an official progress report snapshot for ${scoutName}. Please review your scout's advancement metrics and apply your parent digital signature.`,
         type: 'homework',
         priority: 'high',
         actionUrl: '/#parent-reports',
         metadata: {
           reportId,
           scoutId,
-          scoutName
+          scoutName,
+          rank: reportSnapshot.rank || 'Scout'
         }
       });
     } catch (notifErr) {
       console.warn('Could not dispatch parent notification email/alert:', notifErr);
+    }
+
+    // 2. Notify scout via scout notification pipeline
+    try {
+      await dispatchScoutNotification({
+        recipientUid: scoutId,
+        scoutEmail: scoutEmail,
+        title: `Official Progress Report Certified by ${leaderName || 'Scoutmaster'}`,
+        message: `Your Unit Leader ${leaderName || 'Scoutmaster'} has published your official progress report for ${reportSnapshot.rank || 'Scout'} rank advancement. Open your profile to inspect your snapshot and sign as scout candidate.`,
+        type: 'report',
+        priority: 'high',
+        actionUrl: '/#profile-reports',
+        metadata: {
+          reportId,
+          scoutId,
+          scoutName,
+          rank: reportSnapshot.rank || 'Scout'
+        }
+      });
+    } catch (scoutNotifErr) {
+      console.warn('Could not dispatch scout notification:', scoutNotifErr);
     }
 
     return { success: true, reportId, reportData };

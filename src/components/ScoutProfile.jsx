@@ -34,7 +34,12 @@ import {
   Award,
   GraduationCap,
   Briefcase,
-  Plus
+  Plus,
+  FileText,
+  PenTool,
+  Printer,
+  Bell,
+  ShieldCheck
 } from 'lucide-react';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import AssignmentsManager from './AssignmentsManager';
@@ -42,6 +47,9 @@ import RoadToEagleTracker from './RoadToEagleTracker';
 import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
 import ServiceLogs from './ServiceLogs';
+import PublishedReportViewerModal from './PublishedReportViewerModal';
+import SignaturePadModal from './SignaturePadModal';
+import { signPublishedReportByScout } from '../services/publishedReportsService';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -140,6 +148,14 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     }
   }, [initialTab]);
   
+  // Official Published Reports State for Scout
+  const [publishedReports, setPublishedReports] = useState([]);
+  const [scoutNotifications, setScoutNotifications] = useState([]);
+  const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
+  const [signingPublishedReport, setSigningPublishedReport] = useState(null);
+  const [isSubmittingScoutSignature, setIsSubmittingScoutSignature] = useState(false);
+  const [scoutSignSuccessToast, setScoutSignSuccessToast] = useState('');
+
   // Attendance Tracking & Risk States
   const [attendanceStats, setAttendanceStats] = useState({
     totalSessions: 0,
@@ -347,6 +363,68 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
 
     return () => unsub();
   }, [currentUser?.uid]);
+
+  // ── 0.5. REAL-TIME PUBLISHED REPORTS & SCOUT NOTIFICATIONS ──
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const unsubPub = onSnapshot(collection(db, 'published_reports'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(r => r.scoutId === currentUser.uid);
+      list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+      setPublishedReports(list);
+    }, (err) => console.warn("Published reports listener fallback:", err));
+
+    const unsubNotifs = onSnapshot(collection(db, 'scout_notifications'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(n => n.recipientUid === currentUser.uid);
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setScoutNotifications(list);
+    }, (err) => console.warn("Scout notifications listener fallback:", err));
+
+    return () => {
+      unsubPub();
+      unsubNotifs();
+    };
+  }, [currentUser?.uid]);
+
+  // Scout Digital Signature Handler
+  const handleSaveScoutSignature = async ({ signerName, signatureDataUrl }) => {
+    if (!signingPublishedReport) return;
+    setIsSubmittingScoutSignature(true);
+    try {
+      await signPublishedReportByScout({
+        reportId: signingPublishedReport.reportId || signingPublishedReport.id,
+        signerName,
+        signatureDataUrl
+      });
+      setScoutSignSuccessToast(`✓ Official progress report certified and digitally signed!`);
+      setSigningPublishedReport(null);
+
+      if (viewingPublishedReport && (viewingPublishedReport.id === signingPublishedReport.id || viewingPublishedReport.reportId === signingPublishedReport.reportId)) {
+        setViewingPublishedReport(prev => ({
+          ...prev,
+          signatures: {
+            ...prev.signatures,
+            scout: {
+              signed: true,
+              signerName,
+              signatureDataUrl,
+              signedAt: new Date().toISOString()
+            }
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('Scout signature error:', err);
+      alert('Error saving signature: ' + err.message);
+    } finally {
+      setIsSubmittingScoutSignature(false);
+      setTimeout(() => setScoutSignSuccessToast(''), 4000);
+    }
+  };
 
   // ── 1. ROBUST PROFILE PHOTO UPLOAD WITH COMPRESSION & INSTANT AUTO-SAVE ──
   const handlePhotoChange = async (e) => {
@@ -838,7 +916,63 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         </div>
       </div>
 
-      
+      {/* ── NOTIFICATION BANNER: OFFICIAL PROGRESS REPORT PUBLISHED ── */}
+      {isScout && publishedReports.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border-2 border-emerald-500/50 p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl shrink-0 shadow-md">
+              📜
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                  Official Progress Report Snapshot
+                </span>
+                {!publishedReports[0].signatures?.scout?.signed ? (
+                  <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full animate-pulse">
+                    ✍️ Scout Candidate Signature Requested
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                    ✓ Scout Signed
+                  </span>
+                )}
+              </div>
+              <h3 className="text-sm font-black text-white mt-1">
+                Unit Leader {publishedReports[0].leaderName} published your official advancement report snapshot for {publishedReports[0].reportSnapshot?.rank || rankName} Rank
+              </h3>
+              <p className="text-xs text-slate-300">
+                Published on {publishedReports[0].publishedAt?.split('T')[0]} &bull; Parent Status: {publishedReports[0].signatures?.parent?.signed ? '✓ Signed by Parent' : '⏳ Awaiting Parent Review'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                if (!publishedReports[0].signatures?.scout?.signed) {
+                  setSigningPublishedReport(publishedReports[0]);
+                } else {
+                  setViewingPublishedReport(publishedReports[0]);
+                }
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+            >
+              <FileText size={14} />
+              <span>{!publishedReports[0].signatures?.scout?.signed ? 'Review & Sign Report' : 'View Certified PDF'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveProfileTab('reports')}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+            >
+              All Snapshots ({publishedReports.length})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── PROFILE SUB-NAVIGATION TABS ── */}
       <div className="flex flex-wrap gap-2 border-b border-slate-750 pb-3">
         <button
@@ -853,6 +987,30 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           <User size={15} />
           <span>{isParent ? '👨‍👩‍👧 Family Profile' : '👤 Personal Info'}</span>
         </button>
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('reports')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'reports'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <FileText size={15} />
+            <span>📜 Official Progress Reports</span>
+            {publishedReports.length > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                publishedReports.some(r => !r.signatures?.scout?.signed)
+                  ? 'bg-amber-400 text-slate-950 animate-pulse'
+                  : 'bg-slate-900 text-emerald-300'
+              }`}>
+                {publishedReports.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {!isParent && (
           <button
@@ -2379,6 +2537,165 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
             </button>
           </form>
         </div>
+      )}
+
+      {/* ── TAB: OFFICIAL PROGRESS REPORTS ── */}
+      {activeProfileTab === 'reports' && isScout && (
+        <div className="space-y-6">
+          <div className="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-xl space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <FileText size={18} className="text-emerald-400" />
+                  <span>Official Scout Progress Reports & Certified Snapshots</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Official progress records certified by troop leaders for parent conferences and Court of Honor advancement milestones.
+                </p>
+              </div>
+              <span className="text-xs bg-slate-900 border border-slate-700 text-emerald-300 font-mono font-bold px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                {publishedReports.length} Certified Record{publishedReports.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {scoutSignSuccessToast && (
+              <div className="p-3 bg-emerald-950 border border-emerald-500/60 rounded-xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-md">
+                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <span>{scoutSignSuccessToast}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {publishedReports.length === 0 ? (
+              <div className="bg-slate-800 border border-slate-700 p-12 rounded-2xl text-center space-y-3">
+                <FileText size={42} className="mx-auto text-slate-500 opacity-50" />
+                <h4 className="text-sm font-bold text-white">No Published Progress Reports Yet</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Your Troop Leaders will publish official certified progress report snapshots here prior to your advancement reviews, parent conferences, and Courts of Honor.
+                </p>
+              </div>
+            ) : (
+              publishedReports.map(report => {
+                const isScoutSigned = report.signatures?.scout?.signed;
+                const isParentSigned = report.signatures?.parent?.signed;
+                const snapshot = report.reportSnapshot || {};
+
+                return (
+                  <div
+                    key={report.id}
+                    className={`bg-slate-800 border p-6 rounded-2xl space-y-4 shadow-xl transition ${
+                      !isScoutSigned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-700'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                            {snapshot.rank || 'Scout'} Rank Snapshot
+                          </span>
+                          <span className="text-xs font-mono font-bold text-slate-300">
+                            📅 Published {report.publishedAt?.split('T')[0]}
+                          </span>
+                        </div>
+
+                        <h4 className="font-extrabold text-white text-base">
+                          Official Progress Report for {report.scoutName}
+                        </h4>
+
+                        <p className="text-xs text-slate-400">
+                          Certifying Leader: <strong className="text-slate-200">{report.leaderName}</strong> &bull; Patrol: <strong className="text-slate-200">{report.patrolName}</strong>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                        {!isScoutSigned && (
+                          <button
+                            type="button"
+                            onClick={() => setSigningPublishedReport(report)}
+                            className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 animate-pulse"
+                          >
+                            <PenTool size={14} />
+                            <span>Sign as Scout Candidate</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setViewingPublishedReport(report)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                        >
+                          <FileText size={14} />
+                          <span>{isScoutSigned ? 'View & Print Signed PDF' : 'Inspect Snapshot'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Summary Metrics & Signature Status Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-700/80 text-center">
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-750">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Rank Progress</span>
+                        <strong className="text-emerald-400 font-mono text-sm">{snapshot.rankProgress || 0}%</strong>
+                      </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-750">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Attendance</span>
+                        <strong className="text-sky-400 font-mono text-sm">{snapshot.attendanceRate || 100}%</strong>
+                      </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-750">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Parent Review</span>
+                        {isParentSigned ? (
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                            <ShieldCheck size={13} /> Verified
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                            <Clock size={13} /> Awaiting Parent
+                          </span>
+                        )}
+                      </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-750">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Candidate Signature</span>
+                        {isScoutSigned ? (
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                            <ShieldCheck size={13} /> Certified
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                            <PenTool size={13} /> Sign Needed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── PUBLISHED REPORT VIEWER & SIGNING MODALS ── */}
+      {viewingPublishedReport && (
+        <PublishedReportViewerModal
+          isOpen={!!viewingPublishedReport}
+          onClose={() => setViewingPublishedReport(null)}
+          report={viewingPublishedReport}
+          currentUser={currentUser}
+        />
+      )}
+
+      {signingPublishedReport && (
+        <SignaturePadModal
+          isOpen={!!signingPublishedReport}
+          onClose={() => setSigningPublishedReport(null)}
+          onSave={handleSaveScoutSignature}
+          isSubmitting={isSubmittingScoutSignature}
+          signerType="scout"
+          defaultSignerName={fullName || currentUser?.fullName || currentUser?.username || 'Scout Candidate'}
+          defaultSignerRole="Scout Candidate"
+          title="Scout Candidate Digital Signature"
+          subtitle={`Certify and sign your official progress report for ${signingPublishedReport.reportSnapshot?.rank || rankName} rank`}
+        />
       )}
 
     </div>
