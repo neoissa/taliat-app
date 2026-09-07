@@ -29,7 +29,9 @@ import {
   Lock, 
   Unlock, 
   Sparkles,
-  Vote
+  Vote,
+  Crown,
+  Shield
 } from 'lucide-react';
 
 function formatTime(timestamp) {
@@ -52,7 +54,47 @@ export default function PatrolChat({ currentUser }) {
   const [uploading, setUploading] = useState(false);
   const [activeGroupData, setActiveGroupData] = useState(null);
   const [showEmojis, setShowEmojis] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const bottomRef = useRef();
+
+  // ── Accessible Groups Filter ──
+  // Troop Owner: Can view and switch to any group
+  // Normal Leader / Assistant: Strictly their assigned patrol(s)
+  const accessibleGroups = isOwner
+    ? groups
+    : groups.filter(g => 
+        g.id === currentUser?.groupId || 
+        g.id === currentUser?.patrolId || 
+        g.leaderId === currentUser?.uid || 
+        (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(currentUser?.uid)) ||
+        (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(currentUser?.uid))
+      );
+
+  // Active chat room ID:
+  // - Owner: selectedGroupId || groups[0]?.id || 'general-stream'
+  // - Leader: selectedGroupId (if in accessibleGroups) || accessibleGroups[0]?.id || currentUser?.groupId || currentUser?.patrolId || 'general-stream'
+  // - Scout/Parent: currentUser?.groupId || currentUser?.patrolId || 'general-stream'
+  const activeRoomId = isOwner
+    ? (selectedGroupId || (groups[0]?.id || 'general-stream'))
+    : isLeader
+    ? (accessibleGroups.some(g => g.id === selectedGroupId) ? selectedGroupId : (accessibleGroups[0]?.id || currentUser?.groupId || currentUser?.patrolId || 'general-stream'))
+    : (currentUser?.groupId || currentUser?.patrolId || 'general-stream');
+
+  // Resolve all members in the current active chat room
+  const activeRoomMembers = Object.values(usersMap).filter(u => {
+    if (activeRoomId === 'general-stream') return true;
+    return (
+      u.groupId === activeRoomId ||
+      u.patrolId === activeRoomId ||
+      u.uid === activeGroupData?.leaderId ||
+      (Array.isArray(activeGroupData?.assignedLeaderIds) && activeGroupData.assignedLeaderIds.includes(u.uid)) ||
+      (Array.isArray(activeGroupData?.assistantLeaderIds) && activeGroupData.assistantLeaderIds.includes(u.uid))
+    );
+  });
+
+  const leadershipMembers = activeRoomMembers.filter(u => u.role === 'leader' || u.role === 'owner' || u.role === 'admin' || (activeGroupData?.leaderId === u.uid));
+  const scoutMembers = activeRoomMembers.filter(u => u.role === 'scout' || (!u.role && u.role !== 'parent' && u.role !== 'leader' && u.role !== 'owner' && u.role !== 'admin'));
+  const parentMembers = activeRoomMembers.filter(u => u.role === 'parent');
 
   // ── Poll Creation States ──
   const [showPollModal, setShowPollModal] = useState(false);
@@ -61,11 +103,6 @@ export default function PatrolChat({ currentUser }) {
   const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
   const [pollSubmitting, setPollSubmitting] = useState(false);
   const [expandedPollVoters, setExpandedPollVoters] = useState({}); // { [messageId]: boolean }
-
-  // Determine chat room ID: Group / Patrol ID
-  const defaultGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.leaderId || 'general-stream';
-  const activeRoomId = isLeaderOrOwner ? (selectedGroupId || (groups[0]?.id || 'general-stream')) : defaultGroupId;
-
 
   // Listen to all users to resolve live profile pictures & names for chat
   useEffect(() => {
@@ -82,18 +119,26 @@ export default function PatrolChat({ currentUser }) {
 
   // 1. Fetch groups to populate room list for Leader/Owner
   useEffect(() => {
-    if (!isLeaderOrOwner) return;
-
     const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(g => !g.archived);
       setGroups(list);
       
-      if (list.length > 0 && !selectedGroupId) {
-        const assignedGroup = list.find(g => g.assignedLeaderIds && g.assignedLeaderIds.includes(currentUser.uid));
-        if (assignedGroup) {
-          setSelectedGroupId(assignedGroup.id);
-        } else {
-          setSelectedGroupId(list[0].id);
+      if (list.length > 0) {
+        if (isOwner) {
+          if (!selectedGroupId) setSelectedGroupId(list[0].id);
+        } else if (isLeader) {
+          const myGroup = list.find(g => 
+            g.id === currentUser?.groupId || 
+            g.id === currentUser?.patrolId || 
+            g.leaderId === currentUser?.uid || 
+            (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(currentUser?.uid)) ||
+            (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(currentUser?.uid))
+          );
+          if (myGroup) {
+            setSelectedGroupId(myGroup.id);
+          } else if (currentUser?.groupId) {
+            setSelectedGroupId(currentUser.groupId);
+          }
         }
       }
     }, (err) => {
@@ -101,7 +146,7 @@ export default function PatrolChat({ currentUser }) {
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, currentUser?.uid]);
+  }, [isOwner, isLeader, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId]);
 
   // 2. Fetch messages for activeRoomId
   useEffect(() => {
@@ -353,30 +398,54 @@ export default function PatrolChat({ currentUser }) {
     <div className="bg-slate-800 border border-slate-700 rounded-2xl flex flex-col h-[580px] shadow-xl overflow-hidden print-hide relative">
       {/* Header */}
       <div className="p-4 border-b border-slate-700 bg-slate-800/80 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-        <div className="flex items-center gap-3">
+        {/* Clickable Patrol Header */}
+        <div 
+          onClick={() => setShowMembersModal(true)}
+          className="flex items-center gap-3 cursor-pointer group hover:bg-slate-750/70 p-2 -m-1 rounded-2xl transition max-w-full sm:max-w-md select-none"
+          title="Click to view all people & leaders in this chat"
+        >
           {activeGroupData?.photoURL ? (
-            <img src={activeGroupData.photoURL} alt="Group Icon" className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0" />
+            <img 
+              src={activeGroupData.photoURL} 
+              alt="Group Icon" 
+              className="w-10 h-10 rounded-xl object-cover border-2 border-emerald-500/40 group-hover:border-emerald-400 group-hover:scale-105 transition shrink-0 shadow-sm" 
+            />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-750 flex items-center justify-center text-slate-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-750 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 group-hover:border-emerald-500/40 transition shrink-0">
               <Users size={18} />
             </div>
           )}
-          <div>
-            <h3 className="font-bold text-white text-sm leading-tight flex items-center gap-2">
-              <span>{activeGroupData?.name || 'General Stream'}</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-mono">
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-sm leading-tight flex items-center gap-2 flex-wrap">
+              <span className="truncate group-hover:text-emerald-300 transition">
+                {activeGroupData?.name ? `${activeGroupData.name} Patrol` : (activeRoomId === 'general-stream' ? 'General Stream' : 'Patrol Chat')}
+              </span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-mono shrink-0">
                 Live Chat & Polls
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {isLeaderOrOwner 
-                ? 'Taliʿa Stream Selector (Leader view)' 
-                : `Patrol Messenger: ${activeGroupData?.name || currentUser?.groupId || currentUser?.patrolId || 'General'}`}
+            <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span className="text-emerald-400 font-semibold group-hover:underline flex items-center gap-1">
+                <Users size={11} /> {activeRoomMembers.length} {activeRoomMembers.length === 1 ? 'member' : 'members'} &bull; Click to view roster
+              </span>
+              {activeGroupData?.motto && (
+                <span className="text-slate-500 hidden md:inline">&bull; &ldquo;{activeGroupData.motto}&rdquo;</span>
+              )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Dedicated View Roster Button */}
+          <button
+            onClick={() => setShowMembersModal(true)}
+            className="bg-slate-900 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-white font-bold text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="View all people in this chat group"
+          >
+            <Users size={13} className="text-emerald-400" />
+            <span>Roster ({activeRoomMembers.length})</span>
+          </button>
+
           {/* Quick Create Poll Button */}
           <button
             onClick={() => setShowPollModal(true)}
@@ -397,17 +466,17 @@ export default function PatrolChat({ currentUser }) {
             </button>
           )}
 
-          {/* Room Switcher for Leader/Owner */}
-          {isLeaderOrOwner && (
+          {/* Room Switcher: STRICTLY Troop Owner or Leaders with >1 assigned patrols */}
+          {(isOwner || (isLeader && accessibleGroups.length > 1)) && (
             <div className="flex items-center gap-1.5">
               <select
                 value={activeRoomId}
                 onChange={(e) => setSelectedGroupId(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
-                <option value="general-stream">General Stream</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                {isOwner && <option value="general-stream">🌐 General Stream</option>}
+                {(isOwner ? groups : accessibleGroups).map(g => (
+                  <option key={g.id} value={g.id}>👥 {g.name} Patrol</option>
                 ))}
               </select>
             </div>
@@ -746,6 +815,185 @@ export default function PatrolChat({ currentUser }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. PATROL CHAT MEMBERS ROSTER MODAL ── */}
+      {showMembersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+                  {activeGroupData?.photoURL ? (
+                    <img src={activeGroupData.photoURL} alt={activeGroupData.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">👥</span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base leading-tight">
+                    {activeGroupData?.name ? `${activeGroupData.name} Patrol` : (activeRoomId === 'general-stream' ? 'General Troop Stream' : 'Patrol Chat')}
+                  </h3>
+                  <p className="text-xs text-emerald-400 font-semibold mt-0.5 flex items-center gap-1.5">
+                    <span>👥 {activeRoomMembers.length} {activeRoomMembers.length === 1 ? 'Member' : 'Members'} in Chat</span>
+                    {activeGroupData?.motto && (
+                      <span className="text-slate-400 font-normal italic">&bull; &ldquo;{activeGroupData.motto}&rdquo;</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMembersModal(false)}
+                className="text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-xl transition cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content Sections */}
+            <div className="space-y-4">
+              {/* Leadership Section */}
+              {leadershipMembers.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
+                    <span className="flex items-center gap-1.5 text-amber-400">
+                      <Crown size={13} />
+                      <span>Patrol Leadership ({leadershipMembers.length})</span>
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {leadershipMembers.map(m => {
+                      const isOwnerUser = m.role === 'owner' || m.email === 'neoissa@gmail.com';
+                      const posLabel = m.leaderPosition || (isOwnerUser ? 'Troop Headmaster / Owner' : 'Patrol Leader');
+                      return (
+                        <div key={m.uid} className="bg-slate-950/80 border border-slate-800 hover:border-slate-700 p-3 rounded-2xl flex items-center justify-between gap-3 transition">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-700/10 border border-amber-500/40 flex items-center justify-center font-bold text-amber-300 text-sm shrink-0 overflow-hidden">
+                              {m.photoURL ? (
+                                <img src={m.photoURL} alt={m.fullName || m.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{m.fullName?.charAt(0) || m.username?.charAt(0) || 'L'}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-white truncate">{m.fullName || m.username}</span>
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono font-bold">
+                                  {isOwnerUser ? 'OWNER' : 'LEADER'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-emerald-400 font-medium truncate mt-0.5">
+                                {posLabel}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {m.username && <span className="text-[10px] text-slate-400 font-mono block">@{m.username}</span>}
+                            {m.scoutPhone || m.phone ? (
+                              <span className="text-[10px] text-slate-500 font-mono">{m.scoutPhone || m.phone}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Scouts Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
+                  <span className="flex items-center gap-1.5 text-emerald-400">
+                    <Users size={13} />
+                    <span>Patrol Scouts ({scoutMembers.length})</span>
+                  </span>
+                </div>
+                {scoutMembers.length === 0 ? (
+                  <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-center text-xs text-slate-500 italic">
+                    No scouts currently registered in this patrol.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {scoutMembers.map(s => (
+                      <div key={s.uid} className="bg-slate-950/80 border border-slate-800 hover:border-slate-700 p-3 rounded-2xl flex items-center justify-between gap-3 transition">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600/20 to-teal-700/10 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 text-sm shrink-0 overflow-hidden">
+                            {s.photoURL ? (
+                              <img src={s.photoURL} alt={s.fullName || s.username} className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{s.fullName?.charAt(0) || s.username?.charAt(0) || 'S'}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-white truncate">{s.fullName || s.username}</span>
+                              {s.rank && (
+                                <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/80 px-1.5 py-0.2 rounded font-mono font-medium">
+                                  {s.rank}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                              {s.schoolGrade ? `${s.schoolGrade} • ` : ''}@{s.username || 'scout'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {s.bsaId ? (
+                            <span className="text-[10px] text-slate-400 font-mono block">BSA ID: {s.bsaId}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Parents Section (if any linked parents) */}
+              {parentMembers.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
+                    <span className="flex items-center gap-1.5 text-purple-400">
+                      <span>👨‍👩‍👧 Family Guardians ({parentMembers.length})</span>
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {parentMembers.map(p => (
+                      <div key={p.uid} className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-700/60 flex items-center justify-center text-purple-300 text-xs font-bold shrink-0">
+                            {p.fullName?.charAt(0) || 'P'}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-white truncate block">{p.fullName || p.username}</span>
+                            <span className="text-[10px] text-slate-400">Guardian</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-800 pt-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <Lock size={12} className="text-emerald-400" />
+                <span>Private stream for this patrol only.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMembersModal(false)}
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-5 py-2 rounded-xl transition cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
