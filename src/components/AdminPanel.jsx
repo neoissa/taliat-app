@@ -78,23 +78,9 @@ import {
   generateParentInviteMessage, 
   applyIslamicTransliteration 
 } from '../utils/kashafVoice';
+import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 
-const BSA_LEADER_POSITIONS = [
-  'Scoutmaster',
-  'Assistant Scoutmaster',
-  'Patrol Leader',
-  'Assistant Leader',
-  'Senior Patrol Leader',
-  'Assistant Senior Patrol Leader',
-  'Committee Chair',
-  'Committee Member',
-  'Chartered Org Representative',
-  'Advancement Chair',
-  'Outdoor Activity Chair',
-  'Treasurer',
-  'Secretary',
-  'Patrol Advisor'
-];
+const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
 
 function compressImage(file, maxWidth = 300, maxHeight = 300, quality = 0.8) {
@@ -175,6 +161,8 @@ export default function AdminPanel({ currentUser, onNavigate }) {
   
   // Scout & Advancement Specifics
   const [editRank, setEditRank] = useState('Scout');
+  const [editScoutPosition, setEditScoutPosition] = useState('General Scout / Member');
+  const [editPreviousPositions, setEditPreviousPositions] = useState([]);
   const [editBsaId, setEditBsaId] = useState('');
   const [editSchoolGrade, setEditSchoolGrade] = useState('');
   const [editBirthDate, setEditBirthDate] = useState('');
@@ -451,6 +439,8 @@ export default function AdminPanel({ currentUser, onNavigate }) {
     
     // Scout & Advancement
     setEditRank(u.rank || 'Scout');
+    setEditScoutPosition(u.scoutPosition || u.position || u.youthPosition || 'General Scout / Member');
+    setEditPreviousPositions(Array.isArray(u.previousPositions) ? u.previousPositions : (Array.isArray(u.pastPositions) ? u.pastPositions : []));
     setEditBsaId(u.bsaId || '');
     setEditSchoolGrade(u.schoolGrade || u.grade || '');
     setEditBirthDate(u.birthDate || u.dob || '');
@@ -570,6 +560,9 @@ export default function AdminPanel({ currentUser, onNavigate }) {
         
         // Scout & Advancement
         rank: editRank || 'Scout',
+        scoutPosition: editRole === 'scout' ? (editScoutPosition || 'General Scout / Member') : null,
+        position: editRole === 'scout' ? (editScoutPosition || 'General Scout / Member') : null,
+        previousPositions: editPreviousPositions || [],
         bsaId: editBsaId.trim() || null,
         schoolGrade: editSchoolGrade.trim() || null,
         birthDate: editBirthDate.trim() || null,
@@ -1347,9 +1340,10 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                             isSuper ? 'bg-amber-950 text-amber-300 border-amber-600' :
                             u.role === 'leader' ? 'bg-emerald-950 text-emerald-300 border-emerald-600' :
                             u.role === 'parent' ? 'bg-sky-950 text-sky-300 border-sky-600' :
+                            (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' ? 'bg-amber-950 text-amber-300 border-amber-600' :
                             'bg-slate-900 text-slate-300 border-slate-700'
                           }`}>
-                            {isSuper ? '👑 Owner' : u.role === 'leader' ? `⚜️ ${u.leaderPosition || 'Leader'}` : u.role === 'parent' ? '👨‍👩‍👧 Parent' : '🏕️ Scout'}
+                            {isSuper ? '👑 Owner' : u.role === 'leader' ? `⚜️ ${u.leaderPosition || 'Leader'}` : u.role === 'parent' ? '👨‍👩‍👧 Parent' : (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' ? `🎖️ ${u.scoutPosition || u.position}` : '🏕️ Scout'}
                           </span>
                         </td>
 
@@ -1363,7 +1357,14 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                           {u.role === 'parent' ? (
                             <span>{Array.isArray(u.linkedScoutIds) ? `${u.linkedScoutIds.length} Linked Children` : 'No children linked'}</span>
                           ) : u.role === 'scout' ? (
-                            <span>Rank: <strong className="text-white">{u.rank || 'Scout'}</strong></span>
+                            <span>
+                              Rank: <strong className="text-white">{u.rank || 'Scout'}</strong>
+                              {(u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' && (
+                                <span className="text-amber-400 font-semibold block text-[10px]">
+                                  🎖️ {u.scoutPosition || u.position}
+                                </span>
+                              )}
+                            </span>
                           ) : (
                             <span>
                               SPT: <strong className={(u.spt || u.sptDate || u.sptFileUrl || u.yptCompleted) ? 'text-emerald-400' : 'text-amber-400'}>
@@ -3404,6 +3405,21 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                     </div>
 
                     <div>
+                      <label className="block text-xs font-bold text-amber-300 uppercase mb-1 flex items-center gap-1">
+                        <Shield size={12} className="text-amber-400" /> Current Scouting Position
+                      </label>
+                      <select
+                        value={editScoutPosition}
+                        onChange={(e) => setEditScoutPosition(e.target.value)}
+                        className="w-full bg-slate-950 border-2 border-amber-500/50 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                      >
+                        {SCOUT_YOUTH_POSITIONS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
                       <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Official BSA Member ID</label>
                       <input
                         type="text"
@@ -3434,6 +3450,115 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
                         className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                       />
                     </div>
+                  </div>
+
+                  {/* 📜 Previous Scouting Positions (Youth Leadership History) */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1.5">
+                          <span>📜</span> Previous Scouting Positions (Leadership History)
+                        </span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Record past scouting terms and positions of responsibility held in the troop.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPreviousPositions([
+                            ...editPreviousPositions,
+                            {
+                              id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                              position: 'Assistant Patrol Leader (APL)',
+                              term: '',
+                              notes: ''
+                            }
+                          ]);
+                        }}
+                        className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                      >
+                        <Plus size={13} />
+                        <span>Add Previous Position</span>
+                      </button>
+                    </div>
+
+                    {editPreviousPositions.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic p-3 bg-slate-900/60 rounded-xl border border-slate-850 text-center">
+                        No previous scouting positions recorded yet. Click &quot;Add Previous Position&quot; to log past leadership terms.
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {editPreviousPositions.map((item, idx) => (
+                          <div key={item.id || idx} className="bg-slate-900 border border-slate-750 p-3 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-mono text-amber-300/90 uppercase font-bold">
+                                Past Position #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditPreviousPositions(editPreviousPositions.filter((_, i) => i !== idx));
+                                }}
+                                className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                title="Remove this previous position"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Position Held</label>
+                                <select
+                                  value={item.position || 'General Scout / Member'}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], position: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                                >
+                                  {SCOUT_YOUTH_POSITIONS.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Term / Duration</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. 2024–2025"
+                                  value={item.term || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], term: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Unit / Notes</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Patrol 1 (6 mos)"
+                                  value={item.notes || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], notes: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2 border-t border-slate-800 space-y-3">
@@ -3696,25 +3821,136 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               {/* ── TAB 4: LEADERSHIP & SPT ── */}
               {editModalTab === 'leadership' && editRole !== 'scout' && (
                 <div className="space-y-4">
-                  {/* For Leader / Owner / Admin: Official BSA Position */}
+                  {/* For Leader / Owner / Admin: Official BSA Position & Previous Roles */}
                   {editRole !== 'parent' && (
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
-                        ⚜️ Official BSA Leadership Position
-                      </span>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Assigned Role Position</label>
-                        <select
-                          value={editLeaderPosition}
-                          onChange={(e) => setEditLeaderPosition(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                        >
-                          {BSA_LEADER_POSITIONS.map(pos => (
-                            <option key={pos} value={pos}>{pos}</option>
-                          ))}
-                        </select>
+                    <>
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                          ⚜️ Current Official BSA Leadership Position
+                        </span>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Assigned Role Position</label>
+                          <select
+                            value={editLeaderPosition}
+                            onChange={(e) => setEditLeaderPosition(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                          >
+                            {BSA_LEADER_POSITIONS.map(pos => (
+                              <option key={pos} value={pos}>{pos}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* 📜 Previous Leadership Positions (Adult Leadership History) */}
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1.5">
+                              <span>📜</span> Previous Leadership Roles (Leadership History)
+                            </span>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              Record past adult leader positions held in the troop (e.g. Assistant Scoutmaster, Patrol Advisor, Committee Chair).
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditPreviousPositions([
+                                ...editPreviousPositions,
+                                {
+                                  id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                  position: 'Assistant Scoutmaster',
+                                  term: '',
+                                  notes: ''
+                                }
+                              ]);
+                            }}
+                            className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                          >
+                            <Plus size={13} />
+                            <span>Add Previous Role</span>
+                          </button>
+                        </div>
+
+                        {editPreviousPositions.length === 0 ? (
+                          <p className="text-xs text-slate-500 italic p-3 bg-slate-900/60 rounded-xl border border-slate-850 text-center">
+                            No previous leadership positions recorded yet. Click &quot;Add Previous Role&quot; to log past adult scouter terms.
+                          </p>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {editPreviousPositions.map((item, idx) => (
+                              <div key={item.id || idx} className="bg-slate-900 border border-slate-750 p-3 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[10px] font-mono text-amber-300/90 uppercase font-bold">
+                                    Past Role #{idx + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditPreviousPositions(editPreviousPositions.filter((_, i) => i !== idx));
+                                    }}
+                                    className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                    title="Remove this previous role"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Position / Role</label>
+                                    <select
+                                      value={item.position || 'Assistant Scoutmaster'}
+                                      onChange={(e) => {
+                                        const next = [...editPreviousPositions];
+                                        next[idx] = { ...next[idx], position: e.target.value };
+                                        setEditPreviousPositions(next);
+                                      }}
+                                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                                    >
+                                      {BSA_LEADER_POSITIONS.map(p => (
+                                        <option key={p} value={p}>{p}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Term / Years</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. 2022–2024"
+                                      value={item.term || ''}
+                                      onChange={(e) => {
+                                        const next = [...editPreviousPositions];
+                                        next[idx] = { ...next[idx], term: e.target.value };
+                                        setEditPreviousPositions(next);
+                                      }}
+                                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Unit / Notes</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Troop 110 • Committee"
+                                      value={item.notes || ''}
+                                      onChange={(e) => {
+                                        const next = [...editPreviousPositions];
+                                        next[idx] = { ...next[idx], notes: e.target.value };
+                                        setEditPreviousPositions(next);
+                                      }}
+                                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
 
                   {/* Safety & Youth Protection Training (SPT) */}

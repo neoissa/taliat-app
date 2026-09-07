@@ -1018,21 +1018,6 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
               <button
                 type="button"
-                onClick={() => onNavigate && onNavigate('resources')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-slate-650 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">🦅</span>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-amber-300">Road to Eagle Reference</h4>
-                    <p className="text-[10px] text-slate-400">Eagle steps & planning guide</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-slate-500 group-hover:text-amber-400 transition" />
-              </button>
-
-              <button
-                type="button"
                 onClick={() => onNavigate && onNavigate('chat')}
                 className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-slate-650 transition flex items-center justify-between cursor-pointer group"
               >

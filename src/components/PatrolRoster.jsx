@@ -21,6 +21,7 @@ import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
+import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import { 
   Printer, 
   ArrowLeft, 
@@ -41,18 +42,18 @@ import {
   ShieldCheck, 
   Users, 
   Crown, 
-  Shield,
-  Copy,
-  Check,
-  Search,
-  Globe,
-  RefreshCw,
-  KeyRound,
-  ExternalLink,
-  Edit3,
-  RotateCcw,
-  Lock,
-  X
+  Shield, 
+  Copy, 
+  Check, 
+  Search, 
+  Globe, 
+  RefreshCw, 
+  KeyRound, 
+  ExternalLink, 
+  Edit3, 
+  RotateCcw, 
+  Lock, 
+  X 
 } from 'lucide-react';
 import { 
   getKashafGreeting, 
@@ -62,22 +63,7 @@ import {
   generateLeaderInviteMessage 
 } from '../utils/kashafVoice';
 
-const BSA_LEADER_POSITIONS = [
-  'Scoutmaster',
-  'Assistant Scoutmaster',
-  'Patrol Leader',
-  'Assistant Leader',
-  'Senior Patrol Leader',
-  'Assistant Senior Patrol Leader',
-  'Committee Chair',
-  'Committee Member',
-  'Chartered Org Representative',
-  'Advancement Chair',
-  'Outdoor Activity Chair',
-  'Treasurer',
-  'Secretary',
-  'Unit Leader',
-];
+const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
 function ScoutDetail({ scout, currentUser, onBack }) {
   const [notesList, setNotesList] = useState([]);
@@ -385,8 +371,19 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             )}
             <div>
               <h3 className="font-bold text-xl text-white">{scout.fullName || scout.username}</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                @{scout.username} &bull; <span className="text-emerald-400 font-bold">{activeRank}</span> &bull; {scout.patrolId || 'Taliʿa'} Patrol
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                <span>@{scout.username}</span> &bull; 
+                <span className="text-emerald-400 font-bold">{activeRank}</span> &bull; 
+                <span>{scout.patrolId || 'Taliʿa'} Patrol</span>
+                {(scout.scoutPosition || scout.position) && (scout.scoutPosition || scout.position) !== 'General Scout / Member' && (
+                  <>
+                    &bull;
+                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Crown size={10} />
+                      <span>{scout.scoutPosition || scout.position}</span>
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -414,6 +411,13 @@ function ScoutDetail({ scout, currentUser, onBack }) {
 
         {/* BSA & Contact Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+          <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
+            <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">Current Position</span>
+            <span className="font-semibold text-amber-300 text-sm flex items-center gap-1 mt-0.5">
+              <Crown size={12} className="text-amber-400 shrink-0" />
+              <span>{scout.scoutPosition || scout.position || 'General Scout / Member'}</span>
+            </span>
+          </div>
           <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-700/40">
             <span className="text-slate-550 block uppercase text-[9px] font-bold text-slate-500">BSA Member ID</span>
             <span className="font-semibold text-slate-200 text-sm">{scout.bsaId || '—'}</span>
@@ -469,6 +473,26 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* 📜 Previous Positions (Leadership History) Card */}
+        {((Array.isArray(scout.previousPositions) && scout.previousPositions.length > 0) || (Array.isArray(scout.pastPositions) && scout.pastPositions.length > 0)) && (
+          <div className="bg-slate-900/50 border border-slate-700/60 rounded-xl p-4 text-xs space-y-2">
+            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span>📜</span> Previous Scouting Positions (Leadership History)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+              {(scout.previousPositions || scout.pastPositions).map((prev, idx) => (
+                <div key={prev.id || idx} className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-lg space-y-1">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-white font-semibold text-xs">{prev.position}</strong>
+                    {prev.term && <span className="text-[10px] font-mono text-amber-300 font-bold">{prev.term}</span>}
+                  </div>
+                  {prev.notes && <p className="text-[11px] text-slate-400 italic">{prev.notes}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Administrative Password Reset (Owners Only) */}
         {(currentUser.role === 'owner' || currentUser.email === 'neoissa@gmail.com') && (
@@ -818,7 +842,8 @@ function ScoutDetail({ scout, currentUser, onBack }) {
               <h1 className="text-2xl font-black text-black">{scout.fullName || scout.username}</h1>
               <p className="text-sm text-slate-600 mt-1">
                 Patrol: <span className="font-semibold text-black">{scout.patrolId || 'Taliʿa'}</span> &bull; 
-                Active Rank: <span className="font-semibold text-black">{activeRank}</span>
+                Active Rank: <span className="font-semibold text-black">{activeRank}</span> &bull; 
+                Position: <span className="font-semibold text-black">{scout.scoutPosition || scout.position || 'General Scout / Member'}</span>
               </p>
             </div>
             <div className="text-right">
@@ -830,6 +855,16 @@ function ScoutDetail({ scout, currentUser, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Previous Leadership Positions in Print (if any) */}
+        {((Array.isArray(scout.previousPositions) && scout.previousPositions.length > 0) || (Array.isArray(scout.pastPositions) && scout.pastPositions.length > 0)) && (
+          <div className="border border-slate-300 p-2.5 rounded text-xs">
+            <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">Leadership History (Past Positions Held):</span>
+            <p className="text-black">
+              {(scout.previousPositions || scout.pastPositions).map(p => `${p.position}${p.term ? ` (${p.term})` : ''}${p.notes ? ` - ${p.notes}` : ''}`).join(' • ')}
+            </p>
+          </div>
+        )}
 
         {/* Print Summary cards */}
         <div>
@@ -1162,8 +1197,10 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [editParentPhone, setEditParentPhone] = useState('');
   const [editGroupId, setEditGroupId] = useState('');
   const [editRank, setEditRank] = useState('Scout');
+  const [editScoutPosition, setEditScoutPosition] = useState('General Scout / Member');
+  const [editPreviousPositions, setEditPreviousPositions] = useState([]);
   const [editRole, setEditRole] = useState('scout');
-  const [editLeaderPosition, setEditLeaderPosition] = useState('');
+  const [editLeaderPosition, setEditLeaderPosition] = useState('Assistant Scoutmaster');
   const [userUpdating, setUserUpdating] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editErr, setEditErr] = useState('');
@@ -1403,8 +1440,10 @@ export default function PatrolRoster({ currentUser = {} }) {
     setEditParentPhone(u.parentPhone || '');
     setEditGroupId(u.groupId || u.patrolId || '');
     setEditRank(u.rank || 'Scout');
+    setEditScoutPosition(u.scoutPosition || u.position || 'General Scout / Member');
+    setEditPreviousPositions(Array.isArray(u.previousPositions) ? u.previousPositions : Array.isArray(u.pastPositions) ? u.pastPositions : []);
     setEditRole(u.role || 'scout');
-    setEditLeaderPosition(u.leaderPosition || 'Patrol Leader');
+    setEditLeaderPosition(u.leaderPosition || 'Assistant Scoutmaster');
     setEditMsg('');
     setEditErr('');
 
@@ -1447,8 +1486,12 @@ export default function PatrolRoster({ currentUser = {} }) {
 
       if (editRole === 'scout') {
         updatePayload.rank = editRank;
-      } else if (editRole === 'leader' || editRole === 'owner') {
+        updatePayload.scoutPosition = editScoutPosition || 'General Scout / Member';
+        updatePayload.position = editScoutPosition || 'General Scout / Member';
+        updatePayload.previousPositions = editPreviousPositions;
+      } else if (editRole === 'leader' || editRole === 'owner' || editRole === 'admin') {
         updatePayload.leaderPosition = editLeaderPosition;
+        updatePayload.previousPositions = editPreviousPositions;
       }
 
       await setDoc(doc(db, 'users', editingUser.uid), updatePayload, { merge: true });
@@ -2662,8 +2705,14 @@ Reminder to log your community service and volunteering hours into the portal.
                                       </div>
                                     )}
                                     <div>
-                                      <p className="font-semibold text-white text-xs sm:text-sm">
-                                        {scout.fullName || scout.username}
+                                      <p className="font-semibold text-white text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
+                                        <span>{scout.fullName || scout.username}</span>
+                                        {(scout.scoutPosition || scout.position) && (scout.scoutPosition || scout.position) !== 'General Scout / Member' && (
+                                          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded-full inline-flex items-center gap-0.5">
+                                            <Crown size={9} />
+                                            <span>{scout.scoutPosition || scout.position}</span>
+                                          </span>
+                                        )}
                                       </p>
                                       <p className="text-[11px] text-slate-400">
                                         @{scout.username} &bull; <span className="text-emerald-400 font-semibold">{scout.rank || 'Scout'}</span>
@@ -3829,60 +3878,299 @@ Reminder to log your community service and volunteering hours into the portal.
               </div>
 
               {editRole === 'scout' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Current Rank</label>
-                    <select
-                      value={editRank}
-                      onChange={(e) => setEditRank(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                    >
-                      <option value="Scout">Scout</option>
-                      <option value="Tenderfoot">Tenderfoot</option>
-                      <option value="Second Class">Second Class</option>
-                      <option value="First Class">First Class</option>
-                      <option value="Star">Star</option>
-                      <option value="Life">Life</option>
-                      <option value="Eagle Scout">Eagle Scout</option>
-                      <option value="Arrow of Light">Arrow of Light</option>
-                    </select>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Current Rank</label>
+                      <select
+                        value={editRank}
+                        onChange={(e) => setEditRank(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="Scout">Scout</option>
+                        <option value="Tenderfoot">Tenderfoot</option>
+                        <option value="Second Class">Second Class</option>
+                        <option value="First Class">First Class</option>
+                        <option value="Star">Star</option>
+                        <option value="Life">Life</option>
+                        <option value="Eagle Scout">Eagle Scout</option>
+                        <option value="Arrow of Light">Arrow of Light</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-amber-300 uppercase mb-1 flex items-center gap-1">
+                        <Crown size={12} className="text-amber-400" />
+                        <span>Current Position</span>
+                      </label>
+                      <select
+                        value={editScoutPosition}
+                        onChange={(e) => setEditScoutPosition(e.target.value)}
+                        className="w-full bg-slate-950 border-2 border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                      >
+                        {SCOUT_YOUTH_POSITIONS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 13579246"
+                        value={editBsaId}
+                        onChange={(e) => setEditBsaId(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 13579246"
-                      value={editBsaId}
-                      onChange={(e) => setEditBsaId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                    />
+
+                  {/* 📜 Previous Scouting Positions Manager (For Scouts) */}
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1.5">
+                          <span>📜</span> Previous Positions (Leadership History)
+                        </span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Log past youth leadership positions held in the troop.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPreviousPositions([
+                            ...editPreviousPositions,
+                            {
+                              id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                              position: 'Assistant Patrol Leader (APL)',
+                              term: '',
+                              notes: ''
+                            }
+                          ]);
+                        }}
+                        className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                      >
+                        <Plus size={12} />
+                        <span>Add Previous Position</span>
+                      </button>
+                    </div>
+
+                    {editPreviousPositions.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic p-2.5 bg-slate-900/60 rounded-xl border border-slate-850 text-center">
+                        No previous positions recorded yet. Click &quot;Add Previous Position&quot; to log past terms.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {editPreviousPositions.map((item, idx) => (
+                          <div key={item.id || idx} className="bg-slate-900 border border-slate-750 p-2.5 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-mono text-amber-300 font-bold uppercase">
+                                Past Position #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditPreviousPositions(editPreviousPositions.filter((_, i) => i !== idx));
+                                }}
+                                className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                title="Remove position"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Position</label>
+                                <select
+                                  value={item.position || 'General Scout / Member'}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], position: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                                >
+                                  {SCOUT_YOUTH_POSITIONS.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Term</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. 2024–2025"
+                                  value={item.term || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], term: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Notes / Patrol</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Patrol 1"
+                                  value={item.notes || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], notes: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-amber-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {editRole === 'leader' && (
-                <div className="space-y-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Leader Position</label>
-                    <select
-                      value={editLeaderPosition}
-                      onChange={(e) => setEditLeaderPosition(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                    >
-                      {BSA_LEADER_POSITIONS.map(pos => (
-                        <option key={pos} value={pos}>{pos}</option>
-                      ))}
-                    </select>
+                <div className="space-y-3 bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Leader Position</label>
+                      <select
+                        value={editLeaderPosition}
+                        onChange={(e) => setEditLeaderPosition(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        {ADULT_LEADER_POSITIONS.map(pos => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 13579246"
+                        value={editBsaId}
+                        onChange={(e) => setEditBsaId(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA ID (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 13579246"
-                      value={editBsaId}
-                      onChange={(e) => setEditBsaId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                    />
+
+                  {/* 📜 Previous Adult Leadership Roles Manager */}
+                  <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block flex items-center gap-1.5">
+                          <span>📜</span> Previous Leadership Roles (Leadership History)
+                        </span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Record past adult leadership roles in the troop.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPreviousPositions([
+                            ...editPreviousPositions,
+                            {
+                              id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                              position: 'Assistant Scoutmaster',
+                              term: '',
+                              notes: ''
+                            }
+                          ]);
+                        }}
+                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs px-2.5 py-1 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                      >
+                        <Plus size={12} />
+                        <span>Add Previous Role</span>
+                      </button>
+                    </div>
+
+                    {editPreviousPositions.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic p-2.5 bg-slate-950/60 rounded-xl border border-slate-850 text-center">
+                        No previous leadership roles recorded yet. Click &quot;Add Previous Role&quot; to log past terms.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {editPreviousPositions.map((item, idx) => (
+                          <div key={item.id || idx} className="bg-slate-950 border border-slate-800 p-2.5 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-mono text-emerald-300 font-bold uppercase">
+                                Past Role #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditPreviousPositions(editPreviousPositions.filter((_, i) => i !== idx));
+                                }}
+                                className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                title="Remove role"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Role</label>
+                                <select
+                                  value={item.position || 'Assistant Scoutmaster'}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], position: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                                >
+                                  {ADULT_LEADER_POSITIONS.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Term</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. 2022–2024"
+                                  value={item.term || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], term: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Notes</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Unit Advisor"
+                                  value={item.notes || ''}
+                                  onChange={(e) => {
+                                    const next = [...editPreviousPositions];
+                                    next[idx] = { ...next[idx], notes: e.target.value };
+                                    setEditPreviousPositions(next);
+                                  }}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

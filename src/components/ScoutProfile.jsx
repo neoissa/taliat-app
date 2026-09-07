@@ -33,12 +33,15 @@ import {
   Users,
   Award,
   GraduationCap,
-  Briefcase
+  Briefcase,
+  Plus
 } from 'lucide-react';
+import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
 import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
+import ServiceLogs from './ServiceLogs';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -78,7 +81,7 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
   });
 }
 
-export default function ScoutProfile({ currentUser, onNavigate }) {
+export default function ScoutProfile({ currentUser, initialTab = 'personal', onNavigate }) {
   const [fullUserData, setFullUserData] = useState(null);
 
   // Accurate Role Flags
@@ -118,6 +121,8 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
   const [cityStateZip, setCityStateZip] = useState('');
   const [parentLinkedScouts, setParentLinkedScouts] = useState([]);
   const [leaderPosition, setLeaderPosition] = useState('Assistant Scoutmaster');
+  const [scoutPosition, setScoutPosition] = useState('General Scout / Member');
+  const [previousPositions, setPreviousPositions] = useState([]);
 
   const [patrolName, setPatrolName] = useState('Taliʿa');
   const [rankName, setRankName] = useState('Scout');
@@ -127,7 +132,13 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [savingSpt, setSavingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
-  const [activeProfileTab, setActiveProfileTab] = useState('personal'); // 'personal' | 'roles-guide' | 'eagle' | 'homework' | 'attendance' | 'spt' | 'security' | 'calendar'
+  const [activeProfileTab, setActiveProfileTab] = useState(initialTab || 'personal'); // 'personal' | 'roles-guide' | 'service' | 'attendance' | 'spt' | 'security'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveProfileTab(initialTab);
+    }
+  }, [initialTab]);
   
   // Attendance Tracking & Risk States
   const [attendanceStats, setAttendanceStats] = useState({
@@ -192,7 +203,9 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         setCityStateZip(data.cityStateZip || '');
 
         setRankName(data.rank || 'Scout');
+        setScoutPosition(data.scoutPosition || data.position || 'General Scout / Member');
         setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
+        setPreviousPositions(Array.isArray(data.previousPositions) ? data.previousPositions : Array.isArray(data.pastPositions) ? data.pastPositions : []);
         setSpt(data.spt || data.sptDate || data.yptDate || '');
         setSptFileUrl(data.sptFileUrl || '');
         setSptFileName(data.sptFileName || '');
@@ -548,12 +561,16 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         updates.parent2Relation = parent2Relation.trim() || 'Mother';
         updates.parentEmail = parentEmail.trim() || null;
         updates.parentPhone = parentPhone.trim() || null;
+        updates.scoutPosition = scoutPosition || 'General Scout / Member';
+        updates.position = scoutPosition || 'General Scout / Member';
+        updates.previousPositions = previousPositions;
       }
 
       if (isLeader || isExecutive) {
         if (leaderPosition) {
           updates.leaderPosition = leaderPosition;
         }
+        updates.previousPositions = previousPositions;
       }
 
       await setDoc(userRef, updates, { merge: true });
@@ -731,6 +748,12 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
               <span className="text-slate-400">
                 Active Rank: <strong className="text-white">{rankName}</strong> &bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId || '—'}</strong>
               </span>
+              {scoutPosition && scoutPosition !== 'General Scout / Member' && (
+                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Crown size={10} />
+                  <span>{scoutPosition}</span>
+                </span>
+              )}
 
               {/* Attendance Risk Warning Badge in Header */}
               {attendanceStats.totalSessions > 0 && (
@@ -873,30 +896,15 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         {isScout && (
           <button
             type="button"
-            onClick={() => setActiveProfileTab('eagle')}
+            onClick={() => setActiveProfileTab('service')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-              activeProfileTab === 'eagle'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+              activeProfileTab === 'service'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-950/50'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
             }`}
           >
-            <span className="text-base">🦅</span>
-            <span>Road to Eagle & Palms</span>
-          </button>
-        )}
-
-        {isScout && (
-          <button
-            type="button"
-            onClick={() => setActiveProfileTab('homework')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-              activeProfileTab === 'homework'
-                ? 'bg-sky-600 text-white shadow-lg shadow-sky-950/50'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-            }`}
-          >
-            <span className="text-base">🎒</span>
-            <span>My Homework & Quests</span>
+            <Clock size={15} />
+            <span>⏱️ Service & Volunteering</span>
           </button>
         )}
 
@@ -1191,14 +1199,9 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
         </div>
       )}
 
-      {/* ── TAB 1: ROAD TO EAGLE & PALMS ── */}
-      {activeProfileTab === 'eagle' && currentUser.role === 'scout' && (
-        <RoadToEagleTracker currentUser={currentUser} scoutId={currentUser.uid} />
-      )}
-
-      {/* ── TAB 2: SCOUT HOMEWORK & ASSIGNED TASKS ── */}
-      {activeProfileTab === 'homework' && currentUser.role === 'scout' && (
-        <AssignmentsManager currentUser={currentUser} scoutId={currentUser.uid} isEmbeddedInProfile={false} />
+      {/* ── TAB: SERVICE & VOLUNTEERING ── */}
+      {activeProfileTab === 'service' && isScout && (
+        <ServiceLogs currentUser={currentUser} scoutId={currentUser.uid} />
       )}
 
       {/* ── TAB 3: PERSONAL INFORMATION ── */}
@@ -1330,14 +1333,28 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                           onChange={(e) => setLeaderPosition(e.target.value)}
                           className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                         >
-                          <option value="Scoutmaster">Scoutmaster</option>
-                          <option value="Assistant Scoutmaster">Assistant Scoutmaster</option>
-                          <option value="Committee Chair">Committee Chair</option>
-                          <option value="Committee Member">Committee Member</option>
-                          <option value="Chartered Org Rep">Chartered Org Rep</option>
-                          <option value="Troop Leader">Troop Leader</option>
-                          <option value="Activity Coordinator">Activity Coordinator</option>
-                          <option value="Quartermaster Advisor">Quartermaster Advisor</option>
+                          {ADULT_LEADER_POSITIONS.map(pos => (
+                            <option key={pos} value={pos}>{pos}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Current Scouting Position (Scout Only) */}
+                    {isScout && (
+                      <div>
+                        <label className="block text-xs font-semibold text-amber-300 uppercase mb-1 flex items-center gap-1.5">
+                          <Crown size={12} className="text-amber-400" />
+                          <span>Current Scouting Position</span>
+                        </label>
+                        <select
+                          value={scoutPosition}
+                          onChange={(e) => setScoutPosition(e.target.value)}
+                          className="w-full bg-slate-900 border-2 border-amber-500/50 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                        >
+                          {SCOUT_YOUTH_POSITIONS.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
                         </select>
                       </div>
                     )}
@@ -1452,6 +1469,228 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
+
+                  {/* 📜 Previous Positions / Leadership History Manager (For Scouts) */}
+                  {isScout && (
+                    <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📜</span> Previous Scouting Positions (Leadership History)
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Log past youth leadership positions held in the troop (terms, patrol, or roles).
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviousPositions([
+                              ...previousPositions,
+                              {
+                                id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                position: 'Assistant Patrol Leader (APL)',
+                                term: '',
+                                notes: ''
+                              }
+                            ]);
+                          }}
+                          className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                        >
+                          <Plus size={13} />
+                          <span>Add Previous Position</span>
+                        </button>
+                      </div>
+
+                      {previousPositions.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-center">
+                          No previous scouting positions recorded yet. Click &quot;Add Previous Position&quot; to log past leadership roles.
+                        </p>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {previousPositions.map((item, idx) => (
+                            <div key={item.id || idx} className="bg-slate-950/80 border border-slate-750 p-3 rounded-xl space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">
+                                  Past Position #{idx + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviousPositions(previousPositions.filter((_, i) => i !== idx));
+                                  }}
+                                  className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                  title="Remove this position"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Position Held</label>
+                                  <select
+                                    value={item.position || 'General Scout / Member'}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], position: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                                  >
+                                    {SCOUT_YOUTH_POSITIONS.map(p => (
+                                      <option key={p} value={p}>{p}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Term / Year</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. 2024–2025"
+                                    value={item.term || ''}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], term: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Patrol / Notes</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Falcon Patrol (6 mos)"
+                                    value={item.notes || ''}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], notes: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 📜 Previous Leadership Roles Manager (For Adult Leaders & Executives) */}
+                  {(isLeader || isExecutive) && (
+                    <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📜</span> Previous Leadership Roles (Leadership History)
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Record previous adult leadership positions held in the troop or district.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviousPositions([
+                              ...previousPositions,
+                              {
+                                id: `prev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                position: 'Assistant Scoutmaster',
+                                term: '',
+                                notes: ''
+                              }
+                            ]);
+                          }}
+                          className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer self-start sm:self-auto shrink-0"
+                        >
+                          <Plus size={13} />
+                          <span>Add Previous Role</span>
+                        </button>
+                      </div>
+
+                      {previousPositions.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-center">
+                          No previous leadership roles recorded yet. Click &quot;Add Previous Role&quot; to log past terms.
+                        </p>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {previousPositions.map((item, idx) => (
+                            <div key={item.id || idx} className="bg-slate-950/80 border border-slate-750 p-3 rounded-xl space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-mono text-emerald-300 uppercase font-bold">
+                                  Past Role #{idx + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviousPositions(previousPositions.filter((_, i) => i !== idx));
+                                  }}
+                                  className="text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/40 transition cursor-pointer"
+                                  title="Remove this role"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Role Held</label>
+                                  <select
+                                    value={item.position || 'Assistant Scoutmaster'}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], position: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                                  >
+                                    {ADULT_LEADER_POSITIONS.map(p => (
+                                      <option key={p} value={p}>{p}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Term / Duration</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. 2022–2024"
+                                    value={item.term || ''}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], term: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Department / Notes</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Unit Advisor / Committee"
+                                    value={item.notes || ''}
+                                    onChange={(e) => {
+                                      const next = [...previousPositions];
+                                      next[idx] = { ...next[idx], notes: e.target.value };
+                                      setPreviousPositions(next);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* ── FAMILY & EMERGENCY CONTACTS SECTION (FOR SCOUTS) ── */}
                   {isScout && (
@@ -1764,6 +2003,27 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                       <strong className="text-emerald-400 text-sm">{rankName}</strong>
                     </div>
 
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Scouting Position</span>
+                      <strong className="text-amber-300 text-sm flex items-center gap-1.5 mt-0.5">
+                        <Crown size={13} className="text-amber-400 shrink-0" />
+                        <span>{scoutPosition || 'General Scout / Member'}</span>
+                      </strong>
+                    </div>
+
+                    {previousPositions.length > 0 && (
+                      <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750 space-y-1.5">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">📜 Past Scouting Roles ({previousPositions.length})</span>
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {previousPositions.map((p, idx) => (
+                            <span key={p.id || idx} className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-lg">
+                              <strong>{p.position}</strong> {p.term ? `(${p.term})` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Attendance Summary Tile */}
                     <div 
                       onClick={() => setActiveProfileTab('attendance')}
@@ -1820,6 +2080,19 @@ export default function ScoutProfile({ currentUser, onNavigate }) {
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Patrol Assignment</span>
                       <strong className="text-emerald-400 text-sm">{patrolName ? `${patrolName} Patrol` : 'General Leadership'}</strong>
                     </div>
+
+                    {previousPositions.length > 0 && (
+                      <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750 space-y-1.5">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">📜 Past Leadership Roles ({previousPositions.length})</span>
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {previousPositions.map((p, idx) => (
+                            <span key={p.id || idx} className="bg-slate-800 text-emerald-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-lg">
+                              <strong>{p.position}</strong> {p.term ? `(${p.term})` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div 
                       onClick={() => setActiveProfileTab('spt')}

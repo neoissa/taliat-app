@@ -706,7 +706,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </button>
 
             <button
-              onClick={() => onNavigate && onNavigate('service-log')}
+              onClick={() => onNavigate && onNavigate('profile', 'service')}
               className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-teal-500/50 transition flex items-center justify-between cursor-pointer group"
             >
               <div className="flex items-center gap-3">

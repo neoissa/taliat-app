@@ -341,3 +341,47 @@ export const ALL_ROLES_ARRAY = [
   ROLES_DATA.parent,
   ROLES_DATA.owner
 ];
+
+/**
+ * Standard BSA Youth Scouting Positions of Responsibility
+ */
+export const SCOUT_YOUTH_POSITIONS = [
+  'General Scout / Member',
+  'Senior Patrol Leader (SPL)',
+  'Assistant Senior Patrol Leader (ASPL)',
+  'Patrol Leader (PL)',
+  'Assistant Patrol Leader (APL)',
+  'Troop Guide',
+  'Scribe',
+  'Quartermaster',
+  'Historian',
+  'Librarian',
+  'Chaplain Aide',
+  'Bugler',
+  'Order of the Arrow Representative',
+  'Outdoor Ethics Guide',
+  'Junior Assistant Scoutmaster (JASM)',
+  'Webmaster',
+  'Den Chief'
+];
+
+/**
+ * Standard BSA Adult Leadership Positions
+ */
+export const ADULT_LEADER_POSITIONS = [
+  'Scoutmaster',
+  'Assistant Scoutmaster',
+  'Patrol Leader / Unit Advisor',
+  'Assistant Patrol Leader',
+  'Committee Chair',
+  'Committee Member',
+  'Advancement Chair',
+  'Chartered Organization Representative (COR)',
+  'Chaplain',
+  'Treasurer',
+  'Secretary',
+  'Outdoor / Activities Chair',
+  'Training Coordinator',
+  'Troop Headmaster / Lead Admin'
+];
+

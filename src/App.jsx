@@ -253,10 +253,23 @@ export default function App() {
   };
 
   const [attendanceInitialData, setAttendanceInitialData] = useState(null);
+  const [profileInitialTab, setProfileInitialTab] = useState('personal');
 
   const handleNavigate = (tab, extraData = null) => {
     if (tab === 'attendance' && extraData) {
       setAttendanceInitialData(extraData);
+    }
+    if (tab === 'profile' && extraData) {
+      if (typeof extraData === 'string') {
+        setProfileInitialTab(extraData);
+      } else if (extraData.tab) {
+        setProfileInitialTab(extraData.tab);
+      }
+    } else if (tab === 'service-log') {
+      setCurrentTab('profile');
+      setProfileInitialTab('service');
+      setMobileMenuOpen(false);
+      return;
     }
     setCurrentTab(tab);
     setMobileMenuOpen(false);
@@ -306,6 +319,7 @@ export default function App() {
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
+        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
         { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
@@ -322,6 +336,7 @@ export default function App() {
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
         { id: 'reports', label: 'Reports Center', icon: '📈' },
+        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
         { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
@@ -334,6 +349,7 @@ export default function App() {
     } else if (isParent) {
       return [
         { id: 'home', label: 'Parent Portal', icon: '👨‍👩‍👧' },
+        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'resources', label: 'Safety & Guides', icon: '📚' },
         { id: 'profile', label: 'Family Profile', icon: '👤' }
@@ -349,7 +365,6 @@ export default function App() {
         { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
         { id: 'journal', label: 'My Journal & Notes', icon: '📝' },
-        { id: 'service-log', label: 'Service Log', icon: '⏱️' },
         { id: 'chat', label: userGroupName ? `${userGroupName} Chat` : 'Patrol Chat', icon: '💬', badge: unreadChatCount },
         { id: 'resources', label: 'Resources', icon: '📚' },
         { id: 'profile', label: 'My Profile', icon: '👤' }
@@ -805,7 +820,7 @@ export default function App() {
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
       <main className="flex-1 min-w-0 bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        {currentTab === 'road-to-eagle' && isScout && (
+        {currentTab === 'road-to-eagle' && (
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
 
@@ -843,9 +858,9 @@ export default function App() {
         {currentTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'lesson-plans' && isLeaderOrOwner && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
-        {currentTab === 'service-log' && isScout && <ServiceLogs currentUser={currentUser} />}
+        {currentTab === 'service-log' && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'resources' && <VideoResources currentUser={currentUser} />}
-        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'profile' && <ScoutProfile currentUser={currentUser} initialTab={profileInitialTab} onNavigate={handleNavigate} />}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
