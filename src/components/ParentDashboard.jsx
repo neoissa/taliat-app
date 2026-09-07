@@ -61,7 +61,9 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  PenTool
+  PenTool,
+  Lock,
+  Filter
 } from 'lucide-react';
 
 function getRelativeDueDate(dateStr) {
@@ -156,6 +158,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [parentSignSuccessToast, setParentSignSuccessToast] = useState('');
   const [reportSubTab, setReportSubTab] = useState('published'); // 'published' | 'live'
   const [completedHomeworkOpen, setCompletedHomeworkOpen] = useState(false);
+  const [selectedRankMap, setSelectedRankMap] = useState({}); // { [scoutUid]: rankId }
+  const [advancementViewFilter, setAdvancementViewFilter] = useState('all'); // 'all' | 'completed' | 'inprogress' | 'merit' | 'islamic'
 
   // Sync initial tab when changed by parent container
   useEffect(() => {
@@ -797,14 +801,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             </div>
           )}
 
-          {/* SECTION 2: CURRENT RANK PROGRESS WIDGET */}
+          {/* SECTION 2: CURRENT RANK & COMPLETED ADVANCEMENT PROGRESS WIDGET */}
           <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-750 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">⚜️</span>
                 <div>
                   <h3 className="font-extrabold text-white text-base">Current Rank & Advancement Progress</h3>
-                  <p className="text-xs text-slate-400">Real-time status certified by troop leaders.</p>
+                  <p className="text-xs text-slate-400">Real-time status certified by troop leaders — Completed & In Progress.</p>
                 </div>
               </div>
 
@@ -813,7 +817,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 onClick={() => setActiveTab('advancement')}
                 className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
               >
-                <span>View Full Requirements</span>
+                <span>View Full Roadmap & Requirements</span>
                 <ChevronRight size={14} />
               </button>
             </div>
@@ -827,6 +831,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 const sMerit = meritProgressMap[scout.uid] || {};
                 const earnedBadgesCount = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true).length;
                 const groupObj = allGroups.find(g => g.id === scout.groupId) || {};
+                const bsaRanks = RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
 
                 return (
                   <div key={scout.uid} className="bg-slate-900 border border-slate-755 p-5 rounded-2xl space-y-3 shadow-md">
@@ -859,6 +864,41 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                       <div className="flex justify-between text-[11px] text-slate-400">
                         <span>{targetStats.completed} of {targetStats.total} Requirements Certified</span>
                         <span>{earnedBadgesCount} Merit Badges Earned</span>
+                      </div>
+                    </div>
+
+                    {/* 7-Rank Pathway Mini-Chips */}
+                    <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                        Rank Milestones Completed & Active:
+                      </span>
+                      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                        {bsaRanks.map(rank => {
+                          const isDone = isRankCompleted(rank, sRanks);
+                          const isActiveNext = rank.id === nextRank.id && !isDone;
+                          return (
+                            <button
+                              key={rank.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedRankMap(prev => ({ ...prev, [scout.uid]: rank.id }));
+                                setActiveTab('advancement');
+                              }}
+                              title={`${rank.name}: ${isDone ? 'Earned & Certified' : isActiveNext ? 'In Progress' : 'Upcoming'}`}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shrink-0 cursor-pointer ${
+                                isDone
+                                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900'
+                                  : isActiveNext
+                                  ? 'bg-amber-950 text-amber-300 border border-amber-600 animate-pulse hover:bg-amber-900'
+                                  : 'bg-slate-800/80 text-slate-500 border border-slate-750 hover:text-slate-400'
+                              }`}
+                            >
+                              <RankIcon rankId={rank.id} size={11} />
+                              <span>{rank.name}</span>
+                              {isDone && <Check size={10} className="text-emerald-400" />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1646,66 +1686,551 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         />
       )}
 
-      {/* ── 10. TAB 7: ADVANCEMENT & BADGES (Read-Only) ── */}
+      {/* ── 10. TAB 7: ADVANCEMENT & BADGES (Complete & In-Progress Progress) ── */}
       {activeTab === 'advancement' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {scopedScouts.map(scout => {
             const sRanks = ranksProgressMap[scout.uid] || {};
             const sMerit = meritProgressMap[scout.uid] || {};
+            const sIslamic = islamicProgressMap[scout.uid] || {};
+
+            // Available BSA ranks (including AOL if scout has progress)
+            const aolHasProgress = sRanks['arrow_of_light'] && (
+              sRanks['arrow_of_light'].completed ||
+              Object.keys(sRanks['arrow_of_light'].completedRequirements || sRanks['arrow_of_light'].steps || {}).length > 0
+            );
+            const bsaRanks = aolHasProgress ? RANKS_DATA : RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
+
             const latestRank = getLatestAchievedRank(sRanks, scout.rank);
             const nextRank = getNextIncompleteRank(sRanks);
-            const targetStats = getRankCompletionPercentage(nextRank.id, sRanks);
-            const activeReqs = (sRanks[nextRank.id] || {}).completedRequirements || (sRanks[nextRank.id] || {}).steps || {};
+            const completedRanks = bsaRanks.filter(r => isRankCompleted(r, sRanks));
+
+            // Active inspected rank for this scout
+            const currentSelectedRankId = selectedRankMap[scout.uid] || nextRank.id || 'scout';
+            const selectedRank = RANKS_DATA.find(r => r.id === currentSelectedRankId) || nextRank || RANKS_DATA[0];
+            const isSelectedRankCompleted = isRankCompleted(selectedRank, sRanks);
+            const selectedRankStats = getRankCompletionPercentage(selectedRank.id, sRanks);
+            const selectedRankReqs = (sRanks[selectedRank.id] || {}).completedRequirements || (sRanks[selectedRank.id] || {}).steps || {};
+            const selectedRankDate = (sRanks[selectedRank.id] || {}).completedDate || (sRanks[selectedRank.id] || {}).dateCompleted || (sRanks[selectedRank.id] || {}).approvedAt || null;
+
+            // Total Requirements Certified across all ranks
+            let totalCertifiedReqsAllRanks = 0;
+            let totalReqsAllRanks = 0;
+            bsaRanks.forEach(r => {
+              const st = getRankCompletionPercentage(r.id, sRanks);
+              totalCertifiedReqsAllRanks += st.completed;
+              totalReqsAllRanks += st.total;
+            });
+
+            // Merit Badges metrics
             const earnedBadges = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true);
+            const eagleRequiredEarned = earnedBadges.filter(b => b.eagleRequired).length;
+            const electiveEarned = earnedBadges.filter(b => !b.eagleRequired).length;
+            const inProgressBadges = MERIT_BADGES.filter(b => {
+              const mb = sMerit[b.id];
+              if (!mb || mb.completed === true) return false;
+              const reqs = mb.completedRequirements || mb.requirements || {};
+              return Object.keys(reqs).length > 0 || mb.inProgress;
+            });
+
+            // Islamic Topics metrics
+            const completedIslamicTopics = ISLAMIC_BASICS_TOPICS.filter(t => {
+              const st = sIslamic[t.id];
+              return st === true || st?.completed === true || (sIslamic.completedTopics && sIslamic.completedTopics[t.id]);
+            });
+
+            const currentFilter = advancementViewFilter; // 'all' | 'completed' | 'inprogress' | 'merit' | 'islamic'
 
             return (
-              <div key={scout.uid} className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-750 pb-3">
-                  <div>
-                    <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                      <Award size={18} className="text-emerald-400" />
-                      <span>{scout.fullName || scout.username} — Advancement Details</span>
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      Current Rank: <strong className="text-emerald-400">{latestRank.name}</strong> &bull; Working on: <strong className="text-amber-300">{nextRank.name}</strong> ({targetStats.percentage}%)
-                    </p>
-                  </div>
-                  <span className="text-xs font-mono text-emerald-400 font-bold bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
-                    {targetStats.completed} of {targetStats.total} Certified
-                  </span>
-                </div>
-
-                {/* Requirements Breakdown */}
-                <div className="space-y-2.5">
-                  {(nextRank.categories || []).map((cat, cIdx) => (
-                    <div key={cIdx} className="space-y-1.5">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">{cat.name}</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {cat.requirements.map(req => {
-                          const isDone = activeReqs[req.id]?.completed === true;
-                          return (
-                            <div
-                              key={req.id}
-                              className={`p-3 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
-                                isDone ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200' : 'bg-slate-900/60 border-slate-755 text-slate-400'
-                              }`}
-                            >
-                              <div className="space-y-0.5">
-                                <strong className="text-white block">Req {req.id}</strong>
-                                <p className="text-[11px] leading-relaxed line-clamp-2">{req.text}</p>
-                              </div>
-                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                isDone ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-500'
-                              }`}>
-                                {isDone ? '✓ Certified' : 'Incomplete'}
-                              </span>
-                            </div>
-                          );
-                        })}
+              <div key={scout.uid} className="bg-slate-850 border border-slate-750 rounded-3xl p-6 sm:p-7 shadow-xl space-y-6">
+                
+                {/* 1. Scout Advancement Header Banner */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 p-5 rounded-2xl border border-slate-755 shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0">
+                      {scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-white text-lg sm:text-xl">
+                          {scout.fullName || scout.username}
+                        </h3>
+                        <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                          {scout.patrol || scout.patrolName || scout.talia || 'Al-Huda Patrol'}
+                        </span>
+                        {scout.scoutPosition && (
+                          <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                            {scout.scoutPosition}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
+                        <span>Current Rank: <strong className="text-emerald-400 font-bold">{latestRank.name}</strong></span>
+                        <span>&bull;</span>
+                        <span>Working Toward: <strong className="text-amber-300 font-bold">{nextRank.name}</strong></span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* High-level Metric Stat Badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+                    <div className="bg-slate-900/90 border border-emerald-500/30 p-2.5 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Ranks Achieved</span>
+                      <span className="text-sm font-black text-emerald-300 font-mono">{completedRanks.length} / {bsaRanks.length}</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-sky-500/30 p-2.5 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Certified Reqs</span>
+                      <span className="text-sm font-black text-sky-300 font-mono">{totalCertifiedReqsAllRanks} / {totalReqsAllRanks}</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Merit Badges</span>
+                      <span className="text-sm font-black text-amber-300 font-mono">{earnedBadges.length} Earned</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-purple-500/30 p-2.5 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Islamic Topics</span>
+                      <span className="text-sm font-black text-purple-300 font-mono">{completedIslamicTopics.length} Mastered</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Quick View Filter Switcher */}
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  {[
+                    { id: 'all', label: '🗺️ Full 7-Rank Pathway' },
+                    { id: 'completed', label: `✓ Completed Ranks (${completedRanks.length})` },
+                    { id: 'inprogress', label: `⚡ In Progress (${nextRank.name})` },
+                    { id: 'merit', label: `🏅 Earned Merit Badges (${earnedBadges.length})` },
+                    { id: 'islamic', label: `📖 Islamic Foundations (${completedIslamicTopics.length})` }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setAdvancementViewFilter(tab.id);
+                        if (tab.id === 'inprogress') {
+                          setSelectedRankMap(prev => ({ ...prev, [scout.uid]: nextRank.id }));
+                        } else if (tab.id === 'completed' && completedRanks.length > 0) {
+                          setSelectedRankMap(prev => ({ ...prev, [scout.uid]: completedRanks[completedRanks.length - 1].id }));
+                        }
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                        currentFilter === tab.id
+                          ? 'bg-emerald-600 text-white shadow-md scale-[1.02]'
+                          : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-755 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
                   ))}
                 </div>
+
+                {/* 3. 7-Rank Pathway Stepper / Interactive Selector */}
+                {(currentFilter === 'all' || currentFilter === 'completed' || currentFilter === 'inprogress') && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <Target size={14} className="text-emerald-400" />
+                        <span>Official BSA Advancement Pathway</span>
+                      </span>
+                      <span className="text-[11px] text-slate-400 italic">Click any rank to inspect certified requirements</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                      {bsaRanks.map(rank => {
+                        const isDone = isRankCompleted(rank, sRanks);
+                        const isActiveNext = rank.id === nextRank.id && !isDone;
+                        const isCurrentSelected = rank.id === selectedRank.id;
+                        const rankStats = getRankCompletionPercentage(rank.id, sRanks);
+
+                        return (
+                          <button
+                            key={rank.id}
+                            type="button"
+                            onClick={() => setSelectedRankMap(prev => ({ ...prev, [scout.uid]: rank.id }))}
+                            className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between gap-2.5 cursor-pointer relative ${
+                              isCurrentSelected
+                                ? 'bg-slate-800 border-emerald-500 ring-2 ring-emerald-500/40 shadow-lg scale-[1.03]'
+                                : isDone
+                                ? 'bg-emerald-950/30 border-emerald-800/50 hover:bg-emerald-950/50 text-slate-200'
+                                : isActiveNext
+                                ? 'bg-amber-950/30 border-amber-500/50 hover:bg-amber-950/50 text-slate-200'
+                                : 'bg-slate-900/80 border-slate-755 hover:bg-slate-800/80 opacity-70 hover:opacity-100 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className={`p-2 rounded-xl ${
+                                isDone 
+                                  ? 'bg-emerald-900/60 text-emerald-300' 
+                                  : isActiveNext 
+                                  ? 'bg-amber-900/60 text-amber-300' 
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                <RankIcon rankId={rank.id} size={20} />
+                              </div>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                isDone
+                                  ? 'bg-emerald-900 text-emerald-200 border border-emerald-600'
+                                  : isActiveNext
+                                  ? 'bg-amber-900 text-amber-200 border border-amber-600 animate-pulse'
+                                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+                              }`}>
+                                {isDone ? '✓ Achieved' : isActiveNext ? '⚡ Active' : 'Upcoming'}
+                              </span>
+                            </div>
+
+                            <div>
+                              <strong className="text-white text-xs block truncate">{rank.name}</strong>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {rankStats.completed} / {rankStats.total} ({rankStats.percentage}%)
+                              </span>
+                            </div>
+
+                            {/* Progress Micro Bar */}
+                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  isDone ? 'bg-emerald-400' : isActiveNext ? 'bg-amber-400' : 'bg-slate-600'
+                                }`}
+                                style={{ width: `${rankStats.percentage}%` }}
+                              />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Inspected Rank Details Card */}
+                {(currentFilter === 'all' || currentFilter === 'completed' || currentFilter === 'inprogress') && (
+                  <div className="bg-slate-900 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-5 shadow-lg">
+                    
+                    {/* Selected Rank Hero Banner */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                          isSelectedRankCompleted
+                            ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
+                            : selectedRank.id === nextRank.id
+                            ? 'bg-amber-950/80 border border-amber-500/50 text-amber-300'
+                            : 'bg-slate-800 border border-slate-700 text-slate-400'
+                        }`}>
+                          <RankIcon rankId={selectedRank.id} size={28} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-lg font-black text-white">{selectedRank.name} Rank Requirements</h4>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                              isSelectedRankCompleted
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                                : selectedRank.id === nextRank.id
+                                ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            }`}>
+                              {isSelectedRankCompleted 
+                                ? (selectedRankDate ? `✓ Fully Certified on ${selectedRankDate}` : '✓ Fully Certified Rank')
+                                : selectedRank.id === nextRank.id 
+                                ? '⚡ Currently in Progress' 
+                                : '🔒 Locked / Future Rank Roadmap'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">{selectedRank.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 sm:text-right shrink-0">
+                        <div>
+                          <span className="text-xs font-mono font-black text-emerald-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 block">
+                            {selectedRankStats.completed} of {selectedRankStats.total} Certified ({selectedRankStats.percentage}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar for Selected Rank */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isSelectedRankCompleted ? 'bg-emerald-400' : 'bg-gradient-to-r from-emerald-500 to-amber-400'
+                          }`}
+                          style={{ width: `${selectedRankStats.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Requirement Categories & Individual Checklists */}
+                    <div className="space-y-4 pt-1">
+                      {(selectedRank.categories || []).map((cat, cIdx) => (
+                        <div key={cIdx} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-black uppercase text-slate-300 tracking-wider">
+                              {cat.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {cat.requirements.filter(r => selectedRankReqs[r.id]?.completed === true || selectedRankReqs[r.id] === true).length} / {cat.requirements.length} Done
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            {cat.requirements.map(req => {
+                              const reqData = selectedRankReqs[req.id];
+                              const isDone = reqData === true || reqData?.completed === true || reqData === 'completed' || reqData === 'approved' || reqData?.approved === true;
+                              const isPending = !isDone && (reqData?.pending === true || reqData === 'pending');
+                              const signOffDate = reqData?.completedAt || reqData?.approvedAt || reqData?.completedDate || null;
+                              const approver = reqData?.approvedBy || reqData?.signerName || null;
+
+                              return (
+                                <div
+                                  key={req.id}
+                                  className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 text-xs transition ${
+                                    isDone
+                                      ? 'bg-emerald-950/25 border-emerald-800/50 text-emerald-100 shadow-sm'
+                                      : isPending
+                                      ? 'bg-amber-950/20 border-amber-500/40 text-amber-200 shadow-sm'
+                                      : 'bg-slate-900/70 border-slate-755 text-slate-400'
+                                  }`}
+                                >
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <strong className={`${isDone ? 'text-emerald-300 font-black' : isPending ? 'text-amber-300 font-black' : 'text-white'}`}>
+                                        Req {req.number || req.id}
+                                      </strong>
+                                      {isDone && (
+                                        <span className="text-[9px] bg-emerald-900/60 text-emerald-300 border border-emerald-700/60 px-1.5 py-0.2 rounded font-mono font-bold">
+                                          ✓ Signed Off
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed line-clamp-3 font-sans">
+                                      {req.text}
+                                    </p>
+                                    {(signOffDate || approver) && isDone && (
+                                      <span className="text-[10px] text-emerald-400/80 font-mono block pt-0.5">
+                                        Certified {signOffDate ? `on ${signOffDate.split('T')[0]}` : ''} {approver ? `by ${approver}` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="shrink-0 self-start">
+                                    <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 ${
+                                      isDone
+                                        ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700 shadow-sm'
+                                        : isPending
+                                        ? 'bg-amber-900/80 text-amber-300 border border-amber-600 animate-pulse'
+                                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                    }`}>
+                                      {isDone ? (
+                                        <>
+                                          <Check size={11} />
+                                          <span>Certified</span>
+                                        </>
+                                      ) : isPending ? (
+                                        <>
+                                          <Clock size={11} />
+                                          <span>In Review</span>
+                                        </>
+                                      ) : (
+                                        <span>Incomplete</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Dedicated Earned & In-Progress Merit Badges Section */}
+                {(currentFilter === 'all' || currentFilter === 'merit') && (
+                  <div className="bg-slate-900 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-5 shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                      <div>
+                        <h4 className="text-base font-black text-white flex items-center gap-2">
+                          <Award size={18} className="text-amber-400" />
+                          <span>Earned & In-Progress Merit Badges</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Official Scouting America merit badges certified for {scout.fullName || scout.username}.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-950/80 text-amber-300 border border-amber-700">
+                          🦅 {eagleRequiredEarned} / 14 Eagle-Required
+                        </span>
+                        <span className="text-xs font-bold px-3 py-1 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-700">
+                          ⭐ {electiveEarned} Elective
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Earned Badges Grid */}
+                    {earnedBadges.length === 0 ? (
+                      <div className="bg-slate-850 border border-slate-800 p-6 rounded-2xl text-center text-xs text-slate-400 italic">
+                        🏅 No merit badges officially completed yet. The scout is working towards initial badge completions.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
+                          ✓ Officially Earned Badges ({earnedBadges.length})
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {earnedBadges.map(badge => {
+                            const mbData = sMerit[badge.id] || {};
+                            const earnedDate = mbData.completedDate || mbData.dateCompleted || mbData.earnedDate || mbData.completedAt || null;
+                            const counselor = mbData.counselorName || mbData.counselor || mbData.approvedBy || null;
+
+                            return (
+                              <div
+                                key={badge.id}
+                                className="bg-slate-850/90 border border-emerald-500/30 p-4 rounded-2xl space-y-2.5 shadow-sm hover:border-emerald-500 transition"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="space-y-0.5">
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                      badge.eagleRequired
+                                        ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                        : 'bg-sky-950 text-sky-300 border border-sky-600'
+                                    }`}>
+                                      {badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective Badge'}
+                                    </span>
+                                    <h5 className="font-extrabold text-white text-sm mt-1">{badge.name}</h5>
+                                  </div>
+                                  <span className="text-xs bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.5 rounded-full font-bold shrink-0">
+                                    ✓ Earned
+                                  </span>
+                                </div>
+
+                                {badge.description && (
+                                  <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
+                                    {badge.description}
+                                  </p>
+                                )}
+
+                                <div className="pt-2 border-t border-slate-755 text-[10px] text-slate-400 flex justify-between items-center font-mono">
+                                  <span>{earnedDate ? `Date: ${earnedDate.split('T')[0]}` : 'Certified by Troop'}</span>
+                                  {counselor && <span>Counselor: {counselor}</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* In-Progress Badges Grid */}
+                    {inProgressBadges.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-slate-800">
+                        <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
+                          ⚡ Merit Badges In Progress ({inProgressBadges.length})
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {inProgressBadges.map(badge => {
+                            const mbData = sMerit[badge.id] || {};
+                            const reqs = mbData.completedRequirements || mbData.requirements || {};
+                            const doneCount = Object.values(reqs).filter(v => v === true || v?.completed === true).length;
+                            const totalCount = badge.requirements ? badge.requirements.length : 0;
+
+                            return (
+                              <div
+                                key={`prog_${badge.id}`}
+                                className="bg-slate-850/60 border border-slate-755 p-4 rounded-2xl space-y-2.5 shadow-sm"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                                      {badge.eagleRequired ? '🦅 Eagle Required' : '⭐ Elective'}
+                                    </span>
+                                    <h5 className="font-extrabold text-white text-sm mt-1">{badge.name}</h5>
+                                  </div>
+                                  <span className="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-700 px-2 py-0.5 rounded-full font-bold">
+                                    In Progress
+                                  </span>
+                                </div>
+                                {totalCount > 0 && (
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    Progress: {doneCount} of {totalCount} requirements completed
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. Islamic Foundations & Core Knowledge Section */}
+                {(currentFilter === 'all' || currentFilter === 'islamic') && (
+                  <div className="bg-slate-900 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-5 shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                      <div>
+                        <h4 className="text-base font-black text-white flex items-center gap-2">
+                          <BookOpen size={18} className="text-purple-400" />
+                          <span>Islamic Foundations & Spiritual Growth</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Fiqh, Aqa'id, Akhlaq, and Karbala personality mastery certified for {scout.fullName || scout.username}.
+                        </p>
+                      </div>
+
+                      <span className="text-xs font-bold px-3 py-1 rounded-xl bg-purple-950/80 text-purple-300 border border-purple-700 self-start sm:self-auto">
+                        {completedIslamicTopics.length} of {ISLAMIC_BASICS_TOPICS.length} Topics Mastered
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {ISLAMIC_BASICS_TOPICS.map(topic => {
+                        const st = sIslamic[topic.id];
+                        const isDone = st === true || st?.completed === true || (sIslamic.completedTopics && sIslamic.completedTopics[topic.id]);
+                        const isPending = !isDone && (st?.pending === true);
+                        const doneDate = st?.completedDate || st?.completedAt || null;
+
+                        return (
+                          <div
+                            key={topic.id}
+                            className={`p-4 rounded-2xl border space-y-2 transition ${
+                              isDone
+                                ? 'bg-purple-950/20 border-purple-600/40 text-purple-100'
+                                : isPending
+                                ? 'bg-amber-950/20 border-amber-500/40 text-amber-100'
+                                : 'bg-slate-850/60 border-slate-755 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="text-[9px] font-black uppercase text-purple-300 bg-purple-950/60 border border-purple-700/50 px-2 py-0.5 rounded-full">
+                                {topic.category}
+                              </span>
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                                isDone
+                                  ? 'bg-purple-900/80 text-purple-200 border border-purple-600'
+                                  : isPending
+                                  ? 'bg-amber-900/80 text-amber-200 border border-amber-600'
+                                  : 'bg-slate-800 text-slate-500'
+                              }`}>
+                                {isDone ? '✓ Mastered' : isPending ? '⏳ In Review' : 'Incomplete'}
+                              </span>
+                            </div>
+
+                            <h5 className="font-extrabold text-white text-xs sm:text-sm">{topic.title}</h5>
+
+                            {doneDate && (
+                              <span className="text-[10px] text-purple-300/80 font-mono block pt-1 border-t border-purple-900/40">
+                                Certified on {doneDate.split('T')[0]}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
