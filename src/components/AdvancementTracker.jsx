@@ -7,6 +7,7 @@ import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import RoadToEagleTracker from './RoadToEagleTracker';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
+import { dispatchScoutNotification } from '../utils/notificationPipeline';
 
 const RANK_COLORS = {
   emerald: {
@@ -348,6 +349,20 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       const newAchievedRank = getLatestAchievedRank(simulatedProgress, scoutData?.rank);
       if (newAchievedRank?.name && newAchievedRank.name !== scoutData?.rank) {
         await setDoc(doc(db, 'users', scoutId), { rank: newAchievedRank.name }, { merge: true });
+      }
+
+      // Dispatch celebratory achievement notification to scout
+      if (newCompleted && scoutId && scoutId !== currentUser?.uid) {
+        dispatchScoutNotification({
+          recipientUid: scoutId,
+          scoutEmail: scoutData?.email || null,
+          title: `⭐ Requirement Certified: ${selectedRankData?.name || 'Rank'} (Req ${reqId})`,
+          message: `Leader ${currentUser?.fullName || 'Scoutmaster'} certified requirement ${reqId} for ${selectedRankData?.name || 'your current rank'}. Mabrook!`,
+          type: 'rank',
+          priority: 'normal',
+          actionUrl: '/#advancement',
+          metadata: { rankId: selectedRankId, reqId }
+        }).catch(e => console.warn("Failed to dispatch advancement approval alert:", e));
       }
     } catch (err) {
       console.error('Error approving requirement status:', err);

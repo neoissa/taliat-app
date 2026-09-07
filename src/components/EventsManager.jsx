@@ -7,7 +7,9 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { 
   Calendar, 
@@ -47,7 +49,7 @@ import {
   Layers
 } from 'lucide-react';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
-import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
+import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
   generateScoutingYearSchedule, 
   generateMonthSchedule,
@@ -629,6 +631,27 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
         });
       } else {
         dispatchPatrolStreamAlert(scope, `📅 New Patrol Event: ${title.trim()} on ${date} at ${time.trim()}.`);
+      }
+
+      // Dispatch alert to target scouts on new event creation
+      if (!editingId) {
+        getDocs(query(collection(db, 'users'), where('role', '==', 'scout'))).then(snap => {
+          let targetScouts = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+          if (scope !== 'all') {
+            targetScouts = targetScouts.filter(s => s.groupId === scope || s.patrolId === scope);
+          }
+          if (targetScouts.length > 0) {
+            dispatchBulkScoutNotifications({
+              scouts: targetScouts,
+              title: `📅 Upcoming Outing / Event: ${title.trim()}`,
+              message: `${title.trim()} scheduled for ${date}${time ? ` at ${time}` : ''}. Location: ${location || 'Troop HQ'}.`,
+              type: 'event',
+              priority: 'normal',
+              actionUrl: '/#events',
+              metadata: { eventId: docId }
+            }).catch(e => console.warn("Failed to dispatch new event notifications:", e));
+          }
+        }).catch(e => console.warn("Fetch scouts for event alert fallback:", e));
       }
 
       setMsg(editingId ? "Event updated!" : "New event published!");

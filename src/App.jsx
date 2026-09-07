@@ -22,6 +22,7 @@ import LeaderReportsCenter from './components/LeaderReportsCenter';
 import PatrolAttendance from './components/PatrolAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
+import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
@@ -57,6 +58,7 @@ export default function App() {
   const [userGroup, setUserGroup] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Live ticking clock for header and sidebar navigation
@@ -232,6 +234,35 @@ export default function App() {
     }
   }, [currentTab, currentUser?.uid]);
 
+  // Real-time unread scout notifications listener
+  useEffect(() => {
+    if (!currentUser?.uid || currentUser?.role !== 'scout') {
+      setUnreadAlertsCount(0);
+      return;
+    }
+
+    const scoutUid = currentUser.uid;
+    const unsubs = [];
+
+    // 1. Listen to /scout_notifications
+    unsubs.push(onSnapshot(collection(db, 'scout_notifications'), (snap) => {
+      const pushedUnread = snap.docs
+        .map(d => d.data())
+        .filter(n => (!n.recipientUid || n.recipientUid === scoutUid || n.scoutEmail === currentUser.email) && !n.read && !n.isRead).length;
+      setUnreadAlertsCount(pushedUnread);
+    }, (err) => console.warn("Scout notifications listener fallback:", err)));
+
+    // 2. Listen to subcollection /users/{scoutUid}/notifications
+    unsubs.push(onSnapshot(collection(db, 'users', scoutUid, 'notifications'), (snap) => {
+      const subcolUnread = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
+      if (subcolUnread > 0) {
+        setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
+      }
+    }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+
+    return () => unsubs.forEach(u => u());
+  }, [currentUser?.uid, currentUser?.role, currentUser?.email]);
+
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
     if (currentUser) {
@@ -359,6 +390,7 @@ export default function App() {
       // Scout Navigation
       return [
         { id: 'home', label: 'Home Dashboard', icon: '🏠' },
+        { id: 'feed', label: 'Alerts & Feed', icon: '🔔', badge: unreadAlertsCount },
         { id: 'advancement', label: 'My 7 Ranks', icon: '⚜️' },
         { id: 'assignments', label: 'My Homework', icon: '🎒' },
         { id: 'merit-badges', label: 'My Merit Badges', icon: '🏅' },
@@ -852,6 +884,13 @@ export default function App() {
           <ParentDashboard 
             currentUser={currentUser} 
             initialTab="feed"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {currentTab === 'feed' && isScout && (
+          <ScoutAlertsFeed 
+            currentUser={currentUser} 
             onNavigate={handleNavigate} 
           />
         )}

@@ -31,7 +31,8 @@ import {
   ArrowRight,
   Zap,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
@@ -52,6 +53,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const [attendanceStats, setAttendanceStats] = useState({
     totalSessions: 0,
     presentCount: 0,
@@ -115,6 +117,28 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     }, (err) => console.warn("Scout published reports listener fallback:", err));
     return () => unsubPub();
   }, [scoutUid]);
+
+  // 2.7. Subscribe to Scout Notifications (Pushed & Subcollection)
+  useEffect(() => {
+    if (!scoutUid) return;
+    const unsubs = [];
+
+    unsubs.push(onSnapshot(collection(db, 'scout_notifications'), (snap) => {
+      const count = snap.docs
+        .map(d => d.data())
+        .filter(n => (!n.recipientUid || n.recipientUid === scoutUid || n.scoutEmail === currentUser?.email) && !n.read && !n.isRead).length;
+      setUnreadNotifsCount(count);
+    }, (err) => console.warn("Scout notifications listener fallback:", err)));
+
+    unsubs.push(onSnapshot(collection(db, 'users', scoutUid, 'notifications'), (snap) => {
+      const subCount = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
+      if (subCount > 0) {
+        setUnreadNotifsCount(prev => Math.max(prev, subCount));
+      }
+    }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+
+    return () => unsubs.forEach(u => u());
+  }, [scoutUid, currentUser?.email]);
 
   // 3. Subscribe to merit badges completed
   useEffect(() => {
@@ -306,6 +330,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
 
           <div className="flex flex-wrap gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('feed')}
+              className="bg-gradient-to-r from-emerald-600/30 to-teal-600/20 hover:bg-emerald-500/40 text-emerald-300 border-2 border-emerald-500/60 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+            >
+              <Bell size={15} className={unreadNotifsCount > 0 ? "animate-bounce text-amber-400" : ""} />
+              <span>🔔 Alerts & Feed {unreadNotifsCount > 0 ? `(${unreadNotifsCount})` : ''}</span>
+            </button>
             <button
               type="button"
               onClick={() => setShowPendingModal(true)}

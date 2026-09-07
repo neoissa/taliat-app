@@ -39,6 +39,7 @@ import {
   Award,
   Dumbbell
 } from 'lucide-react';
+import { dispatchScoutNotification, dispatchBulkScoutNotifications } from '../utils/notificationPipeline';
 
 // Helper to determine strict status of an assignment for a given scout record
 export function getAssignmentStatus(assignment, record) {
@@ -264,6 +265,18 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
         notes: existing.scoutNotes || '',
         updatedAt: serverTimestamp()
       }, { merge: true });
+
+      // Dispatch celebratory achievement notification to scout
+      dispatchScoutNotification({
+        recipientUid: scout.uid,
+        scoutEmail: scout.email || null,
+        title: `⭐ Assignment Verified: ${assignment.title}`,
+        message: `Leader ${currentUser?.fullName || 'Scoutmaster'} verified and approved your assignment submission. Great job!`,
+        type: 'assignment',
+        priority: 'normal',
+        actionUrl: '/#assignments',
+        metadata: { assignmentId: assignment.id }
+      }).catch(e => console.warn("Failed to dispatch assignment verified alert:", e));
     } catch (err) {
       console.error("Failed to mark completed:", err);
       alert("Error marking completed: " + err.message);
@@ -397,6 +410,32 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
     try {
       await setDoc(doc(db, 'assignments', docId), data, { merge: true });
+
+      // Dispatch alert to target scouts on new assignment creation
+      if (!editingId) {
+        let targetScouts = [];
+        if (assignedTarget === 'all') {
+          targetScouts = scoutsList;
+        } else if (assignedTarget === 'patrol' && targetGroupId) {
+          targetScouts = scoutsList.filter(s => s.groupId === targetGroupId || s.patrolId === targetGroupId);
+        } else if (assignedTarget === 'scout' && targetScoutUid) {
+          const found = scoutsList.find(s => s.uid === targetScoutUid);
+          if (found) targetScouts = [found];
+        }
+
+        if (targetScouts.length > 0) {
+          dispatchBulkScoutNotifications({
+            scouts: targetScouts,
+            title: `📝 New Assignment: ${title.trim()}`,
+            message: `Leader ${currentUser?.fullName || 'Scoutmaster'} assigned "${title.trim()}". Due: ${dueDate || 'Soon'}.`,
+            type: 'assignment',
+            priority: 'normal',
+            actionUrl: '/#assignments',
+            metadata: { assignmentId: docId }
+          }).catch(e => console.warn("Failed to dispatch new assignment notifications:", e));
+        }
+      }
+
       setFormMsg(editingId ? "Assignment updated successfully!" : "New homework assigned to scouts!");
       setTimeout(() => {
         setShowForm(false);

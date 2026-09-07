@@ -80,7 +80,7 @@ export async function dispatchScoutNotification({
   scoutEmail,
   title,
   message,
-  type = 'report', // 'report' | 'rank' | 'badge' | 'assignment' | 'event'
+  type = 'report', // 'report' | 'rank' | 'badge' | 'assignment' | 'event' | 'broadcast'
   priority = 'normal', // 'urgent' | 'high' | 'normal'
   actionUrl = '/#profile',
   metadata = {}
@@ -96,14 +96,23 @@ export async function dispatchScoutNotification({
       priority,
       actionUrl,
       read: false,
+      isRead: false,
       metadata,
       createdAt: new Date().toISOString(),
       timestamp: serverTimestamp()
     };
 
+    // 1. Write to /scout_notifications collection
     const notifRef = await addDoc(collection(db, 'scout_notifications'), notificationDoc);
 
-    // Queue email if scout email provided
+    // 2. Also write to /users/{recipientUid}/notifications subcollection for direct listener
+    try {
+      await addDoc(collection(db, 'users', recipientUid, 'notifications'), notificationDoc);
+    } catch (subErr) {
+      console.warn("Subcollection notification write fallback:", subErr);
+    }
+
+    // 3. Queue email if scout email provided
     if (scoutEmail) {
       await addDoc(collection(db, 'mail'), {
         to: [scoutEmail],
@@ -139,6 +148,39 @@ export async function dispatchScoutNotification({
     console.warn("Scout notification dispatch fallback:", err);
     return null;
   }
+}
+
+/**
+ * Dispatches notifications to multiple scouts simultaneously
+ */
+export async function dispatchBulkScoutNotifications({
+  scouts = [], // array of { uid, email, fullName }
+  title,
+  message,
+  type = 'assignment',
+  priority = 'normal',
+  actionUrl = '/#assignments',
+  metadata = {}
+}) {
+  if (!Array.isArray(scouts) || scouts.length === 0) return [];
+  const results = [];
+  for (const s of scouts) {
+    const sUid = s.uid || s.id;
+    if (sUid) {
+      const res = await dispatchScoutNotification({
+        recipientUid: sUid,
+        scoutEmail: s.email || null,
+        title,
+        message,
+        type,
+        priority,
+        actionUrl,
+        metadata
+      });
+      results.push(res);
+    }
+  }
+  return results;
 }
 
 /**
