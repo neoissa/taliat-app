@@ -39,7 +39,12 @@ import {
   PenTool,
   Printer,
   Bell,
-  ShieldCheck
+  ShieldCheck,
+  Send,
+  X,
+  Flame,
+  Target,
+  CheckSquare
 } from 'lucide-react';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import AssignmentsManager from './AssignmentsManager';
@@ -164,10 +169,31 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     excusedCount: 0,
     lateCount: 0,
     attendanceRate: 100,
-    riskLevel: 'green' // 'green' | 'yellow' | 'red'
+    riskLevel: 'green', // 'green' | 'yellow' | 'red'
+    criticalityLevel: 0, // 0 | 1 | 2 | 3
+    totalHours: 0,
+    campingNights: 0,
+    serviceHours: 0,
+    tuesdayHours: 0,
+    fridayHours: 0,
+    halqaHours: 0,
+    campoutHours: 0,
+    categories: {
+      meetings: { total: 0, attended: 0 },
+      halqas: { total: 0, attended: 0 },
+      campouts: { total: 0, attended: 0 },
+      service: { total: 0, attended: 0 }
+    }
   });
   const [scoutAttendanceSessions, setScoutAttendanceSessions] = useState([]);
+  const [attendanceExcuses, setAttendanceExcuses] = useState([]);
   const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all' | 'present' | 'absent' | 'excused'
+  const [showExcuseModal, setShowExcuseModal] = useState(false);
+  const [excuseDate, setExcuseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [excuseReason, setExcuseReason] = useState('Illness');
+  const [excuseNotes, setExcuseNotes] = useState('');
+  const [excuseSubmitting, setExcuseSubmitting] = useState(false);
+  const [excuseSuccessMsg, setExcuseSuccessMsg] = useState('');
   
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -262,11 +288,11 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     }
   }, [currentUser?.role, currentUser?.linkedScoutIds, fullUserData?.role, fullUserData?.linkedScoutIds]);
 
-  // ── 0. REAL-TIME ATTENDANCE SESSIONS & ABSENCE RISK ENGINE ──
+  // ── 0. REAL-TIME ATTENDANCE SESSIONS, EVENTS & ABSENCE RISK ENGINE ──
   useEffect(() => {
     if (!currentUser?.uid) return;
 
-    const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+    const unsubSessions = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
       const mySessions = [];
       let present = 0;
       let absent = 0;
@@ -278,6 +304,15 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
       let totalTuesdayHours = 0;
       let totalFridayHours = 0;
       let totalHalqaHours = 0;
+      let totalCampoutHours = 0;
+      let meetingCount = 0;
+      let meetingPresent = 0;
+      let halqaCount = 0;
+      let halqaPresent = 0;
+      let campoutCount = 0;
+      let campoutPresent = 0;
+      let serviceCount = 0;
+      let servicePresent = 0;
 
       snap.docs.forEach((d) => {
         const data = d.data();
@@ -313,12 +348,27 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
             excused++;
           }
 
+          if (sType.includes('Tuesday') || sType.includes('Halqa')) {
+            halqaCount++;
+            if (isAttended) halqaPresent++;
+          } else if (sType.includes('Camp')) {
+            campoutCount++;
+            if (isAttended) campoutPresent++;
+          } else if (sType.includes('Service')) {
+            serviceCount++;
+            if (isAttended) servicePresent++;
+          } else {
+            meetingCount++;
+            if (isAttended) meetingPresent++;
+          }
+
           if (isAttended) {
             totalAttendedHours += sHours;
             totalCampingNights += sNights;
             if (sType.includes('Tuesday')) totalTuesdayHours += sHours;
             else if (sType.includes('Weekly') || sType.includes('Friday')) totalFridayHours += sHours;
             else if (sType.includes('Halqa') || sType.includes('Study')) totalHalqaHours += sHours;
+            else if (sType.includes('Camp')) totalCampoutHours += sHours;
             else if (sType.includes('Service') || sType.includes('Volunteer')) totalServiceHours += sHours;
           }
         }
@@ -330,15 +380,25 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
       const total = mySessions.length;
       const rate = total > 0 ? Math.round((present / total) * 100) : 100;
       
-      // Absence Risk Thresholds:
-      // Red: >= 3 unexcused absences
-      // Yellow: >= 2 unexcused absences
-      // Green: 0-1 unexcused absences
+      // Absence Risk & Criticality Thresholds:
+      // Level 0: 0 unexcused absences (Pristine Standing, 100%)
+      // Level 1: 1 unexcused absence (Good Standing, Low Risk)
+      // Level 2: 2 unexcused absences (Warning / Advisory Threshold)
+      // Level 3: >= 3 unexcused absences (Critical Escalation / Action Required)
       let risk = 'green';
+      let critLevel = 0;
       if (absent >= 3) {
         risk = 'red';
-      } else if (absent >= 2) {
+        critLevel = 3;
+      } else if (absent === 2) {
         risk = 'yellow';
+        critLevel = 2;
+      } else if (absent === 1) {
+        risk = 'green';
+        critLevel = 1;
+      } else {
+        risk = 'green';
+        critLevel = 0;
       }
 
       setAttendanceStats({
@@ -349,19 +409,37 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         lateCount: late,
         attendanceRate: rate,
         riskLevel: risk,
+        criticalityLevel: critLevel,
         totalHours: Math.round(totalAttendedHours * 10) / 10,
         campingNights: totalCampingNights,
         serviceHours: Math.round(totalServiceHours * 10) / 10,
         tuesdayHours: Math.round(totalTuesdayHours * 10) / 10,
         fridayHours: Math.round(totalFridayHours * 10) / 10,
-        halqaHours: Math.round(totalHalqaHours * 10) / 10
+        halqaHours: Math.round(totalHalqaHours * 10) / 10,
+        campoutHours: Math.round(totalCampoutHours * 10) / 10,
+        categories: {
+          meetings: { total: meetingCount, attended: meetingPresent },
+          halqas: { total: halqaCount, attended: halqaPresent },
+          campouts: { total: campoutCount, attended: campoutPresent },
+          service: { total: serviceCount, attended: servicePresent }
+        }
       });
       setScoutAttendanceSessions(mySessions);
     }, (err) => {
       console.warn("Scout attendance stats listener fallback:", err);
     });
 
-    return () => unsub();
+    const unsubExcuses = onSnapshot(collection(db, 'attendance_excuses'), (snap) => {
+      const myExcuses = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(e => e.scoutId === currentUser.uid);
+      setAttendanceExcuses(myExcuses);
+    }, (err) => console.warn("Attendance excuses listener fallback:", err));
+
+    return () => {
+      unsubSessions();
+      unsubExcuses();
+    };
   }, [currentUser?.uid]);
 
   // ── 0.5. REAL-TIME PUBLISHED REPORTS & SCOUT NOTIFICATIONS ──
@@ -423,6 +501,43 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     } finally {
       setIsSubmittingScoutSignature(false);
       setTimeout(() => setScoutSignSuccessToast(''), 4000);
+    }
+  };
+
+  // ── ABSENCE EXCUSE SUBMISSION HANDLER ──
+  const handleSubmitAbsenceExcuse = async (e) => {
+    if (e) e.preventDefault();
+    if (!excuseDate) {
+      alert('Please select the date of the missed session.');
+      return;
+    }
+    setExcuseSubmitting(true);
+    setExcuseSuccessMsg('');
+    try {
+      const excuseId = `${currentUser.uid}_${excuseDate}_${Date.now()}`;
+      await setDoc(doc(db, 'attendance_excuses', excuseId), {
+        scoutId: currentUser.uid,
+        scoutName: fullName || currentUser.username || 'Scout',
+        groupId: fullUserData?.groupId || currentUser.groupId || '',
+        date: excuseDate,
+        reason: excuseReason,
+        notes: excuseNotes,
+        submittedAt: new Date().toISOString(),
+        submittedBy: fullName || currentUser.username,
+        status: 'pending'
+      }, { merge: true });
+
+      setExcuseSuccessMsg('✓ Absence explanation submitted to unit leadership successfully!');
+      setTimeout(() => {
+        setExcuseSuccessMsg('');
+        setShowExcuseModal(false);
+        setExcuseNotes('');
+      }, 2000);
+    } catch (err) {
+      console.error('Error submitting absence excuse:', err);
+      alert('Failed to submit excuse: ' + err.message);
+    } finally {
+      setExcuseSubmitting(false);
     }
   };
 
@@ -1103,94 +1218,163 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         />
       )}
 
-      {/* ── TAB: DEDICATED ATTENDANCE & WARNING TRACKER (FOR SCOUTS) ── */}
-      {activeProfileTab === 'attendance' && currentUser.role === 'scout' && (
-        <div className="space-y-6">
-          {/* Automated Color-Coded Warning Banner */}
-          {attendanceStats.riskLevel === 'red' ? (
-            <div className="bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/60 border-2 border-red-500/80 rounded-3xl p-6 shadow-2xl space-y-3">
+      {/* ── TAB: DEDICATED ATTENDANCE, EVENTS PARTICIPATION & CRITICALITY DASHBOARD ── */}
+      {activeProfileTab === 'attendance' && (
+        <div className="space-y-6 animate-fadeIn font-sans">
+          
+          {/* 1. TOP PACING & CRITICALITY HEADER BANNER */}
+          <div className={`border-2 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 transition ${
+            attendanceStats.criticalityLevel === 3
+              ? 'bg-gradient-to-br from-red-950/90 via-slate-900 to-red-950/60 border-red-500/80 shadow-red-950/60'
+              : attendanceStats.criticalityLevel === 2
+              ? 'bg-gradient-to-br from-amber-950/90 via-slate-900 to-amber-950/60 border-amber-500/80 shadow-amber-950/60'
+              : attendanceStats.criticalityLevel === 1
+              ? 'bg-gradient-to-br from-emerald-950/70 via-slate-900 to-teal-950/50 border-emerald-500/60 shadow-emerald-950/40'
+              : 'bg-gradient-to-br from-emerald-950/80 via-slate-900 to-teal-950/60 border-emerald-500/70 shadow-emerald-950/50'
+          }`}>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-bold shrink-0 shadow-lg animate-bounce">
-                  <AlertCircle size={26} />
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-xl ${
+                  attendanceStats.criticalityLevel === 3
+                    ? 'bg-red-500/20 border-2 border-red-500/60 text-red-400 animate-bounce'
+                    : attendanceStats.criticalityLevel === 2
+                    ? 'bg-amber-500/20 border-2 border-amber-500/60 text-amber-400'
+                    : 'bg-emerald-500/20 border-2 border-emerald-500/60 text-emerald-400'
+                }`}>
+                  {attendanceStats.criticalityLevel === 3 ? (
+                    <AlertCircle size={30} />
+                  ) : attendanceStats.criticalityLevel === 2 ? (
+                    <AlertTriangle size={30} />
+                  ) : (
+                    <CheckCircle2 size={30} />
+                  )}
                 </div>
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-black text-red-300">
-                      🚨 Critical Attendance Warning: {attendanceStats.absentCount} Unexcused Absences
-                    </h3>
-                    <span className="bg-red-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Immediate Action Required
-                    </span>
-                  </div>
-                  <p className="text-xs text-red-200/90 leading-relaxed font-medium">
-                    You have accumulated <strong>{attendanceStats.absentCount} unexcused absences</strong> across recorded patrol meetings and halqas (current attendance rate: <strong>{attendanceStats.attendanceRate}%</strong>). Active troop participation is mandatory for Scout rank advancements, patrol voting, and leadership qualifications.
-                  </p>
-                  <div className="pt-2 text-xs text-red-300 bg-red-950/50 p-3 rounded-xl border border-red-500/30 flex items-center gap-2">
-                    <Info size={15} className="shrink-0" />
-                    <span><strong>Action Step:</strong> Please consult with your Patrol Leader or Scoutmaster to review your attendance record and arrange make-up sessions or submit excused absence notes.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : attendanceStats.riskLevel === 'yellow' ? (
-            <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/60 border-2 border-amber-500/80 rounded-3xl p-6 shadow-2xl space-y-3">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0 shadow-lg">
-                  <AlertTriangle size={26} />
-                </div>
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-black text-amber-300">
-                      ⚠️ Attendance Advisory: {attendanceStats.absentCount} Absences Recorded
-                    </h3>
-                    <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Attention Needed
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
-                    You have <strong>{attendanceStats.absentCount} unexcused absences</strong>. Regular troop meeting and halqa attendance is essential to maintain your active standing and continue advancing toward your next rank.
-                  </p>
-                  <div className="pt-2 text-xs text-amber-300 bg-amber-950/50 p-3 rounded-xl border border-amber-500/30 flex items-center gap-2">
-                    <Info size={15} className="shrink-0" />
-                    <span><strong>Pro-Tip:</strong> If you are unable to attend due to illness, school exams, or travel, notify your leader ahead of time so your absence is marked as <em>Excused</em>.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/60 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-2xl flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-lg">
-                <CheckCircle2 size={26} />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-black text-emerald-300 flex items-center gap-2">
-                  <span>🟢 Good Attendance Standing ({attendanceStats.attendanceRate}%)</span>
-                </h3>
-                <p className="text-xs text-emerald-200/90 leading-relaxed font-medium">
-                  MāshāʾAllāh! You have attended <strong>{attendanceStats.presentCount} of {attendanceStats.totalSessions}</strong> recorded troop sessions with only {attendanceStats.absentCount} absence{attendanceStats.absentCount === 1 ? '' : 's'}. Keep up the great consistency!
-                </p>
-              </div>
-            </div>
-          )}
 
-          {/* Attendance KPI Cards */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm ${
+                      attendanceStats.criticalityLevel === 3
+                        ? 'bg-red-500 text-slate-950 animate-pulse'
+                        : attendanceStats.criticalityLevel === 2
+                        ? 'bg-amber-500 text-slate-950'
+                        : 'bg-emerald-500 text-slate-950'
+                    }`}>
+                      {attendanceStats.criticalityLevel === 3
+                        ? '🚨 Tier 3: Critical Absence Risk'
+                        : attendanceStats.criticalityLevel === 2
+                        ? '⚠️ Tier 2: Attendance Advisory'
+                        : attendanceStats.criticalityLevel === 1
+                        ? '🟢 Tier 1: Good Standing (1 Missed)'
+                        : '🟢 Tier 0: Perfect Standing (100%)'}
+                    </span>
+                    <span className="text-xs text-slate-300 font-mono font-bold bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-700">
+                      {attendanceStats.presentCount} of {attendanceStats.totalSessions} Sessions Attended
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl font-black text-white tracking-tight">
+                    {attendanceStats.criticalityLevel === 3
+                      ? `Critical Warning: ${attendanceStats.absentCount} Unexcused Absences Recorded`
+                      : attendanceStats.criticalityLevel === 2
+                      ? `Attendance Advisory: ${attendanceStats.absentCount} Absences (Approaching Limit)`
+                      : attendanceStats.criticalityLevel === 1
+                      ? `Active Standing: 1 Absence Recorded (${attendanceStats.attendanceRate}% Attendance)`
+                      : `MāshāʾAllāh! Perfect 100% Attendance Record`
+                    }
+                  </h3>
+
+                  <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                    {attendanceStats.criticalityLevel === 3
+                      ? `You have accumulated ${attendanceStats.absentCount} unexcused absences (current rate: ${attendanceStats.attendanceRate}%). Active troop attendance (≥80%) is required for rank requirement sign-offs and Board of Review scheduling. Please consult your Scoutmaster or Patrol Leader immediately to schedule a make-up session.`
+                      : attendanceStats.criticalityLevel === 2
+                      ? `You have ${attendanceStats.absentCount} unexcused absences. Missing 1 more meeting will trigger an advancement hold. Make sure to attend the next 3 consecutive troop meetings and halqas to restore strong standing.`
+                      : attendanceStats.criticalityLevel === 1
+                      ? `You have 1 absence on record. Your active attendance rate is ${attendanceStats.attendanceRate}%, which is well within the troop benchmark. If this absence was due to illness or school exams, submit an excused note.`
+                      : `You have attended every single recorded roll call session! Perfect attendance qualifies you for annual attendance honors and priority high-adventure expeditions.`
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExcuseDate(new Date().toISOString().split('T')[0]);
+                    setShowExcuseModal(true);
+                  }}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg"
+                >
+                  <Send size={13} />
+                  <span>Submit Absence Excuse Note</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Attendance Progress Bar vs 80% Benchmark */}
+            <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-755 space-y-2">
+              <div className="flex justify-between items-center text-xs font-bold">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <TrendingUp size={13} className="text-emerald-400" />
+                  <span>Overall Attendance Pacing Meter</span>
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-mono text-amber-300 font-semibold">
+                    🎯 Benchmark: ≥80% Required
+                  </span>
+                  <span className={`font-mono text-sm font-black ${
+                    attendanceStats.attendanceRate >= 80 ? 'text-emerald-300' : 'text-red-300'
+                  }`}>
+                    {attendanceStats.attendanceRate}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative w-full h-3.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700/80">
+                <div 
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    attendanceStats.attendanceRate >= 80
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-400'
+                      : attendanceStats.attendanceRate >= 70
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                      : 'bg-gradient-to-r from-red-600 to-red-400'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(5, attendanceStats.attendanceRate))}%` }}
+                />
+                {/* 80% Benchmark Marker */}
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-white shadow-sm z-10"
+                  style={{ left: '80%' }}
+                  title="80% Minimum Standard"
+                />
+              </div>
+
+              <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                <span>0%</span>
+                <span className="text-amber-400 font-bold">80% Active Standard (Advancement Gate)</span>
+                <span>100%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. THE 5 HERO KPI CARDS */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="bg-slate-800 border border-teal-500/40 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider block">Total Hours</span>
-              <strong className="text-xl font-black text-teal-300 font-mono block">{attendanceStats.totalHours || 0} Hours</strong>
-              <span className="text-[10px] text-slate-400">Total earned in troop</span>
+            <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Events Had</span>
+              <strong className="text-xl font-black text-white font-mono block">
+                {attendanceStats.totalSessions} Held
+              </strong>
+              <span className="text-[10px] text-slate-400">Recorded troop sessions</span>
             </div>
 
             <div className="bg-slate-800 border border-emerald-500/40 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Present & Attended</span>
-              <strong className="text-xl font-black text-emerald-300 font-mono block">{attendanceStats.presentCount} / {attendanceStats.totalSessions}</strong>
-              <span className="text-[10px] text-emerald-400/80">{attendanceStats.attendanceRate}% Attendance Rate</span>
-            </div>
-
-            <div className="bg-slate-800 border border-indigo-500/40 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block">Camping Nights</span>
-              <strong className="text-xl font-black text-indigo-300 font-mono block">{attendanceStats.campingNights || 0} Nights</strong>
-              <span className="text-[10px] text-indigo-300/80">Outdoor campouts</span>
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Events Attended</span>
+              <strong className="text-xl font-black text-emerald-300 font-mono block">
+                {attendanceStats.presentCount} / {attendanceStats.totalSessions}
+              </strong>
+              <span className="text-[10px] text-emerald-400/80 font-bold font-mono">
+                {attendanceStats.attendanceRate}% Attendance Rate
+              </span>
             </div>
 
             <div className={`p-4 rounded-2xl space-y-1 shadow-md border ${
@@ -1200,30 +1384,256 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                 ? 'bg-amber-950/40 border-amber-500 text-amber-300' 
                 : 'bg-slate-800 border-slate-700 text-slate-200'
             }`}>
-              <span className="text-[10px] font-bold uppercase tracking-wider block">Unexcused Absences</span>
-              <strong className="text-xl font-black font-mono block">{attendanceStats.absentCount} Missed</strong>
+              <span className="text-[10px] font-bold uppercase tracking-wider block">Events Missed</span>
+              <strong className="text-xl font-black font-mono block">
+                {attendanceStats.absentCount} Unexcused
+              </strong>
               <span className="text-[10px] opacity-80">
-                {attendanceStats.absentCount >= 3 ? '🚨 Critical Alert' : attendanceStats.absentCount >= 2 ? '⚠️ Warning' : 'Within Limits'}
+                {attendanceStats.excusedCount > 0 ? `+ ${attendanceStats.excusedCount} Excused Notes` : 'No Excuses Filed'}
               </span>
             </div>
 
-            <div className="bg-slate-800 border border-sky-500/30 p-4 rounded-2xl space-y-1 shadow-md">
-              <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider block">Excused & Late</span>
-              <strong className="text-xl font-black text-sky-300 font-mono block">{attendanceStats.excusedCount} Exc / {attendanceStats.lateCount} Late</strong>
-              <span className="text-[10px] text-sky-400/80">Notice / late log</span>
+            <div className="bg-slate-800 border border-teal-500/40 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider block">Program Hours</span>
+              <strong className="text-xl font-black text-teal-300 font-mono block">
+                {attendanceStats.totalHours || 0} Hours
+              </strong>
+              <span className="text-[10px] text-teal-300/80">Logged in field & meetings</span>
+            </div>
+
+            <div className="bg-slate-800 border border-indigo-500/40 p-4 rounded-2xl space-y-1 shadow-md">
+              <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block">Campout Nights</span>
+              <strong className="text-xl font-black text-indigo-300 font-mono block">
+                {attendanceStats.campingNights || 0} Nights
+              </strong>
+              <span className="text-[10px] text-indigo-300/80">Outdoor overnights</span>
             </div>
           </div>
 
-          {/* Chronological Attendance History Table */}
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          {/* 3. TROOP ATTENDANCE CRITICALITY & ABSENCE POLICY MATRIX (1, 2, 3+ MISSED) */}
+          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="border-b border-slate-750 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <ShieldCheck size={18} className="text-emerald-400" />
+                <span>Troop Attendance Criticality & Absence Policy Scale</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Understand what each absence level means for your scout’s rank advancement, privileges, and troop standing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+              {/* Tier 0: 0 Absences */}
+              <div className={`p-4 rounded-2xl border transition space-y-2 flex flex-col justify-between ${
+                attendanceStats.absentCount === 0
+                  ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border-slate-755'
+              }`}>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                      Level 0: Pristine
+                    </span>
+                    {attendanceStats.absentCount === 0 && (
+                      <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                        ACTIVE LEVEL ✓
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                    <span>🟢 0 Missed</span>
+                    <span className="text-xs text-slate-400 font-normal">(100%)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                    <strong>Pristine Record:</strong> Unrestricted rank advancements, eligible for the Troop Attendance Honor Pin, priority selection for high-adventure campouts.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-800 text-[10px] font-mono text-emerald-400 font-bold">
+                  Status: Exemplary Standing
+                </div>
+              </div>
+
+              {/* Tier 1: 1 Absence */}
+              <div className={`p-4 rounded-2xl border transition space-y-2 flex flex-col justify-between ${
+                attendanceStats.absentCount === 1
+                  ? 'bg-emerald-950/40 border-emerald-500/80 ring-2 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border-slate-755'
+              }`}>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                      Level 1: Safe Buffer
+                    </span>
+                    {attendanceStats.absentCount === 1 && (
+                      <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                        ACTIVE LEVEL ✓
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                    <span>🟢 1 Missed</span>
+                    <span className="text-xs text-slate-400 font-normal">(Low Risk)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                    <strong>Good Standing:</strong> Within standard excused buffer. Check in with your patrol buddy to catch up on missed skills and submit an excuse note if ill.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-800 text-[10px] font-mono text-emerald-400 font-bold">
+                  Status: Standard Active
+                </div>
+              </div>
+
+              {/* Tier 2: 2 Absences */}
+              <div className={`p-4 rounded-2xl border transition space-y-2 flex flex-col justify-between ${
+                attendanceStats.absentCount === 2
+                  ? 'bg-amber-950/60 border-amber-500 ring-2 ring-amber-500/40 shadow-lg shadow-amber-950/50'
+                  : 'bg-slate-900/80 border-slate-755'
+              }`}>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                      Level 2: Warning
+                    </span>
+                    {attendanceStats.absentCount === 2 && (
+                      <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                        ⚠️ CAUTION
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                    <span>🟡 2 Missed</span>
+                    <span className="text-xs text-amber-300 font-normal">(Advisory)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                    <strong>Caution Threshold:</strong> Approaching critical limit. Missing 1 more session places rank advancements on hold. Patrol Leader will conduct an attendance check-in.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-800 text-[10px] font-mono text-amber-400 font-bold">
+                  Status: Advisory Notice
+                </div>
+              </div>
+
+              {/* Tier 3+: 3+ Absences */}
+              <div className={`p-4 rounded-2xl border transition space-y-2 flex flex-col justify-between ${
+                attendanceStats.absentCount >= 3
+                  ? 'bg-red-950/70 border-red-500 ring-2 ring-red-500/50 shadow-lg shadow-red-950/60'
+                  : 'bg-slate-900/80 border-slate-755'
+              }`}>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-red-400 tracking-wider">
+                      Level 3: Critical
+                    </span>
+                    {attendanceStats.absentCount >= 3 && (
+                      <span className="bg-red-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full animate-bounce">
+                        🚨 ACTION REQUIRED
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                    <span>🔴 3+ Missed</span>
+                    <span className="text-xs text-red-300 font-normal">(Critical)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                    <strong>Critical Escalation:</strong> Below 80% active standard. Rank sign-offs, Board of Review, and patrol voting privileges paused until an attendance plan / make-up hours are fulfilled.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-800 text-[10px] font-mono text-red-400 font-bold">
+                  Status: Advancement Hold
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. EVENT PARTICIPATION BREAKDOWN BY CATEGORY */}
+          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="border-b border-slate-750 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <Target size={18} className="text-sky-400" />
+                <span>Participation Breakdown by Program Category</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Attendance rate across regular troop meetings, Islamic study halqas, outdoor expeditions, and service logs.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="bg-slate-900/80 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚜️</span>
+                  <div>
+                    <h5 className="text-xs font-bold text-white">Weekly Troop Meetings</h5>
+                    <span className="text-[10px] text-slate-400 font-mono">Friday / Sunday</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Attended:</span>
+                  <strong className="text-emerald-300 font-mono">
+                    {attendanceStats.categories?.meetings?.attended || 0} / {attendanceStats.categories?.meetings?.total || 0}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🕌</span>
+                  <div>
+                    <h5 className="text-xs font-bold text-white">Islamic Knowledge Halqa</h5>
+                    <span className="text-[10px] text-slate-400 font-mono">Tuesday Evenings</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Attended:</span>
+                  <strong className="text-sky-300 font-mono">
+                    {attendanceStats.categories?.halqas?.attended || 0} / {attendanceStats.categories?.halqas?.total || 0}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⛺</span>
+                  <div>
+                    <h5 className="text-xs font-bold text-white">Outdoor Campouts</h5>
+                    <span className="text-[10px] text-slate-400 font-mono">Weekend Expeditions</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Nights Logged:</span>
+                  <strong className="text-indigo-300 font-mono">
+                    {attendanceStats.campingNights || 0} Nights
+                  </strong>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/80 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🛠️</span>
+                  <div>
+                    <h5 className="text-xs font-bold text-white">Community Service</h5>
+                    <span className="text-[10px] text-slate-400 font-mono">Volunteer Projects</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Service Logged:</span>
+                  <strong className="text-amber-300 font-mono">
+                    {attendanceStats.serviceHours || 0} Hours
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. CHRONOLOGICAL ATTENDANCE HISTORY TABLE WITH FILTERS */}
+          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-750 pb-3">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                   <Clock size={16} className="text-teal-400" />
-                  <span>My Attendance Session History ({filteredSessions.length} Entries)</span>
+                  <span>Roll Call & Session History ({filteredSessions.length} Entries)</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Detailed roll call log recorded by your patrol leader during troop events.
+                  Complete roll call log recorded by your patrol leader during troop events.
                 </p>
               </div>
 
@@ -1232,9 +1642,9 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                 <button
                   type="button"
                   onClick={() => setAttendanceFilter('all')}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
                     attendanceFilter === 'all'
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-emerald-600 text-white shadow-md'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-750'
                   }`}
                 >
@@ -1243,55 +1653,56 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                 <button
                   type="button"
                   onClick={() => setAttendanceFilter('present')}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
                     attendanceFilter === 'present'
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-emerald-600 text-white shadow-md'
                       : 'bg-slate-900 text-slate-400 hover:text-emerald-300 border border-slate-750'
                   }`}
                 >
-                  Present ({attendanceStats.presentCount})
+                  ✓ Attended ({attendanceStats.presentCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setAttendanceFilter('absent')}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
                     attendanceFilter === 'absent'
-                      ? 'bg-red-600 text-white'
+                      ? 'bg-red-600 text-white shadow-md'
                       : 'bg-slate-900 text-slate-400 hover:text-red-300 border border-slate-750'
                   }`}
                 >
-                  Absent ({attendanceStats.absentCount})
+                  🚨 Missed ({attendanceStats.absentCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setAttendanceFilter('excused')}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
                     attendanceFilter === 'excused'
-                      ? 'bg-sky-600 text-white'
+                      ? 'bg-sky-600 text-white shadow-md'
                       : 'bg-slate-900 text-slate-400 hover:text-sky-300 border border-slate-750'
                   }`}
                 >
-                  Excused ({attendanceStats.excusedCount})
+                  📝 Excused ({attendanceStats.excusedCount})
                 </button>
               </div>
             </div>
 
             {filteredSessions.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 text-xs italic space-y-2">
-                <Calendar size={28} className="mx-auto text-slate-600" />
-                <p>No attendance logs match the selected filter.</p>
+              <div className="text-center py-12 text-slate-500 text-xs italic space-y-2">
+                <Calendar size={32} className="mx-auto text-slate-600 opacity-60" />
+                <p>No attendance records match the selected filter.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-200 border-collapse">
                   <thead>
                     <tr className="border-b border-slate-700/80 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      <th className="py-3 px-3">Session Date</th>
-                      <th className="py-3 px-3">Program / Event</th>
-                      <th className="py-3 px-3 text-center">Duration</th>
-                      <th className="py-3 px-3">Meeting Topic / Notes</th>
-                      <th className="py-3 px-3">Your Attendance</th>
-                      <th className="py-3 px-3">Leader Remark</th>
+                      <th className="py-3.5 px-3">Session Date</th>
+                      <th className="py-3.5 px-3">Program / Event</th>
+                      <th className="py-3.5 px-3 text-center">Duration</th>
+                      <th className="py-3.5 px-3">Meeting Topic / Notes</th>
+                      <th className="py-3.5 px-3">Attendance Status</th>
+                      <th className="py-3.5 px-3">Leader Remarks</th>
+                      <th className="py-3.5 px-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-750/60">
@@ -1306,37 +1717,37 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                             : 'hover:bg-slate-750/30'
                         }`}
                       >
-                        <td className="py-3 px-3 font-mono font-bold text-slate-300">
+                        <td className="py-3.5 px-3 font-mono font-bold text-slate-300 whitespace-nowrap">
                           <span className="flex items-center gap-1.5">
                             <Calendar size={13} className="text-teal-400" />
                             <span>{session.date || '—'}</span>
                           </span>
                         </td>
-                        <td className="py-3 px-3 font-semibold text-white">
+                        <td className="py-3.5 px-3 font-semibold text-white">
                           {session.eventType}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-teal-300">
+                        <td className="py-3.5 px-3 text-center font-mono font-bold text-teal-300 whitespace-nowrap">
                           {session.status === 'present' || session.status === 'late' ? `${session.hours || 0}h${session.nights > 0 ? ` • ${session.nights}n` : ''}` : '0h'}
                         </td>
-                        <td className="py-3 px-3 text-slate-400">
+                        <td className="py-3.5 px-3 text-slate-400 max-w-xs truncate">
                           {session.sessionNotes || '—'}
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-3 whitespace-nowrap">
                           {session.status === 'present' ? (
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
                               <Check size={11} /> Present
                             </span>
                           ) : session.status === 'absent' ? (
                             <span className="bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
-                              <XCircle size={11} /> Absent
+                              <XCircle size={11} /> Absent (Unexcused)
                             </span>
                           ) : session.status === 'excused' ? (
                             <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
-                              Excused
+                              📝 Excused
                             </span>
                           ) : session.status === 'late' ? (
                             <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1">
-                              Late
+                              ⏳ Late
                             </span>
                           ) : (
                             <span className="bg-slate-700 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-xl capitalize">
@@ -1344,8 +1755,22 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-slate-300 italic">
+                        <td className="py-3.5 px-3 text-slate-300 italic max-w-xs truncate">
                           {session.note || '—'}
+                        </td>
+                        <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                          {session.status === 'absent' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExcuseDate(session.date || new Date().toISOString().split('T')[0]);
+                                setShowExcuseModal(true);
+                              }}
+                              className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg transition cursor-pointer shadow-sm"
+                            >
+                              Submit Excuse
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1353,6 +1778,90 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: SUBMIT ABSENCE EXCUSE NOTE ── */}
+      {showExcuseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/60 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <AlertCircle size={18} className="text-amber-400" />
+                <span>Submit Absence Excuse Note</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowExcuseModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {excuseSuccessMsg && (
+              <p className="text-xs text-emerald-300 bg-emerald-950/80 p-3 rounded-xl border border-emerald-600">
+                {excuseSuccessMsg}
+              </p>
+            )}
+
+            <form onSubmit={handleSubmitAbsenceExcuse} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date of Missed Event *</label>
+                <input
+                  type="date"
+                  required
+                  value={excuseDate}
+                  onChange={(e) => setExcuseDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Reason for Absence *</label>
+                <select
+                  value={excuseReason}
+                  onChange={(e) => setExcuseReason(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="Illness">🤒 Illness / Medical Appointment</option>
+                  <option value="Family Travel">✈️ Family Travel / Emergency</option>
+                  <option value="School Conflict">📚 School / Academic Exam</option>
+                  <option value="Religious Event">🕌 Religious / Community Event</option>
+                  <option value="Other">📋 Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Explanation / Notes for Leader</label>
+                <textarea
+                  rows={3}
+                  placeholder="Provide context for the unit leader / Scoutmaster..."
+                  value={excuseNotes}
+                  onChange={(e) => setExcuseNotes(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 font-sans"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={excuseSubmitting}
+                  className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Send size={14} />
+                  <span>{excuseSubmitting ? 'Submitting...' : 'Submit Excuse Note'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExcuseModal(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

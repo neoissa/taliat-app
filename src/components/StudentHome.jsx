@@ -453,7 +453,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── 1.5. SCOUT ATTENDANCE STANDING & WARNING BANNER ── */}
       <div 
-        onClick={() => onNavigate && onNavigate('profile')}
+        onClick={() => onNavigate && onNavigate('profile', 'attendance')}
         className={`rounded-3xl p-5 sm:p-6 shadow-xl border-2 transition cursor-pointer group ${
           attendanceStats.riskLevel === 'red'
             ? 'bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/60 border-red-500/80 hover:border-red-400'
@@ -527,7 +527,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onNavigate && onNavigate('profile');
+              onNavigate && onNavigate('profile', 'attendance');
             }}
             className={`font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center ${
               attendanceStats.riskLevel === 'red'
