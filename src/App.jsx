@@ -348,7 +348,8 @@ export default function App() {
       ];
     } else if (isParent) {
       return [
-        { id: 'home', label: 'Parent Portal', icon: '👨‍👩‍👧' },
+        { id: 'home', label: 'Parent Hub', icon: '👨‍👩‍👧' },
+        { id: 'feed', label: 'Alerts & Feed', icon: '🔔' },
         { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
         { id: 'events', label: 'Troop Calendar', icon: '📅' },
         { id: 'resources', label: 'Safety & Guides', icon: '📚' },
@@ -842,6 +843,15 @@ export default function App() {
         {(!currentTab || currentTab === 'home') && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
+            initialTab="overview"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {currentTab === 'feed' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="feed"
             onNavigate={handleNavigate} 
           />
         )}

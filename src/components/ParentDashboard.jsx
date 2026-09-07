@@ -4,10 +4,7 @@ import {
   collection, 
   doc, 
   onSnapshot, 
-  query, 
-  where, 
   setDoc, 
-  addDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
@@ -19,6 +16,7 @@ import ScoutProgressReport from './ScoutProgressReport';
 import SignaturePadModal from './SignaturePadModal';
 import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
+import ParentAlertsFeed from './ParentAlertsFeed';
 import {
   Award,
   Star,
@@ -52,32 +50,96 @@ import {
   Save,
   Send,
   X,
-  Car,
-  Utensils,
-  MapPin
+  MapPin,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Bookmark,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  PenTool
 } from 'lucide-react';
-import { dispatchParentNotification } from '../utils/notificationPipeline';
 
-export default function ParentDashboard({ currentUser = {}, onNavigate }) {
+function getRelativeDueDate(dateStr) {
+  if (!dateStr) return 'No due date';
+  try {
+    const due = new Date(dateStr);
+    const now = new Date();
+    due.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((due - now) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'}`;
+    if (diffDays === 0) return 'Due Today';
+    if (diffDays === 1) return 'Due Tomorrow';
+    if (diffDays <= 6) {
+      const dayName = due.toLocaleDateString('en-US', { weekday: 'long' });
+      return `Due this ${dayName}`;
+    }
+    return `Due in ${diffDays} days (${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+  } catch {
+    return `Due ${dateStr}`;
+  }
+}
+
+function getEventTargeting(event, scout, allGroups = []) {
+  const targetGroupId = event.targetGroupId || event.groupId || 'all';
+  const category = (event.category || '').toLowerCase();
+  const title = (event.title || '').toLowerCase();
+  const notes = (event.notes || event.description || '').toLowerCase();
+  
+  if (category.includes('court of honor') || category.includes('family') || notes.includes('parent') || notes.includes('family') || title.includes('family')) {
+    return {
+      type: 'family',
+      badge: '👨‍👩‍👧 Family Event',
+      label: 'Parents & Siblings Invited (Court of Honor / Potluck)',
+      color: 'bg-teal-950/80 text-teal-300 border-teal-500/50'
+    };
+  }
+  
+  if (!targetGroupId || targetGroupId === 'all' || targetGroupId === 'troop') {
+    return {
+      type: 'troop',
+      badge: '🎯 Entire Troop',
+      label: 'All Scouts & Patrols Welcome',
+      color: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+    };
+  }
+  
+  // Patrol-specific
+  const group = allGroups.find(g => g.id === targetGroupId);
+  const groupName = group?.name || 'Patrol Unit';
+  const isForActiveScout = scout && scout.groupId === targetGroupId;
+  
+  return {
+    type: 'patrol',
+    badge: `🎯 ${groupName} Patrol`,
+    label: isForActiveScout ? `Tagged: ${scout.fullName || scout.username} (Your Patrol)` : `Specific to ${groupName} Patrol`,
+    color: isForActiveScout ? 'bg-amber-950/80 text-amber-300 border-amber-500/50' : 'bg-slate-900 text-slate-400 border-slate-700'
+  };
+}
+
+export default function ParentDashboard({ currentUser = {}, initialTab = 'overview', onNavigate }) {
   const [parentDoc, setParentDoc] = useState(currentUser);
   const [linkedScouts, setLinkedScouts] = useState([]);
-  const [selectedScoutId, setSelectedScoutId] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'tasks' | 'events' | 'family' | 'reports' | 'notifications'
+  const [selectedScoutId, setSelectedScoutId] = useState('all'); // 'all' | scoutId
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview'); // 'overview' | 'homework' | 'advancement' | 'events' | 'feed' | 'reports' | 'tasks' | 'family'
   const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'past'
   const [loading, setLoading] = useState(true);
 
-  // Child Progress States
-  const [ranksProgress, setRanksProgress] = useState({});
-  const [meritProgress, setMeritProgress] = useState({});
-  const [islamicProgress, setIslamicProgress] = useState({});
-  const [scoutSubmissions, setScoutSubmissions] = useState({});
-  const [scoutHomeworkRecords, setScoutHomeworkRecords] = useState({});
+  // Synced Collections
+  const [ranksProgressMap, setRanksProgressMap] = useState({}); // { [scoutId]: ranksData }
+  const [meritProgressMap, setMeritProgressMap] = useState({});
+  const [islamicProgressMap, setIslamicProgressMap] = useState({});
+  const [scoutSubmissionsMap, setScoutSubmissionsMap] = useState({});
   const [assignmentsList, setAssignmentsList] = useState([]);
-  const [serviceLogs, setServiceLogs] = useState([]);
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [eventsList, setEventsList] = useState([]);
+  const [eventRsvps, setEventRsvps] = useState({}); // { [rsvpKey]: { status } }
   const [allUsers, setAllUsers] = useState([]);
   const [allGroups, setAllGroups] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   // Parent Action Center (Tasks & Forms)
   const [parentTasks, setParentTasks] = useState([]);
@@ -114,9 +176,6 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
   const [familySaving, setFamilySaving] = useState(false);
   const [familyMsg, setFamilyMsg] = useState('');
 
-  // In-App Notifications Feed
-  const [notifications, setNotifications] = useState([]);
-
   // Published Reports & Parent Signature State
   const [publishedReports, setPublishedReports] = useState([]);
   const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
@@ -124,6 +183,14 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
   const [isSubmittingParentSignature, setIsSubmittingParentSignature] = useState(false);
   const [parentSignSuccessToast, setParentSignSuccessToast] = useState('');
   const [reportSubTab, setReportSubTab] = useState('published'); // 'published' | 'live'
+  const [completedHomeworkOpen, setCompletedHomeworkOpen] = useState(false);
+
+  // Sync initial tab when changed by parent container
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // 1. Keep Parent Document updated
   useEffect(() => {
@@ -150,7 +217,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
     return () => unsub();
   }, [currentUser?.uid]);
 
-  // 2. Fetch Users, Groups & Published Reports
+  // 2. Fetch Users, Groups, Events, RSVPs & Published Reports
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setAllUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
@@ -163,14 +230,128 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
       list.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
       setPublishedReports(list);
     });
+    const unsubEvents = onSnapshot(collection(db, 'events'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
+      setEventsList(list);
+    });
+    const unsubRsvps = onSnapshot(collection(db, 'event_rsvps'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setEventRsvps(map);
+    });
+    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAttendanceSessions(list);
+    });
+    const unsubTasks = onSnapshot(collection(db, 'parent_tasks'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31'));
+      setParentTasks(list);
+    });
+    const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
+      setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    const unsubNotifs = onSnapshot(collection(db, 'parent_notifications'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(n => !n.recipientUid || n.recipientUid === currentUser?.uid || n.parentEmail === currentUser?.email);
+      list.sort((a, b) => new Date(b.createdAt || '1970-01-01') - new Date(a.createdAt || '1970-01-01'));
+      setNotifications(list);
+    });
 
     return () => {
       unsubUsers();
       unsubGroups();
       unsubPub();
+      unsubEvents();
+      unsubRsvps();
+      unsubAttendance();
+      unsubTasks();
+      unsubAssign();
+      unsubNotifs();
     };
   }, []);
 
+  // Listen to parent form submissions
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsubSubs = onSnapshot(collection(db, 'parent_task_submissions'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (data.parentUid === currentUser.uid) {
+          map[data.taskId] = data;
+        }
+      });
+      setTaskSubmissions(map);
+    });
+    return () => unsubSubs();
+  }, [currentUser?.uid]);
+
+  // 3. Resolve Linked Children
+  useEffect(() => {
+    const linkedIds = parentDoc?.linkedScoutIds || [];
+    const matchingScouts = allUsers.filter(u => {
+      if (u.role !== 'scout') return false;
+      if (linkedIds.includes(u.uid)) return true;
+      if (Array.isArray(u.parentUids) && u.parentUids.includes(parentDoc?.uid)) return true;
+      if (parentDoc?.email && u.parentEmail && u.parentEmail.toLowerCase().trim() === parentDoc.email.toLowerCase().trim()) return true;
+      return false;
+    });
+
+    setLinkedScouts(matchingScouts);
+    if (matchingScouts.length > 0 && selectedScoutId !== 'all' && !matchingScouts.some(s => s.uid === selectedScoutId)) {
+      setSelectedScoutId(matchingScouts[0].uid);
+      setAbsenceScoutId(matchingScouts[0].uid);
+    } else if (matchingScouts.length === 1 && selectedScoutId === 'all') {
+      setSelectedScoutId(matchingScouts[0].uid);
+      setAbsenceScoutId(matchingScouts[0].uid);
+    } else if (matchingScouts.length > 0 && !absenceScoutId) {
+      setAbsenceScoutId(matchingScouts[0].uid);
+    }
+    setLoading(false);
+  }, [parentDoc, allUsers]);
+
+  // 4. Progress Listeners for All Linked Children
+  useEffect(() => {
+    if (linkedScouts.length === 0) return;
+
+    const unsubs = [];
+    linkedScouts.forEach(scout => {
+      const sId = scout.uid;
+      // Ranks
+      unsubs.push(onSnapshot(collection(db, 'user_progress', sId, 'ranks'), (snap) => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data(); });
+        setRanksProgressMap(prev => ({ ...prev, [sId]: map }));
+      }));
+
+      // Merit Badges
+      unsubs.push(onSnapshot(collection(db, 'user_progress', sId, 'merit_badges'), (snap) => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data(); });
+        setMeritProgressMap(prev => ({ ...prev, [sId]: map }));
+      }));
+
+      // Islamic Basics
+      unsubs.push(onSnapshot(doc(db, 'user_progress', sId, 'islamic_basics', 'status'), (snap) => {
+        setIslamicProgressMap(prev => ({ ...prev, [sId]: snap.exists() ? snap.data() : {} }));
+      }));
+
+      // Assignments Submissions
+      unsubs.push(onSnapshot(collection(db, 'user_progress', sId, 'assignments'), (snap) => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data(); });
+        setScoutSubmissionsMap(prev => ({ ...prev, [sId]: map }));
+      }));
+    });
+
+    return () => unsubs.forEach(u => u());
+  }, [linkedScouts]);
+
+  // Handle Parent Digital Signature for Progress Report
   const handleSaveParentSignature = async ({ signerName, signerRole, signatureDataUrl, signedAt }) => {
     if (!signingPublishedReport) return;
     setIsSubmittingParentSignature(true);
@@ -182,7 +363,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         signatureDataUrl,
         signerUid: currentUser.uid
       });
-      setParentSignSuccessToast(`✓ Official progress report for ${signingPublishedReport.scoutName} successfully signed and verified!`);
+      setParentSignSuccessToast(`✓ Official progress report for ${signingPublishedReport.scoutName} successfully signed and certified!`);
       setSigningPublishedReport(null);
 
       // Refresh viewing report if open
@@ -208,214 +389,6 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
     } finally {
       setIsSubmittingParentSignature(false);
       setTimeout(() => setParentSignSuccessToast(''), 4000);
-    }
-  };
-
-  // 3. Resolve Linked Children
-  useEffect(() => {
-    const linkedIds = parentDoc?.linkedScoutIds || [];
-    const matchingScouts = allUsers.filter(u => {
-      if (u.role !== 'scout') return false;
-      if (linkedIds.includes(u.uid)) return true;
-      if (Array.isArray(u.parentUids) && u.parentUids.includes(parentDoc?.uid)) return true;
-      if (parentDoc?.email && u.parentEmail && u.parentEmail.toLowerCase().trim() === parentDoc.email.toLowerCase().trim()) return true;
-      return false;
-    });
-
-    setLinkedScouts(matchingScouts);
-    if (matchingScouts.length > 0 && (!selectedScoutId || !matchingScouts.some(s => s.uid === selectedScoutId))) {
-      setSelectedScoutId(matchingScouts[0].uid);
-      setAbsenceScoutId(matchingScouts[0].uid);
-    }
-    setLoading(false);
-  }, [parentDoc, allUsers, selectedScoutId]);
-
-  // Active Selected Child
-  const activeScout = linkedScouts.find(s => s.uid === selectedScoutId) || linkedScouts[0] || null;
-  const activeScoutId = activeScout?.uid;
-
-  // 4. Progress Listeners for Active Child
-  useEffect(() => {
-    if (!activeScoutId) return;
-
-    const unsubRanks = onSnapshot(collection(db, 'user_progress', activeScoutId, 'ranks'), (snap) => {
-      const map = {};
-      snap.docs.forEach(d => { map[d.id] = d.data(); });
-      setRanksProgress(map);
-    });
-
-    const unsubMerit = onSnapshot(collection(db, 'user_progress', activeScoutId, 'merit_badges'), (snap) => {
-      const map = {};
-      snap.docs.forEach(d => { map[d.id] = d.data(); });
-      setMeritProgress(map);
-    });
-
-    const unsubIslamic = onSnapshot(doc(db, 'user_progress', activeScoutId, 'islamic_basics', 'status'), (snap) => {
-      if (snap.exists()) setIslamicProgress(snap.data() || {});
-      else setIslamicProgress({});
-    });
-
-    const unsubSub = onSnapshot(collection(db, 'user_progress', activeScoutId, 'assignments'), (snap) => {
-      const map = {};
-      snap.docs.forEach(d => { map[d.id] = d.data(); });
-      setScoutSubmissions(map);
-    });
-
-    const unsubHw = onSnapshot(collection(db, 'scout_homework'), (snap) => {
-      const m = {};
-      snap.docs.forEach(d => { m[d.id] = d.data(); });
-      setScoutHomeworkRecords(m);
-    });
-
-    const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
-      setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    const unsubService = onSnapshot(collection(db, 'service_logs'), (snap) => {
-      const list = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(l => l.scoutId === activeScoutId || l.userId === activeScoutId);
-      list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
-      setServiceLogs(list);
-    });
-
-    const unsubAttendance = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
-      const list = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(s => s.records && s.records[activeScoutId]);
-      list.sort((a, b) => new Date(b.date || '1970-01-01') - new Date(a.date || '1970-01-01'));
-      setAttendanceSessions(list);
-    });
-
-    return () => {
-      unsubRanks();
-      unsubMerit();
-      unsubIslamic();
-      unsubSub();
-      unsubHw();
-      unsubAssign();
-      unsubService();
-      unsubAttendance();
-    };
-  }, [activeScoutId]);
-
-  // 5. Parent Tasks & In-App Notifications Listeners
-  useEffect(() => {
-    const unsubTasks = onSnapshot(collection(db, 'parent_tasks'), (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      list.sort((a, b) => new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31'));
-      setParentTasks(list);
-    });
-
-    const unsubEvents = onSnapshot(collection(db, 'events'), (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      list.sort((a, b) => new Date(a.date || '9999-12-31') - new Date(b.date || '9999-12-31'));
-      setEventsList(list);
-    });
-
-    const unsubNotifs = onSnapshot(collection(db, 'parent_notifications'), (snap) => {
-      const list = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(n => !n.recipientUid || n.recipientUid === currentUser?.uid || n.parentEmail === currentUser?.email);
-      list.sort((a, b) => new Date(b.createdAt || '1970-01-01') - new Date(a.createdAt || '1970-01-01'));
-      setNotifications(list);
-    });
-
-    // Listen to parent form submissions
-    if (currentUser?.uid) {
-      const unsubSubs = onSnapshot(collection(db, 'parent_task_submissions'), (snap) => {
-        const map = {};
-        snap.docs.forEach(d => {
-          const data = d.data();
-          if (data.parentUid === currentUser.uid) {
-            map[data.taskId] = data;
-          }
-        });
-        setTaskSubmissions(map);
-      });
-      return () => {
-        unsubTasks();
-        unsubEvents();
-        unsubNotifs();
-        unsubSubs();
-      };
-    }
-
-    return () => {
-      unsubTasks();
-      unsubEvents();
-      unsubNotifs();
-    };
-  }, [currentUser?.uid, currentUser?.email]);
-
-  // ── URGENT 7-DAY DEADLINE CALCULATION ENGINE ──
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const evaluatedTasks = parentTasks.map(task => {
-    const sub = taskSubmissions[task.id];
-    const isDone = !!(sub?.completed || sub?.status === 'completed');
-    let isUrgent = false;
-    let isOverdue = false;
-    let daysDiff = null;
-
-    if (!isDone && task.dueDate) {
-      const due = new Date(task.dueDate);
-      due.setHours(0, 0, 0, 0);
-      daysDiff = Math.round((due - now) / (1000 * 60 * 60 * 24));
-
-      if (daysDiff < 0) {
-        isOverdue = true;
-      } else if (daysDiff <= 7) {
-        isUrgent = true;
-      }
-    }
-
-    return {
-      ...task,
-      isDone,
-      isUrgent,
-      isOverdue,
-      daysDiff,
-      submission: sub || null
-    };
-  });
-
-  const urgentTasks = evaluatedTasks.filter(t => !t.isDone && (t.isUrgent || t.isOverdue));
-  const unreadNotifsCount = notifications.filter(n => !n.read).length;
-
-  // ── HANDLERS ──
-  // Save Dual-Parent Profile
-  const handleSaveFamilyProfile = async (e) => {
-    e.preventDefault();
-    if (!currentUser?.uid) return;
-    setFamilySaving(true);
-    setFamilyMsg('');
-
-    const payload = {
-      parent1Name: parent1Name.trim(),
-      parent1Phone: parent1Phone.trim(),
-      parent1Email: parent1Email.trim().toLowerCase(),
-      parent1Relation,
-      parent2Name: parent2Name.trim(),
-      parent2Phone: parent2Phone.trim(),
-      parent2Email: parent2Email.trim().toLowerCase(),
-      parent2Relation,
-      familyAddress: familyAddress.trim(),
-      emergencyContactName: emergencyContactName.trim(),
-      emergencyContactPhone: emergencyContactPhone.trim(),
-      updatedAt: serverTimestamp()
-    };
-
-    try {
-      await setDoc(doc(db, 'users', currentUser.uid), payload, { merge: true });
-      setFamilyMsg('✓ Family household profile updated successfully!');
-      setIsEditingFamily(false);
-      setTimeout(() => setFamilyMsg(''), 3000);
-    } catch (err) {
-      alert("Failed to update profile: " + err.message);
-    } finally {
-      setFamilySaving(false);
     }
   };
 
@@ -497,216 +470,282 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
     }
   };
 
-  // Mark notification read
-  const handleMarkNotifRead = async (notifId) => {
+  // Toggle RSVP status for an event
+  const handleRsvp = async (eventId, scoutId, status) => {
+    const targetId = scoutId === 'all' ? (linkedScouts[0]?.uid || currentUser.uid) : scoutId;
+    const rsvpId = `rsvp_${eventId}_${targetId}`;
     try {
-      await setDoc(doc(db, 'parent_notifications', notifId), { read: true }, { merge: true });
+      await setDoc(doc(db, 'event_rsvps', rsvpId), {
+        eventId,
+        scoutId: targetId,
+        parentUid: currentUser.uid,
+        status, // 'going' | 'cant_go'
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch (err) {
-      console.warn("Mark notif read error:", err);
+      console.error("RSVP update failed:", err);
     }
   };
 
-  // ── ADVANCEMENT & ATTENDANCE CALCULATIONS FOR ACTIVE CHILD ──
-  const scoutFullName = activeScout?.fullName || activeScout?.username || 'Child Member';
-  const groupObj = allGroups.find(g => g.id === activeScout?.groupId) || {};
-  const patrolName = groupObj.name || 'Al-Huda';
+  // Save Dual-Parent Profile
+  const handleSaveFamilyProfile = async (e) => {
+    e.preventDefault();
+    if (!currentUser?.uid) return;
+    setFamilySaving(true);
+    setFamilyMsg('');
 
-  const latestAchievedRank = getLatestAchievedRank(ranksProgress, activeScout?.rank);
-  const nextTargetRank = getNextIncompleteRank(ranksProgress);
-  const scoutRank = latestAchievedRank.name;
+    const payload = {
+      parent1Name: parent1Name.trim(),
+      parent1Phone: parent1Phone.trim(),
+      parent1Email: parent1Email.trim().toLowerCase(),
+      parent1Relation,
+      parent2Name: parent2Name.trim(),
+      parent2Phone: parent2Phone.trim(),
+      parent2Email: parent2Email.trim().toLowerCase(),
+      parent2Relation,
+      familyAddress: familyAddress.trim(),
+      emergencyContactName: emergencyContactName.trim(),
+      emergencyContactPhone: emergencyContactPhone.trim(),
+      updatedAt: serverTimestamp()
+    };
 
-  const completedRanks = RANKS_DATA.filter(rank => isRankCompleted(rank, ranksProgress));
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), payload, { merge: true });
+      setFamilyMsg('✓ Family household profile updated successfully!');
+      setIsEditingFamily(false);
+      setTimeout(() => setFamilyMsg(''), 3000);
+    } catch (err) {
+      alert("Failed to update profile: " + err.message);
+    } finally {
+      setFamilySaving(false);
+    }
+  };
 
-  const activeRankData = nextTargetRank;
-  const targetStats = getRankCompletionPercentage(nextTargetRank.id, ranksProgress);
-  const activeProg = ranksProgress[activeRankData.id] || {};
-  const activeReqs = activeProg.completedRequirements || activeProg.steps || {};
-  const activeTotal = targetStats.total;
-  const activeDone = targetStats.completed;
-  const rankPercent = targetStats.percentage;
+  // Active Scoped Scout (or null for all)
+  const isAllView = selectedScoutId === 'all';
+  const activeScout = !isAllView ? linkedScouts.find(s => s.uid === selectedScoutId) || linkedScouts[0] : null;
+  const scopedScouts = isAllView ? linkedScouts : activeScout ? [activeScout] : [];
 
-  const earnedBadges = MERIT_BADGES.filter(b => {
-    const p = meritProgress[b.id];
-    if (!p) return false;
-    const total = b.requirements ? b.requirements.length : 1;
-    const done = b.requirements ? b.requirements.filter(r => {
-      const s = p.steps?.[r.id] || p.completedSteps?.[r.id];
-      return s === true || s?.completed === true || s === 'approved' || s?.approved === true;
-    }).length : 0;
-    return p.completed === true || (total > 0 && done === total);
-  });
+  // Urgent 7-Day Deadline Evaluation
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
-  // Attendance stats
-  let totalAttendedHours = 0;
-  let campingNights = 0;
-  let attendedSessionsCount = 0;
-  let unexcusedAbsences = 0;
+  const evaluatedTasks = parentTasks.map(task => {
+    const sub = taskSubmissions[task.id];
+    const isDone = !!(sub?.completed || sub?.status === 'completed');
+    let isUrgent = false;
+    let isOverdue = false;
+    let daysDiff = null;
 
-  attendanceSessions.forEach(s => {
-    const rec = s.records?.[activeScoutId];
-    if (rec) {
-      const sType = s.eventType || '';
-      const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
-      const defaultN = sType.includes('Camp') ? 2 : 0;
-      const h = rec.hours !== undefined ? Number(rec.hours) : (s.hours !== undefined ? Number(s.hours) : defaultH);
-      const n = rec.nights !== undefined ? Number(rec.nights) : (s.nights !== undefined ? Number(s.nights) : defaultN);
+    if (!isDone && task.dueDate) {
+      const due = new Date(task.dueDate);
+      due.setHours(0, 0, 0, 0);
+      daysDiff = Math.round((due - now) / (1000 * 60 * 60 * 24));
 
-      if (rec.status === 'present' || rec.status === 'late') {
-        attendedSessionsCount++;
-        totalAttendedHours += h;
-        campingNights += n;
-      } else if (rec.status === 'absent') {
-        unexcusedAbsences++;
+      if (daysDiff < 0) {
+        isOverdue = true;
+      } else if (daysDiff <= 7) {
+        isUrgent = true;
       }
     }
+
+    return {
+      ...task,
+      isDone,
+      isUrgent,
+      isOverdue,
+      daysDiff,
+      submission: sub || null
+    };
   });
 
-  const totalSessions = attendanceSessions.length;
-  const attendanceRate = totalSessions > 0 ? Math.round((attendedSessionsCount / totalSessions) * 100) : 100;
-  const riskLevel = unexcusedAbsences >= 3 ? 'critical' : unexcusedAbsences === 2 ? 'warning' : 'good';
-
-  // Published Reports Calculations
+  const urgentTasks = evaluatedTasks.filter(t => !t.isDone && (t.isUrgent || t.isOverdue));
+  
   const linkedUids = linkedScouts.map(s => s.uid);
-  const childPublishedReports = publishedReports.filter(r => r.scoutId === activeScoutId);
-  const allPendingReports = publishedReports.filter(r => linkedUids.includes(r.scoutId) && !r.signatures?.parent?.signed);
-  const activeScoutPendingReports = childPublishedReports.filter(r => !r.signatures?.parent?.signed);
+  const pendingReportsToSign = publishedReports.filter(r => linkedUids.includes(r.scoutId) && !r.signatures?.parent?.signed);
+  const unreadNotifsCount = notifications.filter(n => !n.read).length + pendingReportsToSign.length;
+
+  // Build Homework List for Scoped Scouts
+  const buildScoutHomework = (scout) => {
+    if (!scout) return [];
+    const scoutSubs = scoutSubmissionsMap[scout.uid] || {};
+    return assignmentsList.map(assign => {
+      const sub = scoutSubs[assign.id];
+      const isApproved = sub?.status === 'approved' || sub?.completed === true;
+      const isPendingReview = sub?.status === 'submitted' || sub?.status === 'pending_review' || (sub?.submissionText && !isApproved);
+      const isPending = !isApproved && !isPendingReview;
+
+      return {
+        ...assign,
+        scoutId: scout.uid,
+        scoutName: scout.fullName || scout.username,
+        submission: sub || null,
+        status: isApproved ? 'completed' : isPendingReview ? 'in_review' : 'pending',
+        leaderFeedback: sub?.leaderFeedback || sub?.leaderNote || assign.instructions || ''
+      };
+    });
+  };
+
+  const allScopedHomework = scopedScouts.flatMap(s => buildScoutHomework(s));
+  const activeHomework = allScopedHomework.filter(h => h.status !== 'completed');
+  const completedHomework = allScopedHomework.filter(h => h.status === 'completed');
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-emerald-400">
         <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <span className="text-sm font-semibold">Loading Family Portal...</span>
+        <span className="text-sm font-semibold">Loading Dhulfiqār Family Portal...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
-      {/* ── 1. URGENT 7-DAY DEADLINE BANNER ── */}
-      {urgentTasks.length > 0 && (
-        <div className="bg-gradient-to-r from-red-950/90 via-red-900/80 to-amber-950/90 border-2 border-red-500 p-4 sm:p-5 rounded-3xl shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-red-500/30 border border-red-400 flex items-center justify-center text-xl shrink-0">
-              ⚡
-            </div>
-            <div>
-              <span className="text-[10px] font-black uppercase bg-red-500 text-white px-2 py-0.5 rounded-full">
-                Action Required ({urgentTasks.length} Due Soon)
-              </span>
-              <h3 className="text-sm font-black text-white mt-1">
-                {urgentTasks[0].title} — {urgentTasks[0].isOverdue ? '🚨 OVERDUE!' : `Due in ${urgentTasks[0].daysDiff} days`}
-              </h3>
-              <p className="text-xs text-red-200">Please review and submit the required medical/camp form before the deadline.</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className="bg-white hover:bg-slate-100 text-red-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
-          >
-            Open Action Center &rarr;
-          </button>
-        </div>
-      )}
-
-      {/* ── 2. TOP HERO & DUAL-PARENT QUICK SUMMARY ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-16 text-slate-100">
+      
+      {/* ── 1. WARM WELCOME & ACTION BAR ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border border-slate-750 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-emerald-950/60 shrink-0">
             👨‍👩‍👧
           </div>
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-xl font-black text-white">Dhulfiqār Family Portal</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-black text-white">
+                Welcome back, {parent1Name || parentDoc.fullName || 'Parent'}!
+              </h2>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Parent Hub
+                Family Portal
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-1">
-              Family household: <strong className="text-white">{parent1Name || parentDoc.fullName || 'Parent'}</strong>
-              {parent2Name ? ` & ${parent2Name}` : ''} &bull; {linkedScouts.length} Registered {linkedScouts.length === 1 ? 'Child' : 'Children'}
+              Here’s what your family has coming up this week across scouting & learning.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
+            type="button"
             onClick={() => setShowAbsenceModal(true)}
-            className="bg-amber-600 hover:bg-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
           >
             <AlertCircle size={14} />
-            <span>Submit Absence Notice</span>
+            <span>Notify Leader of Absence</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('family')}
             className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
           >
             <User size={14} />
-            <span>Family Profile</span>
+            <span>Household Profile</span>
           </button>
         </div>
       </div>
 
-      {/* ── 3. MULTI-CHILD SWITCHER TABS ── */}
+      {/* ── 2. STICKY PROMINENT CHILD SWITCHER ── */}
       {linkedScouts.length > 0 && (
-        <div className="bg-slate-850 border border-slate-750 p-3 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-none shadow-md">
-          <span className="text-[10px] uppercase font-black text-slate-400 px-2 shrink-0">Select Child:</span>
+        <div className="sticky top-2 z-30 bg-slate-900/95 backdrop-blur border border-slate-750 p-2.5 rounded-2xl shadow-lg flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <span className="text-[10px] uppercase font-black text-slate-400 px-2 shrink-0 flex items-center gap-1">
+            <Users size={12} className="text-emerald-400" />
+            <span>Child View:</span>
+          </span>
+
+          {linkedScouts.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setSelectedScoutId('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                isAllView
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 scale-[1.02]'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+              }`}
+            >
+              <span>👨‍👩‍👧 All Family View</span>
+              <span className="text-[10px] bg-black/25 px-1.5 py-0.2 rounded-full font-mono">{linkedScouts.length}</span>
+            </button>
+          )}
+
           {linkedScouts.map(scout => {
             const isSelected = scout.uid === selectedScoutId;
+            const sRanks = ranksProgressMap[scout.uid] || {};
+            const latestRank = getLatestAchievedRank(sRanks, scout.rank);
             return (
               <button
                 key={scout.uid}
+                type="button"
                 onClick={() => setSelectedScoutId(scout.uid)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2.5 cursor-pointer shrink-0 ${
                   isSelected
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02]'
-                    : 'bg-slate-900 border border-slate-750 text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 scale-[1.02]'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
                 }`}
               >
-                <div className="w-6 h-6 rounded-full bg-slate-950/60 border border-white/20 flex items-center justify-center text-[10px] font-black">
-                  {scout.fullName?.charAt(0) || 'S'}
+                <div className="w-6 h-6 rounded-full bg-slate-950/60 border border-white/20 flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
+                  {scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}
                 </div>
                 <span>{scout.fullName || scout.username}</span>
-                <span className="text-[10px] opacity-80 font-mono">({scout.rank || 'Scout'})</span>
+                <span className="text-[10px] opacity-80 font-mono">({latestRank.name})</span>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* ── 4. PRIMARY PARENT PORTAL TABS ── */}
+      {/* ── 3. PRIMARY PARENT PORTAL TABS ── */}
       <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none">
         {[
-          { id: 'overview', label: `${scoutFullName}'s Progress`, icon: Award },
-          { id: 'tasks', label: 'Parent Action Center (Forms)', icon: Zap, badge: urgentTasks.length > 0 ? `⚡ ${urgentTasks.length} Due` : null, badgeColor: 'bg-red-500 text-white' },
-          { id: 'events', label: 'Troop Calendar & RSVP', icon: Calendar },
+          { id: 'overview', label: 'Family Overview', icon: Home },
+          { 
+            id: 'homework', 
+            label: 'Assignments & Learning', 
+            icon: BookOpen,
+            badge: activeHomework.length > 0 ? `${activeHomework.length} Active` : null,
+            badgeColor: 'bg-amber-500 text-slate-950 font-black'
+          },
+          { id: 'events', label: 'Upcoming Schedule & RSVP', icon: Calendar },
+          { 
+            id: 'feed', 
+            label: 'Alerts & Activity Feed', 
+            icon: Bell, 
+            badge: unreadNotifsCount > 0 ? unreadNotifsCount : null, 
+            badgeColor: 'bg-sky-500 text-white font-black animate-pulse' 
+          },
           { 
             id: 'reports', 
             label: 'Official Progress Reports', 
             icon: Printer,
-            badge: allPendingReports.length > 0 ? `✍️ ${allPendingReports.length} To Sign` : null,
+            badge: pendingReportsToSign.length > 0 ? `✍️ ${pendingReportsToSign.length} To Sign` : null,
             badgeColor: 'bg-amber-500 text-slate-950 font-black animate-pulse'
           },
-          { id: 'family', label: 'Dual-Parent Household Profile', icon: Home },
-          { id: 'notifications', label: 'Alerts & Feed', icon: Bell, badge: unreadNotifsCount > 0 ? unreadNotifsCount : null, badgeColor: 'bg-blue-500 text-white' }
+          { 
+            id: 'tasks', 
+            label: 'Forms & Waivers', 
+            icon: Zap, 
+            badge: urgentTasks.length > 0 ? `⚡ ${urgentTasks.length}` : null, 
+            badgeColor: 'bg-red-500 text-white font-black' 
+          },
+          { id: 'advancement', label: 'Advancement & Badges', icon: Award },
+          { id: 'family', label: 'Household Profile', icon: User }
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
           return (
             <button
               key={t.id}
+              type="button"
               onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 scale-[1.02]'
                   : 'bg-slate-850 border border-slate-750 text-slate-400 hover:text-white'
               }`}
             >
               <Icon size={14} />
               <span>{t.label}</span>
               {t.badge && (
-                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${t.badgeColor}`}>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full ${t.badgeColor}`}>
                   {t.badge}
                 </span>
               )}
@@ -715,138 +754,780 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         })}
       </div>
 
-      {/* ── 5. TAB 1: CHILD PROGRESS & ADVANCEMENT (100% READ-ONLY) ── */}
+      {/* ── 4. TAB 1: CONSOLIDATED AT-A-GLANCE FAMILY OVERVIEW ── */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* ── PENDING PROGRESS REPORT SIGNATURE ALERT ── */}
-          {activeScoutPendingReports.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-950/90 via-amber-900/80 to-slate-900 border-2 border-amber-500/80 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+          
+          {/* SECTION 1: URGENT ACTION BANNER (Only renders when action required) */}
+          {(pendingReportsToSign.length > 0 || urgentTasks.length > 0) && (
+            <div className="bg-gradient-to-r from-red-950/90 via-amber-950/80 to-slate-900 border-2 border-amber-500/80 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-2xl shrink-0">
-                  ✍️
+                  ⚡
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full">
-                      Signature Required
+                      Immediate Action Required
                     </span>
                     <span className="text-xs text-amber-200 font-mono">
-                      Published on {activeScoutPendingReports[0].publishedAt?.split('T')[0]}
+                      {pendingReportsToSign.length > 0 ? `${pendingReportsToSign.length} Report to Sign` : `${urgentTasks.length} Form Due`}
                     </span>
                   </div>
                   <h3 className="text-sm font-black text-white mt-1">
-                    Official Progress Report for {scoutFullName}
+                    {pendingReportsToSign.length > 0 
+                      ? `Official Progress Report published for ${pendingReportsToSign[0].scoutName}`
+                      : `${urgentTasks[0].title} — ${urgentTasks[0].isOverdue ? 'Overdue' : `Due in ${urgentTasks[0].daysDiff} days`}`
+                    }
                   </h3>
                   <p className="text-xs text-slate-300">
-                    Certified by {activeScoutPendingReports[0].leaderName}. Please review and apply your parent digital signature.
+                    {pendingReportsToSign.length > 0 
+                      ? 'Review and apply your parent digital signature for troop advancement sign-offs.'
+                      : 'Please complete and submit the required activity waiver or health disclosure.'
+                    }
                   </p>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => {
-                  setViewingPublishedReport(activeScoutPendingReports[0]);
+                  if (pendingReportsToSign.length > 0) {
+                    setViewingPublishedReport(pendingReportsToSign[0]);
+                  } else {
+                    setActiveTab('tasks');
+                  }
                 }}
                 className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
               >
-                Review & Sign Report &rarr;
+                {pendingReportsToSign.length > 0 ? 'Review & Sign Report →' : 'Complete Form →'}
               </button>
             </div>
           )}
 
-          {/* Quick Metrics KPI Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Rank</span>
-              <strong className="text-lg font-black text-emerald-400 block truncate">{latestAchievedRank.name}</strong>
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
-                <div className="bg-amber-400 h-full transition-all duration-300" style={{ width: `${rankPercent}%` }}></div>
-              </div>
-              <span className="text-[10px] text-slate-400 block mt-1">Target: {activeRankData.name} ({rankPercent}%)</span>
-            </div>
-
-            <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Merit Badges</span>
-              <strong className="text-lg font-black text-amber-400 block font-mono">{earnedBadges.length} / 21 Earned</strong>
-              <span className="text-[10px] text-slate-400 block mt-1">★ {earnedBadges.filter(b => b.eagleRequired).length} Eagle-Required</span>
-            </div>
-
-            <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Attendance Rate</span>
+          {/* SECTION 2: CURRENT RANK PROGRESS WIDGET */}
+          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-750 pb-3">
               <div className="flex items-center gap-2">
-                <strong className="text-lg font-black text-emerald-400 font-mono">{attendanceRate}%</strong>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                  riskLevel === 'critical' ? 'bg-red-500 text-white' : riskLevel === 'warning' ? 'bg-amber-500 text-slate-950' : 'bg-emerald-950 text-emerald-300'
-                }`}>
-                  {riskLevel === 'good' ? '🟢 Good' : riskLevel === 'warning' ? '⚠️ Warning' : '🚨 Critical'}
-                </span>
+                <span className="text-lg">⚜️</span>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Current Rank & Advancement Progress</h3>
+                  <p className="text-xs text-slate-400">Real-time status certified by troop leaders.</p>
+                </div>
               </div>
-              <span className="text-[10px] text-slate-400 block mt-1">{Math.round(totalAttendedHours * 10) / 10}h &bull; {campingNights} Nights</span>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('advancement')}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Full Requirements</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
 
-            <div className="bg-slate-850 border border-slate-750 p-4 rounded-3xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned Patrol</span>
-              <strong className="text-lg font-black text-sky-400 block truncate">👥 {patrolName}</strong>
-              <span className="text-[10px] text-slate-400 block mt-1">Dhulfiqār Troop 313</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {scopedScouts.map(scout => {
+                const sRanks = ranksProgressMap[scout.uid] || {};
+                const latestRank = getLatestAchievedRank(sRanks, scout.rank);
+                const nextRank = getNextIncompleteRank(sRanks);
+                const targetStats = getRankCompletionPercentage(nextRank.id, sRanks);
+                const sMerit = meritProgressMap[scout.uid] || {};
+                const earnedBadgesCount = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true).length;
+                const groupObj = allGroups.find(g => g.id === scout.groupId) || {};
+
+                return (
+                  <div key={scout.uid} className="bg-slate-900 border border-slate-755 p-5 rounded-2xl space-y-3 shadow-md">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
+                          <span>{scout.fullName || scout.username}</span>
+                          <span className="text-[10px] text-amber-400 bg-amber-950/60 border border-amber-500/40 px-2 py-0.2 rounded-full font-bold">
+                            {scout.scoutPosition || 'Scout'}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Patrol: <strong className="text-slate-200">{groupObj.name || 'Al-Huda'}</strong> &bull; Current Rank: <strong className="text-emerald-400">{latestRank.name}</strong>
+                        </p>
+                      </div>
+
+                      <span className="text-xs font-mono font-black text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2.5 py-1 rounded-xl">
+                        {targetStats.percentage}% to {nextRank.name}
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-500 rounded-full"
+                          style={{ width: `${targetStats.percentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>{targetStats.completed} of {targetStats.total} Requirements Certified</span>
+                        <span>{earnedBadgesCount} Merit Badges Earned</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Advancement Checklist View (Strictly Read-Only) */}
+          {/* SECTION 3: THIS WEEK'S HOMEWORK (Top 1–2 Active Tasks) */}
           <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-750 pb-3">
-              <div>
-                <h3 className="font-extrabold text-white text-base">⚜️ Target Rank: {activeRankData.name} Requirements Progress</h3>
-                <p className="text-xs text-slate-400">Current rank: <strong className="text-emerald-400">{latestAchievedRank.name}</strong>. Requirements below are for advancing to {activeRankData.name}.</p>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎒</span>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">This Week's Homework & Quests</h3>
+                  <p className="text-xs text-slate-400">
+                    {activeHomework.length > 0 
+                      ? `${activeHomework.length} active assignments requiring scout attention.`
+                      : 'All assigned tasks completed! Great work.'}
+                  </p>
+                </div>
               </div>
-              <span className="text-xs font-mono text-emerald-400 font-bold bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
-                {activeDone} of {activeTotal} Certified
-              </span>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('homework')}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>View All Homework</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
 
-            <div className="space-y-2.5">
-              {(activeRankData.categories || []).map((cat, cIdx) => (
-                <div key={cIdx} className="space-y-1.5">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">{cat.name}</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {cat.requirements.map(req => {
-                      const isDone = activeReqs[req.id]?.completed === true;
-                      return (
-                        <div
-                          key={req.id}
-                          className={`p-3 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
-                            isDone ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200' : 'bg-slate-900/60 border-slate-755 text-slate-400'
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <strong className="text-white block">Req {req.id}</strong>
-                            <p className="text-[11px] leading-relaxed line-clamp-2">{req.text}</p>
-                          </div>
-                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                            isDone ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-500'
-                          }`}>
-                            {isDone ? '✓ Certified' : 'Incomplete'}
+            {activeHomework.length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-center text-xs text-slate-400 italic">
+                ✨ No pending homework assignments! All learning modules are completed.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activeHomework.slice(0, 2).map((hw, idx) => {
+                  const relDue = getRelativeDueDate(hw.dueDate);
+                  return (
+                    <div key={`${hw.id}_${idx}`} className="bg-slate-900 border border-slate-755 p-4 rounded-2xl space-y-2.5 shadow-md">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold bg-slate-800 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">
+                            {hw.category || 'Scouting Skills'}
                           </span>
+                          <h4 className="font-bold text-white text-xs sm:text-sm">{hw.title}</h4>
+                          <span className="text-[10px] text-slate-400 block font-medium">For: {hw.scoutName}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          hw.status === 'in_review'
+                            ? 'bg-sky-950 text-sky-300 border border-sky-500/40'
+                            : 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                        }`}>
+                          {hw.status === 'in_review' ? '📤 Under Review' : '⏳ Needs Submission'}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+                        <span className="font-mono text-amber-300 flex items-center gap-1">
+                          <Clock size={11} /> {relDue}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('homework')}
+                          className="text-emerald-400 hover:text-emerald-300 font-bold"
+                        >
+                          Inspect &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 4: UPCOMING CALENDAR STREAM (Next 2–3 Troop Events) */}
+          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-750 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📅</span>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Upcoming Troop Schedule</h3>
+                  <p className="text-xs text-slate-400">Next meetings, campouts, and family gatherings.</p>
                 </div>
-              ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('events')}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Full Calendar & RSVPs</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
+
+            {(() => {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const upcomingEvents = eventsList
+                .filter(e => (e.date || '') >= todayStr)
+                .slice(0, 3);
+
+              if (upcomingEvents.length === 0) {
+                return (
+                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-center text-xs text-slate-400 italic">
+                    No upcoming events scheduled right now. Check back soon!
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {upcomingEvents.map(ev => {
+                    const targetInfo = getEventTargeting(ev, activeScout, allGroups);
+                    const rsvpKey = `rsvp_${ev.id}_${activeScout?.uid || linkedScouts[0]?.uid || currentUser.uid}`;
+                    const currentRsvp = eventRsvps[rsvpKey]?.status;
+
+                    return (
+                      <div key={ev.id} className="bg-slate-900 border border-slate-755 p-4 sm:p-5 rounded-2xl space-y-3 shadow-md">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${targetInfo.color}`}>
+                                {targetInfo.badge}
+                              </span>
+                              <span className="text-xs font-mono font-bold text-slate-300">
+                                📅 {ev.date} &bull; ⏰ {ev.time || '6:30 PM'}
+                              </span>
+                            </div>
+
+                            <h4 className="font-extrabold text-white text-sm sm:text-base">{ev.title}</h4>
+                            
+                            {ev.location && (
+                              <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium">
+                                <MapPin size={12} className="text-emerald-400 shrink-0" />
+                                <span>{ev.location}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Quick RSVP Actions */}
+                          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRsvp(ev.id, selectedScoutId, 'going')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                currentRsvp === 'going'
+                                  ? 'bg-emerald-600 text-white shadow-md'
+                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+                              }`}
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>{currentRsvp === 'going' ? 'Going ✓' : 'Going'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRsvp(ev.id, selectedScoutId, 'cant_go')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                currentRsvp === 'cant_go'
+                                  ? 'bg-red-600 text-white shadow-md'
+                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+                              }`}
+                            >
+                              <XCircle size={13} />
+                              <span>{currentRsvp === 'cant_go' ? "Can't Go" : "Can't Go"}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAbsenceDate(ev.date || todayStr);
+                                setShowAbsenceModal(true);
+                              }}
+                              className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold ml-1 cursor-pointer"
+                              title="Notify leader with reason for absence"
+                            >
+                              Notify Leader
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
 
-      {/* ── 6. TAB 2: PARENT ACTION CENTER (TASKS & FORMS) ── */}
+      {/* ── 5. TAB 2: DEDICATED CHILD HOMEWORK & TASKS CHECKLIST ── */}
+      {activeTab === 'homework' && (
+        <div className="space-y-6">
+          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <BookOpen size={18} className="text-sky-400" />
+                  <span>Assignments & Learning Checklist</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Track weekly quests, Islamic reflections, and skill practice for {isAllView ? 'your family' : activeScout?.fullName || activeScout?.username}.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700">
+                  {completedHomework.length} Completed
+                </span>
+                <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-950 text-amber-300 border border-amber-700">
+                  {activeHomework.length} In Progress
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Homework Items */}
+          <div className="space-y-3">
+            {activeHomework.length === 0 ? (
+              <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-2">
+                <CheckCircle2 size={40} className="mx-auto text-emerald-400 opacity-60" />
+                <h4 className="text-sm font-bold text-white">All Caught Up on Homework!</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  No active assignments requiring submission at this time.
+                </p>
+              </div>
+            ) : (
+              activeHomework.map((hw, idx) => {
+                const relDue = getRelativeDueDate(hw.dueDate);
+                return (
+                  <div 
+                    key={`${hw.id}_${idx}`}
+                    className="bg-slate-850 border border-slate-755 p-5 rounded-2xl space-y-3 shadow-md hover:border-slate-700 transition"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold bg-slate-900 border border-slate-700 text-sky-300 px-2.5 py-0.5 rounded-full">
+                            {hw.category || 'Scouting Skills'}
+                          </span>
+                          <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-semibold">
+                            👤 {hw.scoutName}
+                          </span>
+                        </div>
+
+                        <h4 className="font-extrabold text-white text-base mt-1">{hw.title}</h4>
+                        {hw.description && (
+                          <p className="text-xs text-slate-300 leading-relaxed font-sans">{hw.description}</p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:items-end gap-1 shrink-0">
+                        {/* Status Indicator */}
+                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${
+                          hw.status === 'in_review'
+                            ? 'bg-sky-950 text-sky-300 border-sky-500/50'
+                            : 'bg-amber-950 text-amber-300 border-amber-500/50'
+                        }`}>
+                          {hw.status === 'in_review' ? '📤 Submitted — Awaiting Leader Review' : '⏳ Pending Scout Submission'}
+                        </span>
+
+                        {/* Relative Due Date */}
+                        <span className="text-xs font-mono font-bold text-amber-300 flex items-center gap-1 mt-1">
+                          <Clock size={12} />
+                          <span>{relDue}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Leader Feedback Quote Bubble */}
+                    {hw.leaderFeedback && (
+                      <div className="bg-slate-900/90 border border-slate-750 p-3 rounded-xl text-xs text-slate-300 italic flex items-start gap-2">
+                        <MessageSquare size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-emerald-400 font-bold not-italic block text-[11px]">💬 Leader Instructions & Feedback:</strong>
+                          <p className="mt-0.5 leading-relaxed">"{hw.leaderFeedback}"</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Collapsible Completed Homework Archive */}
+          {completedHomework.length > 0 && (
+            <div className="bg-slate-850 border border-slate-750 rounded-3xl overflow-hidden shadow-md">
+              <button
+                type="button"
+                onClick={() => setCompletedHomeworkOpen(!completedHomeworkOpen)}
+                className="w-full px-6 py-4 flex items-center justify-between text-left text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer bg-slate-900/50"
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-400" />
+                  <span>View Completed Homework Archive ({completedHomework.length} Finished Tasks)</span>
+                </div>
+                {completedHomeworkOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+
+              {completedHomeworkOpen && (
+                <div className="p-5 space-y-2.5 border-t border-slate-800">
+                  {completedHomework.map((hw, idx) => (
+                    <div key={`comp_${hw.id}_${idx}`} className="p-3.5 bg-slate-900/70 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <strong className="text-slate-200 block">{hw.title}</strong>
+                        <span className="text-[11px] text-slate-400">{hw.scoutName} &bull; {hw.category || 'General'}</span>
+                      </div>
+                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <Check size={11} /> Completed & Signed Off
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 6. TAB 3: UPCOMING SCHEDULE & CHILD TARGETING ── */}
+      {activeTab === 'events' && (
+        <div className="space-y-6">
+          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <Calendar size={18} className="text-sky-400" />
+                  <span>Troop Schedule & Child Targeting</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Transparent audience tags clarify exactly which events apply to your scouts and family.
+                </p>
+              </div>
+
+              {/* Sub Tabs: Upcoming vs Past */}
+              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setEventSubTab('upcoming')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    eventSubTab === 'upcoming'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Upcoming Schedule</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEventSubTab('past')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    eventSubTab === 'past'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Past Events</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Events Stream */}
+          {(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const upcomingList = eventsList.filter(e => (e.date || '') >= todayStr);
+            const pastList = eventsList.filter(e => (e.date || '') < todayStr);
+            const displayList = eventSubTab === 'past' ? pastList : upcomingList;
+
+            if (displayList.length === 0) {
+              return (
+                <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center text-xs text-slate-400 italic">
+                  {eventSubTab === 'past' ? 'No past events found.' : 'No upcoming troop events scheduled right now.'}
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {displayList.map(ev => {
+                  const targetInfo = getEventTargeting(ev, activeScout, allGroups);
+                  const rsvpKey = `rsvp_${ev.id}_${activeScout?.uid || linkedScouts[0]?.uid || currentUser.uid}`;
+                  const currentRsvp = eventRsvps[rsvpKey]?.status;
+
+                  return (
+                    <div key={ev.id} className="bg-slate-850 border border-slate-755 p-6 rounded-3xl space-y-4 shadow-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${targetInfo.color}`}>
+                              {targetInfo.badge}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-slate-300">
+                              📅 {ev.date} &bull; ⏰ {ev.time || '6:30 PM - 8:30 PM'}
+                            </span>
+                          </div>
+
+                          <h4 className="font-extrabold text-white text-lg">{ev.title}</h4>
+
+                          {/* Targeting Context Description */}
+                          <p className="text-xs text-slate-300 flex items-center gap-1.5 font-medium">
+                            <Compass size={13} className="text-sky-400 shrink-0" />
+                            <span>{targetInfo.label}</span>
+                          </p>
+
+                          {/* Meeting Location */}
+                          {ev.location && (
+                            <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-3 py-1 rounded-xl w-fit max-w-full">
+                              <MapPin size={12} className="text-emerald-400 shrink-0" />
+                              <span className="truncate">{ev.location}</span>
+                            </p>
+                          )}
+
+                          {/* Preparation / Required Gear Notes */}
+                          {(ev.gear || ev.notes || ev.description) && (
+                            <p className="text-xs text-slate-300 bg-slate-900/80 p-3 rounded-xl border border-slate-750 leading-relaxed font-sans">
+                              🎒 <strong className="text-white">Gear & Prep:</strong> {ev.gear || ev.notes || ev.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* RSVP & Absence Actions */}
+                        <div className="bg-slate-900 border border-slate-750 p-4 rounded-2xl space-y-2 shrink-0 self-start sm:self-auto min-w-[200px]">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block text-center">Family RSVP</span>
+                          
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRsvp(ev.id, selectedScoutId, 'going')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
+                                currentRsvp === 'going'
+                                  ? 'bg-emerald-600 text-white shadow-md'
+                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white'
+                              }`}
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>{currentRsvp === 'going' ? 'Going ✓' : 'Going'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRsvp(ev.id, selectedScoutId, 'cant_go')}
+                              className={`flex-1 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
+                                currentRsvp === 'cant_go'
+                                  ? 'bg-red-600 text-white shadow-md'
+                                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white'
+                              }`}
+                            >
+                              <XCircle size={13} />
+                              <span>{currentRsvp === 'cant_go' ? "Can't Go" : "Can't Go"}</span>
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAbsenceDate(ev.date || todayStr);
+                              setShowAbsenceModal(true);
+                            }}
+                            className="w-full text-center text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold pt-1 cursor-pointer block"
+                          >
+                            Can't attend? Notify Leader &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── 7. TAB 4: STANDALONE ALERTS & ACTIVITY FEED ── */}
+      {activeTab === 'feed' && (
+        <ParentAlertsFeed 
+          currentUser={currentUser} 
+          linkedScouts={linkedScouts} 
+          onNavigate={(targetTab) => setActiveTab(targetTab)}
+          onOpenAction={(targetTab, payload) => {
+            if (targetTab === 'reports' && payload) {
+              setViewingPublishedReport(payload);
+            } else if (targetTab === 'tasks' && payload) {
+              setSubmittingTask(payload);
+            } else {
+              setActiveTab(targetTab);
+            }
+          }}
+        />
+      )}
+
+      {/* ── 8. TAB 5: OFFICIAL PROGRESS REPORTS ── */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <Printer size={18} className="text-emerald-400" />
+                  <span>Official Progress Reports & Digital Signatures</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  View certified report snapshots for your scouts, apply parent digital signatures, and export official records.
+                </p>
+              </div>
+
+              {/* Sub-tabs: Published Snapshots vs Live Interactive Report */}
+              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('published')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    reportSubTab === 'published'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Published Snapshots</span>
+                  <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{publishedReports.filter(r => linkedUids.includes(r.scoutId)).length}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportSubTab('live')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    reportSubTab === 'live'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>Live Roadmap</span>
+                </button>
+              </div>
+            </div>
+
+            {parentSignSuccessToast && (
+              <div className="p-3.5 bg-emerald-950 border border-emerald-500/60 rounded-2xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-lg">
+                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <span>{parentSignSuccessToast}</span>
+              </div>
+            )}
+          </div>
+
+          {reportSubTab === 'published' ? (
+            <div className="space-y-4">
+              {publishedReports.filter(r => linkedUids.includes(r.scoutId)).length === 0 ? (
+                <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-3">
+                  <FileText size={42} className="mx-auto text-slate-500 opacity-50" />
+                  <h4 className="text-sm font-bold text-white">No Published Reports Yet</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Troop leaders publish official progress report snapshots prior to parent conferences and Court of Honor advancement milestones.
+                  </p>
+                </div>
+              ) : (
+                publishedReports.filter(r => linkedUids.includes(r.scoutId)).map(report => {
+                  const isParentSigned = report.signatures?.parent?.signed;
+                  return (
+                    <div
+                      key={report.id}
+                      className={`bg-slate-850 border p-6 rounded-3xl space-y-4 shadow-xl transition ${
+                        !isParentSigned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-755'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                              {report.reportSnapshot?.rank || 'Scout'} Rank Snapshot
+                            </span>
+                            <span className="text-xs font-mono font-bold text-slate-300">
+                              📅 Published {report.publishedAt?.split('T')[0]}
+                            </span>
+                          </div>
+
+                          <h4 className="font-extrabold text-white text-base">
+                            Official Progress Report for {report.scoutName}
+                          </h4>
+
+                          <p className="text-xs text-slate-400">
+                            Certifying Leader: <strong className="text-slate-200">{report.leaderName}</strong> &bull; Patrol: <strong className="text-slate-200">{report.patrolName}</strong>
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                          {!isParentSigned && (
+                            <button
+                              type="button"
+                              onClick={() => setSigningPublishedReport(report)}
+                              className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 animate-pulse"
+                            >
+                              <PenTool size={14} />
+                              <span>Review & Sign as Parent</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setViewingPublishedReport(report)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                          >
+                            <FileText size={14} />
+                            <span>{isParentSigned ? 'View & Print Signed PDF' : 'Inspect Snapshot'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Summary Metrics & Signature Status Pills */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-755 text-center">
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Advancement</span>
+                          <strong className="text-emerald-400 font-mono text-sm">{report.reportSnapshot?.rankProgress || 0}%</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Attendance</span>
+                          <strong className="text-sky-400 font-mono text-sm">{report.reportSnapshot?.attendanceRate || 100}%</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Service Hours</span>
+                          <strong className="text-amber-400 font-mono text-sm">{report.reportSnapshot?.serviceHours || 0} hrs</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Signing Status</span>
+                          {isParentSigned ? (
+                            <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                              <ShieldCheck size={13} /> Verified
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1 mt-0.5">
+                              <Clock size={13} /> Action Required
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <ScoutProgressReport scout={activeScout || linkedScouts[0]} currentUser={currentUser} onBack={() => setReportSubTab('published')} />
+          )}
+        </div>
+      )}
+
+      {/* ── 9. TAB 6: FORMS & WAIVERS (Parent Action Center) ── */}
       {activeTab === 'tasks' && (
         <div className="space-y-5">
           <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-2">
             <h3 className="font-extrabold text-white text-base flex items-center gap-2">
               <Zap size={18} className="text-amber-400" />
-              <span>Parent Action Center: Required Forms & Registration Waivers</span>
+              <span>Parent Action Center: Forms & Waivers</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Submit digital acknowledgments, medical record uploads, and activity permission slips for your scouts.
+              Submit digital acknowledgments, medical record uploads, and activity permission slips.
             </p>
           </div>
 
@@ -906,13 +1587,14 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
                     </a>
                   )}
 
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-750">
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-755">
                     {task.isDone ? (
                       <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
                         <CheckCircle2 size={14} /> Submitted on {task.submission?.submittedAt?.split('T')[0]}
                       </span>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => setSubmittingTask(task)}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
                       >
@@ -928,281 +1610,85 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         </div>
       )}
 
-      {/* ── 7. TAB 3: TROOP CALENDAR & RSVP ── */}
-      {/* ── 7. TAB 3: TROOP CALENDAR & RSVP ── */}
-      {activeTab === 'events' && (() => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const upcomingList = eventsList
-          .filter(e => (e.date || '') >= todayStr)
-          .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-        const pastList = eventsList
-          .filter(e => (e.date || '') < todayStr)
-          .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        const displayList = eventSubTab === 'past' ? pastList : upcomingList;
-
-        return (
-          <div className="space-y-5">
-            <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                    <Calendar size={18} className="text-sky-400" />
-                    <span>Troop Calendar & Interactive RSVPs</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Confirm attendance for <strong className="text-white">{scoutFullName}</strong>, log dietary needs, and offer carpool driver assistance.
-                  </p>
-                </div>
-
-                {/* Sub Tabs: Upcoming vs Past */}
-                <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => setEventSubTab('upcoming')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                      eventSubTab === 'upcoming'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>Upcoming</span>
-                    <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{upcomingList.length}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEventSubTab('past')}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                      eventSubTab === 'past'
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>Past Events</span>
-                    <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{pastList.length}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {displayList.length === 0 ? (
-                <div className="bg-slate-850 border border-slate-755 p-8 rounded-3xl text-center text-slate-400 text-xs italic">
-                  {eventSubTab === 'past' ? 'No past events found.' : 'No upcoming troop events scheduled right now.'}
-                </div>
-              ) : (
-                displayList.map(ev => (
-                  <div key={ev.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-3 shadow-md">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] border px-2 py-0.5 rounded-full font-bold uppercase ${
-                            eventSubTab === 'past' 
-                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          }`}>
-                            {ev.category || 'Event'}
-                          </span>
-                          <span className="text-xs font-mono font-bold text-slate-300">📅 {ev.date} &bull; ⏰ {ev.time}</span>
-                        </div>
-                        <h4 className="font-extrabold text-white text-base">{ev.title}</h4>
-                        {ev.location && (
-                          <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
-                            <MapPin size={11} className="text-emerald-400 shrink-0" />
-                            <span className="truncate">{ev.location}</span>
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() => onNavigate && onNavigate('events')}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition cursor-pointer shrink-0"
-                      >
-                        {eventSubTab === 'past' ? 'View Details & Records' : 'View RSVP & Details'}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── 8. TAB 4: OFFICIAL PROGRESS REPORTS & PUBLISHED SNAPSHOTS ── */}
-      {activeTab === 'reports' && activeScout && (
+      {/* ── 10. TAB 7: ADVANCEMENT & BADGES (Read-Only) ── */}
+      {activeTab === 'advancement' && (
         <div className="space-y-6">
-          {/* Header & Sub-tab navigation */}
-          <div className="bg-slate-850 border border-slate-755 p-6 rounded-3xl shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                  <Printer size={18} className="text-emerald-400" />
-                  <span>Official Progress Reports & Digital Signatures</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  View certified report snapshots for <strong className="text-white">{scoutFullName}</strong>, apply parent digital signatures, and export official records.
-                </p>
-              </div>
+          {scopedScouts.map(scout => {
+            const sRanks = ranksProgressMap[scout.uid] || {};
+            const sMerit = meritProgressMap[scout.uid] || {};
+            const latestRank = getLatestAchievedRank(sRanks, scout.rank);
+            const nextRank = getNextIncompleteRank(sRanks);
+            const targetStats = getRankCompletionPercentage(nextRank.id, sRanks);
+            const activeReqs = (sRanks[nextRank.id] || {}).completedRequirements || (sRanks[nextRank.id] || {}).steps || {};
+            const earnedBadges = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true);
 
-              {/* Sub-tabs: Published Snapshots vs Live Interactive Report */}
-              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setReportSubTab('published')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                    reportSubTab === 'published'
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>Published Snapshots</span>
-                  <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">{childPublishedReports.length}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReportSubTab('live')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                    reportSubTab === 'live'
-                      ? 'bg-teal-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>Live Report & Roadmap</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Parent Sign Success Toast */}
-            {parentSignSuccessToast && (
-              <div className="p-3.5 bg-emerald-950 border border-emerald-500/60 rounded-2xl text-emerald-200 text-xs flex items-center gap-2 font-bold animate-fadeIn shadow-lg">
-                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-                <span>{parentSignSuccessToast}</span>
-              </div>
-            )}
-          </div>
-
-          {reportSubTab === 'published' ? (
-            <div className="space-y-4">
-              {childPublishedReports.length === 0 ? (
-                <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-3">
-                  <FileText size={42} className="mx-auto text-slate-500 opacity-50" />
-                  <h4 className="text-sm font-bold text-white">No Published Reports Yet</h4>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Troop leaders publish official progress report snapshots prior to parent conferences and Court of Honor advancement milestones.
-                  </p>
-                  <button
-                    onClick={() => setReportSubTab('live')}
-                    className="mt-2 bg-slate-800 hover:bg-slate-750 text-emerald-400 text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition cursor-pointer"
-                  >
-                    View Real-Time Live Progress Report &rarr;
-                  </button>
+            return (
+              <div key={scout.uid} className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-750 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                      <Award size={18} className="text-emerald-400" />
+                      <span>{scout.fullName || scout.username} — Advancement Details</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Current Rank: <strong className="text-emerald-400">{latestRank.name}</strong> &bull; Working on: <strong className="text-amber-300">{nextRank.name}</strong> ({targetStats.percentage}%)
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono text-emerald-400 font-bold bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-750">
+                    {targetStats.completed} of {targetStats.total} Certified
+                  </span>
                 </div>
-              ) : (
-                childPublishedReports.map(report => {
-                  const isParentSigned = report.signatures?.parent?.signed;
-                  const isScoutSigned = report.signatures?.scout?.signed;
-                  return (
-                    <div
-                      key={report.id}
-                      className={`bg-slate-850 border p-6 rounded-3xl space-y-4 shadow-xl transition ${
-                        !isParentSigned ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-755'
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                              {report.reportSnapshot?.rank || 'Scout'} Rank Snapshot
-                            </span>
-                            <span className="text-xs font-mono font-bold text-slate-300">
-                              📅 Published {report.publishedAt?.split('T')[0]}
-                            </span>
-                          </div>
 
-                          <h4 className="font-extrabold text-white text-base">
-                            Official Progress Report — {report.reportingPeriod || 'Cumulative'}
-                          </h4>
-
-                          <p className="text-xs text-slate-400">
-                            Certifying Leader: <strong className="text-slate-200">{report.leaderName}</strong> &bull; Patrol: <strong className="text-slate-200">{report.patrolName}</strong>
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-                          {!isParentSigned && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSigningPublishedReport(report);
-                              }}
-                              className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 animate-pulse"
+                {/* Requirements Breakdown */}
+                <div className="space-y-2.5">
+                  {(nextRank.categories || []).map((cat, cIdx) => (
+                    <div key={cIdx} className="space-y-1.5">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">{cat.name}</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {cat.requirements.map(req => {
+                          const isDone = activeReqs[req.id]?.completed === true;
+                          return (
+                            <div
+                              key={req.id}
+                              className={`p-3 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
+                                isDone ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200' : 'bg-slate-900/60 border-slate-755 text-slate-400'
+                              }`}
                             >
-                              <PenTool size={14} />
-                              <span>Review & Sign as Parent</span>
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => setViewingPublishedReport(report)}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
-                          >
-                            <FileText size={14} />
-                            <span>{isParentSigned ? 'View & Print Signed PDF' : 'Inspect Snapshot'}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Summary Metrics & Signature Status Pills */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-755 text-center">
-                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Advancement</span>
-                          <strong className="text-emerald-400 font-mono text-sm">{report.reportSnapshot?.rankProgress || 0}%</strong>
-                        </div>
-                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Attendance</span>
-                          <strong className="text-sky-400 font-mono text-sm">{report.reportSnapshot?.attendanceRate || 100}%</strong>
-                        </div>
-                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Service Hours</span>
-                          <strong className="text-amber-400 font-mono text-sm">{report.reportSnapshot?.serviceHours || 0} hrs</strong>
-                        </div>
-                        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Signing Status</span>
-                          {isParentSigned ? (
-                            <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1 mt-0.5">
-                              <ShieldCheck size={13} /> Verified
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1 mt-0.5">
-                              <Clock size={13} /> Action Required
-                            </span>
-                          )}
-                        </div>
+                              <div className="space-y-0.5">
+                                <strong className="text-white block">Req {req.id}</strong>
+                                <p className="text-[11px] leading-relaxed line-clamp-2">{req.text}</p>
+                              </div>
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                isDone ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-500'
+                              }`}>
+                                {isDone ? '✓ Certified' : 'Incomplete'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          ) : (
-            <ScoutProgressReport scout={activeScout} currentUser={currentUser} onBack={() => setReportSubTab('published')} />
-          )}
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ── 9. TAB 5: DUAL-PARENT FAMILY PROFILE ── */}
+      {/* ── 11. TAB 8: HOUSEHOLD PROFILE ── */}
       {activeTab === 'family' && (
         <div className="bg-slate-850 border border-slate-750 p-6 sm:p-7 rounded-3xl shadow-xl space-y-6">
           <div className="flex justify-between items-center border-b border-slate-750 pb-4">
             <div>
               <h3 className="font-extrabold text-white text-lg">Dual-Parent Household Profile</h3>
               <p className="text-xs text-slate-400">
-                Manage contact details for both parents and household emergency contacts. No leader approval required.
+                Manage contact details for both parents and household emergency contacts.
               </p>
             </div>
             {!isEditingFamily ? (
               <button
+                type="button"
                 onClick={() => setIsEditingFamily(true)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
               >
@@ -1211,6 +1697,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => setIsEditingFamily(false)}
                 className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition"
               >
@@ -1347,56 +1834,6 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         </div>
       )}
 
-      {/* ── 10. TAB 6: IN-APP NOTIFICATIONS CENTER ── */}
-      {activeTab === 'notifications' && (
-        <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-750 pb-3">
-            <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-              <Bell size={18} className="text-emerald-400" />
-              <span>Family Alerts & Notifications Feed</span>
-            </h3>
-            <span className="text-xs font-mono text-slate-400">{notifications.length} Messages</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {notifications.length === 0 ? (
-              <p className="text-xs text-slate-400 italic py-8 text-center">No alerts in your notification center.</p>
-            ) : (
-              notifications.map(n => (
-                <div
-                  key={n.id}
-                  className={`p-4 rounded-2xl border transition flex items-start justify-between gap-3 ${
-                    !n.read ? 'bg-slate-900 border-emerald-500/50 shadow-sm' : 'bg-slate-900/50 border-slate-800 opacity-70'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                        n.priority === 'urgent' ? 'bg-red-500 text-white' : 'bg-emerald-950 text-emerald-300'
-                      }`}>
-                        {n.type || 'Alert'}
-                      </span>
-                      <strong className="text-xs font-bold text-white">{n.title}</strong>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed font-sans">{n.message}</p>
-                    <span className="text-[10px] text-slate-500 font-mono block pt-1">{n.createdAt?.split('T')[0]}</span>
-                  </div>
-
-                  {!n.read && (
-                    <button
-                      onClick={() => handleMarkNotifRead(n.id)}
-                      className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 cursor-pointer shrink-0"
-                    >
-                      Mark Read
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
       {/* ── MODAL: SIGN & SUBMIT FORM ── */}
       {submittingTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -1407,6 +1844,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
                 <h3 className="font-extrabold text-white text-base mt-0.5">{submittingTask.title}</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setSubmittingTask(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
               >
@@ -1483,6 +1921,7 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
                 <span>Submit Scout Absence Notice</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setShowAbsenceModal(false)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
               >
@@ -1564,29 +2003,31 @@ export default function ParentDashboard({ currentUser = {}, onNavigate }) {
         </div>
       )}
 
-      {/* ── PUBLISHED REPORT SNAPSHOT VIEWER MODAL ── */}
-      {viewingPublishedReport && (
-        <PublishedReportViewerModal
-          isOpen={!!viewingPublishedReport}
-          report={viewingPublishedReport}
-          onClose={() => setViewingPublishedReport(null)}
-          currentUser={currentUser}
-          onReportUpdated={() => {}}
-        />
-      )}
-
-      {/* ── DIGITAL SIGNATURE PAD MODAL FOR PARENT ── */}
+      {/* ── MODAL: DIGITAL SIGNATURE PAD (OFFICIAL REPORT SIGNING) ── */}
       {signingPublishedReport && (
         <SignaturePadModal
           isOpen={!!signingPublishedReport}
           onClose={() => setSigningPublishedReport(null)}
+          title={`Parent Digital Signature: ${signingPublishedReport.scoutName}`}
+          subtitle="Official Progress Report Certification & Verification Stamp"
+          defaultSignerName={parent1Name || currentUser.fullName || ''}
+          defaultSignerRole={parent1Relation || 'Parent'}
+          saving={isSubmittingParentSignature}
           onSave={handleSaveParentSignature}
-          isSubmitting={isSubmittingParentSignature}
-          signerType="parent"
-          defaultSignerName={parent1Name || parentDoc.fullName || currentUser?.fullName || ''}
-          defaultSignerRole={parent1Relation || 'Father'}
-          title="Parent Digital Signature Certification"
-          subtitle={`Review and certify the official progress report for ${signingPublishedReport.scoutName}`}
+        />
+      )}
+
+      {/* ── MODAL: VIEW PUBLISHED REPORT WITH VERIFICATION STAMP ── */}
+      {viewingPublishedReport && (
+        <PublishedReportViewerModal
+          isOpen={!!viewingPublishedReport}
+          onClose={() => setViewingPublishedReport(null)}
+          report={viewingPublishedReport}
+          currentUser={currentUser}
+          onSignClick={(rep) => {
+            setViewingPublishedReport(null);
+            setSigningPublishedReport(rep);
+          }}
         />
       )}
     </div>
