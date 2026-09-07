@@ -599,438 +599,347 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
       )}
 
-      {/* ── 3. TWO-COLUMN MAIN HUB: UPCOMING ACTIVITIES & PATROL OVERVIEW ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Patrol Overview & Quick Scout Review */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Patrol Summary / Unit Focus */}
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
-            {isTroopWideAuthority ? (
-              <>
-                <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-                  <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
-                    <Users size={16} className="text-emerald-400" />
-                    <span>Taliʿat Patrol Units ({groups.length})</span>
-                  </h3>
+      {/* ── 3. MAIN HUB: PATROL OVERVIEW & UPCOMING ACTIVITIES ── */}
+      <div className="space-y-6">
+        {/* Patrol Summary / Unit Focus */}
+        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
+          {isTroopWideAuthority ? (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-750 pb-3">
+                <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+                  <Users size={16} className="text-emerald-400" />
+                  <span>Taliʿat Patrol Units ({groups.length})</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('roster')}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Full Roster</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {groups.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic p-3 col-span-3">No patrol groups registered yet.</p>
+                ) : (
+                  groups.map((g) => {
+                    const pScouts = scouts.filter(s => s.groupId === g.id || s.patrolId === g.id);
+                    const pPending = pScouts.reduce((sum, s) => sum + (pendingMap[s.uid]?.total || 0), 0);
+                    return (
+                      <div
+                        key={g.id}
+                        onClick={() => onNavigate && onNavigate('roster')}
+                        className="bg-slate-900/80 border border-slate-750 hover:border-emerald-500/50 p-4 rounded-2xl transition cursor-pointer space-y-2 group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <strong className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
+                            🛡️ {g.name} Patrol
+                          </strong>
+                          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                            {pScouts.length} Scouts
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {g.description || 'Active Dhulfiqār scouting patrol unit'}
+                        </p>
+                        {pPending > 0 && (
+                          <div className="pt-1">
+                            <span className="text-[9px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-full">
+                              {pPending} Pending Tasks
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-750 pb-3">
+                <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+                  <Shield size={16} className="text-emerald-400" />
+                  <span>My Assigned Patrol Unit</span>
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('chat')}
+                    className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Patrol Chat</span>
+                    <ChevronRight size={13} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => onNavigate && onNavigate('roster')}
                     className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    <span>Full Roster</span>
+                    <span>Patrol Roster</span>
                     <ChevronRight size={13} />
                   </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {groups.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic p-3 col-span-2">No patrol groups registered yet.</p>
-                  ) : (
-                    groups.map((g) => {
-                      const pScouts = scouts.filter(s => s.groupId === g.id || s.patrolId === g.id);
-                      const pPending = pScouts.reduce((sum, s) => sum + (pendingMap[s.uid]?.total || 0), 0);
-                      return (
-                        <div
-                          key={g.id}
-                          onClick={() => onNavigate && onNavigate('roster')}
-                          className="bg-slate-900/80 border border-slate-750 hover:border-emerald-500/50 p-4 rounded-2xl transition cursor-pointer space-y-2 group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <strong className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
-                              🛡️ {g.name} Patrol
-                            </strong>
-                            <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
-                              {pScouts.length} Scouts
-                            </span>
+              {myGroup ? (
+                <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                          🛡️ Assigned Patrol Unit
+                        </span>
+                        <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono font-bold border border-slate-700">
+                          {scouts.length} Assigned Scouts
+                        </span>
+                        {totalPendingApprovals > 0 && (
+                          <span className="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-full shadow-sm">
+                            {totalPendingApprovals} Pending Sign-Offs
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-base sm:text-lg font-black text-white pt-1">
+                        🛡️ {myGroup.name} Patrol
+                      </h4>
+                      {myGroup.description && (
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                          {myGroup.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Quick Action CTAs */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onNavigate && onNavigate('roster')}
+                        className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Users size={13} />
+                        <span>View Roster</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate && onNavigate('chat')}
+                        className="bg-slate-800 hover:bg-slate-750 text-sky-300 border border-sky-500/30 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <MessageSquare size={13} />
+                        <span>Patrol Chat</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Roster Member Chips */}
+                  {scouts.length > 0 ? (
+                    <div className="pt-3 border-t border-slate-800/80">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
+                        Unit Scouts ({scouts.length}):
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {scouts.map((s) => (
+                          <div
+                            key={s.uid}
+                            onClick={() => onNavigate && onNavigate('roster')}
+                            className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/40 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                            <span>{s.fullName || s.username}</span>
+                            {s.rank && (
+                              <span className="text-[10px] text-emerald-400/80 font-mono">({s.rank})</span>
+                            )}
                           </div>
-                          <p className="text-[11px] text-slate-400 truncate">
-                            {g.description || 'Active Dhulfiqār scouting patrol unit'}
-                          </p>
-                          {pPending > 0 && (
-                            <div className="pt-1">
-                              <span className="text-[9px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-full">
-                                {pPending} Pending Tasks
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-3 border-t border-slate-800/80">
+                      <p className="text-xs text-slate-400 italic">No scouts currently assigned to this patrol unit.</p>
+                    </div>
                   )}
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-                  <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
-                    <Shield size={16} className="text-emerald-400" />
-                    <span>My Assigned Patrol Unit</span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onNavigate && onNavigate('chat')}
-                      className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Patrol Chat</span>
-                      <ChevronRight size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate && onNavigate('roster')}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Patrol Roster</span>
-                      <ChevronRight size={13} />
-                    </button>
-                  </div>
+              ) : (
+                <div className="bg-slate-900/80 border border-amber-500/30 p-5 rounded-2xl text-center space-y-2">
+                  <span className="text-2xl">🛡️</span>
+                  <h4 className="text-sm font-bold text-amber-300">No Patrol Unit Assigned</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    You are currently not assigned to a specific patrol unit. Please contact a troop administrator to assign you to your patrol.
+                  </p>
                 </div>
+              )}
+            </>
+          )}
+        </div>
 
-                {myGroup ? (
-                  <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
+        {/* ── UPCOMING TROOP EVENTS & ATTENDANCE ROLL CALL MONITOR ── */}
+        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-4">
+            <div>
+              <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
+                <Calendar size={18} className="text-teal-400" />
+                <span>Troop Events & Attendance Roll Call</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Scheduled troop events automatically sync with patrol roll call & attendance tracking.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('attendance')}
+                className="bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <span>📋 Attendance Hub</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('events')}
+                className="bg-slate-750 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
+              >
+                <span>All Events</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setEventAttendanceFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
+                eventAttendanceFilter === 'all'
+                  ? 'bg-slate-700 text-white border-slate-500 shadow-sm'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-slate-800'
+              }`}
+            >
+              All Events ({allEvents.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setEventAttendanceFilter('pending')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                eventAttendanceFilter === 'pending'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-amber-300 border-slate-800'
+              }`}
+            >
+              <span>⚠️ Roll Call Pending</span>
+              <span className="bg-amber-500/30 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {pendingRollCallCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setEventAttendanceFilter('recorded')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                eventAttendanceFilter === 'recorded'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
+                  : 'bg-slate-900/60 text-slate-400 hover:text-emerald-300 border-slate-800'
+              }`}
+            >
+              <span>🟢 Logged Sessions</span>
+              <span className="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {recordedRollCallCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Event List */}
+          <div className="space-y-3">
+            {filteredEvents.length === 0 ? (
+              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+                <p className="text-xs text-slate-400 italic">
+                  {eventAttendanceFilter === 'pending'
+                    ? '🎉 Awesome! All scheduled events have attendance logs completed.'
+                    : eventAttendanceFilter === 'recorded'
+                    ? 'No attendance sessions logged yet for scheduled events.'
+                    : 'No upcoming troop events found in the schedule.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('events')}
+                  className="inline-flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 font-bold cursor-pointer"
+                >
+                  <span>➕ Schedule New Troop Event</span>
+                </button>
+              </div>
+            ) : (
+              filteredEvents.slice(0, 8).map(ev => {
+                const info = getEventAttendanceInfo(ev);
+                return (
+                  <div
+                    key={ev.id}
+                    className={`bg-slate-900/80 border rounded-2xl p-4 transition space-y-3 ${
+                      info.recorded
+                        ? 'border-emerald-500/30 hover:border-emerald-500/60'
+                        : 'border-slate-750 hover:border-amber-500/40'
+                    }`}
+                  >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
+                      <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-black text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                            🛡️ Assigned Patrol Unit
+                          <span className="text-[10px] bg-slate-800 text-teal-300 border border-slate-700 font-mono font-bold px-2 py-0.5 rounded-md">
+                            📅 {ev.date || 'Upcoming'}
                           </span>
-                          <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono font-bold border border-slate-700">
-                            {scouts.length} Assigned Scouts
+                          {ev.time && (
+                            <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-mono px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Clock size={10} className="text-amber-400" /> {ev.time}
+                            </span>
+                          )}
+                          <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-bold px-2 py-0.5 rounded-md">
+                            {ev.category || ev.type || 'Event'}
                           </span>
-                          {totalPendingApprovals > 0 && (
-                            <span className="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-full shadow-sm">
-                              {totalPendingApprovals} Pending Sign-Offs
+                          {info.recorded ? (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span>🟢 Logged:</span> {info.presentCount}/{info.totalCount} Scouts ({info.turnoutPct}%)
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span>⚠️ Roll Call Pending</span>
                             </span>
                           )}
                         </div>
-                        <h4 className="text-base sm:text-lg font-black text-white pt-1">
-                          🛡️ {myGroup.name} Patrol
-                        </h4>
-                        {myGroup.description && (
-                          <p className="text-xs text-slate-300 leading-relaxed">
-                            {myGroup.description}
+
+                        <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
+
+                        {ev.location && (
+                          <p className="text-[11px] text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
+                            <MapPin size={11} className="text-emerald-400 shrink-0" />
+                            <span className="truncate">{ev.location}</span>
                           </p>
                         )}
                       </div>
 
-                      {/* Quick Action CTAs */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => onNavigate && onNavigate('roster')}
-                          className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-                        >
-                          <Users size={13} />
-                          <span>View Roster</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onNavigate && onNavigate('chat')}
-                          className="bg-slate-800 hover:bg-slate-750 text-sky-300 border border-sky-500/30 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-                        >
-                          <MessageSquare size={13} />
-                          <span>Patrol Chat</span>
-                        </button>
+                      {/* Action CTA Button */}
+                      <div className="shrink-0">
+                        {info.recorded ? (
+                          <button
+                            type="button"
+                            onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/40 hover:border-teal-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                          >
+                            <span>✏️ Update Roll Call</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                            className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
+                          >
+                            <Calendar size={13} />
+                            <span>📋 Take Attendance (Auto-Sync)</span>
+                          </button>
+                        )}
                       </div>
                     </div>
-
-                    {/* Quick Roster Member Chips */}
-                    {scouts.length > 0 ? (
-                      <div className="pt-3 border-t border-slate-800/80">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
-                          Unit Scouts ({scouts.length}):
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {scouts.map((s) => (
-                            <div
-                              key={s.uid}
-                              onClick={() => onNavigate && onNavigate('roster')}
-                              className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/40 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-                            >
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-                              <span>{s.fullName || s.username}</span>
-                              {s.rank && (
-                                <span className="text-[10px] text-emerald-400/80 font-mono">({s.rank})</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="pt-3 border-t border-slate-800/80">
-                        <p className="text-xs text-slate-400 italic">No scouts currently assigned to this patrol unit.</p>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <div className="bg-slate-900/80 border border-amber-500/30 p-5 rounded-2xl text-center space-y-2">
-                    <span className="text-2xl">🛡️</span>
-                    <h4 className="text-sm font-bold text-amber-300">No Patrol Unit Assigned</h4>
-                    <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      You are currently not assigned to a specific patrol unit. Please contact a troop administrator to assign you to your patrol.
-                    </p>
-                  </div>
-                )}
-              </>
+                );
+              })
             )}
-          </div>
-
-          {/* ── UPCOMING TROOP EVENTS & ATTENDANCE ROLL CALL MONITOR ── */}
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-4">
-              <div>
-                <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
-                  <Calendar size={18} className="text-teal-400" />
-                  <span>Troop Events & Attendance Roll Call</span>
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Scheduled troop events automatically sync with patrol roll call & attendance tracking.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('attendance')}
-                  className="bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <span>📋 Attendance Hub</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('events')}
-                  className="bg-slate-750 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
-                >
-                  <span>All Events</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setEventAttendanceFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
-                  eventAttendanceFilter === 'all'
-                    ? 'bg-slate-700 text-white border-slate-500 shadow-sm'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-slate-800'
-                }`}
-              >
-                All Events ({allEvents.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setEventAttendanceFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                  eventAttendanceFilter === 'pending'
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-amber-300 border-slate-800'
-                }`}
-              >
-                <span>⚠️ Roll Call Pending</span>
-                <span className="bg-amber-500/30 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                  {pendingRollCallCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setEventAttendanceFilter('recorded')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                  eventAttendanceFilter === 'recorded'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-emerald-300 border-slate-800'
-                }`}
-              >
-                <span>🟢 Logged Sessions</span>
-                <span className="bg-emerald-500/30 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                  {recordedRollCallCount}
-                </span>
-              </button>
-            </div>
-
-            {/* Event List */}
-            <div className="space-y-3">
-              {filteredEvents.length === 0 ? (
-                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
-                  <p className="text-xs text-slate-400 italic">
-                    {eventAttendanceFilter === 'pending'
-                      ? '🎉 Awesome! All scheduled events have attendance logs completed.'
-                      : eventAttendanceFilter === 'recorded'
-                      ? 'No attendance sessions logged yet for scheduled events.'
-                      : 'No upcoming troop events found in the schedule.'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('events')}
-                    className="inline-flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 font-bold cursor-pointer"
-                  >
-                    <span>➕ Schedule New Troop Event</span>
-                  </button>
-                </div>
-              ) : (
-                filteredEvents.slice(0, 8).map(ev => {
-                  const info = getEventAttendanceInfo(ev);
-                  return (
-                    <div
-                      key={ev.id}
-                      className={`bg-slate-900/80 border rounded-2xl p-4 transition space-y-3 ${
-                        info.recorded
-                          ? 'border-emerald-500/30 hover:border-emerald-500/60'
-                          : 'border-slate-750 hover:border-amber-500/40'
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] bg-slate-800 text-teal-300 border border-slate-700 font-mono font-bold px-2 py-0.5 rounded-md">
-                              📅 {ev.date || 'Upcoming'}
-                            </span>
-                            {ev.time && (
-                              <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-mono px-2 py-0.5 rounded-md flex items-center gap-1">
-                                <Clock size={10} className="text-amber-400" /> {ev.time}
-                              </span>
-                            )}
-                            <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-bold px-2 py-0.5 rounded-md">
-                              {ev.category || ev.type || 'Event'}
-                            </span>
-                            {info.recorded ? (
-                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <span>🟢 Logged:</span> {info.presentCount}/{info.totalCount} Scouts ({info.turnoutPct}%)
-                              </span>
-                            ) : (
-                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <span>⚠️ Roll Call Pending</span>
-                              </span>
-                            )}
-                          </div>
-
-                          <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
-
-                          {ev.location && (
-                            <p className="text-[11px] text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
-                              <MapPin size={11} className="text-emerald-400 shrink-0" />
-                              <span className="truncate">{ev.location}</span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Action CTA Button */}
-                        <div className="shrink-0">
-                          {info.recorded ? (
-                            <button
-                              type="button"
-                              onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                              className="w-full sm:w-auto bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/40 hover:border-teal-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                            >
-                              <span>✏️ Update Roll Call</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                              className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
-                            >
-                              <Calendar size={13} />
-                              <span>📋 Take Attendance (Auto-Sync)</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right 1 Col: Quick Command Hub & Leader Tools */}
-        <div className="space-y-6">
-          {/* Quick Action Command Hub */}
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-3">
-            <h3 className="font-extrabold text-white text-sm border-b border-slate-750 pb-3 flex items-center gap-2">
-              <Sparkles size={16} className="text-amber-400" />
-              <span>⚡ Leader Quick Actions</span>
-            </h3>
-
-            <div className="space-y-2 text-xs">
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('reports')}
-                className="w-full text-left p-3 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">📈</span>
-                  <div>
-                    <h4 className="font-bold text-emerald-300 group-hover:text-emerald-200">Reports & Analytics Center</h4>
-                    <p className="text-[10px] text-slate-400">Custom print progress builder</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-emerald-400 group-hover:translate-x-0.5 transition" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('attendance')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-teal-500/50 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">📋</span>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-teal-300">Patrol Attendance & Retention</h4>
-                    <p className="text-[10px] text-slate-400">Roll call, presence logs & absence alerts</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-slate-500 group-hover:text-teal-400 transition" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('scouts')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-slate-650 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">📊</span>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-emerald-300">Advancement Tracker</h4>
-                    <p className="text-[10px] text-slate-400">7-Rank sign-offs & progress</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('lesson-plans')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-slate-650 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">📋</span>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-emerald-300">Lesson Plans & Curriculum</h4>
-                    <p className="text-[10px] text-slate-400">Teaching modules & guides</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('chat')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-slate-650 transition flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">💬</span>
-                  <div>
-                    <h4 className="font-bold text-white group-hover:text-emerald-300">Patrol Messenger</h4>
-                    <p className="text-[10px] text-slate-400">Direct scout & parent chat</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition" />
-              </button>
-            </div>
           </div>
         </div>
       </div>

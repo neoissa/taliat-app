@@ -522,204 +522,71 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       {/* ── 3. SCOUT HOMEWORK & DUE TASKS (VIDEOS & WORKSHEETS) ── */}
       <AssignmentsManager currentUser={currentUser} scoutId={currentUser?.uid} isEmbeddedInProfile={false} />
 
-      {/* ── 4. UPCOMING PLANNED EVENTS & ACTIONS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left: Upcoming Events */}
-        <div className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-            <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
-              <Calendar className="text-emerald-400" size={18} />
-              <span>📅 Upcoming Troop Events & Campouts</span>
-            </h3>
-            <button
-              onClick={() => onNavigate && onNavigate('events')}
-              className="text-xs text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer flex items-center gap-1"
-            >
-              <span>View All</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
+      {/* ── 4. UPCOMING PLANNED EVENTS ── */}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-755 pb-3">
+          <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+            <Calendar className="text-emerald-400" size={18} />
+            <span>📅 Upcoming Troop Events & Campouts</span>
+          </h3>
+          <button
+            onClick={() => onNavigate && onNavigate('events')}
+            className="text-xs text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer flex items-center gap-1"
+          >
+            <span>View All</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
 
-          {upcomingEvents.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-900/40 rounded-xl border border-slate-800">
-              🏕️ No upcoming troop events scheduled right now. Check back soon!
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {upcomingEvents.map(ev => {
-                const isToday = ev.date === new Date().toISOString().split('T')[0];
-                return (
-                  <div
-                    key={ev.id}
-                    className="bg-slate-900/60 border border-slate-750 hover:border-emerald-500/40 p-4 rounded-xl flex items-center justify-between gap-3 transition shadow-sm"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
-                          <span>📅</span> {ev.date}
+        {upcomingEvents.length === 0 ? (
+          <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-900/40 rounded-xl border border-slate-800">
+            🏕️ No upcoming troop events scheduled right now. Check back soon!
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {upcomingEvents.map(ev => {
+              const isToday = ev.date === new Date().toISOString().split('T')[0];
+              return (
+                <div
+                  key={ev.id}
+                  className="bg-slate-900/60 border border-slate-750 hover:border-emerald-500/40 p-4 rounded-xl flex items-center justify-between gap-3 transition shadow-sm"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                        <span>📅</span> {ev.date}
+                      </span>
+                      {ev.time && (
+                        <span className="text-[10px] text-slate-300 font-semibold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1">
+                          <span>⏰</span> {ev.time}
                         </span>
-                        {ev.time && (
-                          <span className="text-[10px] text-slate-300 font-semibold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1">
-                            <span>⏰</span> {ev.time}
-                          </span>
-                        )}
-                        {isToday && (
-                          <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/40 font-black px-2 py-0.5 rounded-full uppercase animate-pulse">
-                            🔥 TODAY!
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-extrabold text-sm text-white">{ev.title}</h4>
-                      {ev.location && (
-                        <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
-                          <MapPin size={11} className="text-emerald-400 shrink-0" />
-                          <span className="truncate">{ev.location}</span>
-                        </p>
+                      )}
+                      {isToday && (
+                        <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/40 font-black px-2 py-0.5 rounded-full uppercase animate-pulse">
+                          🔥 TODAY!
+                        </span>
                       )}
                     </div>
-
-                    <button
-                      onClick={() => onNavigate && onNavigate('events')}
-                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3.5 py-2 rounded-xl border border-slate-700 shrink-0 cursor-pointer shadow-sm"
-                    >
-                      Details & Maps
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Right: Quick Action Hub with Road to Eagle as top standalone card */}
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-3">
-          <h3 className="font-extrabold text-white text-sm border-b border-slate-750 pb-3 flex items-center gap-2">
-            <Sparkles className="text-emerald-400" size={16} />
-            <span>⚡ Scout Adventure Hub</span>
-          </h3>
-
-          <div className="space-y-2">
-            {/* ── STANDALONE ROAD TO EAGLE HUB TAB ── */}
-            <button
-              onClick={() => onNavigate && onNavigate('road-to-eagle')}
-              className="w-full text-left p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 hover:from-amber-900/60 border-2 border-amber-500/60 hover:border-amber-400 transition flex items-center justify-between cursor-pointer group shadow-lg shadow-amber-950/30"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl group-hover:scale-110 transition shrink-0">
-                  🦅
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-black text-xs text-amber-300 group-hover:text-amber-200 transition">Road to Eagle & Palms</h4>
-                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded-full font-black uppercase">Top Goal</span>
-                  </div>
-                  <p className="text-[10px] text-slate-350">Life tenure, leadership, 21 badges, project & palms</p>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-amber-400 group-hover:translate-x-1 transition" />
-            </button>
-
-            {/* ── UNIVERSAL PENDING QUEUE HUB TAB ── */}
-            <button
-              type="button"
-              onClick={() => setShowPendingModal(true)}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-amber-500/40 hover:border-amber-400 transition flex items-center justify-between cursor-pointer group shadow-md"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition animate-pulse">⏳</span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-xs text-amber-300 group-hover:text-amber-200 transition">Pending Submissions & Tests</h4>
-                    {totalPendingPortalItems > 0 && (
-                      <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
-                        {totalPendingPortalItems} Pending
-                      </span>
+                    <h4 className="font-extrabold text-sm text-white">{ev.title}</h4>
+                    {ev.location && (
+                      <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
+                        <MapPin size={11} className="text-emerald-400 shrink-0" />
+                        <span className="truncate">{ev.location}</span>
+                      </p>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-400">All Islamic tests, rank steps & badge tasks</p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-amber-400 group-hover:translate-x-0.5 transition" />
-            </button>
 
-            <button
-              onClick={() => onNavigate && onNavigate('advancement')}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-emerald-500/50 transition flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition">⚜️</span>
-                <div>
-                  <h4 className="font-bold text-xs text-white group-hover:text-emerald-300 transition">My 7 Ranks</h4>
-                  <p className="text-[10px] text-slate-400">Complete requirements & advance</p>
+                  <button
+                    onClick={() => onNavigate && onNavigate('events')}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3.5 py-2 rounded-xl border border-slate-700 shrink-0 cursor-pointer shadow-sm"
+                  >
+                    Details & Maps
+                  </button>
                 </div>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition" />
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('merit-badges')}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-amber-500/50 transition flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition">🏅</span>
-                <div>
-                  <h4 className="font-bold text-xs text-white group-hover:text-amber-300 transition">My Merit Badges</h4>
-                  <p className="text-[10px] text-slate-400">Plan your 21 Eagle Merit Badges</p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 group-hover:text-amber-400 transition" />
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('islamic')}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-emerald-500/50 transition flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition">🕌</span>
-                <div>
-                  <h4 className="font-bold text-xs text-white group-hover:text-emerald-300 transition">Islamic Knowledge</h4>
-                  <p className="text-[10px] text-slate-400">14 Infallibles, Karbala & Du'as</p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition" />
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('chat')}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-sky-500/50 transition flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition">💬</span>
-                <div>
-                  <h4 className="font-bold text-xs text-white group-hover:text-sky-300 transition flex items-center gap-1.5">
-                    <span>Patrol Messenger</span>
-                    {unreadChatCount > 0 && (
-                      <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
-                        {unreadChatCount > 99 ? '99+' : unreadChatCount} new
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-[10px] text-slate-400">Chat with patrol & vote in polls</p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 group-hover:text-sky-400 transition" />
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('profile', 'service')}
-              className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-750 hover:border-teal-500/50 transition flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl group-hover:scale-110 transition">⏱️</span>
-                <div>
-                  <h4 className="font-bold text-xs text-white group-hover:text-teal-300 transition">Service & Volunteering</h4>
-                  <p className="text-[10px] text-slate-400">Record community service hours</p>
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-slate-500 group-hover:text-teal-400 transition" />
-            </button>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
       {/* Universal Pending Items Modal */}
       <UniversalPendingQueueModal
