@@ -3805,17 +3805,26 @@ Reminder to log your community service and volunteering hours into the portal.
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Assignment</label>
-                  <select
-                    value={editGroupId}
-                    onChange={(e) => setEditGroupId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    <option value="">Unassigned</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} Patrol</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                    {editRole === 'parent' ? 'Patrol Affiliation' : 'Patrol Assignment'}
+                  </label>
+                  {editRole === 'parent' ? (
+                    <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-400 italic flex items-center gap-1.5">
+                      <span>👨‍👩‍👧</span>
+                      <span>Not Applicable (Linked to Children)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={editGroupId}
+                      onChange={(e) => setEditGroupId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Unassigned (No Patrol)</option>
+                      {groups.map(g => (
+                        <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 

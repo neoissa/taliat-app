@@ -27,11 +27,15 @@ import {
   TrendingUp,
   Info,
   ChevronRight,
-  Filter
+  Filter,
+  HeartPulse,
+  MapPin,
+  Users
 } from 'lucide-react';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
 import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
+import LiveClockAndCalendar from './LiveClockAndCalendar';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -71,7 +75,7 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
   });
 }
 
-export default function ScoutProfile({ currentUser }) {
+export default function ScoutProfile({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   // Profile information states
   const [fullName, setFullName] = useState('');
@@ -84,7 +88,24 @@ export default function ScoutProfile({ currentUser }) {
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  // Extended Profile fields
   const [bsaId, setBsaId] = useState('');
+  const [schoolGrade, setSchoolGrade] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [allergies, setAllergies] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const [dietaryRestrictions, setDietaryRestrictions] = useState('');
+  const [parent1Name, setParent1Name] = useState('');
+  const [parent1Relation, setParent1Relation] = useState('Father');
+  const [parent2Name, setParent2Name] = useState('');
+  const [parent2Relation, setParent2Relation] = useState('Mother');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState('');
+  const [homeAddress, setHomeAddress] = useState('');
+  const [cityStateZip, setCityStateZip] = useState('');
+  const [parentLinkedScouts, setParentLinkedScouts] = useState([]);
+
   const [patrolName, setPatrolName] = useState('Taliʿa');
   const [rankName, setRankName] = useState('Scout');
   const [spt, setSpt] = useState('');
@@ -136,13 +157,28 @@ export default function ScoutProfile({ currentUser }) {
         setFullName(data.fullName || '');
         setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
         setBio(data.bio || '');
-        setScoutEmail(data.scoutEmail || data.email || '');
+        setScoutEmail(data.personalEmail || data.scoutEmail || data.email || '');
         setParentEmail(data.parentEmail || '');
-        setScoutPhone(data.scoutPhone || '');
+        setScoutPhone(data.scoutPhone || data.phone || '');
         setParentPhone(data.parentPhone || '');
         setPhotoUrl(data.photoURL || '');
         setPhotoPreview(data.photoURL || '');
-        setBsaId(data.bsaId || '—');
+        setBsaId(data.bsaId || '');
+        setSchoolGrade(data.schoolGrade || data.grade || '');
+        setBirthDate(data.birthDate || data.dob || '');
+        setAllergies(data.allergies || '');
+        setMedicalNotes(data.medicalNotes || '');
+        setDietaryRestrictions(data.dietaryRestrictions || '');
+        setParent1Name(data.parent1Name || '');
+        setParent1Relation(data.parent1Relation || 'Father');
+        setParent2Name(data.parent2Name || '');
+        setParent2Relation(data.parent2Relation || 'Mother');
+        setEmergencyContactName(data.emergencyContactName || '');
+        setEmergencyContactPhone(data.emergencyContactPhone || '');
+        setEmergencyContactRelation(data.emergencyContactRelation || '');
+        setHomeAddress(data.homeAddress || data.address || '');
+        setCityStateZip(data.cityStateZip || '');
+
         setRankName(data.rank || 'Scout');
         setSpt(data.spt || data.sptDate || data.yptDate || '');
         setSptFileUrl(data.sptFileUrl || '');
@@ -170,6 +206,19 @@ export default function ScoutProfile({ currentUser }) {
     
     return () => unsubProfile();
   }, [currentUser?.uid]);
+
+  // Real-time listener for linked children if parent
+  useEffect(() => {
+    const isParent = currentUser?.role === 'parent' || fullUserData?.role === 'parent';
+    const linkedIds = fullUserData?.linkedScoutIds || currentUser?.linkedScoutIds || [];
+    if (isParent || linkedIds.length > 0) {
+      const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+        const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        setParentLinkedScouts(allUsers.filter(u => linkedIds.includes(u.uid)));
+      });
+      return () => unsub();
+    }
+  }, [currentUser?.role, currentUser?.linkedScoutIds, fullUserData?.role, fullUserData?.linkedScoutIds]);
 
   // ── 0. REAL-TIME ATTENDANCE SESSIONS & ABSENCE RISK ENGINE ──
   useEffect(() => {
@@ -459,8 +508,25 @@ export default function ScoutProfile({ currentUser }) {
         ...(isOwner && username.trim() ? { username: username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') } : {}),
         bio: bio.trim(),
         scoutEmail: scoutEmail.trim(),
+        personalEmail: scoutEmail.trim(),
         scoutPhone: scoutPhone.trim(),
+        phone: scoutPhone.trim(),
         photoURL: photoUrl || null,
+        bsaId: bsaId.trim() || null,
+        schoolGrade: schoolGrade.trim() || null,
+        birthDate: birthDate.trim() || null,
+        allergies: allergies.trim() || null,
+        medicalNotes: medicalNotes.trim() || null,
+        dietaryRestrictions: dietaryRestrictions.trim() || null,
+        parent1Name: parent1Name.trim() || null,
+        parent1Relation: parent1Relation.trim() || 'Father',
+        parent2Name: parent2Name.trim() || null,
+        parent2Relation: parent2Relation.trim() || 'Mother',
+        emergencyContactName: emergencyContactName.trim() || null,
+        emergencyContactPhone: emergencyContactPhone.trim() || null,
+        emergencyContactRelation: emergencyContactRelation.trim() || null,
+        homeAddress: homeAddress.trim() || null,
+        cityStateZip: cityStateZip.trim() || null,
         spt: spt.trim() || null,
         sptDate: spt.trim() || null,
         sptFileUrl: sptFileUrl || null,
@@ -754,6 +820,19 @@ export default function ScoutProfile({ currentUser }) {
 
         <button
           type="button"
+          onClick={() => setActiveProfileTab('calendar')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeProfileTab === 'calendar'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/50'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Calendar size={15} />
+          <span>📅 Troop Calendar</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveProfileTab('security')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeProfileTab === 'security'
@@ -766,6 +845,12 @@ export default function ScoutProfile({ currentUser }) {
         </button>
       </div>
 
+      {/* ── TAB: TROOP CALENDAR & LIVE AGENDA ── */}
+      {activeProfileTab === 'calendar' && (
+        <div className="space-y-4">
+          <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
+        </div>
+      )}
       
       {/* ── TAB: ROLE & LEADERSHIP GUIDE ── */}
       {activeProfileTab === 'roles-guide' && (
@@ -1087,143 +1172,274 @@ export default function ScoutProfile({ currentUser }) {
               </h3>
 
               <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  {/* Username Field with Owner-Only Enforcement */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className={`block text-xs font-semibold uppercase flex items-center gap-1.5 ${isOwner ? 'text-amber-300' : 'text-slate-400'}`}>
-                        {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
-                        <span>Username</span>
-                      </label>
-                      <span className={`text-[9px] px-2 py-0.2 rounded font-bold uppercase ${
-                        isOwner 
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}>
-                        {isOwner ? '👑 Owner Editable' : '🔒 Locked'}
-                      </span>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      required
-                      disabled={!isOwner}
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
-                      className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
-                        isOwner 
-                          ? 'bg-slate-900 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
-                          : 'bg-slate-950/60 border border-slate-800 text-slate-400 cursor-not-allowed select-none'
-                      }`}
-                      placeholder="username"
-                    />
-                    <p className={`text-[10px] mt-1 ${isOwner ? 'text-amber-400/80 font-medium' : 'text-slate-500'}`}>
-                      {isOwner 
-                        ? '👑 Owner Privilege: You can edit this username.' 
-                        : '🔒 Locked: Only Troop Owner can modify usernames.'
-                      }
-                    </p>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
-                    <input
-                      type="text"
-                      disabled={currentUser.role === 'scout'}
-                      value={bsaId}
-                      onChange={(e) => setBsaId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                      <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
-                    </label>
-                    <input
-                      type="email"
-                      value={scoutEmail}
-                      onChange={(e) => setScoutEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                      <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
-                    </label>
-                    <input
-                      type="tel"
-                      value={scoutPhone}
-                      onChange={(e) => setScoutPhone(e.target.value)}
-                      placeholder="e.g. +1234567890"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  {currentUser.role === 'scout' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                          <Mail size={12} /> Parent Email
+                    {/* Username Field with Owner-Only Enforcement */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className={`block text-xs font-semibold uppercase flex items-center gap-1.5 ${isOwner ? 'text-amber-300' : 'text-slate-400'}`}>
+                          {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
+                          <span>Username</span>
                         </label>
+                        <span className={`text-[9px] px-2 py-0.2 rounded font-bold uppercase ${
+                          isOwner 
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        }`}>
+                          {isOwner ? '👑 Owner Editable' : '🔒 Locked'}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        disabled={!isOwner}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                        className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
+                          isOwner 
+                            ? 'bg-slate-900 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
+                            : 'bg-slate-950/60 border border-slate-800 text-slate-400 cursor-not-allowed select-none'
+                        }`}
+                        placeholder="username"
+                      />
+                      <p className={`text-[10px] mt-1 ${isOwner ? 'text-amber-400/80 font-medium' : 'text-slate-500'}`}>
+                        {isOwner 
+                          ? '👑 Owner Privilege: You can edit this username.' 
+                          : '🔒 Locked: Only Troop Owner can modify usernames.'
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">BSA Member ID</label>
+                      <input
+                        type="text"
+                        disabled={currentUser.role === 'scout' && !isOwner}
+                        value={bsaId}
+                        onChange={(e) => setBsaId(e.target.value)}
+                        placeholder="e.g. 13894210"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">School Grade Level</label>
+                      <input
+                        type="text"
+                        value={schoolGrade}
+                        onChange={(e) => setSchoolGrade(e.target.value)}
+                        placeholder="e.g. 8th Grade, High School"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Mail size={12} /> {currentUser.role === 'scout' ? 'Scout Email' : 'Personal Email'}
+                      </label>
+                      <input
+                        type="email"
+                        value={scoutEmail}
+                        onChange={(e) => setScoutEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Phone size={12} /> {currentUser.role === 'scout' ? 'Scout Phone' : 'Phone Number'}
+                      </label>
+                      <input
+                        type="tel"
+                        value={scoutPhone}
+                        onChange={(e) => setScoutPhone(e.target.value)}
+                        placeholder="e.g. +1234567890"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <MapPin size={12} /> City, State, Zip
+                      </label>
+                      <input
+                        type="text"
+                        value={cityStateZip}
+                        onChange={(e) => setCityStateZip(e.target.value)}
+                        placeholder="Dearborn, MI 48126"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                      <MapPin size={12} /> Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={homeAddress}
+                      onChange={(e) => setHomeAddress(e.target.value)}
+                      placeholder="e.g. 123 Scouting Way"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {/* ── FAMILY & EMERGENCY CONTACTS SECTION ── */}
+                  <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                    <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users size={14} /> Family & Emergency Contacts
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Primary Guardian / Parent 1 Name</label>
+                        <input
+                          type="text"
+                          value={parent1Name}
+                          onChange={(e) => setParent1Name(e.target.value)}
+                          placeholder="e.g. Ahmad Nehme"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
+                        <select
+                          value={parent1Relation}
+                          onChange={(e) => setParent1Relation(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="Father">Father</option>
+                          <option value="Mother">Mother</option>
+                          <option value="Guardian">Guardian</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Email</label>
                         <input
                           type="email"
                           value={parentEmail}
                           onChange={(e) => setParentEmail(e.target.value)}
                           placeholder="parent@example.com"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                          <Phone size={12} /> Parent Phone
-                        </label>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Phone</label>
                         <input
                           type="tel"
                           value={parentPhone}
                           onChange={(e) => setParentPhone(e.target.value)}
-                          placeholder="e.g. +1234567890"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          placeholder="+1234567890"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                         />
                       </div>
-                    </>
-                  )}
-                </div>
-
-                {/* ── ABOUT ME SECTION ── */}
-                <div className="pt-3 border-t border-slate-700/60 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                      <User size={15} />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
-                      <p className="text-[11px] text-slate-400">
-                        Share facts about yourself, your hobbies, interests, and scouting goals.
-                      </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
+                        <input
+                          type="text"
+                          value={emergencyContactName}
+                          onChange={(e) => setEmergencyContactName(e.target.value)}
+                          placeholder="e.g. Uncle Ali"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
+                        <input
+                          type="tel"
+                          value={emergencyContactPhone}
+                          onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                          placeholder="+1234567890"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
-                    rows={3}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
-                  />
+                  {/* ── HEALTH & MEDICAL NOTES SECTION ── */}
+                  <div className="pt-3 border-t border-slate-700/60 space-y-3">
+                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <HeartPulse size={14} /> Health, Allergies & Dietary Restrictions
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Allergies & Medical Alerts</label>
+                        <textarea
+                          rows={2}
+                          value={allergies}
+                          onChange={(e) => setAllergies(e.target.value)}
+                          placeholder="e.g. Peanuts, Bee stings, Inhaler required..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Dietary Restrictions</label>
+                        <textarea
+                          rows={2}
+                          value={dietaryRestrictions}
+                          onChange={(e) => setDietaryRestrictions(e.target.value)}
+                          placeholder="e.g. Strictly Zabiha Halal, Gluten-free..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── ABOUT ME SECTION ── */}
+                  <div className="pt-3 border-t border-slate-700/60 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <User size={15} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white uppercase tracking-wider">About Me</label>
+                        <p className="text-[11px] text-slate-400">
+                          Share facts about yourself, your hobbies, interests, and scouting goals.
+                        </p>
+                      </div>
+                    </div>
+
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Write something about yourself, your interests, hobbies, goals in scouting, or a personal intro..."
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end border-t border-slate-700/60 pt-3">
@@ -1248,10 +1464,35 @@ export default function ScoutProfile({ currentUser }) {
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Patrol</span>
                   <strong className="text-white text-sm">{patrolName} Patrol</strong>
                 </div>
-                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
-                  <strong className="text-emerald-400 text-sm">{rankName}</strong>
-                </div>
+                {currentUser.role === 'scout' && (
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Rank</span>
+                    <strong className="text-emerald-400 text-sm">{rankName}</strong>
+                  </div>
+                )}
+
+                {/* Linked Children Card for Parents */}
+                {(currentUser.role === 'parent' || parentLinkedScouts.length > 0) && (
+                  <div className="bg-slate-900/70 p-4 rounded-xl border border-indigo-500/40 space-y-2">
+                    <span className="text-[10px] text-indigo-400 uppercase font-bold block flex items-center gap-1">
+                      <Users size={12} /> Linked Scout Children ({parentLinkedScouts.length})
+                    </span>
+                    {parentLinkedScouts.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 italic">No scout children linked yet.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {parentLinkedScouts.map(scout => (
+                          <div key={scout.uid} className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                            <span className="font-bold text-white text-xs">{scout.fullName || scout.username}</span>
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                              {scout.rank || 'Scout'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Attendance Summary Tile */}
                 {currentUser.role === 'scout' && (

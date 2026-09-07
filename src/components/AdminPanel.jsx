@@ -59,7 +59,14 @@ import {
   UserCheck,
   Archive,
   Camera,
-  TrendingUp
+  TrendingUp,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  HeartPulse,
+  Home,
+  Loader2
 } from 'lucide-react';
 import { dispatchParentNotification, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { RANKS_DATA } from '../data/ranksData';
@@ -153,16 +160,54 @@ export default function AdminPanel({ currentUser, onNavigate }) {
   const [userMsg, setUserMsg] = useState('');
   const [userErr, setUserErr] = useState('');
 
-  // Editing User Modal State
+  // ── Universal Profile & Account Override Modal State ──
   const [editingUser, setEditingUser] = useState(null);
+  const [editModalTab, setEditModalTab] = useState('general'); // 'general' | 'advancement' | 'family' | 'leadership' | 'security'
   const [editFullName, setEditFullName] = useState('');
   const [editUsername, setEditUsername] = useState('');
-  const [editRole, setEditRole] = useState('');
-  const [editLeaderPosition, setEditLeaderPosition] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState('scout');
   const [editGroupId, setEditGroupId] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [editPhotoPreview, setEditPhotoPreview] = useState('');
+  const [uploadingUserPhoto, setUploadingUserPhoto] = useState(false);
+  
+  // Scout & Advancement Specifics
+  const [editRank, setEditRank] = useState('Scout');
+  const [editBsaId, setEditBsaId] = useState('');
+  const [editSchoolGrade, setEditSchoolGrade] = useState('');
+  const [editBirthDate, setEditBirthDate] = useState('');
+  const [editAllergies, setEditAllergies] = useState('');
+  const [editMedicalNotes, setEditMedicalNotes] = useState('');
+  const [editDietaryRestrictions, setEditDietaryRestrictions] = useState('');
+
+  // Family, Contacts & Parent Specifics
+  const [editPersonalEmail, setEditPersonalEmail] = useState('');
+  const [editScoutPhone, setEditScoutPhone] = useState('');
+  const [editParentEmail, setEditParentEmail] = useState('');
+  const [editParentPhone, setEditParentPhone] = useState('');
+  const [editParent1Name, setEditParent1Name] = useState('');
+  const [editParent1Relation, setEditParent1Relation] = useState('Father');
+  const [editParent2Name, setEditParent2Name] = useState('');
+  const [editParent2Relation, setEditParent2Relation] = useState('Mother');
+  const [editEmergencyContactName, setEditEmergencyContactName] = useState('');
+  const [editEmergencyContactPhone, setEditEmergencyContactPhone] = useState('');
+  const [editEmergencyContactRelation, setEditEmergencyContactRelation] = useState('');
+  const [editHomeAddress, setEditHomeAddress] = useState('');
+  const [editCityStateZip, setEditCityStateZip] = useState('');
   const [editParentLinkedScoutIds, setEditParentLinkedScoutIds] = useState([]);
-  const [editPassword, setEditPassword] = useState('');
+
+  // Leadership & Safety Training Specifics
+  const [editLeaderPosition, setEditLeaderPosition] = useState('Assistant Scoutmaster');
   const [editSpt, setEditSpt] = useState('');
+  const [editSptFileUrl, setEditSptFileUrl] = useState('');
+  const [editSptFileName, setEditSptFileName] = useState('');
+  const [uploadingAdminSpt, setUploadingAdminSpt] = useState(false);
+  const [editYptCompleted, setEditYptCompleted] = useState(false);
+
+  // Security & Submission State
+  const [editPassword, setEditPassword] = useState('');
   const [userUpdating, setUserUpdating] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editErr, setEditErr] = useState('');
@@ -391,23 +436,124 @@ export default function AdminPanel({ currentUser, onNavigate }) {
     }
   };
 
-  // ── 2. EDIT USER HANDLER ──
+  // ── 2. UNIVERSAL USER & PROFILE EDIT HANDLERS ──
   const handleOpenEditUser = (u) => {
     setEditingUser(u);
+    setEditModalTab('general');
     setEditFullName(u.fullName || u.username || '');
     setEditUsername(u.username || (u.email ? u.email.split('@')[0] : ''));
+    setEditEmail(u.email || '');
     setEditRole(u.role || 'scout');
+    setEditGroupId(u.groupId || u.patrolId || '');
+    setEditBio(u.bio || '');
+    setEditPhotoUrl(u.photoURL || '');
+    setEditPhotoPreview(u.photoURL || '');
+    
+    // Scout & Advancement
+    setEditRank(u.rank || 'Scout');
+    setEditBsaId(u.bsaId || '');
+    setEditSchoolGrade(u.schoolGrade || u.grade || '');
+    setEditBirthDate(u.birthDate || u.dob || '');
+    setEditAllergies(u.allergies || '');
+    setEditMedicalNotes(u.medicalNotes || '');
+    setEditDietaryRestrictions(u.dietaryRestrictions || '');
+
+    // Contact & Family
+    setEditPersonalEmail(u.personalEmail || u.scoutEmail || (u.email && !u.email.endsWith('@talia.app') ? u.email : ''));
+    setEditScoutPhone(u.scoutPhone || u.phone || '');
+    setEditParentEmail(u.parentEmail || '');
+    setEditParentPhone(u.parentPhone || '');
+    setEditParent1Name(u.parent1Name || '');
+    setEditParent1Relation(u.parent1Relation || 'Father');
+    setEditParent2Name(u.parent2Name || '');
+    setEditParent2Relation(u.parent2Relation || 'Mother');
+    setEditEmergencyContactName(u.emergencyContactName || '');
+    setEditEmergencyContactPhone(u.emergencyContactPhone || '');
+    setEditEmergencyContactRelation(u.emergencyContactRelation || '');
+    setEditHomeAddress(u.homeAddress || u.address || '');
+    setEditCityStateZip(u.cityStateZip || '');
+    setEditParentLinkedScoutIds(Array.isArray(u.linkedScoutIds) ? u.linkedScoutIds : []);
+
+    // Leadership & SPT
     setEditLeaderPosition(u.leaderPosition || 'Assistant Scoutmaster');
-    setEditGroupId(u.groupId || '');
-    setEditParentLinkedScoutIds(u.linkedScoutIds || []);
     setEditSpt(u.spt || u.sptDate || u.yptDate || '');
+    setEditSptFileUrl(u.sptFileUrl || '');
+    setEditSptFileName(u.sptFileName || '');
+    setEditYptCompleted(!!(u.yptCompleted || u.spt || u.sptDate || u.sptFileUrl));
+
     setEditPassword('');
     setEditMsg('');
     setEditErr('');
   };
 
+  const handleUserPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingUserPhoto(true);
+    setEditErr('');
+    try {
+      const compressedDataUrl = await compressImage(file, 500, 500, 0.85);
+      setEditPhotoPreview(compressedDataUrl);
+      setEditPhotoUrl(compressedDataUrl);
+    } catch (err) {
+      console.error("Photo compression error:", err);
+      setEditErr("Failed to process photo: " + err.message);
+    } finally {
+      setUploadingUserPhoto(false);
+    }
+  };
+
+  const handleRemoveUserPhoto = () => {
+    setEditPhotoPreview('');
+    setEditPhotoUrl('');
+  };
+
+  const handleAdminSptUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAdminSpt(true);
+    setEditErr('');
+    const fileName = file.name;
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
+
+    try {
+      let finalUrl = '';
+      if (isImage) {
+        finalUrl = await compressImage(file, 1400, 1400, 0.75);
+      } else if (isPdf) {
+        if (file.size > 1.5 * 1024 * 1024) {
+          setEditErr("PDF certificate is too large (> 1.5MB). Please upload a smaller image or screenshot.");
+          setUploadingAdminSpt(false);
+          return;
+        }
+        finalUrl = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onloadend = () => res(reader.result);
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+      }
+      setEditSptFileUrl(finalUrl);
+      setEditSptFileName(fileName);
+      if (!editSpt) {
+        setEditSpt(new Date().toISOString().split('T')[0]);
+      }
+    } catch (err) {
+      console.error("Admin SPT upload error:", err);
+      setEditErr("Failed to upload SPT certificate: " + err.message);
+    } finally {
+      setUploadingAdminSpt(false);
+    }
+  };
+
+  const handleRemoveAdminSptFile = () => {
+    setEditSptFileUrl('');
+    setEditSptFileName('');
+  };
+
   const handleSaveEditUser = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!editingUser) return;
     setUserUpdating(true);
     setEditMsg('');
@@ -418,23 +564,53 @@ export default function AdminPanel({ currentUser, onNavigate }) {
         fullName: editFullName.trim(),
         role: editRole,
         groupId: editGroupId || null,
+        patrolId: editGroupId || null,
+        bio: editBio.trim() || null,
+        photoURL: editPhotoUrl || null,
+        
+        // Scout & Advancement
+        rank: editRank || 'Scout',
+        bsaId: editBsaId.trim() || null,
+        schoolGrade: editSchoolGrade.trim() || null,
+        birthDate: editBirthDate.trim() || null,
+        allergies: editAllergies.trim() || null,
+        medicalNotes: editMedicalNotes.trim() || null,
+        dietaryRestrictions: editDietaryRestrictions.trim() || null,
+
+        // Contact & Family
+        personalEmail: editPersonalEmail.trim() || null,
+        scoutEmail: editPersonalEmail.trim() || null,
+        scoutPhone: editScoutPhone.trim() || null,
+        phone: editScoutPhone.trim() || null,
+        parentEmail: editParentEmail.trim() || null,
+        parentPhone: editParentPhone.trim() || null,
+        parent1Name: editParent1Name.trim() || null,
+        parent1Relation: editParent1Relation.trim() || 'Father',
+        parent2Name: editParent2Name.trim() || null,
+        parent2Relation: editParent2Relation.trim() || 'Mother',
+        emergencyContactName: editEmergencyContactName.trim() || null,
+        emergencyContactPhone: editEmergencyContactPhone.trim() || null,
+        emergencyContactRelation: editEmergencyContactRelation.trim() || null,
+        homeAddress: editHomeAddress.trim() || null,
+        cityStateZip: editCityStateZip.trim() || null,
+        linkedScoutIds: editRole === 'parent' ? editParentLinkedScoutIds : (editingUser.linkedScoutIds || []),
+
+        // Leadership & SPT
+        leaderPosition: (editRole === 'leader' || editRole === 'owner' || editRole === 'admin') ? editLeaderPosition : (editRole === 'scout' ? (editingUser.leaderPosition || null) : null),
+        spt: editSpt.trim() || null,
+        sptDate: editSpt.trim() || null,
+        sptFileUrl: editSptFileUrl || null,
+        sptFileName: editSptFileName || null,
+        yptCompleted: editYptCompleted || !!editSpt.trim() || !!editSptFileUrl,
+        yptDate: editSpt.trim() || null,
+
         updatedAt: serverTimestamp()
       };
 
-      // Owner-only: Allow username modification
-      if (isOwner && editUsername.trim()) {
+      // Owner-only/Admin: Allow username modification
+      if (editUsername.trim()) {
         const cleanedUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
         updatePayload.username = cleanedUsername;
-      }
-
-      if (editRole === 'leader' || editRole === 'owner') {
-        updatePayload.leaderPosition = editLeaderPosition;
-        updatePayload.spt = editSpt.trim() || null;
-        updatePayload.sptDate = editSpt.trim() || null;
-        updatePayload.yptCompleted = !!editSpt.trim();
-        updatePayload.yptDate = editSpt.trim() || null;
-      } else if (editRole === 'parent') {
-        updatePayload.linkedScoutIds = editParentLinkedScoutIds;
       }
 
       await setDoc(doc(db, 'users', editingUser.uid), updatePayload, { merge: true });
@@ -444,8 +620,8 @@ export default function AdminPanel({ currentUser, onNavigate }) {
         await setDoc(doc(db, 'users', editingUser.uid, 'private', 'secrets'), { password: editPassword.trim() }, { merge: true });
       }
 
-      setEditMsg('✓ User account updated successfully!');
-      setTimeout(() => setEditingUser(null), 1200);
+      setEditMsg('✓ User profile and all system records updated successfully!');
+      setTimeout(() => setEditingUser(null), 1400);
     } catch (err) {
       console.error("Failed to update user:", err);
       setEditErr("Error updating user: " + err.message);
@@ -2935,221 +3111,722 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
       )}
 
 
-      {/* ── EDIT USER MODAL ── */}
+      {/* ── UNIVERSAL USER PROFILE & ACCOUNT OVERRIDE MODAL ── */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className={`bg-slate-900 border-2 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto ${
-            isOwner ? 'border-amber-500/60 shadow-amber-950/50' : 'border-emerald-500/50'
-          }`}>
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                {isOwner ? <Crown size={18} className="text-amber-400" /> : <Edit3 size={18} className="text-emerald-400" />}
-                <span>Edit User: {editingUser.fullName || editingUser.username}</span>
-                {isOwner && (
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black">
-                    👑 OWNER EDIT
-                  </span>
-                )}
-              </h3>
-              <button
-                onClick={() => setEditingUser(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {editErr && <p className="text-xs text-red-400 bg-red-950/60 p-3 rounded-xl border border-red-600">{editErr}</p>}
-            {editMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{editMsg}</p>}
-
-            <form onSubmit={handleSaveEditUser} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/60 rounded-3xl w-full max-w-3xl shadow-2xl shadow-amber-950/40 flex flex-col max-h-[92vh] overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative shrink-0">
+                  {editPhotoPreview ? (
+                    <img
+                      src={editPhotoPreview}
+                      alt="Avatar Preview"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-black text-amber-400 text-lg shadow-md">
+                      {editFullName?.charAt(0) || editUsername?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  {uploadingUserPhoto && (
+                    <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                      <Loader2 size={16} className="animate-spin text-emerald-400" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Username Field with Strict Owner-Only Permissions */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className={`block text-xs font-bold uppercase flex items-center gap-1 ${
-                      isOwner ? 'text-amber-300' : 'text-slate-400'
-                    }`}>
-                      {isOwner ? <Crown size={12} className="text-amber-400" /> : <Lock size={12} className="text-slate-500" />}
-                      <span>Username</span>
-                    </label>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
-                      isOwner 
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}>
-                      {isOwner ? '👑 Editable' : '🔒 Locked'}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-white text-base truncate">
+                      {editFullName || editUsername || 'User Profile'}
+                    </h3>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black flex items-center gap-1">
+                      <Crown size={10} /> ADMIN OVERRIDE
+                    </span>
+                    <span className="text-[9px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-bold uppercase">
+                      {editRole}
                     </span>
                   </div>
-                  <input
-                    type="text"
-                    required
-                    disabled={!isOwner}
-                    value={editUsername}
-                    onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
-                    className={`w-full rounded-xl px-4 py-2 text-xs font-mono transition ${
-                      isOwner 
-                        ? 'bg-slate-950 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 focus:outline-none' 
-                        : 'bg-slate-950/60 border border-slate-800 text-slate-500 cursor-not-allowed select-none'
-                    }`}
-                    placeholder="username"
-                  />
-                  <p className={`text-[10px] mt-1 flex items-center gap-1 ${
-                    isOwner ? 'text-amber-400/90 font-medium' : 'text-slate-500 font-normal'
-                  }`}>
-                    {isOwner ? (
-                      <span>👑 Owner Authority: You can modify this login username.</span>
-                    ) : (
-                      <span>🔒 Locked: Only Troop Owner can modify usernames.</span>
-                    )}
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                    @{editUsername || 'username'} &bull; UID: {editingUser.uid?.slice(0, 10)}...
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Role Elevation</label>
-                  <select
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="scout">Scout</option>
-                    <option value="parent">Parent</option>
-                    <option value="leader">Leader</option>
-                    <option value="admin">Admin</option>
-                    <option value="owner">Troop Owner</option>
-                  </select>
-                </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Patrol Assignment</label>
-                  <select
-                    value={editGroupId}
-                    onChange={(e) => setEditGroupId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            {/* Sub-Navigation Tabs */}
+            <div className="flex border-b border-slate-800 bg-slate-900/90 px-4 pt-2 gap-1 overflow-x-auto scrollbar-none shrink-0">
+              {[
+                { id: 'general', label: '👤 Identity & Avatar', icon: User },
+                { id: 'advancement', label: '🏕️ Scout & Advancement', icon: Award },
+                { id: 'family', label: '👨‍👩‍👧 Family & Contacts', icon: Users },
+                { id: 'leadership', label: '⚜️ Leadership & SPT', icon: Shield },
+                { id: 'security', label: '🔐 Security & Actions', icon: Lock }
+              ].map(t => {
+                const Icon = t.icon;
+                const isActive = editModalTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setEditModalTab(t.id)}
+                    className={`px-3.5 py-2.5 rounded-t-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-b-2 ${
+                      isActive
+                        ? 'bg-slate-800 text-amber-300 border-amber-400 shadow-md'
+                        : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-850'
+                    }`}
                   >
-                    <option value="">Unassigned</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} Patrol</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                    <span>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-              {editRole === 'leader' && (
-                <div className="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Leader Position</label>
-                    <select
-                      value={editLeaderPosition}
-                      onChange={(e) => setEditLeaderPosition(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      {BSA_LEADER_POSITIONS.map(pos => (
-                        <option key={pos} value={pos}>{pos}</option>
-                      ))}
-                    </select>
+            {/* Error / Success Banners */}
+            <div className="px-6 pt-3 shrink-0">
+              {editErr && (
+                <div className="p-3 bg-red-950/80 border border-red-600 text-red-300 text-xs rounded-xl flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0 text-red-400" />
+                  <span>{editErr}</span>
+                </div>
+              )}
+              {editMsg && (
+                <div className="p-3 bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs rounded-xl flex items-center gap-2">
+                  <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
+                  <span>{editMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Body / Tab Content */}
+            <form onSubmit={handleSaveEditUser} className="flex-1 overflow-y-auto p-6 space-y-5">
+              
+              {/* ── TAB 1: IDENTITY & AVATAR ── */}
+              {editModalTab === 'general' && (
+                <div className="space-y-4">
+                  {/* Photo Uploader Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative group shrink-0">
+                      {editPhotoPreview ? (
+                        <img
+                          src={editPhotoPreview}
+                          alt="Profile Avatar"
+                          className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-black text-slate-300 text-2xl uppercase shadow-lg">
+                          {editFullName?.charAt(0) || editUsername?.charAt(0) || 'U'}
+                        </div>
+                      )}
+                      {uploadingUserPhoto && (
+                        <div className="absolute inset-0 bg-black/70 rounded-full flex flex-col items-center justify-center text-white text-[9px] font-bold gap-1">
+                          <Loader2 size={16} className="animate-spin text-emerald-400" />
+                          <span>Saving...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 flex-1 text-center sm:text-left">
+                      <span className="text-xs font-bold text-white block">Profile Picture / Avatar</span>
+                      <p className="text-[11px] text-slate-400">
+                        Upload a photo or take a picture. It will be compressed automatically and saved to the profile.
+                      </p>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                        <label className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition flex items-center gap-1.5 shadow-sm">
+                          <Camera size={13} />
+                          <span>{editPhotoPreview ? 'Change Photo' : 'Upload Photo'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUserPhotoUpload}
+                            disabled={uploadingUserPhoto}
+                            className="hidden"
+                          />
+                        </label>
+                        {editPhotoPreview && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveUserPhoto}
+                            className="text-xs text-red-400 hover:text-red-300 bg-slate-900 border border-slate-800 hover:bg-slate-850 px-2.5 py-1.5 rounded-xl cursor-pointer transition flex items-center gap-1"
+                          >
+                            <Trash2 size={12} />
+                            <span>Remove</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Legal / Display Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFullName}
+                        onChange={(e) => setEditFullName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        placeholder="e.g. Hussein Nehme"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-amber-300 uppercase flex items-center gap-1">
+                          <Crown size={12} className="text-amber-400" />
+                          <span>Login Username *</span>
+                        </label>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-black uppercase">
+                          👑 Override
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                        className="w-full bg-slate-950 border-2 border-amber-500/60 focus:border-amber-400 text-amber-200 rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none"
+                        placeholder="username"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Account Role Elevation</label>
+                      <select
+                        value={editRole}
+                        onChange={(e) => setEditRole(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="scout">🏕️ Scout (Member)</option>
+                        <option value="parent">👨‍👩‍👧 Parent / Guardian</option>
+                        <option value="leader">⚜️ Troop Leader</option>
+                        <option value="admin">⚡ Executive Admin</option>
+                        <option value="owner">👑 Supreme Troop Owner</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                        {editRole === 'parent' ? 'Patrol Affiliation' : 'Assigned Patrol Unit'}
+                      </label>
+                      {editRole === 'parent' ? (
+                        <div className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-400 italic flex items-center gap-2">
+                          <span>👨‍👩‍👧</span>
+                          <span>Not Applicable (Access derived from Linked Children)</span>
+                        </div>
+                      ) : (
+                        <select
+                          value={editGroupId}
+                          onChange={(e) => setEditGroupId(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="">Unassigned (No Patrol)</option>
+                          {groups.map(g => (
+                            <option key={g.id} value={g.id}>👥 {g.name} Patrol</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Safety/Protection Training (SPT) Date</label>
-                    <input
-                      type="date"
-                      value={editSpt}
-                      onChange={(e) => setEditSpt(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">About Me / Bio</label>
+                    <textarea
+                      rows={3}
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      placeholder="Biography, scouting background, interests, hobbies..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Leave blank if pending or uncertified.</p>
                   </div>
                 </div>
               )}
 
-              {editRole === 'parent' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Linked Children</label>
-                  <div className="max-h-36 overflow-y-auto space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-700">
-                    {scoutsList.map(s => (
-                      <label key={s.uid} className="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+              {/* ── TAB 2: SCOUT ADVANCEMENT & MEDICAL ── */}
+              {editModalTab === 'advancement' && (
+                <div className="space-y-4">
+                  <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800 text-xs text-slate-400">
+                    💡 Configure rank advancement records, BSA identification, school details, and critical health/allergy profiles.
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-emerald-400 uppercase mb-1">Active BSA Rank</label>
+                      <select
+                        value={editRank}
+                        onChange={(e) => setEditRank(e.target.value)}
+                        className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-emerald-300 font-bold focus:outline-none focus:border-emerald-400 cursor-pointer"
+                      >
+                        {['Scout', 'Tenderfoot', 'Second Class', 'First Class', 'Star', 'Life', 'Eagle'].map(rk => (
+                          <option key={rk} value={rk}>⚜️ {rk}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA Member ID #</label>
+                      <input
+                        type="text"
+                        value={editBsaId}
+                        onChange={(e) => setEditBsaId(e.target.value)}
+                        placeholder="e.g. 13894210"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">School Grade Level</label>
+                      <input
+                        type="text"
+                        value={editSchoolGrade}
+                        onChange={(e) => setEditSchoolGrade(e.target.value)}
+                        placeholder="e.g. 6th Grade, 9th Grade, High School"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editBirthDate}
+                        onChange={(e) => setEditBirthDate(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800 space-y-3">
+                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <HeartPulse size={14} /> Medical Profile & Dietary Information
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Allergies & Medical Alerts</label>
+                        <textarea
+                          rows={2}
+                          value={editAllergies}
+                          onChange={(e) => setEditAllergies(e.target.value)}
+                          placeholder="e.g. Peanuts, Bee stings, Asthma inhaler required..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Dietary Restrictions</label>
+                        <textarea
+                          rows={2}
+                          value={editDietaryRestrictions}
+                          onChange={(e) => setEditDietaryRestrictions(e.target.value)}
+                          placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Additional Confidential Medical Notes</label>
+                      <textarea
+                        rows={2}
+                        value={editMedicalNotes}
+                        onChange={(e) => setEditMedicalNotes(e.target.value)}
+                        placeholder="Additional physician instructions, medications, restrictions..."
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB 3: FAMILY & CONTACTS ── */}
+              {editModalTab === 'family' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Mail size={12} /> Personal / Direct Email
+                      </label>
+                      <input
+                        type="email"
+                        value={editPersonalEmail}
+                        onChange={(e) => setEditPersonalEmail(e.target.value)}
+                        placeholder="e.g. member@example.com"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <Phone size={12} /> Personal / Direct Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={editScoutPhone}
+                        onChange={(e) => setEditScoutPhone(e.target.value)}
+                        placeholder="e.g. +1 313 555 1234"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Primary Guardian */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                      👨‍👩‍👧 Primary Guardian / Parent 1
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Name</label>
+                        <input
+                          type="text"
+                          value={editParent1Name}
+                          onChange={(e) => setEditParent1Name(e.target.value)}
+                          placeholder="e.g. Ahmad Nehme"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
+                        <select
+                          value={editParent1Relation}
+                          onChange={(e) => setEditParent1Relation(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="Father">Father</option>
+                          <option value="Mother">Mother</option>
+                          <option value="Guardian">Guardian</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Email</label>
+                        <input
+                          type="email"
+                          value={editParentEmail}
+                          onChange={(e) => setEditParentEmail(e.target.value)}
+                          placeholder="parent@example.com"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Phone</label>
+                        <input
+                          type="tel"
+                          value={editParentPhone}
+                          onChange={(e) => setEditParentPhone(e.target.value)}
+                          placeholder="+1 313 555 5678"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Secondary Guardian & Emergency */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                      <span className="text-xs font-bold text-sky-400 uppercase tracking-wider block">
+                        Secondary Guardian / Parent 2
+                      </span>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 2 Name</label>
+                        <input
+                          type="text"
+                          value={editParent2Name}
+                          onChange={(e) => setEditParent2Name(e.target.value)}
+                          placeholder="e.g. Fatima Nehme"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
+                        <select
+                          value={editParent2Relation}
+                          onChange={(e) => setEditParent2Relation(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="Mother">Mother</option>
+                          <option value="Father">Father</option>
+                          <option value="Guardian">Guardian</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                        🚨 Emergency Contact (Alt)
+                      </span>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Contact Name & Relation</label>
+                        <input
+                          type="text"
+                          value={editEmergencyContactName}
+                          onChange={(e) => setEditEmergencyContactName(e.target.value)}
+                          placeholder="e.g. Uncle Ali (Uncle)"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
+                        <input
+                          type="tel"
+                          value={editEmergencyContactPhone}
+                          onChange={(e) => setEditEmergencyContactPhone(e.target.value)}
+                          placeholder="e.g. +1 313 555 9999"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Physical Address */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1 flex items-center gap-1">
+                        <MapPin size={12} /> Street Address
+                      </label>
+                      <input
+                        type="text"
+                        value={editHomeAddress}
+                        onChange={(e) => setEditHomeAddress(e.target.value)}
+                        placeholder="e.g. 123 Scouting Way"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">City, State, Zip</label>
+                      <input
+                        type="text"
+                        value={editCityStateZip}
+                        onChange={(e) => setEditCityStateZip(e.target.value)}
+                        placeholder="Dearborn, MI 48126"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Linked Children (Parent Accounts) */}
+                  {(editRole === 'parent' || editParentLinkedScoutIds.length > 0) && (
+                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-bold text-indigo-300 uppercase">
+                          Linked Scout Children ({editParentLinkedScoutIds.length})
+                        </label>
+                        <span className="text-[10px] text-slate-400">Allows parent portal to view their reports</span>
+                      </div>
+                      <div className="max-h-36 overflow-y-auto space-y-1 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                        {scoutsList.map(s => {
+                          const isLinked = editParentLinkedScoutIds.includes(s.uid);
+                          return (
+                            <label key={s.uid} className={`flex items-center gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition ${isLinked ? 'bg-indigo-950/60 text-white font-bold' : 'text-slate-300 hover:bg-slate-800'}`}>
+                              <input
+                                type="checkbox"
+                                checked={isLinked}
+                                onChange={(e) => {
+                                  if (e.target.checked) setEditParentLinkedScoutIds([...editParentLinkedScoutIds, s.uid]);
+                                  else setEditParentLinkedScoutIds(editParentLinkedScoutIds.filter(id => id !== s.uid));
+                                }}
+                              />
+                              <span>{s.fullName || s.username}</span>
+                              <span className="text-[10px] text-indigo-400 font-mono">({s.rank || 'Scout'})</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── TAB 4: LEADERSHIP & SPT ── */}
+              {editModalTab === 'leadership' && (
+                <div className="space-y-4">
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+                      ⚜️ Official BSA Leadership Position
+                    </span>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Assigned Role Position</label>
+                      <select
+                        value={editLeaderPosition}
+                        onChange={(e) => setEditLeaderPosition(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        {BSA_LEADER_POSITIONS.map(pos => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Safety & Youth Protection Training (SPT) */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield size={14} /> Safety / Protection Training (SPT) Compliance
+                      </span>
+                      <label className="flex items-center gap-1.5 text-xs font-bold cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={editParentLinkedScoutIds.includes(s.uid)}
-                          onChange={(e) => {
-                            if (e.target.checked) setEditParentLinkedScoutIds([...editParentLinkedScoutIds, s.uid]);
-                            else setEditParentLinkedScoutIds(editParentLinkedScoutIds.filter(id => id !== s.uid));
-                          }}
+                          checked={editYptCompleted}
+                          onChange={(e) => setEditYptCompleted(e.target.checked)}
+                          className="rounded text-teal-600 focus:ring-teal-500"
                         />
-                        <span>{s.fullName || s.username} ({s.rank || 'Scout'})</span>
+                        <span className={editYptCompleted ? 'text-teal-300' : 'text-slate-400'}>
+                          {editYptCompleted ? '✓ Verified Certified' : 'Mark as Certified'}
+                        </span>
                       </label>
-                    ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Training Completion Date</label>
+                        <input
+                          type="date"
+                          value={editSpt}
+                          onChange={(e) => setEditSpt(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        />
+                        <p className="text-[10px] text-slate-500 mt-1">Leave blank if uncertified or pending renewal.</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">SPT Certificate File</label>
+                        <div className="flex items-center gap-2">
+                          <label className="bg-teal-700 hover:bg-teal-600 text-white text-xs font-bold px-3 py-2 rounded-xl cursor-pointer transition flex items-center gap-1.5 shadow-sm">
+                            <ImageIcon size={13} />
+                            <span>{uploadingAdminSpt ? 'Uploading...' : (editSptFileUrl ? 'Replace Cert' : 'Upload Cert')}</span>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={handleAdminSptUpload}
+                              disabled={uploadingAdminSpt}
+                              className="hidden"
+                            />
+                          </label>
+                          {editSptFileUrl && (
+                            <>
+                              <a
+                                href={editSptFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 bg-slate-900 border border-slate-700 text-teal-300 hover:text-white rounded-xl text-xs flex items-center gap-1 font-bold"
+                              >
+                                <span>View</span>
+                                <ExternalLink size={11} />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={handleRemoveAdminSptFile}
+                                className="p-2 text-red-400 hover:text-red-300 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer"
+                                title="Remove Certificate"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Reset Password (Optional)</label>
-                <input
-                  type="password"
-                  placeholder="Leave empty to keep existing password"
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {/* Danger Zone: Reset Profile Progress */}
-              <div className="bg-red-950/30 border border-red-900/60 p-4 rounded-2xl space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h5 className="text-xs font-black text-red-400 flex items-center gap-1.5">
-                      <RotateCcw size={13} /> Reset Profile Progress
-                    </h5>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Wipe all ranks, merit badges, homework, service hours, and restore to initial Scout standing.
+              {/* ── TAB 5: SECURITY & ACTIONS ── */}
+              {editModalTab === 'security' && (
+                <div className="space-y-4">
+                  {/* Reset Password Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider block flex items-center gap-1.5">
+                      <KeyRound size={14} /> Direct Password Override
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      Enter a new temporary or permanent password (minimum 6 characters). This will update their login secrets document immediately.
                     </p>
+                    <input
+                      type="password"
+                      placeholder="Leave blank to keep existing password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResettingUser(editingUser);
-                      setResetConfirmationInput('');
-                      setResetErrMsg('');
-                      setResetSuccessMsg('');
-                    }}
-                    className="bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-bold px-3.5 py-2 rounded-xl transition cursor-pointer shrink-0 shadow-md flex items-center gap-1 self-start sm:self-center"
-                  >
-                    <RotateCcw size={12} />
-                    <span>Clear All Progress</span>
-                  </button>
-                </div>
-              </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={userUpdating}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <Check size={15} />
-                  <span>{userUpdating ? 'Saving Changes...' : 'Save User Updates'}</span>
-                </button>
+                  {/* Share on WhatsApp */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                    <div>
+                      <strong className="text-xs font-bold text-white block">WhatsApp Onboarding Message</strong>
+                      <p className="text-[11px] text-slate-400">Launch pre-filled login invite message with portal link.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenWhatsAppModal(editingUser)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.45 5.539 0 10.048-4.479 10.052-9.982.002-2.664-1.03-5.167-2.905-7.046C16.545 1.7 14.053.666 11.993.666c-5.545 0-10.054 4.481-10.058 9.984-.002 1.735.454 3.424 1.316 4.908l-.973 3.555 3.779-.983zm11.507-7.747c-.307-.155-1.822-.897-2.103-.997-.282-.102-.487-.154-.69.155-.203.31-.789.997-.968 1.205-.179.208-.359.233-.666.08-1.57-.792-2.73-1.378-3.82-3.238-.29-.497.29-.462.83-1.543.088-.178.044-.334-.022-.487-.066-.154-.689-1.658-.944-2.274-.249-.597-.502-.516-.69-.526l-.588-.01c-.204 0-.537.077-.818.384-.282.31-1.077 1.05-1.077 2.561 0 1.511 1.101 2.973 1.254 3.178.154.205 2.167 3.307 5.25 4.639.734.316 1.307.505 1.753.647.737.233 1.408.201 1.939.12.59-.09 1.822-.743 2.078-1.46.256-.718.256-1.334.18-1.46-.078-.128-.282-.204-.59-.36z"/>
+                      </svg>
+                      <span>Share on WhatsApp</span>
+                    </button>
+                  </div>
+
+                  {/* Danger Zone: Clear Profile Progress */}
+                  <div className="bg-red-950/30 border border-red-900/60 p-4 rounded-2xl space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h5 className="text-xs font-black text-red-400 flex items-center gap-1.5">
+                          <RotateCcw size={13} /> Reset Profile Advancement & Logs
+                        </h5>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Wipe all rank progress, merit badges, homework, and attendance logs back to fresh Scout status.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResettingUser(editingUser);
+                          setResetConfirmationInput('');
+                          setResetErrMsg('');
+                          setResetSuccessMsg('');
+                        }}
+                        className="bg-red-600/80 hover:bg-red-600 text-white text-[11px] font-bold px-3.5 py-2 rounded-xl transition cursor-pointer shrink-0 shadow-md flex items-center gap-1 self-start sm:self-center"
+                      >
+                        <RotateCcw size={12} />
+                        <span>Clear All Progress</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Form Actions Footer */}
+              <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3 sticky bottom-0 bg-slate-900/95 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-5 py-3 rounded-xl transition cursor-pointer"
                 >
                   Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={userUpdating}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-extrabold text-xs px-6 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/50"
+                >
+                  <Check size={16} />
+                  <span>{userUpdating ? 'Saving All Overrides...' : 'Save All Overrides & Sync'}</span>
                 </button>
               </div>
             </form>
