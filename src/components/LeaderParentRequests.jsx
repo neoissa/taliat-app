@@ -35,7 +35,8 @@ import {
   UserCheck,
   CheckCheck
 } from 'lucide-react';
-import { acknowledgeParentRequest, resolveParentRequest, confirmMeetingRequest } from '../services/parentRequestService';
+import { acknowledgeParentRequest, resolveParentRequest, confirmMeetingRequest, declineMeetingRequestByLeader } from '../services/parentRequestService';
+import ConferenceCountdown from './ConferenceCountdown';
 
 export default function LeaderParentRequests({ 
   currentUser = {}, 
@@ -71,6 +72,11 @@ export default function LeaderParentRequests({
   const [meetingConfirmLocation, setMeetingConfirmLocation] = useState('Troop Headquarters (Highview Elementary School)');
   const [meetingConfirmNote, setMeetingConfirmNote] = useState('');
   const [isSubmittingConfirm, setIsSubmittingConfirm] = useState(false);
+
+  // Meeting Decline Modal State
+  const [decliningMeeting, setDecliningMeeting] = useState(null);
+  const [declineReason, setDeclineReason] = useState('');
+  const [isSubmittingDecline, setIsSubmittingDecline] = useState(false);
 
   // 1. Subscribe to Parent Requests
   useEffect(() => {
@@ -141,7 +147,7 @@ export default function LeaderParentRequests({
       if (activeTab === 'pending') {
         if (req.status !== 'pending_review' && req.status !== 'acknowledged') return false;
       } else if (activeTab === 'resolved') {
-        if (req.status !== 'resolved' && req.status !== 'approved' && req.status !== 'confirmed') return false;
+        if (req.status !== 'resolved' && req.status !== 'approved' && req.status !== 'confirmed' && req.status !== 'declined_by_leader' && req.status !== 'cancelled_by_parent') return false;
       } else if (activeTab !== 'all') {
         if (req.requestType !== activeTab) return false;
       }
@@ -176,7 +182,7 @@ export default function LeaderParentRequests({
       meetingRequests: scopedRequests.filter(r => r.requestType === 'meeting_request').length,
       formSubmissions: scopedRequests.filter(r => r.requestType === 'form_submission').length,
       confirmedConferences: scopedRequests.filter(r => r.requestType === 'meeting_request' && r.status === 'confirmed').length,
-      resolved: scopedRequests.filter(r => r.status === 'resolved' || r.status === 'approved' || r.status === 'confirmed').length
+      resolved: scopedRequests.filter(r => r.status === 'resolved' || r.status === 'approved' || r.status === 'confirmed' || r.status === 'declined_by_leader' || r.status === 'cancelled_by_parent').length
     };
   }, [scopedRequests]);
 
@@ -242,6 +248,38 @@ export default function LeaderParentRequests({
       alert("Failed to confirm conference: " + err.message);
     } finally {
       setIsSubmittingConfirm(false);
+    }
+  };
+
+  // Submit Meeting Decline
+  const handleDeclineMeetingSubmit = async (e) => {
+    e.preventDefault();
+    if (!decliningMeeting) return;
+    setIsSubmittingDecline(true);
+
+    try {
+      await declineMeetingRequestByLeader({
+        requestId: decliningMeeting.requestId || decliningMeeting.id,
+        leaderUid: currentUser?.uid,
+        leaderName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
+        leaderRole: currentUser?.leaderPosition || currentUser?.role || 'Scoutmaster',
+        declineReason: declineReason.trim(),
+        parentUid: decliningMeeting.parentUid,
+        parentEmail: decliningMeeting.parentEmail,
+        scoutName: decliningMeeting.scoutName,
+        meetingTopic: decliningMeeting.meetingTopic || decliningMeeting.metadata?.meetingTopic || 'Scout Conference'
+      });
+
+      setActionSuccessMsg(`✓ Conference request for ${decliningMeeting.scoutName} declined and parent notified.`);
+      setTimeout(() => {
+        setDecliningMeeting(null);
+        setDeclineReason('');
+        setActionSuccessMsg('');
+      }, 2000);
+    } catch (err) {
+      alert("Failed to decline conference: " + err.message);
+    } finally {
+      setIsSubmittingDecline(false);
     }
   };
 
@@ -498,7 +536,9 @@ export default function LeaderParentRequests({
             const isPending = req.status === 'pending_review';
             const isAcknowledged = req.status === 'acknowledged';
             const isConfirmed = req.status === 'confirmed';
-            const isResolved = req.status === 'resolved' || req.status === 'approved' || isConfirmed;
+            const isCancelled = req.status === 'cancelled_by_parent';
+            const isDeclined = req.status === 'declined_by_leader';
+            const isResolved = req.status === 'resolved' || req.status === 'approved' || isConfirmed || isCancelled || isDeclined;
 
             const waMsg = encodeURIComponent(
               `Salam ${req.parentName}, this is regarding your ${req.requestType.replace('_', ' ')} for ${req.scoutName} in Troop 313. We have received your submission and are following up.`
@@ -511,6 +551,10 @@ export default function LeaderParentRequests({
                 className={`border rounded-3xl p-5 sm:p-6 transition shadow-lg space-y-4 ${
                   isConfirmed
                     ? 'bg-gradient-to-br from-slate-900 via-emerald-950/20 to-slate-900 border-emerald-500/60 shadow-emerald-950/30'
+                    : isCancelled
+                    ? 'bg-gradient-to-br from-slate-900 via-rose-950/20 to-slate-900 border-rose-500/50 shadow-rose-950/20'
+                    : isDeclined
+                    ? 'bg-gradient-to-br from-slate-900 via-amber-950/20 to-slate-900 border-amber-500/40 shadow-amber-950/20'
                     : isPending
                     ? 'bg-slate-850 border-amber-500/50 shadow-amber-950/20'
                     : isAcknowledged
@@ -542,6 +586,10 @@ export default function LeaderParentRequests({
                     <span className={`text-xs font-bold px-3 py-1 rounded-xl border flex items-center gap-1.5 ${
                       isConfirmed
                         ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-md shadow-emerald-950/50'
+                        : isCancelled
+                        ? 'bg-rose-950 text-rose-300 border-rose-500 shadow-md'
+                        : isDeclined
+                        ? 'bg-amber-950 text-amber-300 border-amber-500'
                         : isPending
                         ? 'bg-amber-950 text-amber-300 border-amber-500 animate-pulse'
                         : isAcknowledged
@@ -550,6 +598,10 @@ export default function LeaderParentRequests({
                     }`}>
                       {isConfirmed 
                         ? '✓ Confirmed & Scheduled' 
+                        : isCancelled
+                        ? '⚠️ Cancelled by Parent'
+                        : isDeclined
+                        ? '❌ Declined by Leader'
                         : isPending 
                         ? '⏳ Pending Review' 
                         : isAcknowledged 
@@ -617,15 +669,18 @@ export default function LeaderParentRequests({
 
                 {/* Confirmed Meeting Banner (If already confirmed) */}
                 {isConfirmed && (
-                  <div className="bg-emerald-950/80 border-2 border-emerald-500/70 p-4 rounded-2xl space-y-2 shadow-inner">
+                  <div className="bg-emerald-950/80 border-2 border-emerald-500/70 p-4 rounded-2xl space-y-3 shadow-inner">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
                         <CheckCircle2 size={15} className="text-emerald-400" />
                         <span>Scheduled & Confirmed Conference</span>
                       </span>
-                      <span className="text-xs font-bold text-emerald-200 font-mono">
-                        📅 {req.confirmedDate} &bull; ⏰ {req.confirmedTime || '6:30 PM'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-200 font-mono">
+                          📅 {req.confirmedDate} &bull; ⏰ {req.confirmedTime || '6:30 PM'}
+                        </span>
+                        <ConferenceCountdown date={req.confirmedDate} time={req.confirmedTime} variant="pill" />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200 pt-1">
@@ -647,8 +702,48 @@ export default function LeaderParentRequests({
                   </div>
                 )}
 
+                {/* Cancelled by Parent Banner */}
+                {isCancelled && (
+                  <div className="bg-rose-950/60 border border-rose-500/60 p-4 rounded-2xl space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-rose-300 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <AlertTriangle size={14} className="text-rose-400" />
+                        <span>Meeting Cancelled by Parent: {req.cancelledBy || req.parentName}</span>
+                      </span>
+                      {req.cancelledAt && (
+                        <span className="font-mono text-[10px] text-slate-400">
+                          {new Date(req.cancelledAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-rose-200 bg-rose-900/30 p-2.5 rounded-xl border border-rose-800/40 italic">
+                      Reason: "{req.cancelReason || 'Meeting cancelled by parent.'}"
+                    </p>
+                  </div>
+                )}
+
+                {/* Declined by Leader Banner */}
+                {isDeclined && (
+                  <div className="bg-amber-950/50 border border-amber-500/50 p-4 rounded-2xl space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-amber-300 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <AlertCircle size={14} className="text-amber-400" />
+                        <span>Meeting Declined by Leader: {req.declinedBy} ({req.declinedByRole || 'Leader'})</span>
+                      </span>
+                      {req.declinedAt && (
+                        <span className="font-mono text-[10px] text-slate-400">
+                          {new Date(req.declinedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-amber-200 bg-amber-900/30 p-2.5 rounded-xl border border-amber-800/40 italic">
+                      Explanation to Parent: "{req.declineReason || 'Leader unavailable for requested slot.'}"
+                    </p>
+                  </div>
+                )}
+
                 {/* Audit & Follow-up History Trail */}
-                {(req.acknowledgedBy || req.resolvedBy) && !isConfirmed && (
+                {(req.acknowledgedBy || req.resolvedBy) && !isConfirmed && !isCancelled && !isDeclined && (
                   <div className="pt-2 border-t border-slate-800 flex items-center gap-4 text-xs text-slate-400 flex-wrap">
                     {req.acknowledgedBy && (
                       <span className="flex items-center gap-1 text-sky-300">
@@ -696,14 +791,32 @@ export default function LeaderParentRequests({
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {/* If Conference / Meeting Request: Dedicated Confirm & Schedule Action */}
                     {isMeeting && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMeetingConfirm(req)}
-                        className="px-4 py-2 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-sky-950/40"
-                      >
-                        <Calendar size={13} />
-                        <span>{isConfirmed ? '✏️ Reschedule / Modify' : '📅 Confirm & Schedule Meeting'}</span>
-                      </button>
+                      <>
+                        {(!isCancelled && !isDeclined) && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMeetingConfirm(req)}
+                            className="px-4 py-2 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-sky-950/40"
+                          >
+                            <Calendar size={13} />
+                            <span>{isConfirmed ? '✏️ Reschedule / Modify' : '📅 Confirm & Schedule Meeting'}</span>
+                          </button>
+                        )}
+
+                        {(!isCancelled && !isDeclined) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDecliningMeeting(req);
+                              setDeclineReason('');
+                            }}
+                            className="px-3.5 py-2 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 rounded-xl text-xs font-bold transition border border-slate-700 hover:border-rose-600 flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <X size={13} />
+                            <span>Decline Request</span>
+                          </button>
+                        )}
+                      </>
                     )}
 
                     {isPending && !isMeeting && (
@@ -937,6 +1050,79 @@ export default function LeaderParentRequests({
                 <button
                   type="button"
                   onClick={() => setResolvingRequest(null)}
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 3: DECLINE PARENT CONFERENCE REQUEST ── */}
+      {decliningMeeting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-rose-500/70 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] uppercase font-black text-rose-400 block tracking-wider">
+                  Decline Conference Request
+                </span>
+                <h3 className="font-extrabold text-white text-base mt-0.5 flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-rose-400" />
+                  <span>Decline Meeting for {decliningMeeting.scoutName}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDecliningMeeting(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Parent: {decliningMeeting.parentName}</span>
+                {decliningMeeting.meetingTopic && (
+                  <span className="text-sky-300 font-bold">Topic: {decliningMeeting.meetingTopic}</span>
+                )}
+              </div>
+              <p className="text-slate-300 italic">"{decliningMeeting.message || 'No additional note'}"</p>
+            </div>
+
+            <form onSubmit={handleDeclineMeetingSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                  Reason / Explanation to Parent *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="e.g. Salam, I am unavailable at this specific time due to leadership duties. Could we meet this Friday right before the opening roll call at 6:00 PM?"
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500 font-sans"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  This reason will be logged in the executive audit trail and dispatched immediately to the parent via in-app alert and email.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingDecline}
+                  className="flex-1 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-950/40"
+                >
+                  <X size={15} />
+                  <span>{isSubmittingDecline ? 'Declining & Notifying...' : 'Decline Request & Notify Parent'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDecliningMeeting(null)}
                   className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
                 >
                   Cancel

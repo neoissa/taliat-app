@@ -59,6 +59,7 @@ import {
   ChevronUp,
   CheckCheck
 } from 'lucide-react';
+import ConferenceCountdown from './ConferenceCountdown';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
@@ -355,6 +356,34 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     });
     return () => unsubRsvp();
   }, [selectedEvent?.id]);
+
+  // 6. Subscribe to Confirmed Parent Conferences
+  const [confirmedConferences, setConfirmedConferences] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'parent_requests'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.requestType === 'meeting_request' && r.status === 'confirmed');
+      
+      const matching = list.filter(r => {
+        if (isParent) {
+          if (r.parentUid === currentUser?.uid) return true;
+          if (currentUser?.email && r.parentEmail && r.parentEmail.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+          if (linkedScouts.some(s => s.uid === r.scoutId || s.id === r.scoutId || s.fullName === r.scoutName)) return true;
+          return false;
+        }
+        if (!isExecutive && currentUser?.groupId) {
+          if (r.targetLeaderUid === currentUser?.uid || r.confirmedByUid === currentUser?.uid) return true;
+          if (r.patrolId && (r.patrolId === currentUser.groupId || r.patrolName === currentUser.assignedPatrol)) return true;
+          return false;
+        }
+        return true;
+      });
+
+      matching.sort((a, b) => new Date(a.confirmedDate || '9999-12-31') - new Date(b.confirmedDate || '9999-12-31'));
+      setConfirmedConferences(matching);
+    }, (err) => console.warn("EventsManager parent_requests listener:", err));
+
+    return () => unsub();
+  }, [isParent, isExecutive, currentUser, linkedScouts]);
 
   // Sync existing RSVP if user already submitted
   useEffect(() => {
@@ -1986,6 +2015,87 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── UPCOMING CONFIRMED 1-ON-1 LEADER CONFERENCES ── */}
+      {timeHorizon === 'upcoming' && confirmedConferences.length > 0 && (
+        <div className="bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border-2 border-sky-500/50 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-sky-500/20 border border-sky-400/60 flex items-center justify-center text-sky-300 shrink-0 shadow-md">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase bg-sky-500 text-slate-950 px-2.5 py-0.5 rounded-full tracking-wider">
+                    1-on-1 Conference
+                  </span>
+                  <span className="text-xs text-sky-400 font-mono font-bold">
+                    {confirmedConferences.length} Scheduled
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-white mt-0.5">
+                  Confirmed Leader & Parent Conferences
+                </h3>
+              </div>
+            </div>
+
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate(isParent ? 'parent-hub' : 'parent-requests')}
+                className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto hover:underline"
+              >
+                <span>{isParent ? 'Open Parent Hub' : 'Manage Inquiries'}</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {confirmedConferences.map(conf => (
+              <div
+                key={conf.id || conf.requestId}
+                className="bg-slate-950/80 border border-sky-500/40 p-4 rounded-2xl space-y-3 shadow-md"
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold text-sky-400 block uppercase">
+                      {conf.patrolName || 'Troop 313'}
+                    </span>
+                    <strong className="text-sm font-black text-white block">
+                      {conf.scoutName}
+                    </strong>
+                    <span className="text-xs text-slate-300">
+                      Parent: <strong>{conf.parentName}</strong>
+                    </span>
+                  </div>
+                  <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="pill" />
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-300 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                    <Calendar size={13} className="text-emerald-400 shrink-0" />
+                    <span>{conf.confirmedDate} at {conf.confirmedTime || '6:30 PM'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={13} className="text-sky-400 shrink-0" />
+                    <span className="truncate">{conf.meetingLocation || 'Troop Headquarters'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <UserCheck size={13} className="text-sky-400 shrink-0" />
+                    <span>Leader: <strong>{conf.confirmedBy || 'Troop Leader'}</strong> ({conf.confirmedByRole || 'Leader'})</span>
+                  </div>
+                  {conf.confirmationNote && (
+                    <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800">
+                      "{conf.confirmationNote}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

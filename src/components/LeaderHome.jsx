@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
+import ConferenceCountdown from './ConferenceCountdown';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
@@ -660,9 +661,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             {/* C. Confirmed Conferences Reminder */}
             {confirmedConferences.length > 0 && (
-              <div className="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
                     <CheckCircle2 size={18} />
                   </div>
                   <div>
@@ -674,13 +675,20 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'confirmed' })}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold shrink-0 self-start sm:self-auto cursor-pointer"
-                >
-                  View Confirmed List &rarr;
-                </button>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                  <ConferenceCountdown 
+                    date={confirmedConferences[0].confirmedDate} 
+                    time={confirmedConferences[0].confirmedTime} 
+                    variant="pill" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'all' })}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-bold shrink-0 cursor-pointer hover:underline"
+                  >
+                    View All &rarr;
+                  </button>
+                </div>
               </div>
             )}
           </div>

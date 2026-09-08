@@ -11,7 +11,8 @@ import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankComple
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import { signPublishedReportByParent } from '../services/publishedReportsService';
-import { createParentRequest } from '../services/parentRequestService';
+import { createParentRequest, cancelMeetingRequestByParent } from '../services/parentRequestService';
+import ConferenceCountdown from './ConferenceCountdown';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import SignaturePadModal from './SignaturePadModal';
@@ -267,6 +268,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [parentRequestsList, setParentRequestsList] = useState([]);
 
   // Dual-Parent Family Profile State
+  const [primaryAccountHolder, setPrimaryAccountHolder] = useState('parent1'); // 'parent1' | 'parent2'
   const [isEditingFamily, setIsEditingFamily] = useState(false);
   const [parent1Name, setParent1Name] = useState('');
   const [parent1Phone, setParent1Phone] = useState('');
@@ -281,6 +283,12 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [familySaving, setFamilySaving] = useState(false);
   const [familyMsg, setFamilyMsg] = useState('');
+
+  // Conference Cancellation State
+  const [cancellingConference, setCancellingConference] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancellingConference, setIsCancellingConference] = useState(false);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
 
   // Published Reports & Parent Signature State
   const [publishedReports, setPublishedReports] = useState([]);
@@ -312,6 +320,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         setParentDoc({ uid: snap.id, ...data });
         
         // Sync family profile initial fields
+        setPrimaryAccountHolder(data.primaryAccountHolder || 'parent1');
         setParent1Name(data.parent1Name || data.fullName || '');
         setParent1Phone(data.parent1Phone || data.phone || '');
         setParent1Email(data.parent1Email || data.email || '');
@@ -804,14 +813,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     setFamilyMsg('');
 
     const payload = {
+      primaryAccountHolder: primaryAccountHolder || 'parent1',
       parent1Name: parent1Name.trim(),
       parent1Phone: parent1Phone.trim(),
       parent1Email: parent1Email.trim().toLowerCase(),
-      parent1Relation,
+      parent1Relation: parent1Relation || 'Father',
       parent2Name: parent2Name.trim(),
       parent2Phone: parent2Phone.trim(),
       parent2Email: parent2Email.trim().toLowerCase(),
-      parent2Relation,
+      parent2Relation: parent2Relation || 'Mother',
       familyAddress: familyAddress.trim(),
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim(),
@@ -830,10 +840,58 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     }
   };
 
+  // Submit Meeting Cancellation by Parent
+  const handleCancelConferenceSubmit = async (e) => {
+    e.preventDefault();
+    if (!cancellingConference || !currentUser?.uid) return;
+    setIsCancellingConference(true);
+    setCancelSuccessMsg('');
+
+    const effectiveParentName = (parentDoc?.primaryAccountHolder || primaryAccountHolder) === 'parent2' 
+      ? (parent2Name || 'Mother') 
+      : (parent1Name || parentDoc?.fullName || 'Father');
+
+    try {
+      await cancelMeetingRequestByParent({
+        requestId: cancellingConference.requestId || cancellingConference.id,
+        parentUid: currentUser.uid,
+        parentName: effectiveParentName,
+        cancelReason: cancelReason.trim(),
+        targetLeaderUid: cancellingConference.targetLeaderUid || cancellingConference.confirmedByUid,
+        targetLeaderName: cancellingConference.targetLeaderName || cancellingConference.confirmedBy,
+        scoutName: cancellingConference.scoutName,
+        patrolName: cancellingConference.patrolName,
+        confirmedDate: cancellingConference.confirmedDate,
+        confirmedTime: cancellingConference.confirmedTime
+      });
+
+      setCancelSuccessMsg(`✓ Meeting for ${cancellingConference.scoutName} has been cancelled. Leadership notified.`);
+      setTimeout(() => {
+        setCancellingConference(null);
+        setCancelReason('');
+        setCancelSuccessMsg('');
+      }, 1800);
+    } catch (err) {
+      alert("Failed to cancel meeting: " + err.message);
+    } finally {
+      setIsCancellingConference(false);
+    }
+  };
+
   // Active Scoped Scout (or null for all)
   const isAllView = selectedScoutId === 'all';
   const activeScout = !isAllView ? linkedScouts.find(s => s.uid === selectedScoutId) || linkedScouts[0] : null;
   const scopedScouts = isAllView ? linkedScouts : activeScout ? [activeScout] : [];
+
+  // Resolved Primary Account Holder & Dynamic Greeting
+  const effectivePrimaryHolder = parentDoc?.primaryAccountHolder || primaryAccountHolder || 'parent1';
+  const isParent2Primary = effectivePrimaryHolder === 'parent2';
+  const primaryName = isParent2Primary
+    ? (parent2Name || parentDoc?.parent2Name || 'Mother / Guardian 2')
+    : (parent1Name || parentDoc?.parent1Name || parentDoc?.fullName || parentDoc?.username || 'Father / Guardian 1');
+  const primaryRelation = isParent2Primary
+    ? (parent2Relation || parentDoc?.parent2Relation || 'Mother')
+    : (parent1Relation || parentDoc?.parent1Relation || 'Father');
 
   // Urgent 7-Day Deadline Evaluation
   const now = new Date();
@@ -957,15 +1015,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-black text-white">
-                Welcome back, {parent1Name || parentDoc.fullName || 'Parent'}!
+              <h2 className="text-xl sm:text-2xl font-black text-white">
+                Assalāmu ʿAlaykum, {primaryName} <span className="text-emerald-400 font-bold text-sm">({primaryRelation})</span>
               </h2>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Family Portal
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                ⭐ Primary Account Holder
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-1">
-              Here’s what your family has coming up this week across scouting & learning.
+              Here’s what your family has coming up this week across scouting, advancement & learning.
             </p>
           </div>
         </div>
@@ -1191,12 +1249,21 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* Parent 1 (Father / Primary) */}
-              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                    {parent1Relation || 'Father / Guardian 1'}
-                  </span>
-                  <User size={13} className="text-emerald-400" />
+              <div className={`bg-slate-900/90 border p-4 rounded-2xl space-y-2 transition ${
+                !isParent2Primary ? 'border-emerald-500/70 shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/30' : 'border-slate-755'
+              }`}>
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                      {parent1Relation || 'Father'}
+                    </span>
+                    {!isParent2Primary && (
+                      <span className="text-[9px] font-black uppercase bg-amber-400/20 text-amber-300 border border-amber-500/40 px-2 py-0.2 rounded-full">
+                        ⭐ Primary Holder
+                      </span>
+                    )}
+                  </div>
+                  <User size={13} className="text-emerald-400 shrink-0" />
                 </div>
                 <div>
                   <strong className="text-sm font-bold text-white block">
@@ -1206,7 +1273,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     <div className="flex items-center gap-1.5">
                       <Phone size={12} className="text-emerald-400 shrink-0" />
                       {parent1Phone || parentDoc.phone ? (
-                        <a href={`tel:${parent1Phone || parentDoc.phone}`} className="hover:underline text-slate-200">
+                        <a href={`tel:${parent1Phone || parentDoc.phone}`} className="hover:underline text-slate-200 font-mono">
                           {parent1Phone || parentDoc.phone}
                         </a>
                       ) : (
@@ -1228,12 +1295,21 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
 
               {/* Parent 2 (Mother / Secondary) */}
-              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/60 border border-teal-500/30 px-2 py-0.5 rounded-full">
-                    {parent2Relation || 'Mother / Guardian 2'}
-                  </span>
-                  <User size={13} className="text-teal-400" />
+              <div className={`bg-slate-900/90 border p-4 rounded-2xl space-y-2 transition ${
+                isParent2Primary ? 'border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30' : 'border-slate-755'
+              }`}>
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/60 border border-teal-500/30 px-2 py-0.5 rounded-full">
+                      {parent2Relation || 'Mother'}
+                    </span>
+                    {isParent2Primary && (
+                      <span className="text-[9px] font-black uppercase bg-amber-400/20 text-amber-300 border border-amber-500/40 px-2 py-0.2 rounded-full">
+                        ⭐ Primary Holder
+                      </span>
+                    )}
+                  </div>
+                  <User size={13} className="text-teal-400 shrink-0" />
                 </div>
                 <div>
                   <strong className="text-sm font-bold text-white block">
@@ -1243,7 +1319,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     <div className="flex items-center gap-1.5">
                       <Phone size={12} className="text-teal-400 shrink-0" />
                       {parent2Phone ? (
-                        <a href={`tel:${parent2Phone}`} className="hover:underline text-slate-200">
+                        <a href={`tel:${parent2Phone}`} className="hover:underline text-slate-200 font-mono">
                           {parent2Phone}
                         </a>
                       ) : (
@@ -1326,41 +1402,61 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 {confirmedConferences.map(conf => (
                   <div 
                     key={conf.requestId || conf.id}
-                    className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/60 p-5 rounded-2xl space-y-3 shadow-lg"
+                    className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/60 p-5 rounded-2xl space-y-3 shadow-lg flex flex-col justify-between"
                   >
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle2 size={12} />
-                        <span>Confirmed Conference</span>
-                      </span>
-                      <span className="text-xs font-bold text-emerald-300 font-mono">
-                        📅 {conf.confirmedDate} &bull; ⏰ {conf.confirmedTime || '6:30 PM'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <h4 className="font-extrabold text-white text-sm">
-                        {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        Meeting Topic: <strong className="text-emerald-300">{conf.meetingTopic || 'Advancement & Progress'}</strong>
-                      </p>
-                    </div>
-
-                    <div className="bg-slate-950/70 border border-slate-800 p-3 rounded-xl space-y-1.5 text-xs">
-                      <div className="flex items-center gap-1.5 text-slate-200">
-                        <User size={12} className="text-emerald-400 shrink-0" />
-                        <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || 'Troop Leader'} ({conf.confirmedByRole || 'Scoutmaster'})</span>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 size={12} />
+                          <span>Confirmed Conference</span>
+                        </span>
+                        <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="pill" />
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-200">
-                        <MapPin size={12} className="text-emerald-400 shrink-0" />
-                        <span><strong>Venue / Location:</strong> {conf.meetingLocation || 'Troop Headquarters'}</span>
-                      </div>
-                      {conf.confirmationNote && (
-                        <p className="text-xs text-emerald-200/90 italic pt-1 border-t border-slate-800">
-                          📝 Leader Note: "{conf.confirmationNote}"
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-extrabold text-white text-sm">
+                            {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
+                          </h4>
+                          <span className="text-xs font-bold text-emerald-300 font-mono">
+                            📅 {conf.confirmedDate} @ {conf.confirmedTime || '6:30 PM'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          Topic: <strong className="text-emerald-300">{conf.meetingTopic || 'Advancement & Progress'}</strong>
                         </p>
-                      )}
+                      </div>
+
+                      <div className="bg-slate-950/70 border border-slate-800 p-3 rounded-xl space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-slate-200">
+                          <User size={12} className="text-emerald-400 shrink-0" />
+                          <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || 'Troop Leader'} ({conf.confirmedByRole || 'Scoutmaster'})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-200">
+                          <MapPin size={12} className="text-emerald-400 shrink-0" />
+                          <span><strong>Venue / Location:</strong> {conf.meetingLocation || 'Troop Headquarters'}</span>
+                        </div>
+                        {conf.confirmationNote && (
+                          <p className="text-xs text-emerald-200/90 italic pt-1 border-t border-slate-800">
+                            📝 Leader Note: "{conf.confirmationNote}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                      <span className="text-[10px] text-emerald-400 font-mono">✓ Confirmed with Leadership</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingConference(conf);
+                          setCancelReason('');
+                        }}
+                        className="px-3 py-1.5 bg-red-950/60 hover:bg-red-900/80 text-red-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-red-500/40 cursor-pointer"
+                      >
+                        <XCircle size={13} />
+                        <span>Cancel Meeting</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1369,30 +1465,47 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 {pendingConferences.map(conf => (
                   <div 
                     key={conf.requestId || conf.id}
-                    className="bg-slate-900 border border-amber-500/40 p-5 rounded-2xl space-y-3 shadow-md"
+                    className="bg-slate-900 border border-amber-500/40 p-5 rounded-2xl space-y-3 shadow-md flex flex-col justify-between"
                   >
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-[10px] font-black uppercase bg-amber-950 text-amber-300 border border-amber-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <Clock size={12} />
-                        <span>Awaiting Leader Confirmation</span>
-                      </span>
-                      <span className="text-xs text-slate-400 font-mono">
-                        Pref: {conf.proposedDate || 'Flexible'} {conf.proposedTime ? `at ${conf.proposedTime}` : ''}
-                      </span>
-                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-[10px] font-black uppercase bg-amber-950 text-amber-300 border border-amber-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Clock size={12} />
+                          <span>Awaiting Leader Confirmation</span>
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">
+                          Pref: {conf.proposedDate || 'Flexible'} {conf.proposedTime ? `at ${conf.proposedTime}` : ''}
+                        </span>
+                      </div>
 
-                    <div className="space-y-1">
-                      <h4 className="font-extrabold text-white text-sm">
-                        {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
-                      </h4>
-                      <p className="text-xs text-slate-300">
-                        Requested Leader: <strong className="text-amber-300">{conf.targetLeaderName || 'Any Available Leader / Scoutmaster'}</strong>
+                      <div className="space-y-1">
+                        <h4 className="font-extrabold text-white text-sm">
+                          {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
+                        </h4>
+                        <p className="text-xs text-slate-300">
+                          Requested Leader: <strong className="text-amber-300">{conf.targetLeaderName || 'Any Available Leader / Scoutmaster'}</strong>
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 italic">
+                        "{conf.message}"
                       </p>
                     </div>
 
-                    <p className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 italic">
-                      "{conf.message}"
-                    </p>
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                      <span className="text-[10px] text-amber-400 font-mono">⏳ In Leader Review Queue</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingConference(conf);
+                          setCancelReason('');
+                        }}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-red-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 cursor-pointer"
+                      >
+                        <XCircle size={13} />
+                        <span>Cancel Request</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1920,6 +2033,83 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             </div>
           </div>
 
+          {/* Confirmed 1-on-1 Leader Conferences (Pinned to top of Upcoming Schedule) */}
+          {eventSubTab === 'upcoming' && confirmedConferences.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  <span>Personal 1-on-1 Leader Conferences ({confirmedConferences.length})</span>
+                </span>
+                <span className="text-[11px] text-slate-400 italic">Confirmed with Troop Leadership</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {confirmedConferences.map(conf => (
+                  <div
+                    key={`ev_conf_${conf.requestId || conf.id}`}
+                    className="bg-gradient-to-br from-emerald-950/70 via-slate-900 to-slate-900 border-2 border-emerald-500/70 p-6 rounded-3xl space-y-4 shadow-xl flex flex-col justify-between"
+                  >
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md">
+                          <CheckCircle2 size={13} />
+                          <span>Confirmed 1-on-1 Conference</span>
+                        </span>
+                        <span className="text-xs font-mono font-bold text-emerald-300">
+                          📅 {conf.confirmedDate} @ {conf.confirmedTime || '6:30 PM'}
+                        </span>
+                      </div>
+
+                      {/* Live Segmented Countdown Timer */}
+                      <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="full" />
+
+                      <div className="space-y-1">
+                        <h4 className="font-extrabold text-white text-lg flex items-center gap-2">
+                          <span>🤝 Conference for {conf.scoutName}</span>
+                        </h4>
+                        <p className="text-xs text-slate-300">
+                          Patrol: <strong className="text-slate-200">{conf.patrolName}</strong> &bull; Topic: <strong className="text-emerald-300">{conf.meetingTopic || 'Advancement Review'}</strong>
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-2 text-xs">
+                        <div className="flex items-center gap-2 text-slate-200">
+                          <User size={13} className="text-emerald-400 shrink-0" />
+                          <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || 'Troop Leader'} ({conf.confirmedByRole || 'Scoutmaster'})</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-200">
+                          <MapPin size={13} className="text-emerald-400 shrink-0" />
+                          <span><strong>Meeting Location:</strong> {conf.meetingLocation || 'Troop Headquarters (Highview Elementary School)'}</span>
+                        </div>
+                        {conf.confirmationNote && (
+                          <div className="pt-2 border-t border-slate-800 text-xs text-emerald-200/90 italic">
+                            📝 Leader Note: "{conf.confirmationNote}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                      <span className="text-[11px] text-emerald-400 font-mono font-bold">✓ Active Personal Appointment</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingConference(conf);
+                          setCancelReason('');
+                        }}
+                        className="px-4 py-2 bg-red-950/70 hover:bg-red-900/90 text-red-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-red-500/50 cursor-pointer shadow-md"
+                      >
+                        <XCircle size={14} />
+                        <span>Cancel Conference</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Events Stream */}
           {(() => {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1927,7 +2117,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             const pastList = eventsList.filter(e => (e.date || '') < todayStr);
             const displayList = eventSubTab === 'past' ? pastList : upcomingList;
 
-            if (displayList.length === 0) {
+            if (displayList.length === 0 && (eventSubTab !== 'upcoming' || confirmedConferences.length === 0)) {
               return (
                 <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center text-xs text-slate-400 italic">
                   {eventSubTab === 'past' ? 'No past events found.' : 'No upcoming troop events scheduled right now.'}
@@ -3500,9 +3690,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         <div className="bg-slate-850 border border-slate-750 p-6 sm:p-7 rounded-3xl shadow-xl space-y-6">
           <div className="flex justify-between items-center border-b border-slate-750 pb-4">
             <div>
-              <h3 className="font-extrabold text-white text-lg">Dual-Parent Household Profile</h3>
+              <h3 className="font-extrabold text-white text-lg">Dual-Parent Household & Identity Profile</h3>
               <p className="text-xs text-slate-400">
-                Manage contact details for both parents and household emergency contacts.
+                Identify Father, Mother, and Guardians, designate the Primary Account Holder for greetings, and manage emergency contacts.
               </p>
             </div>
             {!isEditingFamily ? (
@@ -3525,20 +3715,123 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             )}
           </div>
 
-          {familyMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{familyMsg}</p>}
+          {familyMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600 font-bold">{familyMsg}</p>}
 
           <form onSubmit={handleSaveFamilyProfile} className="space-y-6">
-            {/* Parent 1 (Primary) */}
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <h4 className="font-extrabold text-emerald-400 text-xs uppercase tracking-wider">Parent 1 (Primary Contact)</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* 1. Primary Account Holder Selector */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 p-5 rounded-2xl border border-emerald-500/40 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
+                  <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
+                    <span>⭐ Primary Account Holder & Portal Greeting</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Select which parent or guardian receives main dashboard greetings and primary correspondence.
+                  </p>
+                </div>
+                <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-mono font-bold">
+                  Active: {primaryName} ({primaryRelation})
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Radio Card 1: Parent 1 */}
+                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
+                  primaryAccountHolder === 'parent1'
+                    ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/30'
+                    : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
+                }`}>
+                  <input
+                    type="radio"
+                    name="primaryAccountHolder"
+                    value="parent1"
+                    disabled={!isEditingFamily}
+                    checked={primaryAccountHolder === 'parent1'}
+                    onChange={() => setPrimaryAccountHolder('parent1')}
+                    className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <div className="space-y-0.5">
+                    <strong className="text-sm font-bold text-white block">
+                      {parent1Name || 'Parent 1'}
+                    </strong>
+                    <span className="text-xs text-emerald-400 block font-medium">
+                      Relationship: {parent1Relation || 'Father'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {parent1Email || 'Primary email'}
+                    </span>
+                  </div>
+                </label>
+
+                {/* Radio Card 2: Parent 2 */}
+                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
+                  primaryAccountHolder === 'parent2'
+                    ? 'bg-teal-950/50 border-teal-500 ring-2 ring-teal-500/30'
+                    : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
+                }`}>
+                  <input
+                    type="radio"
+                    name="primaryAccountHolder"
+                    value="parent2"
+                    disabled={!isEditingFamily}
+                    checked={primaryAccountHolder === 'parent2'}
+                    onChange={() => setPrimaryAccountHolder('parent2')}
+                    className="mt-1 text-teal-500 focus:ring-teal-500"
+                  />
+                  <div className="space-y-0.5">
+                    <strong className="text-sm font-bold text-white block">
+                      {parent2Name || 'Parent 2 (Mother / Guardian)'}
+                    </strong>
+                    <span className="text-xs text-teal-400 block font-medium">
+                      Relationship: {parent2Relation || 'Mother'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {parent2Email || 'Secondary email'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* 2. Parent 1 Details */}
+            <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h4 className="font-extrabold text-emerald-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <User size={14} />
+                  <span>Parent 1 Profile</span>
+                </h4>
+                {primaryAccountHolder === 'parent1' && (
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                    ⭐ Designated Primary Holder
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
+                  <select
+                    disabled={!isEditingFamily}
+                    value={parent1Relation}
+                    onChange={(e) => setParent1Relation(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
+                  >
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Guardian">Guardian</option>
+                    <option value="Grandparent">Grandparent</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name *</label>
                   <input
                     type="text"
                     disabled={!isEditingFamily}
                     value={parent1Name}
                     onChange={(e) => setParent1Name(e.target.value)}
+                    placeholder="e.g. Ghadeer Fares"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
@@ -3550,7 +3843,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     disabled={!isEditingFamily}
                     value={parent1Phone}
                     onChange={(e) => setParent1Phone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                    placeholder="(555) 000-0000"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
                   />
                 </div>
 
@@ -3561,16 +3855,44 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     disabled={!isEditingFamily}
                     value={parent1Email}
                     onChange={(e) => setParent1Email(e.target.value)}
+                    placeholder="parent1@example.com"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Parent 2 (Secondary) */}
+            {/* 3. Parent 2 Details */}
             <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <h4 className="font-extrabold text-sky-400 text-xs uppercase tracking-wider">Parent 2 (Secondary Contact)</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h4 className="font-extrabold text-teal-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <User size={14} />
+                  <span>Parent 2 Profile</span>
+                </h4>
+                {primaryAccountHolder === 'parent2' && (
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                    ⭐ Designated Primary Holder
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
+                  <select
+                    disabled={!isEditingFamily}
+                    value={parent2Relation}
+                    onChange={(e) => setParent2Relation(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
+                  >
+                    <option value="Mother">Mother</option>
+                    <option value="Father">Father</option>
+                    <option value="Guardian">Guardian</option>
+                    <option value="Grandparent">Grandparent</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
                   <input
@@ -3591,7 +3913,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                     placeholder="(555) 000-0000"
                     value={parent2Phone}
                     onChange={(e) => setParent2Phone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
                   />
                 </div>
 
@@ -3609,7 +3931,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
             </div>
 
-            {/* Address & Emergency */}
+            {/* 4. Address & Emergency */}
             <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
               <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider">Household Address & Emergency Contact</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3650,6 +3972,77 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </button>
             )}
           </form>
+        </div>
+      )}
+
+      {/* ── MODAL: CANCEL CONFERENCE (PARENT) ── */}
+      {cancellingConference && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-red-500/60 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <AlertTriangle size={18} className="text-red-400" />
+                <span>Cancel Leader Conference</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCancellingConference(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {cancelSuccessMsg && (
+              <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600 font-bold">
+                {cancelSuccessMsg}
+              </p>
+            )}
+
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1 text-xs text-slate-300">
+              <p><strong>Scout:</strong> {cancellingConference.scoutName}</p>
+              <p><strong>Topic:</strong> {cancellingConference.meetingTopic || 'Conference'}</p>
+              {cancellingConference.confirmedDate && (
+                <p><strong>Scheduled:</strong> {cancellingConference.confirmedDate} at {cancellingConference.confirmedTime || '6:30 PM'}</p>
+              )}
+              {cancellingConference.confirmedBy && (
+                <p><strong>Leader:</strong> {cancellingConference.confirmedBy}</p>
+              )}
+            </div>
+
+            <form onSubmit={handleCancelConferenceSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                  Reason for Cancellation (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Schedule conflict, family travel, or will reschedule next week..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-red-500 font-sans"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isCancellingConference}
+                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <XCircle size={14} />
+                  <span>{isCancellingConference ? 'Cancelling...' : 'Confirm Cancellation'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancellingConference(null)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Keep Meeting
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -3955,8 +4348,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           onClose={() => setSigningPublishedReport(null)}
           title={`Parent Digital Signature: ${signingPublishedReport.scoutName}`}
           subtitle="Official Progress Report Certification & Verification Stamp"
-          defaultSignerName={parent1Name || currentUser.fullName || ''}
-          defaultSignerRole={parent1Relation || 'Parent'}
+          defaultSignerName={primaryName}
+          defaultSignerRole={primaryRelation || 'Parent'}
           saving={isSubmittingParentSignature}
           onSave={handleSaveParentSignature}
         />

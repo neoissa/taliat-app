@@ -332,9 +332,273 @@ export async function confirmMeetingRequest({
       }
     }
 
+    // 3. Record Executive Audit Trail in /audit_logs
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_CONFIRMED_MEETING',
+        action: 'CONFIRMED_MEETING',
+        category: 'LEADER_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        role: leaderRole || 'Leader',
+        details: `Conference confirmed for ${confirmedDate} at ${confirmedTime} at ${meetingLocation}.${confirmationNote ? ` Note: "${confirmationNote}"` : ''}`,
+        scoutName,
+        confirmedDate,
+        confirmedTime,
+        meetingLocation,
+        timestamp: serverTimestamp(),
+        createdAt: confirmedAt
+      });
+    } catch (auditErr) {
+      console.warn("Audit log write fallback:", auditErr);
+    }
+
     return { success: true, confirmedAt };
   } catch (err) {
     console.error("Error confirming meeting request:", err);
+    throw err;
+  }
+}
+
+/**
+ * Parent cancels a requested or confirmed meeting
+ */
+export async function cancelMeetingRequestByParent({
+  requestId,
+  parentUid,
+  parentName = 'Parent / Guardian',
+  cancelReason = '',
+  targetLeaderUid = null,
+  targetLeaderName = null,
+  scoutName = 'Scout',
+  patrolName = 'Patrol',
+  confirmedDate = null,
+  confirmedTime = null
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const cancelledAt = new Date().toISOString();
+
+    const updateData = {
+      status: 'cancelled_by_parent',
+      cancelledBy: parentName,
+      cancelledByUid: parentUid || null,
+      cancelledAt,
+      cancelReason: cancelReason || 'Meeting cancelled by parent.',
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(reqRef, updateData);
+
+    // 1. Record Executive Audit Trail in /audit_logs
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'PARENT_CANCELLED_MEETING',
+        action: 'CANCELLED_MEETING',
+        category: 'PARENT_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: parentName,
+        performedByUid: parentUid || null,
+        role: 'parent',
+        details: `Meeting cancelled by ${parentName}.${cancelReason ? ` Reason: "${cancelReason}"` : ''}${confirmedDate ? ` (Originally scheduled: ${confirmedDate} ${confirmedTime || ''})` : ''}`,
+        scoutName,
+        cancelReason: cancelReason || '',
+        timestamp: serverTimestamp(),
+        createdAt: cancelledAt
+      });
+    } catch (auditErr) {
+      console.warn("Audit log write fallback for parent cancellation:", auditErr);
+    }
+
+    // 2. Dispatch notification to responsible leaders
+    try {
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+      const targetLeaders = allUsers.filter(u => {
+        if (!u.role) return false;
+        const role = u.role.toLowerCase();
+        const isExec = role === 'owner' || role === 'admin' || role === 'executive_leader' || u.isExecutive || u.email === 'neoissa@gmail.com';
+        if (targetLeaderUid && u.uid === targetLeaderUid) return true;
+        if (isExec) return true;
+        return false;
+      });
+
+      const notifMsg = `Parent ${parentName} has cancelled the conference for ${scoutName}.${cancelReason ? ` Reason: "${cancelReason}"` : ''}${confirmedDate ? ` (Scheduled: ${confirmedDate} ${confirmedTime || ''})` : ''}`;
+
+      for (const ldr of targetLeaders) {
+        const notifDoc = {
+          recipientUid: ldr.uid,
+          leaderEmail: ldr.email || null,
+          requestId,
+          requestType: 'meeting_request',
+          title: `⚠️ Conference Cancelled by Parent: ${scoutName}`,
+          message: notifMsg,
+          parentName,
+          scoutName,
+          patrolName,
+          status: 'cancelled_by_parent',
+          actionUrl: '/#admin-requests',
+          read: false,
+          createdAt: cancelledAt,
+          timestamp: serverTimestamp()
+        };
+
+        await addDoc(collection(db, 'leader_notifications'), notifDoc);
+
+        try {
+          await addDoc(collection(db, 'users', ldr.uid, 'notifications'), notifDoc);
+        } catch (e) {}
+
+        if (ldr.email) {
+          try {
+            await addDoc(collection(db, 'mail'), {
+              to: [ldr.email],
+              message: {
+                subject: `[Dhulfiqār Leaders] ⚠️ Conference Cancelled: ${scoutName}`,
+                text: `${notifMsg}\n\nView details: https://taliat-app.web.app/#admin-requests`
+              }
+            });
+          } catch (mErr) {}
+        }
+      }
+    } catch (notifErr) {
+      console.warn("Leader cancellation notification error:", notifErr);
+    }
+
+    return { success: true, cancelledAt };
+  } catch (err) {
+    console.error("Error cancelling meeting request by parent:", err);
+    throw err;
+  }
+}
+
+/**
+ * Leader declines a parent meeting request
+ */
+export async function declineMeetingRequestByLeader({
+  requestId,
+  leaderUid,
+  leaderName = 'Troop Leader',
+  leaderRole = 'Scoutmaster',
+  declineReason = '',
+  parentUid = null,
+  parentEmail = null,
+  scoutName = 'your scout',
+  meetingTopic = 'Scout Conference'
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const declinedAt = new Date().toISOString();
+
+    const updateData = {
+      status: 'declined_by_leader',
+      declinedBy: leaderName,
+      declinedByUid: leaderUid || null,
+      declinedByRole: leaderRole || 'Leader',
+      declinedAt,
+      declineReason: declineReason || 'Leader is unavailable for this time. Please request an alternative.',
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(reqRef, updateData);
+
+    // 1. Record Executive Audit Trail in /audit_logs
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_DECLINED_MEETING',
+        action: 'DECLINED_MEETING',
+        category: 'LEADER_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        role: leaderRole || 'Leader',
+        details: `Conference request declined by ${leaderName} (${leaderRole}).${declineReason ? ` Note: "${declineReason}"` : ''}`,
+        scoutName,
+        declineReason: declineReason || '',
+        timestamp: serverTimestamp(),
+        createdAt: declinedAt
+      });
+    } catch (auditErr) {
+      console.warn("Audit log write fallback for leader decline:", auditErr);
+    }
+
+    // 2. Send Parent In-App Notification
+    if (parentUid || parentEmail) {
+      try {
+        await dispatchParentNotification({
+          recipientUid: parentUid,
+          parentEmail: parentEmail,
+          title: `Leader Conference Update for ${scoutName}`,
+          message: `Leader ${leaderName} (${leaderRole}) was unable to confirm your conference request regarding "${meetingTopic}".\n📝 Leader Note: "${declineReason || 'Please feel free to propose an alternative date or speak with us at the next troop meeting.'}"`,
+          type: 'general',
+          priority: 'urgent',
+          actionUrl: '/#parent-requests',
+          metadata: {
+            requestId,
+            leaderName,
+            leaderRole,
+            declineReason,
+            status: 'declined_by_leader'
+          }
+        });
+      } catch (notifErr) {
+        console.warn("Parent decline notification error:", notifErr);
+      }
+    }
+
+    // 3. Queue Email to Parent via /mail
+    if (parentEmail) {
+      try {
+        await addDoc(collection(db, 'mail'), {
+          to: [parentEmail],
+          message: {
+            subject: `[Dhulfiqār Scouts] Leader Conference Update for ${scoutName}`,
+            text: `Assalāmu ʿAlaykum,\n\nLeader ${leaderName} (${leaderRole}) reviewed your conference request regarding "${meetingTopic}" for ${scoutName}.\n\nLeader Note / Explanation: "${declineReason || 'Please propose an alternative date or meet at our regular troop gathering.'}"\n\nYou may submit a new request via the Parent Portal: https://taliat-app.web.app`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                <div style="background: linear-gradient(135deg, #0f172a, #334155); padding: 16px; border-radius: 8px; color: #ffffff; text-align: center;">
+                  <h2 style="margin: 0; font-size: 20px;">Dhulfiqār Troop 313</h2>
+                  <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Conference Request Status</p>
+                </div>
+                <div style="padding: 20px 0;">
+                  <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+                    <strong style="color: #991b1b; font-size: 15px; display: block;">Conference Request Update</strong>
+                    <span style="color: #b91c1c; font-size: 13px;">Leader ${leaderName} (${leaderRole}) is unavailable for the requested slot.</span>
+                  </div>
+                  <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.8;">
+                    <p style="margin: 4px 0;"><strong>Scout:</strong> ${scoutName}</p>
+                    <p style="margin: 4px 0;"><strong>Topic:</strong> ${meetingTopic}</p>
+                    <p style="margin: 4px 0;"><strong>Leader:</strong> ${leaderName} (${leaderRole})</p>
+                    ${declineReason ? `<p style="margin: 8px 0 4px 0; border-top: 1px solid #e2e8f0; padding-top: 8px;"><strong>Leader Note:</strong> <em>"${declineReason}"</em></p>` : ''}
+                  </div>
+                  <div style="margin: 25px 0; text-align: center;">
+                    <a href="https://taliat-app.web.app" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+                      Open Parent Portal &rarr;
+                    </a>
+                  </div>
+                </div>
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; text-align: center;">
+                  Dhulfiqār Scouts BSA &bull; Troop 313 Leader Conference Registry
+                </div>
+              </div>
+            `
+          }
+        });
+      } catch (mailErr) {
+        console.warn("Mail queue error for meeting decline:", mailErr);
+      }
+    }
+
+    return { success: true, declinedAt };
+  } catch (err) {
+    console.error("Error declining meeting request:", err);
     throw err;
   }
 }
@@ -419,3 +683,4 @@ export async function resolveParentRequest({
     throw err;
   }
 }
+
