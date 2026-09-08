@@ -932,6 +932,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
   const allScopedHomework = scopedScouts.flatMap(s => buildScoutHomework(s));
   const activeHomework = allScopedHomework.filter(h => h.status !== 'completed');
+  const completedHomework = allScopedHomework.filter(h => h.status === 'completed');
   const primaryScopedScout = (!isAllView ? linkedScouts.find(s => s.uid === selectedScoutId) : null) || linkedScouts[0] || null;
   const primaryPatrolName = primaryScopedScout?.patrol || primaryScopedScout?.patrolName || primaryScopedScout?.talia || allGroups.find(g => g.id === primaryScopedScout?.groupId)?.name || 'Patrol';
   const resourcesTabTitle = primaryScopedScout ? `📚 ${primaryPatrolName.replace('Taliʿat ', '')} Resources` : '📚 Patrol Resources';
