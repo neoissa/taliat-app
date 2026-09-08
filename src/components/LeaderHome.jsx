@@ -31,8 +31,8 @@ import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive;
-  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
+  const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.role === 'executive' || currentUser?.isExecutive || currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scout Master';
+  const isScoutmaster = currentUser?.role === 'leader' && (currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster');
   const isTroopWideAuthority = isOwner || isExecutive || isScoutmaster;
   const roleLabel = isOwner ? 'Troop Owner / Superadmin' : currentUser?.leaderPosition || 'Troop Leader';
 
@@ -127,6 +127,20 @@ export default function LeaderHome({ currentUser, onNavigate }) {
     }, (err) => console.warn('LeaderHome assignments fallback:', err));
     return () => unsub();
   }, []);
+
+  // 4.5 Fetch Parent Requests
+  const [parentRequests, setParentRequests] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'parent_requests'), (snap) => {
+      let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const targetGId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
+      if (!isTroopWideAuthority && targetGId) {
+        list = list.filter(r => r.patrolId === targetGId || r.patrolName === currentUser.assignedPatrol || !r.patrolId);
+      }
+      setParentRequests(list);
+    }, (err) => console.warn('Parent requests fallback in LeaderHome:', err));
+    return () => unsub();
+  }, [currentUser, isTroopWideAuthority]);
 
   // 5. Aggregate Real-Time Pending Approvals
   useEffect(() => {
@@ -358,7 +372,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
 
           <div className="flex flex-wrap gap-2.5 shrink-0">
-            {isOwner && (
+            {(isOwner || isExecutive) && (
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('admin')}
@@ -494,6 +508,46 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* ── 1.8 PENDING PARENT REQUESTS ALERT BANNER ── */}
+      {(() => {
+        const pendingReqs = parentRequests.filter(r => r.status === 'pending_review');
+        if (pendingReqs.length === 0) return null;
+
+        return (
+          <div className="bg-gradient-to-r from-sky-950/90 via-slate-900 to-slate-900 border-2 border-sky-500/60 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-2xl shrink-0 text-sky-300">
+                <MessageSquare size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase bg-sky-500 text-slate-950 px-2.5 py-0.5 rounded-full">
+                    Parent Requests ({pendingReqs.length})
+                  </span>
+                  <span className="text-xs text-sky-200 font-mono">
+                    {pendingReqs.filter(r => r.requestType === 'absence_notice').length > 0 ? `${pendingReqs.filter(r => r.requestType === 'absence_notice').length} Absence Notice` : 'Action Required'}
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-white mt-1">
+                  Incoming parent submission from {pendingReqs[0].parentName} for {pendingReqs[0].scoutName}
+                </h3>
+                <p className="text-xs text-slate-300 line-clamp-1">
+                  "{pendingReqs[0].message}"
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('admin')}
+              className="bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
+            >
+              Review Parent Requests &rarr;
+            </button>
+          </div>
+        );
+      })()}
 
       <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
 

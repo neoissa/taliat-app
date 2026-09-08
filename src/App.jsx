@@ -364,6 +364,7 @@ export default function App() {
     } else if (isLeader) {
       return [
         { id: 'home', label: 'Leader Hub', icon: '🏠' },
+        ...(isExecutive ? [{ id: 'admin', label: '👑 Executive Hub', icon: '⚡' }] : []),
         { id: 'roster', label: 'Patrol Roster', icon: '👥' },
         { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
         { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
@@ -928,7 +929,7 @@ export default function App() {
           />
         )}
 
-        {(currentTab === 'admin' || currentTab === 'global-admin') && isOwner && (
+        {(currentTab === 'admin' || currentTab === 'global-admin') && (isOwner || isExecutive) && (
           <AdminPanel currentUser={currentUser} onNavigate={handleNavigate} />
         )}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}

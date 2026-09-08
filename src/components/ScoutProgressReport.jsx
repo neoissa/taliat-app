@@ -616,9 +616,9 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   const scoutInfo = profileData || scout || currentUser || {};
   const scoutFullName = scoutInfo.fullName || scoutInfo.username || 'Scout Member';
   const scoutRank = (scoutInfo.rank || 'Scout').toLowerCase();
-  const rawPatrolName = groupData?.name || profileData?.patrolName || profileData?.groupName || scout?.patrolName || scout?.groupName || currentUser?.patrolName || profileData?.groupId || scout?.groupId || 'Al-Huda';
+  const rawPatrolName = groupData?.name || profileData?.patrolName || profileData?.groupName || scout?.patrolName || scout?.groupName || currentUser?.patrolName || profileData?.groupId || scout?.groupId || 'Unassigned Patrol';
   const formattedTaliaName = (() => {
-    if (!rawPatrolName) return 'Taliʿat Al-Huda';
+    if (!rawPatrolName || rawPatrolName === 'Unassigned Patrol') return 'Unassigned Patrol';
     const lower = String(rawPatrolName).toLowerCase().trim();
     if (lower.startsWith('taliat') || lower.startsWith('talia') || lower.startsWith('taliʿa') || lower.startsWith('taliʿat') || lower.startsWith('tali\'at')) {
       return rawPatrolName;

@@ -11,6 +11,7 @@ import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankComple
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import { signPublishedReportByParent } from '../services/publishedReportsService';
+import { createParentRequest } from '../services/parentRequestService';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import SignaturePadModal from './SignaturePadModal';
@@ -253,6 +254,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [absenceSubmitting, setAbsenceSubmitting] = useState(false);
   const [absenceSuccessMsg, setAbsenceSuccessMsg] = useState('');
 
+  // Leader Conference / Meeting Request State
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [meetingScoutId, setMeetingScoutId] = useState('');
+  const [meetingTopic, setMeetingTopic] = useState('Advancement & Rank Review'); // 'Advancement & Rank Review' | 'Special Accommodation' | 'Behavioral & Leadership' | 'General Inquiry'
+  const [meetingProposedDate, setMeetingProposedDate] = useState('');
+  const [meetingNotes, setMeetingNotes] = useState('');
+  const [meetingSubmitting, setMeetingSubmitting] = useState(false);
+  const [meetingSuccessMsg, setMeetingSuccessMsg] = useState('');
+
   // Dual-Parent Family Profile State
   const [isEditingFamily, setIsEditingFamily] = useState(false);
   const [parent1Name, setParent1Name] = useState('');
@@ -461,6 +471,34 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         signatureDataUrl,
         signerUid: currentUser.uid
       });
+
+      // Dispatch unified parent request & multi-leader notification
+      const targetScout = linkedScouts.find(s => s.uid === signingPublishedReport.scoutId) || {};
+      const scoutGrp = allGroups.find(g => g.id === (targetScout.groupId || targetScout.patrolId || signingPublishedReport.groupId));
+      const pName = scoutGrp?.name || targetScout.patrolName || targetScout.patrol || signingPublishedReport.patrolName || 'Unassigned Patrol';
+
+      try {
+        await createParentRequest({
+          requestType: 'signed_report',
+          parentUid: currentUser.uid,
+          parentName: signerName || parent1Name || currentUser.fullName || 'Parent',
+          parentEmail: parent1Email || currentUser.email || '',
+          parentPhone: parent1Phone || currentUser.phone || '',
+          scoutId: signingPublishedReport.scoutId,
+          scoutName: signingPublishedReport.scoutName || targetScout.fullName || 'Scout Member',
+          patrolId: scoutGrp?.id || targetScout.groupId || '',
+          patrolName: pName,
+          message: `Parent ${signerName || 'Guardian'} digitally signed and certified the official progress report snapshot for ${signingPublishedReport.scoutName}.`,
+          metadata: {
+            reportId: signingPublishedReport.reportId || signingPublishedReport.id,
+            signerRole: signerRole || 'Parent / Guardian',
+            signedAt: signedAt || new Date().toISOString()
+          }
+        });
+      } catch (reqErr) {
+        console.warn("Parent request dispatch error:", reqErr);
+      }
+
       setParentSignSuccessToast(`✓ Official progress report for ${signingPublishedReport.scoutName} successfully signed and certified!`);
       setSigningPublishedReport(null);
 
@@ -515,6 +553,36 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     try {
       const subId = `${submittingTask.id}_${currentUser.uid}`;
       await setDoc(doc(db, 'parent_task_submissions', subId), subData, { merge: true });
+
+      // Dispatch unified parent request & multi-leader notification
+      const targetScout = linkedScouts[0] || {};
+      const scoutGrp = allGroups.find(g => g.id === (targetScout.groupId || targetScout.patrolId));
+      const pName = scoutGrp?.name || targetScout.patrolName || targetScout.patrol || 'Unassigned Patrol';
+
+      try {
+        await createParentRequest({
+          requestType: 'form_submission',
+          parentUid: currentUser.uid,
+          parentName: parent1Name || currentUser.fullName || 'Parent',
+          parentEmail: parent1Email || currentUser.email || '',
+          parentPhone: parent1Phone || currentUser.phone || '',
+          scoutId: targetScout.uid || null,
+          scoutName: targetScout.fullName || 'Scout Member',
+          patrolId: scoutGrp?.id || targetScout.groupId || '',
+          patrolName: pName,
+          message: `Parent submitted form "${submittingTask.title}" with digital signature "${taskSignature}".${taskNotes.trim() ? ` Notes: "${taskNotes.trim()}"` : ''}`,
+          metadata: {
+            taskId: submittingTask.id,
+            taskTitle: submittingTask.title,
+            digitalSignature: taskSignature.trim(),
+            fileUploadUrl: taskFileUploadUrl.trim(),
+            notes: taskNotes.trim()
+          }
+        });
+      } catch (reqErr) {
+        console.warn("Parent request dispatch error:", reqErr);
+      }
+
       setTaskSuccessMsg('✓ Form submitted and acknowledged!');
       setTimeout(() => {
         setSubmittingTask(null);
@@ -537,6 +605,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
     const targetScout = linkedScouts.find(s => s.uid === absenceScoutId);
     const scoutName = targetScout?.fullName || targetScout?.username || 'Scout';
+    const scoutGrp = allGroups.find(g => g.id === (targetScout?.groupId || targetScout?.patrolId));
+    const pName = scoutGrp?.name || targetScout?.patrolName || targetScout?.patrol || 'Unassigned Patrol';
 
     const excuseDoc = {
       scoutId: absenceScoutId,
@@ -555,6 +625,29 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       const excuseId = `excuse_${absenceScoutId}_${absenceDate}`;
       await setDoc(doc(db, 'attendance_excuses', excuseId), excuseDoc, { merge: true });
 
+      // Dispatch unified parent request & multi-leader notification
+      try {
+        await createParentRequest({
+          requestType: 'absence_notice',
+          parentUid: currentUser.uid,
+          parentName: parent1Name || currentUser.fullName || 'Parent',
+          parentEmail: parent1Email || currentUser.email || '',
+          parentPhone: parent1Phone || currentUser.phone || '',
+          scoutId: absenceScoutId,
+          scoutName,
+          patrolId: scoutGrp?.id || targetScout?.groupId || '',
+          patrolName: pName,
+          message: `${scoutName} will be absent from meeting on ${absenceDate}. Reason: ${absenceReason}.${absenceNotes.trim() ? ` Notes: "${absenceNotes.trim()}"` : ''}`,
+          metadata: {
+            absenceDate,
+            absenceReason,
+            absenceNotes: absenceNotes.trim()
+          }
+        });
+      } catch (reqErr) {
+        console.warn("Parent request dispatch error:", reqErr);
+      }
+
       setAbsenceSuccessMsg(`✓ Absence notice filed! ${scoutName} is flagged as Excused on leader roll call.`);
       setTimeout(() => {
         setShowAbsenceModal(false);
@@ -568,18 +661,110 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     }
   };
 
-  // Toggle RSVP status for an event
-  const handleRsvp = async (eventId, scoutId, status) => {
-    const targetId = scoutId === 'all' ? (linkedScouts[0]?.uid || currentUser.uid) : scoutId;
-    const rsvpId = `rsvp_${eventId}_${targetId}`;
+  // Submit Leader Conference / Meeting Request
+  const handleSubmitMeetingRequest = async (e) => {
+    e.preventDefault();
+    const effectiveScoutId = meetingScoutId || linkedScouts[0]?.uid;
+    if (!effectiveScoutId) {
+      alert("Please link a scout to submit a meeting request.");
+      return;
+    }
+    setMeetingSubmitting(true);
+    setMeetingSuccessMsg('');
+
+    const targetScout = linkedScouts.find(s => s.uid === effectiveScoutId) || linkedScouts[0] || {};
+    const scoutName = targetScout.fullName || targetScout.username || 'Scout';
+    const scoutGrp = allGroups.find(g => g.id === (targetScout.groupId || targetScout.patrolId));
+    const pName = scoutGrp?.name || targetScout.patrolName || targetScout.patrol || 'Unassigned Patrol';
+
     try {
-      await setDoc(doc(db, 'event_rsvps', rsvpId), {
-        eventId,
-        scoutId: targetId,
+      await createParentRequest({
+        requestType: 'meeting_request',
         parentUid: currentUser.uid,
-        status, // 'going' | 'cant_go'
+        parentName: parent1Name || currentUser.fullName || 'Parent',
+        parentEmail: parent1Email || currentUser.email || '',
+        parentPhone: parent1Phone || currentUser.phone || '',
+        scoutId: targetScout.uid,
+        scoutName,
+        patrolId: scoutGrp?.id || targetScout.groupId || '',
+        patrolName: pName,
+        message: `Parent requested a leader conference regarding "${meetingTopic}" for ${scoutName}. Proposed Date: ${meetingProposedDate || 'Flexible'}.${meetingNotes.trim() ? ` Notes: "${meetingNotes.trim()}"` : ''}`,
+        metadata: {
+          meetingTopic,
+          meetingProposedDate,
+          meetingNotes: meetingNotes.trim()
+        }
+      });
+
+      setMeetingSuccessMsg(`✓ Conference request submitted! Troop leadership has been notified.`);
+      setTimeout(() => {
+        setShowMeetingModal(false);
+        setMeetingNotes('');
+        setMeetingProposedDate('');
+        setMeetingSuccessMsg('');
+      }, 1800);
+    } catch (err) {
+      alert("Error submitting meeting request: " + err.message);
+    } finally {
+      setMeetingSubmitting(false);
+    }
+  };
+
+  // Toggle RSVP status for an event (Dual sync to event_rsvps and events/{eventId}/rsvps)
+  const handleRsvp = async (eventId, scoutId, status) => {
+    if (!eventId || !currentUser?.uid) return;
+    const targetScouts = scoutId === 'all' 
+      ? (linkedScouts.length > 0 ? linkedScouts : [{ uid: currentUser.uid, fullName: currentUser.fullName || currentUser.username }]) 
+      : [linkedScouts.find(s => s.uid === scoutId) || { uid: scoutId, fullName: 'Scout' }];
+
+    try {
+      for (const sc of targetScouts) {
+        const targetId = sc.uid;
+        const rsvpId = `rsvp_${eventId}_${targetId}`;
+        const normalizedStatus = status === 'going' ? 'attending' : (status === 'cant_go' ? 'not_attending' : 'tentative');
+
+        const rsvpPayload = {
+          eventId,
+          userId: targetId,
+          scoutId: targetId,
+          scoutName: sc.fullName || sc.username || 'Scout',
+          scoutRank: sc.rank || 'Scout',
+          patrolName: sc.patrolId || sc.patrol || '',
+          parentUid: currentUser.uid,
+          parentName: parent1Name || currentUser.fullName || currentUser.username || 'Parent',
+          parentPhone: parent1Phone || currentUser.phoneNumber || '',
+          parentEmail: parent1Email || currentUser.email || '',
+          userRole: 'scout',
+          status: normalizedStatus, // 'attending' | 'not_attending' | 'tentative'
+          updatedAt: new Date().toISOString()
+        };
+
+        // 1. Write to global event_rsvps
+        await setDoc(doc(db, 'event_rsvps', rsvpId), {
+          ...rsvpPayload,
+          status: status // 'going' | 'cant_go' for backward compatibility
+        }, { merge: true });
+
+        // 2. Write to events subcollection
+        await setDoc(doc(db, 'events', eventId, 'rsvps', targetId), rsvpPayload, { merge: true });
+      }
+
+      // Also mark parent record in event subcollection
+      const parentRsvpId = `rsvp_${eventId}_${currentUser.uid}`;
+      const parentPayload = {
+        eventId,
+        userId: currentUser.uid,
+        userName: parent1Name || currentUser.fullName || currentUser.username || 'Parent',
+        userRole: 'parent',
+        userPhone: parent1Phone || currentUser.phoneNumber || '',
+        userEmail: parent1Email || currentUser.email || '',
+        status: status === 'going' ? 'attending' : 'not_attending',
+        linkedScoutIds: linkedScouts.map(s => s.uid),
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      await setDoc(doc(db, 'events', eventId, 'rsvps', currentUser.uid), parentPayload, { merge: true });
+      await setDoc(doc(db, 'event_rsvps', parentRsvpId), parentPayload, { merge: true });
+
     } catch (err) {
       console.error("RSVP update failed:", err);
     }
@@ -746,13 +931,22 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
           >
             <AlertCircle size={14} />
-            <span>Notify Leader of Absence</span>
+            <span>Notify Absence</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowMeetingModal(true)}
+            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+          >
+            <Users size={14} />
+            <span>Request Conference</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('family')}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
           >
             <User size={14} />
             <span>Household Profile</span>
@@ -923,6 +1117,136 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             </div>
           )}
 
+          {/* SECTION 1.5: DUAL-PARENT HOUSEHOLD SUMMARY WIDGET */}
+          <div className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Home size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Household & Guardian Profile</h3>
+                  <p className="text-xs text-slate-400">Primary family contacts, address & emergency details on file.</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingFamily(true);
+                  setActiveTab('family');
+                }}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700 self-start sm:self-center"
+              >
+                <Edit3 size={13} />
+                <span>Edit Household</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Parent 1 (Father / Primary) */}
+              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    {parent1Relation || 'Father / Guardian 1'}
+                  </span>
+                  <User size={13} className="text-emerald-400" />
+                </div>
+                <div>
+                  <strong className="text-sm font-bold text-white block">
+                    {parent1Name || parentDoc.fullName || parentDoc.username || 'Not Recorded'}
+                  </strong>
+                  <div className="space-y-1 mt-2 text-xs text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <Phone size={12} className="text-emerald-400 shrink-0" />
+                      {parent1Phone || parentDoc.phone ? (
+                        <a href={`tel:${parent1Phone || parentDoc.phone}`} className="hover:underline text-slate-200">
+                          {parent1Phone || parentDoc.phone}
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 italic">No phone on record</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={12} className="text-emerald-400 shrink-0" />
+                      {parent1Email || parentDoc.email ? (
+                        <a href={`mailto:${parent1Email || parentDoc.email}`} className="hover:underline text-slate-200 truncate max-w-[200px]" title={parent1Email || parentDoc.email}>
+                          {parent1Email || parentDoc.email}
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 italic">No email</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parent 2 (Mother / Secondary) */}
+              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/60 border border-teal-500/30 px-2 py-0.5 rounded-full">
+                    {parent2Relation || 'Mother / Guardian 2'}
+                  </span>
+                  <User size={13} className="text-teal-400" />
+                </div>
+                <div>
+                  <strong className="text-sm font-bold text-white block">
+                    {parent2Name || 'Not Recorded'}
+                  </strong>
+                  <div className="space-y-1 mt-2 text-xs text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <Phone size={12} className="text-teal-400 shrink-0" />
+                      {parent2Phone ? (
+                        <a href={`tel:${parent2Phone}`} className="hover:underline text-slate-200">
+                          {parent2Phone}
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 italic">No phone on record</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={12} className="text-teal-400 shrink-0" />
+                      {parent2Email ? (
+                        <a href={`mailto:${parent2Email}`} className="hover:underline text-slate-200 truncate max-w-[200px]" title={parent2Email}>
+                          {parent2Email}
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 italic">No email</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address & Emergency Contact */}
+              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                    Residence & Emergency
+                  </span>
+                  <ShieldCheck size={13} className="text-amber-400" />
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-1.5 text-slate-200">
+                    <MapPin size={13} className="text-amber-400 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{familyAddress || parentDoc.address || 'Address not provided'}</span>
+                  </div>
+                  <div className="pt-1.5 border-t border-slate-800 space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Emergency Contact:</span>
+                    <strong className="text-white block font-bold">
+                      {emergencyContactName || 'Not specified'}
+                    </strong>
+                    {emergencyContactPhone && (
+                      <span className="text-amber-300 font-mono flex items-center gap-1">
+                        <Phone size={10} /> {emergencyContactPhone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* SECTION 2: CURRENT RANK & COMPLETED ADVANCEMENT PROGRESS WIDGET */}
           <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-750 pb-3">
@@ -952,7 +1276,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 const targetStats = getRankCompletionPercentage(nextRank.id, sRanks);
                 const sMerit = meritProgressMap[scout.uid] || {};
                 const earnedBadgesCount = MERIT_BADGES.filter(b => sMerit[b.id]?.completed === true).length;
-                const groupObj = allGroups.find(g => g.id === scout.groupId) || {};
+                const groupObj = allGroups.find(g => g.id === (scout.groupId || scout.patrolId)) || {};
                 const bsaRanks = RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
 
                 return (
@@ -966,7 +1290,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                           </span>
                         </h4>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          Patrol: <strong className="text-slate-200">{groupObj.name || 'Al-Huda'}</strong> &bull; Current Rank: <strong className="text-emerald-400">{latestRank.name}</strong>
+                          Patrol: <strong className="text-slate-200">{groupObj.name || scout.patrolName || scout.patrol || 'Unassigned Patrol'}</strong> &bull; Current Rank: <strong className="text-emerald-400">{latestRank.name}</strong>
                         </p>
                       </div>
 
@@ -1923,7 +2247,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                           {scout.fullName || scout.username}
                         </h3>
                         <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
-                          {scout.patrol || scout.patrolName || scout.talia || 'Al-Huda Patrol'}
+                          {allGroups.find(g => g.id === (scout.groupId || scout.patrolId))?.name || scout.patrol || scout.patrolName || scout.talia || 'Unassigned Patrol'}
                         </span>
                         {scout.scoutPosition && (
                           <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold">
@@ -3336,6 +3660,98 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 <button
                   type="button"
                   onClick={() => setShowAbsenceModal(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REQUEST LEADER CONFERENCE / MEETING ── */}
+      {showMeetingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-sky-500/50 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <Users size={18} className="text-sky-400" />
+                <span>Request Leader Conference</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowMeetingModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {meetingSuccessMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{meetingSuccessMsg}</p>}
+
+            <form onSubmit={handleSubmitMeetingRequest} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Select Child *</label>
+                <select
+                  value={meetingScoutId}
+                  onChange={(e) => setMeetingScoutId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                >
+                  {linkedScouts.map(s => (
+                    <option key={s.uid} value={s.uid}>{s.fullName || s.username} ({s.rank || 'Scout'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Meeting Topic / Agenda *</label>
+                <select
+                  value={meetingTopic}
+                  onChange={(e) => setMeetingTopic(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                >
+                  <option value="Advancement & Rank Review">⚜️ Advancement & Rank Review</option>
+                  <option value="Merit Badge Guidance">🎖️ Merit Badge Guidance</option>
+                  <option value="Special Accommodation & Health">🩹 Special Accommodation & Health</option>
+                  <option value="Behavioral & Patrol Leadership">⭐ Behavioral & Leadership</option>
+                  <option value="General Inquiry & Discussion">📋 General Discussion</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Preferred Date / Friday Session (Optional)</label>
+                <input
+                  type="date"
+                  value={meetingProposedDate}
+                  onChange={(e) => setMeetingProposedDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Notes / Specific Questions for Leaders</label>
+                <textarea
+                  rows={2}
+                  placeholder="What would you like to discuss with the scoutmaster or patrol leader?..."
+                  value={meetingNotes}
+                  onChange={(e) => setMeetingNotes(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={meetingSubmitting}
+                  className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Send size={14} />
+                  <span>{meetingSubmitting ? 'Submitting...' : 'Send Conference Request'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMeetingModal(false)}
                   className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
                 >
                   Cancel

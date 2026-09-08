@@ -46,7 +46,18 @@ import {
   History,
   CalendarDays,
   CheckSquare2,
-  Layers
+  Layers,
+  Printer,
+  UserCheck,
+  UserX,
+  Phone,
+  Mail,
+  Shield,
+  User,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  CheckCheck
 } from 'lucide-react';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
@@ -211,8 +222,19 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
+  // Users & Global RSVPs Collections
+  const [users, setUsers] = useState([]);
+  const [globalRsvps, setGlobalRsvps] = useState([]);
+
   // RSVPs Map: { [eventId]: { [scoutOrParentUid]: rsvpData } }
   const [eventRsvps, setEventRsvps] = useState({});
+
+  // ── Leader Attendee Filter & Controls State ──
+  const [rsvpFilterTab, setRsvpFilterTab] = useState('all'); // 'all' | 'attending' | 'tentative' | 'not_attending' | 'pending'
+  const [rsvpSearchQuery, setRsvpSearchQuery] = useState('');
+  const [leaderUpdatingRsvp, setLeaderUpdatingRsvp] = useState(false);
+  const [leaderRsvpMsg, setLeaderRsvpMsg] = useState('');
+  const [showPrintRosterModal, setShowPrintRosterModal] = useState(false);
 
   // ── TIME HORIZON TABS: 'upcoming' | 'past' | 'all' ──
   const [timeHorizon, setTimeHorizon] = useState('upcoming');
@@ -276,7 +298,23 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [rsvpSaving, setRsvpSaving] = useState(false);
   const [rsvpSuccessMsg, setRsvpSuccessMsg] = useState('');
 
-  // 1. Subscribe to events collection
+  // 1. Subscribe to users collection for roster resolution
+  useEffect(() => {
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+    }, (err) => console.warn("EventsManager users listener:", err));
+    return () => unsubUsers();
+  }, []);
+
+  // 2. Subscribe to global event_rsvps collection for all events
+  useEffect(() => {
+    const unsubGlobalRsvps = onSnapshot(collection(db, 'event_rsvps'), (snap) => {
+      setGlobalRsvps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.warn("EventsManager globalRsvps listener:", err));
+    return () => unsubGlobalRsvps();
+  }, []);
+
+  // 3. Subscribe to events collection
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'events'), (snap) => {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -297,7 +335,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     return () => unsub();
   }, [isExecutive, currentUser?.groupId]);
 
-  // 2. Subscribe to groups for leader filter & patrol badge resolution across all user roles
+  // 4. Subscribe to groups for leader filter & patrol badge resolution across all user roles
   useEffect(() => {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
       setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
@@ -305,7 +343,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     return () => unsubGroups();
   }, []);
 
-  // 3. Subscribe to RSVPs for the selected event
+  // 5. Subscribe to RSVPs for the selected event subcollection
   useEffect(() => {
     if (!selectedEvent?.id) return;
     const unsubRsvp = onSnapshot(collection(db, 'events', selectedEvent.id, 'rsvps'), (snap) => {
@@ -822,11 +860,19 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setRsvpSaving(true);
     setRsvpSuccessMsg('');
 
+    const userPatrolObj = groups.find(g => g.id === (currentUser.groupId || currentUser.patrolId));
+
     const rsvpData = {
       userId: currentUser.uid,
       userName: currentUser.fullName || currentUser.username || 'Family',
       userRole: currentUser.role || 'scout',
-      status: rsvpStatus,
+      userEmail: currentUser.email || '',
+      userPhone: currentUser.phone || currentUser.scoutPhone || currentUser.parentPhone || '',
+      groupId: currentUser.groupId || currentUser.patrolId || '',
+      patrolName: userPatrolObj?.name ? `${userPatrolObj.name} Patrol` : '',
+      scoutRank: currentUser.rank || '',
+      linkedScoutIds: Array.isArray(currentUser.linkedScoutIds) ? currentUser.linkedScoutIds : [],
+      status: rsvpStatus, // 'attending' | 'not_attending' | 'tentative'
       dietary: rsvpDietary.trim(),
       driverAvailable: rsvpDriverAvailable,
       seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
@@ -835,7 +881,38 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     };
 
     try {
+      // 1. Save to subcollection events/{eventId}/rsvps/{currentUser.uid}
       await setDoc(doc(db, 'events', selectedEvent.id, 'rsvps', currentUser.uid), rsvpData, { merge: true });
+
+      // 2. Also save to global event_rsvps collection for unified fast lookup
+      const rsvpDocId = `rsvp_${selectedEvent.id}_${currentUser.uid}`;
+      await setDoc(doc(db, 'event_rsvps', rsvpDocId), {
+        ...rsvpData,
+        eventId: selectedEvent.id,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // 3. If parent with linked scouts, also link each scout's record
+      if (currentUser.role === 'parent' && Array.isArray(currentUser.linkedScoutIds) && currentUser.linkedScoutIds.length > 0) {
+        for (const sId of currentUser.linkedScoutIds) {
+          const sRsvpId = `rsvp_${selectedEvent.id}_${sId}`;
+          const scoutObj = users.find(u => u.uid === sId);
+          await setDoc(doc(db, 'event_rsvps', sRsvpId), {
+            eventId: selectedEvent.id,
+            scoutId: sId,
+            scoutName: scoutObj?.fullName || scoutObj?.username || 'Scout',
+            parentUid: currentUser.uid,
+            parentName: currentUser.fullName || currentUser.username || 'Parent',
+            status: rsvpStatus === 'attending' ? 'going' : (rsvpStatus === 'not_attending' ? 'cant_go' : 'tentative'),
+            dietary: rsvpDietary.trim(),
+            driverAvailable: rsvpDriverAvailable,
+            seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
+            notes: rsvpNotes.trim(),
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+
       setRsvpSuccessMsg('✓ RSVP Submitted Successfully!');
       setTimeout(() => setRsvpSuccessMsg(''), 3000);
     } catch (err) {
@@ -843,6 +920,41 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       alert("Error saving RSVP: " + err.message);
     } finally {
       setRsvpSaving(false);
+    }
+  };
+
+  // Leader RSVP Override Handler
+  const handleLeaderOverrideRsvp = async (eventId, attendee, newStatus) => {
+    if (!eventId || !attendee) return;
+    setLeaderUpdatingRsvp(true);
+    setLeaderRsvpMsg('');
+
+    try {
+      const rsvpData = {
+        userId: attendee.userId,
+        scoutId: attendee.scoutId || attendee.userId,
+        userName: attendee.name,
+        userRole: attendee.role,
+        status: newStatus,
+        updatedByLeader: currentUser?.fullName || currentUser?.username || 'Leader',
+        submittedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'events', eventId, 'rsvps', attendee.userId), rsvpData, { merge: true });
+      await setDoc(doc(db, 'event_rsvps', `rsvp_${eventId}_${attendee.userId}`), {
+        ...rsvpData,
+        eventId,
+        status: newStatus === 'attending' ? 'going' : (newStatus === 'not_attending' ? 'cant_go' : 'tentative'),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      setLeaderRsvpMsg(`✓ Recorded ${attendee.name} as ${newStatus === 'attending' ? 'ATTENDING' : newStatus === 'tentative' ? 'TENTATIVE' : 'DECLINED'}`);
+      setTimeout(() => setLeaderRsvpMsg(''), 3000);
+    } catch (err) {
+      console.error("Leader RSVP override failed:", err);
+      alert("Failed to update RSVP: " + err.message);
+    } finally {
+      setLeaderUpdatingRsvp(false);
     }
   };
 
@@ -866,10 +978,163 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     });
   }, [targetGeneratedSchedule, previewFilter, previewSearch]);
 
-  const currentEventRsvpsList = selectedEvent ? Object.values(eventRsvps[selectedEvent.id] || {}) : [];
-  const attendingCount = currentEventRsvpsList.filter(r => r.status === 'attending').length;
-  const tentativeCount = currentEventRsvpsList.filter(r => r.status === 'tentative').length;
-  const notAttendingCount = currentEventRsvpsList.filter(r => r.status === 'not_attending').length;
+  // Helper to calculate RSVP summary for any event card
+  const getEventRsvpSummary = useMemo(() => (ev) => {
+    if (!ev?.id) return { attending: 0, tentative: 0, notAttending: 0, total: 0 };
+    const subMap = eventRsvps[ev.id] || {};
+    const globalList = globalRsvps.filter(r => r.eventId === ev.id);
+
+    const combined = { ...subMap };
+    globalList.forEach(r => {
+      const k = r.userId || r.scoutId || r.id;
+      if (k && !combined[k]) combined[k] = r;
+    });
+
+    const vals = Object.values(combined);
+    const attending = vals.filter(r => r.status === 'attending' || r.status === 'going' || r.status === 'yes').length;
+    const tentative = vals.filter(r => r.status === 'tentative' || r.status === 'maybe').length;
+    const notAttending = vals.filter(r => r.status === 'not_attending' || r.status === 'cant_go' || r.status === 'no').length;
+
+    return { attending, tentative, notAttending, total: vals.length };
+  }, [eventRsvps, globalRsvps]);
+
+  // Comprehensive Computed Attendee Data for Selected Event
+  const selectedEventAttendeeData = useMemo(() => {
+    if (!selectedEvent) return { attendees: [], attendingCount: 0, tentativeCount: 0, notAttendingCount: 0, pendingCount: 0, totalDrivers: 0, totalSeats: 0, dietaryAlerts: [] };
+
+    const eventId = selectedEvent.id;
+    const subcolMap = eventRsvps[eventId] || {};
+    const globalEventRsvps = globalRsvps.filter(r => r.eventId === eventId);
+
+    // Merge RSVPs: subcollection takes precedence
+    const combinedRsvpMap = {};
+    
+    globalEventRsvps.forEach(r => {
+      const key = r.userId || r.scoutId || r.id;
+      if (key) combinedRsvpMap[key] = { ...r };
+    });
+
+    Object.entries(subcolMap).forEach(([uid, rData]) => {
+      combinedRsvpMap[uid] = { ...(combinedRsvpMap[uid] || {}), ...rData, userId: uid };
+    });
+
+    // Determine eligible scouts based on targetGroupId
+    const targetPatrolId = selectedEvent.targetGroupId || selectedEvent.groupId || 'all';
+    const eligibleScouts = users.filter(u => {
+      if (u.role !== 'scout') return false;
+      if (targetPatrolId === 'all') return true;
+      return u.groupId === targetPatrolId || u.patrolId === targetPatrolId;
+    });
+
+    const attendeeList = [];
+    const processedUserIds = new Set();
+
+    // 1. Process all explicit RSVPs
+    Object.entries(combinedRsvpMap).forEach(([uid, rData]) => {
+      processedUserIds.add(uid);
+      if (rData.scoutId) processedUserIds.add(rData.scoutId);
+
+      const userObj = users.find(u => u.uid === uid || u.uid === rData.scoutId || u.uid === rData.userId);
+      const parentObj = rData.parentUid ? users.find(u => u.uid === rData.parentUid) : null;
+      const isScout = userObj?.role === 'scout' || (!userObj && !rData.userRole?.includes('parent'));
+      const isParent = userObj?.role === 'parent' || rData.userRole === 'parent' || !!rData.parentUid;
+      const isLeader = userObj?.role === 'leader' || userObj?.role === 'owner' || userObj?.role === 'admin' || rData.userRole === 'leader';
+
+      const normalizedStatus = (rData.status === 'going' || rData.status === 'attending' || rData.status === 'yes') 
+        ? 'attending' 
+        : (rData.status === 'cant_go' || rData.status === 'not_attending' || rData.status === 'no') 
+        ? 'not_attending' 
+        : (rData.status === 'tentative' || rData.status === 'maybe')
+        ? 'tentative'
+        : 'pending';
+
+      const pId = userObj?.groupId || userObj?.patrolId || rData.groupId;
+      const patrolObj = groups.find(g => g.id === pId);
+
+      attendeeList.push({
+        id: uid,
+        userId: uid,
+        scoutId: rData.scoutId || (isScout ? uid : null),
+        name: rData.userName || rData.scoutName || userObj?.fullName || userObj?.username || 'Attendee',
+        role: isScout ? 'scout' : isParent ? 'parent' : isLeader ? 'leader' : 'family',
+        roleLabel: isScout ? '⚜️ Scout' : isParent ? '👨‍👩‍👧 Parent' : isLeader ? '🛡️ Leader' : 'Guest',
+        rank: userObj?.rank || rData.scoutRank || 'Scout',
+        patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Member',
+        status: normalizedStatus,
+        rawStatus: rData.status,
+        dietary: rData.dietary || userObj?.dietaryRestrictions || userObj?.allergies || '',
+        driverAvailable: !!rData.driverAvailable,
+        seats: rData.seats || 0,
+        notes: rData.notes || '',
+        submittedAt: rData.submittedAt || rData.updatedAt || '',
+        parentName: rData.parentName || parentObj?.fullName || parentObj?.username || userObj?.parent1Name || '',
+        parentPhone: parentObj?.phone || parentObj?.parent1Phone || userObj?.parentPhone || userObj?.emergencyContactPhone || '',
+        userPhone: userObj?.phone || userObj?.scoutPhone || userObj?.personalPhone || '',
+        userEmail: userObj?.email || userObj?.personalEmail || rData.userEmail || '',
+        photoURL: userObj?.photoURL || ''
+      });
+    });
+
+    // 2. Add pending scouts who haven't responded yet
+    eligibleScouts.forEach(scout => {
+      if (!processedUserIds.has(scout.uid)) {
+        const pId = scout.groupId || scout.patrolId;
+        const patrolObj = groups.find(g => g.id === pId);
+
+        attendeeList.push({
+          id: scout.uid,
+          userId: scout.uid,
+          scoutId: scout.uid,
+          name: scout.fullName || scout.username || 'Scout',
+          role: 'scout',
+          roleLabel: '⚜️ Scout',
+          rank: scout.rank || 'Scout',
+          patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Member',
+          status: 'pending',
+          rawStatus: 'no_response',
+          dietary: scout.dietaryRestrictions || scout.allergies || '',
+          driverAvailable: false,
+          seats: 0,
+          notes: '',
+          submittedAt: '',
+          parentName: scout.parent1Name || scout.parentName || '',
+          parentPhone: scout.parentPhone || scout.parent1Phone || scout.emergencyContactPhone || '',
+          userPhone: scout.scoutPhone || scout.phone || '',
+          userEmail: scout.email || scout.personalEmail || '',
+          photoURL: scout.photoURL || ''
+        });
+      }
+    });
+
+    // Counts & aggregations
+    const attendingList = attendeeList.filter(a => a.status === 'attending');
+    const tentativeList = attendeeList.filter(a => a.status === 'tentative');
+    const notAttendingList = attendeeList.filter(a => a.status === 'not_attending');
+    const pendingList = attendeeList.filter(a => a.status === 'pending');
+
+    const driversList = attendeeList.filter(a => a.driverAvailable && a.status === 'attending');
+    const totalSeats = driversList.reduce((acc, d) => acc + (parseInt(d.seats, 10) || 0), 0);
+
+    const dietaryAlerts = attendeeList
+      .filter(a => a.status === 'attending' && a.dietary && a.dietary.trim())
+      .map(a => ({ name: a.name, dietary: a.dietary }));
+
+    return {
+      attendees: attendeeList,
+      attendingCount: attendingList.length,
+      tentativeCount: tentativeList.length,
+      notAttendingCount: notAttendingList.length,
+      pendingCount: pendingList.length,
+      totalDrivers: driversList.length,
+      totalSeats,
+      dietaryAlerts
+    };
+  }, [selectedEvent, eventRsvps, globalRsvps, users, groups]);
+
+  const attendingCount = selectedEventAttendeeData.attendingCount;
+  const tentativeCount = selectedEventAttendeeData.tentativeCount;
+  const notAttendingCount = selectedEventAttendeeData.notAttendingCount;
+  const pendingCount = selectedEventAttendeeData.pendingCount;
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -1821,8 +2086,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               {filteredEvents.map(ev => {
                 const isSelected = selectedEvent?.id === ev.id;
                 const isChecked = selectedEventIds.has(ev.id);
-                const rsvps = Object.values(eventRsvps[ev.id] || {});
-                const countAttending = rsvps.filter(r => r.status === 'attending').length;
+                const rsvpSum = getEventRsvpSummary(ev);
                 const isPast = (ev.date || '') < todayStr;
                 const isFriday = ev.recurringPattern === 'weekly_friday' || new Date(ev.date + 'T12:00:00').getDay() === 5;
                 const isTuesday = ev.recurringPattern === 'weekly_tuesday' || new Date(ev.date + 'T12:00:00').getDay() === 2;
@@ -1845,7 +2109,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                       <button
                         type="button"
                         onClick={(e) => handleToggleSelectEvent(ev.id, e)}
-                        className="pt-0.5 shrink-0 cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-750/60 transition-colors focus:outline-none"
+                        className="pt-0.5 shrink-0 cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-755/60 transition-colors focus:outline-none"
                         title={isChecked ? "Deselect event" : "Select event for batch deletion"}
                         aria-label={isChecked ? `Deselect ${ev.title}` : `Select ${ev.title} for batch delete`}
                       >
@@ -1861,7 +2125,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                       </button>
                     )}
 
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex justify-between items-start gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
@@ -1884,11 +2148,27 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-mono">
-                          {countAttending} {isPast ? 'Attended' : 'Going'}
-                        </span>
+
+                        {/* Live RSVP Status Pills on Card */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border flex items-center gap-1 ${
+                            rsvpSum.attending > 0 
+                              ? 'bg-emerald-950 text-emerald-300 border-emerald-600 shadow-sm' 
+                              : 'bg-slate-900 text-slate-400 border-slate-700'
+                          }`}>
+                            <Users size={11} />
+                            <span>{rsvpSum.attending} {isPast ? 'Attended' : 'Going'}</span>
+                          </span>
+                          {rsvpSum.tentative > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700">
+                              ? {rsvpSum.tentative}
+                            </span>
+                          )}
+                        </div>
                       </div>
+
                       <strong className="text-sm font-bold text-white block leading-snug truncate">{ev.title}</strong>
+                      
                       {(() => {
                         const aud = getEventAudienceInfo(ev, currentUser, groups, linkedScouts);
                         return (
@@ -1900,10 +2180,12 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                           </div>
                         );
                       })()}
+
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
                         <span>⏰ {ev.time}</span>
                         {getEventDisplayDuration(ev) && <span>&bull; {getEventDisplayDuration(ev)}</span>}
                       </div>
+
                       {ev.location && (
                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-950/40 border border-emerald-500/25 px-2.5 py-1 rounded-xl w-fit max-w-full">
                           <MapPin size={11} className="text-emerald-400 shrink-0" />
@@ -1975,6 +2257,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
                 {isLeader && (
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Print Roster / Muster Sheet */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPrintRosterModal(true)}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
+                      title="Print Attendance & RSVP Check-in Roster"
+                    >
+                      <Printer size={14} className="text-emerald-400" />
+                      <span>Print Roster</span>
+                    </button>
+
                     {/* Take Attendance (Enabled for all leaders on all events) */}
                     <button
                       type="button"
@@ -2159,48 +2452,293 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 </form>
               </div>
 
-              {/* ── LEADER RSVP PLANNING ROSTER ── */}
+              {/* ── LEADER COMPREHENSIVE RSVP ATTENDEE MANAGEMENT & ROSTER CENTER ── */}
               {isLeader && (
-                <div className="bg-slate-900 border border-slate-750 p-5 rounded-2xl space-y-3">
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                      <Users size={14} className="text-emerald-400" />
-                      <span>
-                        {(selectedEvent.date || '') < todayStr ? 'Recorded Attendance / Responses' : 'Roster RSVPs'} ({currentEventRsvpsList.length} Responses)
+                <div className="bg-slate-900 border border-slate-750 p-5 sm:p-6 rounded-3xl space-y-4 shadow-xl">
+                  {/* Header & Live KPI Stat Pills */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                    <div>
+                      <h4 className="font-extrabold text-white text-sm uppercase tracking-wider flex items-center gap-2">
+                        <Users size={16} className="text-emerald-400" />
+                        <span>
+                          👥 {(selectedEvent.date || '') < todayStr ? 'Event Attendees & Attendance Roster' : 'RSVP Attendees & Response Roster'}
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Track confirmed scout attendees, volunteer carpool drivers, and pending families.
+                      </p>
+                    </div>
+
+                    {leaderRsvpMsg && (
+                      <span className="text-xs text-emerald-400 font-bold bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-700 animate-fadeIn">
+                        {leaderRsvpMsg}
                       </span>
-                    </h4>
-                    <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="text-emerald-400 font-bold">✓ {attendingCount} { (selectedEvent.date || '') < todayStr ? 'Present' : 'Attending' }</span>
-                      <span className="text-amber-400 font-bold">? {tentativeCount} Tentative</span>
-                      <span className="text-slate-400">✗ {notAttendingCount} Out</span>
+                    )}
+                  </div>
+
+                  {/* KPI Stat Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/40 text-center shadow-sm">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-emerald-400 block">✓ Confirmed Attending</span>
+                      <strong className="text-lg font-black text-emerald-300 font-mono">{attendingCount}</strong>
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/40 text-center shadow-sm">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-amber-400 block">❓ Tentative</span>
+                      <strong className="text-lg font-black text-amber-300 font-mono">{tentativeCount}</strong>
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-750 text-center shadow-sm">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">✗ Declined</span>
+                      <strong className="text-lg font-black text-slate-300 font-mono">{notAttendingCount}</strong>
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-sky-500/30 text-center shadow-sm">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-sky-400 block">⏳ No Response</span>
+                      <strong className="text-lg font-black text-sky-300 font-mono">{pendingCount}</strong>
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-teal-500/40 text-center shadow-sm">
+                      <span className="text-[10px] uppercase font-black tracking-wider text-teal-400 block">🚗 Carpool Capacity</span>
+                      <strong className="text-lg font-black text-teal-300 font-mono">{selectedEventAttendeeData.totalSeats} seats</strong>
+                      <span className="text-[9px] text-slate-400 block">({selectedEventAttendeeData.totalDrivers} drivers)</span>
                     </div>
                   </div>
 
-                  {currentEventRsvpsList.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic py-2">No RSVP responses recorded for this event.</p>
-                  ) : (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {currentEventRsvpsList.map((r, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-slate-950 text-xs border border-slate-800">
-                          <div>
-                            <strong className="text-white block">{r.userName}</strong>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                              {r.dietary && <span>Dietary: {r.dietary}</span>}
-                              {r.driverAvailable && <span className="text-sky-400 font-semibold">🚗 Driver ({r.seats} seats)</span>}
-                              {r.notes && <span className="italic">"{r.notes}"</span>}
-                            </div>
-                          </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            r.status === 'attending' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
-                            r.status === 'tentative' ? 'bg-amber-950 text-amber-300 border-amber-800' :
-                            'bg-slate-900 text-slate-400 border-slate-800'
-                          }`}>
-                            {r.status === 'attending' ? ((selectedEvent.date || '') < todayStr ? 'Present' : 'Attending') : r.status === 'tentative' ? 'Tentative' : 'Declined'}
+                  {/* Dietary & Allergy Warning Box */}
+                  {selectedEventAttendeeData.dietaryAlerts.length > 0 && (
+                    <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-2xl text-xs space-y-1">
+                      <strong className="text-amber-400 uppercase text-[10px] font-bold flex items-center gap-1.5">
+                        <Utensils size={13} /> Special Dietary Needs & Allergies ({selectedEventAttendeeData.dietaryAlerts.length}):
+                      </strong>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {selectedEventAttendeeData.dietaryAlerts.map((d, i) => (
+                          <span key={i} className="text-[11px] bg-slate-900 border border-amber-500/30 text-slate-200 px-2.5 py-0.5 rounded-lg">
+                            <strong className="text-amber-300">{d.name}:</strong> {d.dietary}
                           </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
+
+                  {/* Filter Tabs & Search Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                    <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
+                      {[
+                        { id: 'all', label: `All (${selectedEventAttendeeData.attendees.length})` },
+                        { id: 'attending', label: `✓ Attending (${attendingCount})`, color: 'text-emerald-300' },
+                        { id: 'tentative', label: `❓ Tentative (${tentativeCount})`, color: 'text-amber-300' },
+                        { id: 'not_attending', label: `✗ Declined (${notAttendingCount})`, color: 'text-slate-300' },
+                        { id: 'pending', label: `⏳ No Response (${pendingCount})`, color: 'text-sky-300' }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setRsvpFilterTab(tab.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap border ${
+                            rsvpFilterTab === tab.id
+                              ? 'bg-emerald-600 text-white border-emerald-400 shadow-md'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative w-full sm:w-56">
+                      <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
+                      <input
+                        type="text"
+                        placeholder="Search attendee..."
+                        value={rsvpSearchQuery}
+                        onChange={(e) => setRsvpSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Attendee Cards List */}
+                  {(() => {
+                    const filteredAttendees = selectedEventAttendeeData.attendees.filter(a => {
+                      if (rsvpFilterTab !== 'all' && a.status !== rsvpFilterTab) return false;
+                      if (rsvpSearchQuery.trim()) {
+                        const q = rsvpSearchQuery.toLowerCase();
+                        return a.name.toLowerCase().includes(q) || a.patrol.toLowerCase().includes(q) || (a.notes || '').toLowerCase().includes(q) || (a.parentName || '').toLowerCase().includes(q);
+                      }
+                      return true;
+                    });
+
+                    if (filteredAttendees.length === 0) {
+                      return (
+                        <p className="text-xs text-slate-500 italic py-6 text-center bg-slate-950/60 rounded-2xl border border-slate-800">
+                          No attendees match the current filter.
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                        {filteredAttendees.map((att, idx) => {
+                          const isGoing = att.status === 'attending';
+                          const isTentative = att.status === 'tentative';
+                          const isDeclined = att.status === 'not_attending';
+                          const isNoResponse = att.status === 'pending';
+
+                          return (
+                            <div
+                              key={att.id || idx}
+                              className={`p-3.5 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                                isGoing
+                                  ? 'bg-emerald-950/20 border-emerald-500/35 hover:border-emerald-400'
+                                  : isTentative
+                                  ? 'bg-amber-950/20 border-amber-500/35 hover:border-amber-400'
+                                  : isDeclined
+                                  ? 'bg-slate-950/80 border-slate-800 text-slate-400'
+                                  : 'bg-slate-950/50 border-slate-800/80 text-slate-400'
+                              }`}
+                            >
+                              {/* Left: Attendee Info */}
+                              <div className="flex items-start gap-3 min-w-0">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
+                                  isGoing ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                                  isTentative ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                                  isDeclined ? 'bg-slate-800 text-slate-400 border-slate-700' :
+                                  'bg-slate-900 text-slate-500 border-slate-800'
+                                }`}>
+                                  {att.photoURL ? (
+                                    <img src={att.photoURL} alt={att.name} className="w-full h-full object-cover rounded-xl" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                  ) : (
+                                    <span>{att.name.charAt(0).toUpperCase()}</span>
+                                  )}
+                                </div>
+
+                                <div className="space-y-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <strong className="text-white text-xs font-bold leading-tight truncate">
+                                      {att.name}
+                                    </strong>
+                                    <span className="text-[10px] bg-slate-900 border border-slate-750 px-2 py-0.2 rounded-full font-semibold text-slate-300">
+                                      {att.patrol}
+                                    </span>
+                                    {att.rank && att.rank !== 'Scout' && (
+                                      <span className="text-[10px] text-amber-300 font-bold">
+                                        ({att.rank})
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                      {att.roleLabel}
+                                    </span>
+                                  </div>
+
+                                  {/* Badges: Carpool, Dietary, Notes, Parent */}
+                                  <div className="flex items-center gap-2 text-[10px] text-slate-400 flex-wrap">
+                                    {att.driverAvailable && (
+                                      <span className="text-teal-300 bg-teal-950/60 border border-teal-700 px-2 py-0.2 rounded-md font-bold flex items-center gap-1">
+                                        🚗 Driver ({att.seats} seats)
+                                      </span>
+                                    )}
+                                    {att.dietary && (
+                                      <span className="text-amber-300 bg-amber-950/60 border border-amber-700 px-2 py-0.2 rounded-md font-semibold">
+                                        🍽️ {att.dietary}
+                                      </span>
+                                    )}
+                                    {att.notes && (
+                                      <span className="text-slate-300 italic">
+                                        "{att.notes}"
+                                      </span>
+                                    )}
+                                    {att.parentName && att.parentName !== att.name && (
+                                      <span className="text-slate-400">
+                                        Parent: <strong className="text-slate-200">{att.parentName}</strong>
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Contact Links */}
+                                  <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-0.5">
+                                    {(att.parentPhone || att.userPhone) && (
+                                      <a
+                                        href={`tel:${att.parentPhone || att.userPhone}`}
+                                        className="text-emerald-400 hover:underline flex items-center gap-1 font-mono font-bold"
+                                      >
+                                        <Phone size={10} /> {att.parentPhone || att.userPhone}
+                                      </a>
+                                    )}
+                                    {att.userEmail && (
+                                      <a
+                                        href={`mailto:${att.userEmail}`}
+                                        className="text-slate-400 hover:underline flex items-center gap-1 font-mono truncate max-w-[140px]"
+                                      >
+                                        <Mail size={10} /> {att.userEmail}
+                                      </a>
+                                    )}
+                                    {att.submittedAt && (
+                                      <span className="text-slate-500 font-mono text-[9px]">
+                                        &bull; {new Date(att.submittedAt).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right: Status Pill & Quick Leader Override Buttons */}
+                              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-xl border flex items-center gap-1.5 ${
+                                  isGoing ? 'bg-emerald-950 text-emerald-200 border-emerald-600 shadow-sm' :
+                                  isTentative ? 'bg-amber-950 text-amber-200 border-amber-600' :
+                                  isDeclined ? 'bg-slate-900 text-slate-400 border-slate-750' :
+                                  'bg-slate-900 text-sky-300 border-sky-800'
+                                }`}>
+                                  {isGoing ? <><Check size={11} /> Attending</> :
+                                   isTentative ? <><HelpCircle size={11} /> Tentative</> :
+                                   isDeclined ? <><X size={11} /> Declined</> :
+                                   <><Clock size={11} /> No Response</>}
+                                </span>
+
+                                {/* Leader One-Click Status Override Dropdown/Buttons */}
+                                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLeaderOverrideRsvp(selectedEvent.id, att, 'attending')}
+                                    disabled={leaderUpdatingRsvp || isGoing}
+                                    title="Mark as Attending"
+                                    className={`p-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                                      isGoing ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLeaderOverrideRsvp(selectedEvent.id, att, 'tentative')}
+                                    disabled={leaderUpdatingRsvp || isTentative}
+                                    title="Mark as Tentative"
+                                    className={`p-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                                      isTentative ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    ?
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLeaderOverrideRsvp(selectedEvent.id, att, 'not_attending')}
+                                    disabled={leaderUpdatingRsvp || isDeclined}
+                                    title="Mark as Declined"
+                                    className={`p-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                                      isDeclined ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-red-300 hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    ✗
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -2213,6 +2751,120 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
           </div>
         )}
       </div>
+
+      {/* ── PRINTABLE MUSTER ROLL & CHECK-IN MODAL ── */}
+      {showPrintRosterModal && selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-3xl p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3 print-hide">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                  <Printer size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Printable Event Check-In & Muster Sheet</h3>
+                  <p className="text-[11px] text-slate-400">Official roster for attendance check-in, carpools, and emergency contacts</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg"
+                >
+                  <Printer size={14} />
+                  <span>Print Sheet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPrintRosterModal(false)}
+                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Content Block */}
+            <div className="bg-white text-slate-900 p-6 rounded-2xl space-y-4 font-sans text-xs">
+              {/* Official Header */}
+              <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">⚜️</span>
+                    <h2 className="text-base font-black uppercase tracking-tight text-slate-950">
+                      Dhulfiqār Scouts &bull; Event Muster Sheet
+                    </h2>
+                  </div>
+                  <h3 className="text-lg font-black text-emerald-800 mt-1">{selectedEvent.title}</h3>
+                  <p className="text-xs text-slate-600 font-medium">
+                    📅 {selectedEvent.date} &bull; ⏰ {selectedEvent.time} &bull; 📍 {selectedEvent.location || 'Troop Headquarters'}
+                  </p>
+                </div>
+                <div className="text-right text-[11px] font-mono">
+                  <span className="font-bold block">Confirmed Going: {attendingCount}</span>
+                  <span className="text-slate-600 block">Carpool Seats: {selectedEventAttendeeData.totalSeats}</span>
+                  <span className="text-slate-500 text-[10px]">Printed: {new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {/* Special Dietary / Allergy Alert Box */}
+              {selectedEventAttendeeData.dietaryAlerts.length > 0 && (
+                <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-[11px] text-amber-900">
+                  <strong className="uppercase font-bold">⚠️ Special Dietary / Medical Alerts: </strong>
+                  {selectedEventAttendeeData.dietaryAlerts.map(d => `${d.name} (${d.dietary})`).join('; ')}
+                </div>
+              )}
+
+              {/* Roster Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse border border-slate-300 text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-300 font-bold uppercase text-slate-700">
+                      <th className="p-2 border border-slate-300 w-10 text-center">In</th>
+                      <th className="p-2 border border-slate-300 w-10 text-center">Out</th>
+                      <th className="p-2 border border-slate-300">Scout / Attendee Name</th>
+                      <th className="p-2 border border-slate-300">Patrol & Rank</th>
+                      <th className="p-2 border border-slate-300">Status</th>
+                      <th className="p-2 border border-slate-300">Driver / Carpool</th>
+                      <th className="p-2 border border-slate-300">Emergency / Parent Phone</th>
+                      <th className="p-2 border border-slate-300">Dietary / Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedEventAttendeeData.attendees.map((att, i) => (
+                      <tr key={i} className={`border-b border-slate-200 ${att.status === 'attending' ? 'bg-emerald-50/40 font-medium' : att.status === 'tentative' ? 'bg-amber-50/40' : 'bg-slate-50 opacity-70'}`}>
+                        <td className="p-2 border border-slate-300 text-center font-mono">[  ]</td>
+                        <td className="p-2 border border-slate-300 text-center font-mono">[  ]</td>
+                        <td className="p-2 border border-slate-300 font-bold text-slate-900">{att.name}</td>
+                        <td className="p-2 border border-slate-300">{att.patrol} {att.rank ? `(${att.rank})` : ''}</td>
+                        <td className="p-2 border border-slate-300 capitalize font-bold">
+                          {att.status === 'attending' ? '✓ Attending' : att.status === 'tentative' ? 'Tentative' : att.status === 'not_attending' ? 'Declined' : 'No Response'}
+                        </td>
+                        <td className="p-2 border border-slate-300">{att.driverAvailable ? `🚗 Yes (${att.seats} seats)` : 'No'}</td>
+                        <td className="p-2 border border-slate-300 font-mono text-[10px]">{att.parentPhone || att.userPhone || '—'}</td>
+                        <td className="p-2 border border-slate-300 text-[10px]">{att.dietary || att.notes || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Signatures Footer */}
+              <div className="pt-4 border-t border-slate-300 grid grid-cols-2 gap-6 text-[11px] text-slate-700">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Lead Scoutmaster / Leader Sign-off:</span>
+                  <div className="border-b border-slate-400 h-8 mt-1"></div>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Event Date & Final Attendance Count:</span>
+                  <div className="border-b border-slate-400 h-8 mt-1"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

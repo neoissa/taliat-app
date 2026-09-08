@@ -165,8 +165,9 @@ function SingleScoutCustomReport({
   const scoutFullName = scout.fullName || scout.username || 'Scout Member';
   const scoutRank = (scout.rank || 'Scout').toLowerCase();
   const groupObj = groupsMap[scout.groupId || scout.patrolId] || {};
-  const rawPatrol = groupObj.name || scout.patrolName || scout.groupName || 'Al-Huda';
+  const rawPatrol = groupObj.name || scout.patrolName || scout.groupName || 'Unassigned Patrol';
   const formattedTaliaName = (() => {
+    if (!rawPatrol || rawPatrol === 'Unassigned Patrol') return 'Unassigned Patrol';
     const l = String(rawPatrol).toLowerCase().trim();
     if (l.startsWith('taliat') || l.startsWith('talia') || l.startsWith('taliʿa') || l.startsWith('taliʿat') || l.startsWith('tali\'at')) {
       return rawPatrol;
