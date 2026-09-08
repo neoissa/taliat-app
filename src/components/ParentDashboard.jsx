@@ -257,11 +257,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   // Leader Conference / Meeting Request State
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [meetingScoutId, setMeetingScoutId] = useState('');
+  const [meetingTargetLeaderUid, setMeetingTargetLeaderUid] = useState('');
   const [meetingTopic, setMeetingTopic] = useState('Advancement & Rank Review'); // 'Advancement & Rank Review' | 'Special Accommodation' | 'Behavioral & Leadership' | 'General Inquiry'
   const [meetingProposedDate, setMeetingProposedDate] = useState('');
+  const [meetingProposedTime, setMeetingProposedTime] = useState('6:30 PM');
   const [meetingNotes, setMeetingNotes] = useState('');
   const [meetingSubmitting, setMeetingSubmitting] = useState(false);
   const [meetingSuccessMsg, setMeetingSuccessMsg] = useState('');
+  const [parentRequestsList, setParentRequestsList] = useState([]);
 
   // Dual-Parent Family Profile State
   const [isEditingFamily, setIsEditingFamily] = useState(false);
@@ -369,6 +372,12 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       setNotifications(list);
     });
 
+    const unsubRequests = onSnapshot(collection(db, 'parent_requests'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setParentRequestsList(list);
+    });
+
     return () => {
       unsubUsers();
       unsubGroups();
@@ -379,6 +388,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       unsubTasks();
       unsubAssign();
       unsubNotifs();
+      unsubRequests();
     };
   }, []);
 
@@ -677,6 +687,10 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     const scoutGrp = allGroups.find(g => g.id === (targetScout.groupId || targetScout.patrolId));
     const pName = scoutGrp?.name || targetScout.patrolName || targetScout.patrol || 'Unassigned Patrol';
 
+    const targetLeader = allUsers.find(u => u.uid === meetingTargetLeaderUid) || null;
+    const targetLeaderName = targetLeader ? (targetLeader.fullName || targetLeader.username) : null;
+    const targetLeaderRole = targetLeader ? (targetLeader.leaderPosition || targetLeader.role || 'Troop Leader') : null;
+
     try {
       await createParentRequest({
         requestType: 'meeting_request',
@@ -688,19 +702,31 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         scoutName,
         patrolId: scoutGrp?.id || targetScout.groupId || '',
         patrolName: pName,
-        message: `Parent requested a leader conference regarding "${meetingTopic}" for ${scoutName}. Proposed Date: ${meetingProposedDate || 'Flexible'}.${meetingNotes.trim() ? ` Notes: "${meetingNotes.trim()}"` : ''}`,
+        targetLeaderUid: targetLeader?.uid || null,
+        targetLeaderName,
+        targetLeaderRole,
+        proposedDate: meetingProposedDate || null,
+        proposedTime: meetingProposedTime || null,
+        meetingTopic,
+        message: `Parent requested a leader conference regarding "${meetingTopic}" for ${scoutName}.${targetLeaderName ? ` Requested Leader: ${targetLeaderName} (${targetLeaderRole}).` : ''} Proposed Date: ${meetingProposedDate || 'Flexible'}${meetingProposedTime ? ` at ${meetingProposedTime}` : ''}.${meetingNotes.trim() ? ` Notes: "${meetingNotes.trim()}"` : ''}`,
         metadata: {
           meetingTopic,
           meetingProposedDate,
+          meetingProposedTime,
+          targetLeaderUid: targetLeader?.uid || null,
+          targetLeaderName,
+          targetLeaderRole,
           meetingNotes: meetingNotes.trim()
         }
       });
 
-      setMeetingSuccessMsg(`✓ Conference request submitted! Troop leadership has been notified.`);
+      setMeetingSuccessMsg(`✓ Conference request submitted! ${targetLeaderName ? `Leader ${targetLeaderName}` : 'Troop leadership'} has been notified.`);
       setTimeout(() => {
         setShowMeetingModal(false);
         setMeetingNotes('');
         setMeetingProposedDate('');
+        setMeetingProposedTime('6:30 PM');
+        setMeetingTargetLeaderUid('');
         setMeetingSuccessMsg('');
       }, 1800);
     } catch (err) {
@@ -863,6 +889,25 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   });
   const pendingReportsToSign = familyPublishedReports.filter(r => !r.signatures?.parent?.signed);
   const unreadNotifsCount = notifications.filter(n => !n.read).length + pendingReportsToSign.length;
+
+  // Available Troop Leaders for Conference Selection
+  const availableLeaders = allUsers.filter(u => {
+    if (!u.role) return false;
+    const role = (u.role || '').toLowerCase();
+    const pos = (u.leaderPosition || '').toLowerCase();
+    return role === 'leader' || role === 'executive_leader' || role === 'admin' || role === 'owner' || u.isLeader || u.isExecutive || pos.length > 0;
+  });
+
+  // Family Parent Requests (Conferences, Absences, Signatures)
+  const familyRequests = parentRequestsList.filter(r => {
+    if (r.parentUid && (r.parentUid === currentUser?.uid || r.parentUid === parentDoc?.uid)) return true;
+    if (r.parentEmail && parentEmails.includes(r.parentEmail.toLowerCase().trim())) return true;
+    if (r.scoutId && linkedUids.includes(r.scoutId)) return true;
+    return false;
+  });
+
+  const confirmedConferences = familyRequests.filter(r => r.requestType === 'meeting_request' && r.status === 'confirmed');
+  const pendingConferences = familyRequests.filter(r => r.requestType === 'meeting_request' && (r.status === 'pending_review' || r.status === 'acknowledged'));
 
   // Build Homework List for Scoped Scouts
   const buildScoutHomework = (scout) => {
@@ -1247,8 +1292,114 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             </div>
           </div>
 
+          {/* SECTION 1.7: UPCOMING CONFIRMED LEADER CONFERENCES & INQUIRIES WIDGET */}
+          {(confirmedConferences.length > 0 || pendingConferences.length > 0) && (
+            <div className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-white text-base">Leader Conferences & Inquiries</h3>
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                        Live Status
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">Scheduled 1-on-1 parent conferences and advancement reviews with troop leadership.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMeetingModal(true)}
+                  className="px-3.5 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-sky-500/40 self-start sm:self-center"
+                >
+                  <span>＋ Request Another Meeting</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* Confirmed Conferences */}
+                {confirmedConferences.map(conf => (
+                  <div 
+                    key={conf.requestId || conf.id}
+                    className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/60 p-5 rounded-2xl space-y-3 shadow-lg"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 size={12} />
+                        <span>Confirmed Conference</span>
+                      </span>
+                      <span className="text-xs font-bold text-emerald-300 font-mono">
+                        📅 {conf.confirmedDate} &bull; ⏰ {conf.confirmedTime || '6:30 PM'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-white text-sm">
+                        {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        Meeting Topic: <strong className="text-emerald-300">{conf.meetingTopic || 'Advancement & Progress'}</strong>
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-950/70 border border-slate-800 p-3 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-200">
+                        <User size={12} className="text-emerald-400 shrink-0" />
+                        <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || 'Troop Leader'} ({conf.confirmedByRole || 'Scoutmaster'})</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-200">
+                        <MapPin size={12} className="text-emerald-400 shrink-0" />
+                        <span><strong>Venue / Location:</strong> {conf.meetingLocation || 'Troop Headquarters'}</span>
+                      </div>
+                      {conf.confirmationNote && (
+                        <p className="text-xs text-emerald-200/90 italic pt-1 border-t border-slate-800">
+                          📝 Leader Note: "{conf.confirmationNote}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Pending Conferences */}
+                {pendingConferences.map(conf => (
+                  <div 
+                    key={conf.requestId || conf.id}
+                    className="bg-slate-900 border border-amber-500/40 p-5 rounded-2xl space-y-3 shadow-md"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-[10px] font-black uppercase bg-amber-950 text-amber-300 border border-amber-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Clock size={12} />
+                        <span>Awaiting Leader Confirmation</span>
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono">
+                        Pref: {conf.proposedDate || 'Flexible'} {conf.proposedTime ? `at ${conf.proposedTime}` : ''}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-white text-sm">
+                        {conf.scoutName} &bull; <span className="text-slate-300 text-xs font-normal">{conf.patrolName}</span>
+                      </h4>
+                      <p className="text-xs text-slate-300">
+                        Requested Leader: <strong className="text-amber-300">{conf.targetLeaderName || 'Any Available Leader / Scoutmaster'}</strong>
+                      </p>
+                    </div>
+
+                    <p className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 italic">
+                      "{conf.message}"
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* SECTION 2: CURRENT RANK & COMPLETED ADVANCEMENT PROGRESS WIDGET */}
-          <div className="bg-slate-850 border border-slate-750 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-750 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">⚜️</span>
@@ -3696,10 +3847,26 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 <select
                   value={meetingScoutId}
                   onChange={(e) => setMeetingScoutId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
                 >
                   {linkedScouts.map(s => (
                     <option key={s.uid} value={s.uid}>{s.fullName || s.username} ({s.rank || 'Scout'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Select Leader *</label>
+                <select
+                  value={meetingTargetLeaderUid}
+                  onChange={(e) => setMeetingTargetLeaderUid(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
+                >
+                  <option value="">⭐ Any Available Leader / Scoutmaster</option>
+                  {availableLeaders.map(ldr => (
+                    <option key={ldr.uid} value={ldr.uid}>
+                      {ldr.fullName || ldr.username} ({ldr.leaderPosition || ldr.role || 'Troop Leader'})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -3709,7 +3876,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 <select
                   value={meetingTopic}
                   onChange={(e) => setMeetingTopic(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
                 >
                   <option value="Advancement & Rank Review">⚜️ Advancement & Rank Review</option>
                   <option value="Merit Badge Guidance">🎖️ Merit Badge Guidance</option>
@@ -3719,14 +3886,32 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Preferred Date / Friday Session (Optional)</label>
-                <input
-                  type="date"
-                  value={meetingProposedDate}
-                  onChange={(e) => setMeetingProposedDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Preferred Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={meetingProposedDate}
+                    onChange={(e) => setMeetingProposedDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Preferred Time</label>
+                  <select
+                    value={meetingProposedTime}
+                    onChange={(e) => setMeetingProposedTime(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
+                  >
+                    <option value="6:00 PM">6:00 PM (Pre-Meeting)</option>
+                    <option value="6:30 PM">6:30 PM (Opening Roll Call)</option>
+                    <option value="7:00 PM">7:00 PM (During Meeting)</option>
+                    <option value="7:30 PM">7:30 PM (Patrol Activity)</option>
+                    <option value="8:00 PM">8:00 PM (Post-Meeting)</option>
+                    <option value="Flexible">Flexible / Anytime Friday</option>
+                  </select>
+                </div>
               </div>
 
               <div>
