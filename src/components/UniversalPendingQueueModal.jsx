@@ -27,8 +27,12 @@ import {
   Users,
   Shield,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  MessageSquare,
+  ChevronRight
 } from 'lucide-react';
+import { resolveParentRequest, acknowledgeParentRequest } from '../services/parentRequestService';
 
 const USUL_AL_DIN = [
   { id: 'usul_tawhid', name: 'Tawhid (Monotheism)', arabic: 'التوحيد', prompt: 'Explain why Allah has no partners and recite Surah al-Ikhlas with meaning.' },
@@ -74,6 +78,7 @@ export default function UniversalPendingQueueModal({
   // Consolidated multi-scout data state: { [scoutUid]: { islamic, ranks, merit, assignments, eagle, profile } }
   const [scoutsDataMap, setScoutsDataMap] = useState({});
   const [assignmentsList, setAssignmentsList] = useState([]);
+  const [parentRequestsList, setParentRequestsList] = useState([]);
 
   // UI states
   const [selectedDomainFilter, setSelectedDomainFilter] = useState('all');
@@ -118,6 +123,17 @@ export default function UniversalPendingQueueModal({
       setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsubAssign();
+  }, []);
+
+  // 2.5 Fetch Parent Requests (Absences, Conferences, Signed Reports)
+  useEffect(() => {
+    const unsubReqs = onSnapshot(collection(db, 'parent_requests'), (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(r => r.status === 'pending_review');
+      setParentRequestsList(list);
+    }, (err) => console.warn('Parent requests fallback in queue modal:', err));
+    return () => unsubReqs();
   }, []);
 
   // 3. Real-Time Multi-Scout Subscriptions
@@ -217,13 +233,14 @@ export default function UniversalPendingQueueModal({
   };
 
   // ── AGGREGATE ALL PENDING ITEMS ACROSS EVERY MODULE AND ALL WATCHED SCOUTS ──
-  const allPendingItems = [];
+  const masterPendingItems = [];
 
-  const scoutUidsToScan = (activeScoutId === 'all' || !activeScoutId)
-    ? Object.keys(scoutsDataMap)
-    : [activeScoutId];
+  const allScoutUidsToScan = Array.from(new Set([
+    ...allScouts.map(s => s.uid),
+    ...Object.keys(scoutsDataMap)
+  ]));
 
-  scoutUidsToScan.forEach(sUid => {
+  allScoutUidsToScan.forEach(sUid => {
     const sData = scoutsDataMap[sUid];
     if (!sData) return;
 
@@ -244,7 +261,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[itemId] || islamicProgress[c.id];
       const uniqueKey = `${sUid}_islamic_${itemId}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -270,7 +287,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[itemId] || islamicProgress[d.id];
       const uniqueKey = `${sUid}_islamic_${itemId}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -296,7 +313,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[itemId] || islamicProgress[inf.id];
       const uniqueKey = `${sUid}_islamic_${itemId}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -321,7 +338,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[r.id];
       const uniqueKey = `${sUid}_islamic_${r.id}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -346,7 +363,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[b.id];
       const uniqueKey = `${sUid}_islamic_${b.id}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -371,7 +388,7 @@ export default function UniversalPendingQueueModal({
       const p = islamicProgress[t.id];
       const uniqueKey = `${sUid}_islamic_${t.id}`;
       if (isEntryPending(p) && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -400,7 +417,7 @@ export default function UniversalPendingQueueModal({
           const s = reqsObj[req.id];
           const uniqueKey = `${sUid}_rank_${rank.id}_${req.id}`;
           if (isEntryPending(s) && !approvedItemIds.has(uniqueKey)) {
-            allPendingItems.push({
+            masterPendingItems.push({
               id: uniqueKey,
               scoutUid: sUid,
               scoutName,
@@ -440,7 +457,7 @@ export default function UniversalPendingQueueModal({
           hasReqPending = true;
           const uniqueKey = `${sUid}_badge_${b.id}_req_${req.id}`;
           if (!approvedItemIds.has(uniqueKey)) {
-            allPendingItems.push({
+            masterPendingItems.push({
               id: uniqueKey,
               scoutUid: sUid,
               scoutName,
@@ -466,7 +483,7 @@ export default function UniversalPendingQueueModal({
       // Also support whole badge pending flag if no specific requirement was flagged
       const uniqueBadgeKey = `${sUid}_badge_${b.id}`;
       if ((mp.pending === true || isEntryPending(mp)) && !approvedItemIds.has(uniqueBadgeKey) && !hasReqPending) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueBadgeKey,
           scoutUid: sUid,
           scoutName,
@@ -493,7 +510,7 @@ export default function UniversalPendingQueueModal({
       const sub = assignProgress[a.id];
       const uniqueKey = `${sUid}_homework_${a.id}`;
       if (sub && sub.submittedDate && !sub.completed && !sub.graded && !approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -516,7 +533,7 @@ export default function UniversalPendingQueueModal({
     if (eagleRoadmap.phase2 && !eagleRoadmap.phase2.signatures?.district && eagleRoadmap.phase1?.completed) {
       const uniqueKey = `${sUid}_eagle_phase2`;
       if (!approvedItemIds.has(uniqueKey)) {
-        allPendingItems.push({
+        masterPendingItems.push({
           id: uniqueKey,
           scoutUid: sUid,
           scoutName,
@@ -536,8 +553,54 @@ export default function UniversalPendingQueueModal({
     }
   });
 
+  // F. PARENT REQUESTS (Absences, Meeting requests, Signed reports, Forms)
+  parentRequestsList.forEach(req => {
+    const sUid = req.scoutId;
+    const scoutProf = allScouts.find(s => s.uid === sUid) || scoutsDataMap[sUid]?.profile || {};
+    const scoutName = req.scoutName || scoutProf.fullName || scoutProf.username || 'Scout';
+    const scoutPatrolName = req.patrolName || scoutProf.assignedPatrol || 'Patrol';
+    const uniqueKey = `parent_req_${req.id || req.requestId}`;
+
+    if (!approvedItemIds.has(uniqueKey)) {
+      masterPendingItems.push({
+        id: uniqueKey,
+        scoutUid: sUid || 'unlinked',
+        scoutName,
+        scoutPatrolName,
+        rawId: req.id || req.requestId,
+        domain: 'requests',
+        domainLabel: req.requestType === 'meeting_request' ? '🤝 Conference Request' : req.requestType === 'absence_notice' ? '📅 Absence Notice' : '👨‍👩‍👧 Parent Submission',
+        domainColor: 'border-purple-500/50 bg-purple-950/30 text-purple-300',
+        title: req.requestType === 'meeting_request' 
+          ? `Parent Conference: ${req.parentName}` 
+          : req.requestType === 'absence_notice' 
+          ? `Absence Notice (${req.proposedDate || 'Troop Meeting'})` 
+          : `Parent Submission from ${req.parentName}`,
+        subtitle: `Scout: ${scoutName} • Parent: ${req.parentName}${req.parentPhone ? ` (${req.parentPhone})` : ''}`,
+        description: req.message || req.meetingTopic || 'Parent submission awaiting leader review.',
+        submittedDate: req.createdAt ? req.createdAt.split('T')[0] : 'Recently',
+        targetTab: 'parent-requests',
+        testPrompt: req.requestType === 'meeting_request' 
+          ? `Schedule / confirm conference with ${req.parentName}.` 
+          : `Review parent note and acknowledge receipt.`,
+        requestData: req
+      });
+    }
+  });
+
+  // ── ACCURATE PER-SCOUT PENDING COUNTS DICTIONARY ──
+  const scoutPendingCounts = {};
+  allScouts.forEach(s => {
+    scoutPendingCounts[s.uid] = masterPendingItems.filter(i => i.scoutUid === s.uid).length;
+  });
+
+  // Active items for current view
+  const activePendingItems = (activeScoutId === 'all' || !activeScoutId)
+    ? masterPendingItems
+    : masterPendingItems.filter(i => i.scoutUid === activeScoutId);
+
   // Filtered items
-  const filteredPending = allPendingItems.filter(item => {
+  const filteredPending = activePendingItems.filter(item => {
     if (selectedDomainFilter !== 'all' && item.domain !== selectedDomainFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -635,6 +698,19 @@ export default function UniversalPendingQueueModal({
               }
             }
           });
+        } else if (item.domain === 'requests') {
+          updatePromises.push(
+            resolveParentRequest({
+              requestId: item.rawId,
+              leaderUid,
+              leaderName,
+              resolutionStatus: 'approved',
+              resolutionNote: 'Batch approved and signed off by leader.',
+              parentUid: item.requestData?.parentUid,
+              parentEmail: item.requestData?.parentEmail,
+              scoutName: item.scoutName
+            })
+          );
         }
       });
 
@@ -885,6 +961,17 @@ export default function UniversalPendingQueueModal({
             }
           }
         }, { merge: true });
+      } else if (item.domain === 'requests') {
+        await resolveParentRequest({
+          requestId: item.rawId,
+          leaderUid,
+          leaderName,
+          resolutionStatus: 'approved',
+          resolutionNote: 'Reviewed and approved by unit leader.',
+          parentUid: item.requestData?.parentUid,
+          parentEmail: item.requestData?.parentEmail,
+          scoutName: item.scoutName
+        });
       }
 
       showFeedback(`✓ Approved ${item.title} for ${item.scoutName}!`);
@@ -893,6 +980,9 @@ export default function UniversalPendingQueueModal({
       showFeedback(`❌ Failed to approve: ${err.message}`);
     }
   };
+
+  const activeScoutObj = allScouts.find(s => s.uid === activeScoutId) || scoutsDataMap[activeScoutId]?.profile;
+  const activeScoutName = activeScoutObj?.fullName || activeScoutObj?.username || 'Selected Scout';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
@@ -911,27 +1001,27 @@ export default function UniversalPendingQueueModal({
                 </span>
                 <span className="text-xs text-amber-300 font-bold">
                   {activeScoutId === 'all' 
-                    ? `Troop-Wide Stream (${allPendingItems.length} Total)` 
-                    : `Reviewing: ${allScouts.find(s => s.uid === activeScoutId)?.fullName || 'Selected Scout'}`}
+                    ? `Troop-Wide Stream (${masterPendingItems.length} Total)` 
+                    : `Reviewing: ${activeScoutName} (${activePendingItems.length} pending)`}
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-white">
-                Pending Submissions & Testing Items ({allPendingItems.length})
+                Pending Submissions & Testing Items ({activePendingItems.length})
               </h3>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
-            {/* Scout Switcher */}
+            {/* Scout Switcher Select */}
             {isLeaderOrOwner && allScouts.length > 0 && (
               <select
                 value={activeScoutId}
                 onChange={(e) => setActiveScoutId(e.target.value)}
                 className="bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-1.5 text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-amber-400"
               >
-                <option value="all">🌍 All Scouts in Queue ({allPendingItems.length})</option>
+                <option value="all">🌍 All Scouts in Queue ({masterPendingItems.length})</option>
                 {allScouts.map(s => {
-                  const sCount = allPendingItems.filter(i => i.scoutUid === s.uid).length;
+                  const sCount = scoutPendingCounts[s.uid] || 0;
                   return (
                     <option key={s.uid} value={s.uid}>
                       {s.fullName || s.username} ({sCount} pending)
@@ -980,17 +1070,78 @@ export default function UniversalPendingQueueModal({
           </div>
         )}
 
+        {/* ── 1.5 SCOUT QUEUE OVERVIEW RIBBON (PER-SCOUT REQUESTS & ACTION COUNTS) ── */}
+        {isLeaderOrOwner && allScouts.length > 0 && (
+          <div className="bg-slate-950/90 px-4 py-2.5 border-b border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-800 shrink-0">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+              <Users size={12} className="text-amber-400" />
+              <span>Scout Queues:</span>
+            </span>
+
+            {/* All Scouts Button */}
+            <button
+              type="button"
+              onClick={() => setActiveScoutId('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                activeScoutId === 'all'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                  : 'bg-slate-900 border border-slate-750 text-slate-300 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              <span>🌍 All Troop Members</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                activeScoutId === 'all' 
+                  ? 'bg-slate-950 text-amber-300' 
+                  : masterPendingItems.length > 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {masterPendingItems.length}
+              </span>
+            </button>
+
+            {/* Individual Scout Chips with Live Pending Counts */}
+            {allScouts.map(s => {
+              const sCount = scoutPendingCounts[s.uid] || 0;
+              const isSelected = activeScoutId === s.uid;
+              const pName = groups.find(g => g.id === s.groupId || g.id === s.patrolId)?.name || s.assignedPatrol;
+
+              return (
+                <button
+                  key={s.uid}
+                  type="button"
+                  onClick={() => setActiveScoutId(s.uid)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-500/20 border-2 border-amber-400 text-white shadow-md'
+                      : 'bg-slate-900 border border-slate-750 text-slate-300 hover:text-white hover:border-slate-600'
+                  }`}
+                  title={`${s.fullName || s.username} • ${pName || 'Patrol'}`}
+                >
+                  <span className="truncate max-w-[120px]">{s.fullName?.split(' ')[0] || s.username}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ${
+                    sCount > 0 
+                      ? 'bg-amber-500 text-slate-950 shadow-sm animate-pulse' 
+                      : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {sCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── 2. FILTER CONTROLS & SEARCH ── */}
         <div className="p-3.5 bg-slate-850 border-b border-slate-750 flex flex-col md:flex-row md:items-center justify-between gap-2.5 shrink-0 text-xs">
           {/* Domain Chips */}
           <div className="flex flex-wrap gap-1.5 overflow-x-auto scrollbar-none pb-1 md:pb-0">
             {[
-              { id: 'all', label: 'All Items', count: allPendingItems.length },
-              { id: 'ranks', label: '⚜️ 7 Ranks', count: allPendingItems.filter(i => i.domain === 'ranks').length },
-              { id: 'islamic', label: '🕌 Islamic Knowledge', count: allPendingItems.filter(i => i.domain === 'islamic').length },
-              { id: 'homework', label: '🎒 Homework', count: allPendingItems.filter(i => i.domain === 'homework').length },
-              { id: 'badges', label: '🏅 Merit Badges', count: allPendingItems.filter(i => i.domain === 'badges').length },
-              { id: 'eagle', label: '🦅 Road to Eagle', count: allPendingItems.filter(i => i.domain === 'eagle').length }
+              { id: 'all', label: 'All Items', count: activePendingItems.length },
+              { id: 'ranks', label: '⚜️ 7 Ranks', count: activePendingItems.filter(i => i.domain === 'ranks').length },
+              { id: 'islamic', label: '🕌 Islamic Knowledge', count: activePendingItems.filter(i => i.domain === 'islamic').length },
+              { id: 'homework', label: '🎒 Homework', count: activePendingItems.filter(i => i.domain === 'homework').length },
+              { id: 'badges', label: '🏅 Merit Badges', count: activePendingItems.filter(i => i.domain === 'badges').length },
+              { id: 'eagle', label: '🦅 Road to Eagle', count: activePendingItems.filter(i => i.domain === 'eagle').length },
+              { id: 'requests', label: '👨‍👩‍👧 Parent Requests', count: activePendingItems.filter(i => i.domain === 'requests').length }
             ].map(f => (
               <button
                 key={f.id}
@@ -1027,12 +1178,51 @@ export default function UniversalPendingQueueModal({
         {/* ── 3. SCROLLABLE QUEUE ITEMS STREAM ── */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
           {filteredPending.length === 0 ? (
-            <div className="text-center py-16 space-y-3 bg-slate-900/40 rounded-2xl border border-slate-800 p-6">
-              <CheckCircle2 size={44} className="mx-auto text-emerald-400 opacity-70" />
-              <h4 className="text-base font-extrabold text-white">Review Queue is Clear!</h4>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                No pending items matching the current filter. All scout milestones have been tested, signed off, and recorded.
-              </p>
+            <div className="text-center py-12 space-y-4 bg-slate-900/40 rounded-2xl border border-slate-800 p-6">
+              <CheckCircle2 size={44} className="mx-auto text-emerald-400 opacity-80" />
+              <div className="space-y-1">
+                <h4 className="text-base font-extrabold text-white">
+                  {activeScoutId === 'all'
+                    ? 'Troop Review Queue is Clear!'
+                    : `Queue Clear for ${activeScoutName}!`}
+                </h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  {activeScoutId === 'all'
+                    ? 'No pending items matching the current filter. All scout milestones and parent requests have been tested, signed off, and recorded.'
+                    : `${activeScoutName} has 0 pending items awaiting testing or sign-off under the current filter.`}
+                </p>
+              </div>
+
+              {/* Quick Jump Buttons to other scouts who have items */}
+              {activeScoutId !== 'all' && masterPendingItems.length > 0 && (
+                <div className="pt-4 border-t border-slate-800/80 max-w-lg mx-auto space-y-2.5">
+                  <span className="text-[11px] text-amber-300 font-bold block uppercase tracking-wider">
+                    ⚡ Scouts with Submissions Awaiting Testing ({masterPendingItems.length} Total):
+                  </span>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {allScouts.filter(s => (scoutPendingCounts[s.uid] || 0) > 0).map(s => (
+                      <button
+                        key={s.uid}
+                        type="button"
+                        onClick={() => setActiveScoutId(s.uid)}
+                        className="bg-slate-800 hover:bg-slate-750 border border-amber-500/40 text-slate-200 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>{s.fullName?.split(' ')[0] || s.username}</span>
+                        <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                          {scoutPendingCounts[s.uid]}
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setActiveScoutId('all')}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer shadow-md"
+                    >
+                      View All Scouts Stream ({masterPendingItems.length}) &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             filteredPending.map((item) => (
@@ -1077,7 +1267,13 @@ export default function UniversalPendingQueueModal({
                       type="button"
                       onClick={() => {
                         onClose();
-                        onNavigate(item.targetTab);
+                        if (item.domain === 'requests' && item.requestData?.requestType === 'meeting_request') {
+                          onNavigate('parent-requests', { requestId: item.rawId, confirmMeeting: true });
+                        } else if (item.domain === 'requests') {
+                          onNavigate('parent-requests', { requestId: item.rawId });
+                        } else {
+                          onNavigate(item.targetTab);
+                        }
                       }}
                       className="bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-white font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-slate-700 shrink-0 cursor-pointer self-start"
                     >
@@ -1096,7 +1292,7 @@ export default function UniversalPendingQueueModal({
                 {item.testPrompt && (
                   <div className="text-[11px] text-slate-300 bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-xl flex items-start gap-2">
                     <Sparkles size={13} className="text-emerald-400 shrink-0 mt-0.5" />
-                    <span><strong className="text-emerald-400">Oral Testing Prompt:</strong> {item.testPrompt}</span>
+                    <span><strong className="text-emerald-400">{item.domain === 'requests' ? 'Action Details:' : 'Oral Testing Prompt:'}</strong> {item.testPrompt}</span>
                   </div>
                 )}
 
@@ -1107,14 +1303,28 @@ export default function UniversalPendingQueueModal({
                       Scout: <strong>{item.scoutName}</strong>
                     </span>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSingleApprove(item)}
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
-                    >
-                      <Check size={14} />
-                      <span>Conduct Test & Sign-off ✓</span>
-                    </button>
+                    {item.domain === 'requests' && item.requestData?.requestType === 'meeting_request' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onNavigate && onNavigate('parent-requests', { requestId: item.rawId, confirmMeeting: true });
+                        }}
+                        className="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-purple-950/40"
+                      >
+                        <Calendar size={14} />
+                        <span>📅 Confirm & Schedule Meeting &rarr;</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSingleApprove(item)}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                      >
+                        <Check size={14} />
+                        <span>{item.domain === 'requests' ? 'Acknowledge & Sign ✓' : 'Conduct Test & Sign-off ✓'}</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

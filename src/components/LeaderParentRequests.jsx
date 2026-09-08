@@ -37,7 +37,13 @@ import {
 } from 'lucide-react';
 import { acknowledgeParentRequest, resolveParentRequest, confirmMeetingRequest } from '../services/parentRequestService';
 
-export default function LeaderParentRequests({ currentUser = {}, onNavigate }) {
+export default function LeaderParentRequests({ 
+  currentUser = {}, 
+  onNavigate, 
+  initialRequestId = null, 
+  autoOpenConfirm = false, 
+  initialFilterTab = 'pending' 
+}) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.role === 'executive' || currentUser?.isExecutive || currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster';
 
@@ -47,7 +53,7 @@ export default function LeaderParentRequests({ currentUser = {}, onNavigate }) {
   const [loading, setLoading] = useState(true);
 
   // Filter States
-  const [activeTab, setActiveTab] = useState('pending'); // 'all' | 'pending' | 'absence_notice' | 'signed_report' | 'meeting_request' | 'form_submission' | 'resolved'
+  const [activeTab, setActiveTab] = useState(initialFilterTab || 'pending'); // 'all' | 'pending' | 'absence_notice' | 'signed_report' | 'meeting_request' | 'form_submission' | 'resolved'
   const [patrolFilter, setPatrolFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -79,6 +85,25 @@ export default function LeaderParentRequests({ currentUser = {}, onNavigate }) {
     });
     return () => unsub();
   }, []);
+
+  // 1.1 Handle Direct Navigation Jump & Auto-Open Confirmation Modal
+  useEffect(() => {
+    if (!initialRequestId || requests.length === 0) return;
+    const target = requests.find(r => r.requestId === initialRequestId || r.id === initialRequestId);
+    if (target) {
+      if (target.requestType === 'meeting_request' && (autoOpenConfirm || target.status !== 'resolved')) {
+        handleOpenMeetingConfirm(target);
+      } else if (autoOpenConfirm) {
+        setResolvingRequest(target);
+      }
+      if (target.status === 'confirmed' || target.status === 'resolved' || target.status === 'approved') {
+        setActiveTab('all');
+      } else if (target.requestType) {
+        setActiveTab(target.requestType);
+      }
+      setSearchQuery(target.scoutName || '');
+    }
+  }, [initialRequestId, autoOpenConfirm, requests]);
 
   // 2. Subscribe to Groups
   useEffect(() => {

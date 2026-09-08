@@ -23,7 +23,9 @@ import {
   TrendingUp,
   Crown,
   KeyRound,
-  MapPin
+  MapPin,
+  Phone,
+  Video
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
@@ -135,7 +137,19 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const targetGId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
       if (!isTroopWideAuthority && targetGId) {
-        list = list.filter(r => r.patrolId === targetGId || r.patrolName === currentUser.assignedPatrol || !r.patrolId);
+        list = list.filter(r => 
+          r.patrolId === targetGId || 
+          r.patrolName === currentUser.assignedPatrol || 
+          !r.patrolId ||
+          r.targetLeaderUid === currentUser?.uid ||
+          r.assignedLeaderUid === currentUser?.uid
+        );
+      } else if (!isTroopWideAuthority) {
+        list = list.filter(r => 
+          !r.targetLeaderUid || 
+          r.targetLeaderUid === currentUser?.uid || 
+          r.assignedLeaderUid === currentUser?.uid
+        );
       }
       setParentRequests(list);
     }, (err) => console.warn('Parent requests fallback in LeaderHome:', err));
@@ -509,42 +523,166 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
       </div>
 
-      {/* ── 1.8 PENDING PARENT REQUESTS ALERT BANNER ── */}
+      {/* ── 1.8 PENDING PARENT REQUESTS & CONFERENCE ALERTS ── */}
       {(() => {
-        const pendingReqs = parentRequests.filter(r => r.status === 'pending_review');
-        if (pendingReqs.length === 0) return null;
+        const pendingMeetingReqs = parentRequests.filter(r => r.status === 'pending_review' && r.requestType === 'meeting_request');
+        const pendingOtherReqs = parentRequests.filter(r => r.status === 'pending_review' && r.requestType !== 'meeting_request');
+        const confirmedConferences = parentRequests.filter(r => r.status === 'confirmed' && r.requestType === 'meeting_request');
+
+        if (pendingMeetingReqs.length === 0 && pendingOtherReqs.length === 0 && confirmedConferences.length === 0) return null;
 
         return (
-          <div className="bg-gradient-to-r from-sky-950/90 via-slate-900 to-slate-900 border-2 border-sky-500/60 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-2xl shrink-0 text-sky-300">
-                <MessageSquare size={22} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase bg-sky-500 text-slate-950 px-2.5 py-0.5 rounded-full">
-                    Parent Requests ({pendingReqs.length})
-                  </span>
-                  <span className="text-xs text-sky-200 font-mono">
-                    {pendingReqs.filter(r => r.requestType === 'absence_notice').length > 0 ? `${pendingReqs.filter(r => r.requestType === 'absence_notice').length} Absence Notice` : 'Action Required'}
-                  </span>
+          <div className="space-y-3.5 animate-fadeIn">
+            {/* A. High-Priority Conference Requests Banner */}
+            {pendingMeetingReqs.length > 0 && (
+              <div className="bg-gradient-to-r from-purple-950/95 via-slate-900 to-amber-950/40 border-2 border-purple-500/70 p-5 rounded-3xl shadow-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/30 pb-3.5 mb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-purple-500/25 border border-purple-400 flex items-center justify-center text-xl shrink-0 text-purple-300 shadow-inner">
+                      🤝
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase bg-purple-500 text-slate-950 px-2.5 py-0.5 rounded-full tracking-wider">
+                          Conference Requested
+                        </span>
+                        <span className="text-xs text-purple-200 font-mono font-bold">
+                          {pendingMeetingReqs.length} Awaiting Confirmation
+                        </span>
+                      </div>
+                      <h3 className="text-base font-black text-white mt-0.5">
+                        Leader-Parent Conferences Pending Scheduling
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'pending' })}
+                    className="text-xs text-purple-300 hover:text-purple-200 font-bold self-start sm:self-auto cursor-pointer underline underline-offset-4"
+                  >
+                    View All in Console &rarr;
+                  </button>
                 </div>
-                <h3 className="text-sm font-black text-white mt-1">
-                  Incoming parent submission from {pendingReqs[0].parentName} for {pendingReqs[0].scoutName}
-                </h3>
-                <p className="text-xs text-slate-300 line-clamp-1">
-                  "{pendingReqs[0].message}"
-                </p>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('admin')}
-              className="bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
-            >
-              Review Parent Requests &rarr;
-            </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {pendingMeetingReqs.map(req => (
+                    <div 
+                      key={req.id || req.requestId} 
+                      className="bg-slate-900/90 border border-purple-500/40 hover:border-purple-400 p-4 rounded-2xl flex flex-col justify-between gap-3 transition shadow-md"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                            {req.scoutName}
+                          </span>
+                          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md font-mono">
+                            {req.patrolName || 'Dhulfiqar Patrol'}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-200 font-medium">
+                          Parent: <strong className="text-white">{req.parentName}</strong>
+                          {req.targetLeaderName ? (
+                            <span className="text-purple-300 block text-[11px] mt-0.5">
+                              Requested with: <strong>Leader {req.targetLeaderName}</strong> ({req.targetLeaderRole || 'Leader'})
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 block text-[11px] mt-0.5">
+                              Requested with: <em>Any Available Unit Leader</em>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
+                          <div className="flex items-center gap-2 text-purple-200 font-mono text-[11px]">
+                            <Calendar size={12} className="text-purple-400 shrink-0" />
+                            <span>Requested: <strong>{req.proposedDate || 'Flexible Date'}</strong> @ <strong>{req.proposedTime || 'Evening'}</strong></span>
+                          </div>
+                          {req.meetingTopic && (
+                            <div className="text-slate-300 text-[11px] italic">
+                              Topic: "{req.meetingTopic}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onNavigate && onNavigate('parent-requests', { requestId: req.id || req.requestId, confirmMeeting: true })}
+                        className="w-full bg-gradient-to-r from-purple-600 via-emerald-600 to-teal-600 hover:from-purple-500 hover:to-emerald-500 text-white font-black text-xs py-2.5 px-4 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-purple-950/40"
+                      >
+                        <Calendar size={14} />
+                        <span>📅 Confirm & Schedule Conference &rarr;</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* B. General Parent Requests Banner (Absences, Reports, Forms) */}
+            {pendingOtherReqs.length > 0 && (
+              <div className="bg-gradient-to-r from-sky-950/90 via-slate-900 to-slate-900 border-2 border-sky-500/60 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-2xl shrink-0 text-sky-300">
+                    <MessageSquare size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase bg-sky-500 text-slate-950 px-2.5 py-0.5 rounded-full">
+                        Parent Submissions ({pendingOtherReqs.length})
+                      </span>
+                      <span className="text-xs text-sky-200 font-mono">
+                        {pendingOtherReqs.filter(r => r.requestType === 'absence_notice').length > 0 
+                          ? `${pendingOtherReqs.filter(r => r.requestType === 'absence_notice').length} Absence Notice(s)` 
+                          : 'Action Required'}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-black text-white mt-1">
+                      Incoming submission from {pendingOtherReqs[0].parentName} for {pendingOtherReqs[0].scoutName}
+                    </h3>
+                    <p className="text-xs text-slate-300 line-clamp-1">
+                      "{pendingOtherReqs[0].message}"
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('parent-requests', { requestId: pendingOtherReqs[0].id || pendingOtherReqs[0].requestId })}
+                  className="bg-gradient-to-r from-sky-500 to-sky-400 hover:from-sky-400 hover:to-sky-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer shadow-lg shrink-0 self-start sm:self-center"
+                >
+                  Review Parent Requests &rarr;
+                </button>
+              </div>
+            )}
+
+            {/* C. Confirmed Conferences Reminder */}
+            {confirmedConferences.length > 0 && (
+              <div className="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+                      Scheduled Appointments ({confirmedConferences.length})
+                    </span>
+                    <p className="text-xs text-slate-200">
+                      Next: <strong>{confirmedConferences[0].parentName}</strong> ({confirmedConferences[0].scoutName}) on <strong className="text-emerald-300">{confirmedConferences[0].confirmedDate} at {confirmedConferences[0].confirmedTime}</strong> • {confirmedConferences[0].meetingLocation || 'Troop HQ'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'confirmed' })}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  View Confirmed List &rarr;
+                </button>
+              </div>
+            )}
           </div>
         );
       })()}

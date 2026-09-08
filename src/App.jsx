@@ -234,34 +234,52 @@ export default function App() {
     }
   }, [currentTab, currentUser?.uid]);
 
-  // Real-time unread scout notifications listener
+  // Real-time unread notifications listener (Scouts & Leaders)
   useEffect(() => {
-    if (!currentUser?.uid || currentUser?.role !== 'scout') {
+    if (!currentUser?.uid) {
       setUnreadAlertsCount(0);
       return;
     }
 
-    const scoutUid = currentUser.uid;
+    const uId = currentUser.uid;
+    const isLeaderRole = isLeader || isOwner || isExecutive;
     const unsubs = [];
 
-    // 1. Listen to /scout_notifications
-    unsubs.push(onSnapshot(collection(db, 'scout_notifications'), (snap) => {
-      const pushedUnread = snap.docs
-        .map(d => d.data())
-        .filter(n => (!n.recipientUid || n.recipientUid === scoutUid || n.scoutEmail === currentUser.email) && !n.read && !n.isRead).length;
-      setUnreadAlertsCount(pushedUnread);
-    }, (err) => console.warn("Scout notifications listener fallback:", err)));
+    if (currentUser.role === 'scout') {
+      // 1. Listen to /scout_notifications
+      unsubs.push(onSnapshot(collection(db, 'scout_notifications'), (snap) => {
+        const pushedUnread = snap.docs
+          .map(d => d.data())
+          .filter(n => (!n.recipientUid || n.recipientUid === uId || n.scoutEmail === currentUser.email) && !n.read && !n.isRead).length;
+        setUnreadAlertsCount(pushedUnread);
+      }, (err) => console.warn("Scout notifications listener fallback:", err)));
 
-    // 2. Listen to subcollection /users/{scoutUid}/notifications
-    unsubs.push(onSnapshot(collection(db, 'users', scoutUid, 'notifications'), (snap) => {
-      const subcolUnread = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
-      if (subcolUnread > 0) {
-        setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
-      }
-    }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+      // 2. Listen to subcollection /users/{scoutUid}/notifications
+      unsubs.push(onSnapshot(collection(db, 'users', uId, 'notifications'), (snap) => {
+        const subcolUnread = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
+        if (subcolUnread > 0) {
+          setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
+        }
+      }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+    } else if (isLeaderRole) {
+      // Listen to /leader_notifications and subcollection /users/{leaderUid}/notifications
+      unsubs.push(onSnapshot(collection(db, 'leader_notifications'), (snap) => {
+        const leaderUnread = snap.docs
+          .map(d => d.data())
+          .filter(n => (!n.recipientUid || n.recipientUid === uId || n.leaderEmail === currentUser.email) && !n.read && !n.isRead).length;
+        setUnreadAlertsCount(leaderUnread);
+      }, (err) => console.warn("Leader notifications listener fallback:", err)));
+
+      unsubs.push(onSnapshot(collection(db, 'users', uId, 'notifications'), (snap) => {
+        const subcolUnread = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
+        if (subcolUnread > 0) {
+          setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
+        }
+      }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+    }
 
     return () => unsubs.forEach(u => u());
-  }, [currentUser?.uid, currentUser?.role, currentUser?.email]);
+  }, [currentUser?.uid, currentUser?.role, currentUser?.email, isLeader, isOwner, isExecutive]);
 
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
@@ -285,6 +303,8 @@ export default function App() {
 
   const [attendanceInitialData, setAttendanceInitialData] = useState(null);
   const [profileInitialTab, setProfileInitialTab] = useState('personal');
+  const [adminInitialTab, setAdminInitialTab] = useState('users');
+  const [adminExtraData, setAdminExtraData] = useState(null);
 
   const handleNavigate = (tab, extraData = null) => {
     if (tab === 'attendance' && extraData) {
@@ -301,6 +321,20 @@ export default function App() {
       setProfileInitialTab('service');
       setMobileMenuOpen(false);
       return;
+    } else if (tab === 'parent-requests' || tab === 'admin-requests') {
+      setCurrentTab('admin');
+      setAdminInitialTab('requests');
+      setAdminExtraData(extraData);
+      setMobileMenuOpen(false);
+      return;
+    } else if (tab === 'admin') {
+      if (extraData?.tab) {
+        setAdminInitialTab(extraData.tab);
+        setAdminExtraData(extraData);
+      } else {
+        setAdminInitialTab('users');
+        setAdminExtraData(null);
+      }
     }
     setCurrentTab(tab);
     setMobileMenuOpen(false);
@@ -929,8 +963,13 @@ export default function App() {
           />
         )}
 
-        {(currentTab === 'admin' || currentTab === 'global-admin') && (isOwner || isExecutive) && (
-          <AdminPanel currentUser={currentUser} onNavigate={handleNavigate} />
+        {(currentTab === 'admin' || currentTab === 'global-admin' || currentTab === 'parent-requests' || currentTab === 'admin-requests') && (isLeaderOrOwner || isExecutive) && (
+          <AdminPanel 
+            currentUser={currentUser} 
+            initialTab={adminInitialTab} 
+            extraData={adminExtraData} 
+            onNavigate={handleNavigate} 
+          />
         )}
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && isLeaderOrOwner && <PatrolRoster currentUser={currentUser} />}

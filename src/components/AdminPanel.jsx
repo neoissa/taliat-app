@@ -133,10 +133,17 @@ function compressImage(file, maxWidth = 300, maxHeight = 300, quality = 0.8) {
   });
 }
 
-export default function AdminPanel({ currentUser, onNavigate }) {
+export default function AdminPanel({ currentUser, initialTab = 'users', onNavigate, extraData = null }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
 
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'patrols' | 'broadcasts' | 'forms'
+  const [activeTab, setActiveTab] = useState(initialTab || 'users'); // 'users' | 'patrols' | 'broadcasts' | 'forms' | 'rsvps' | 'requests'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [broadcasts, setBroadcasts] = useState([]);
@@ -3202,7 +3209,13 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
       {/* ── 6. PARENT INQUIRIES & REQUESTS TAB ── */}
       {activeTab === 'requests' && (
-        <LeaderParentRequests currentUser={currentUser} onNavigate={onNavigate} />
+        <LeaderParentRequests 
+          currentUser={currentUser} 
+          onNavigate={onNavigate}
+          initialRequestId={extraData?.requestId}
+          autoOpenConfirm={extraData?.confirmMeeting}
+          initialFilterTab={extraData?.filterTab || 'pending'}
+        />
       )}
 
       {/* ── 7. PARENT FORMS & WAIVERS REGISTRY TAB ── */}
