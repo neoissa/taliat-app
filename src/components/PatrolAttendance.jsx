@@ -152,16 +152,27 @@ export const mapCategoryToEventType = (cat, title = '') => {
 };
 
 export default function PatrolAttendance({ currentUser, initialData }) {
-  const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Assistant Scoutmaster';
-  const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster || isAssistantScoutmaster;
+  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
+  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && currentUser?.leaderPosition === 'Scoutmaster';
+  const isSuperUser = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster;
+  const userPatrolId = currentUser?.groupId || currentUser?.patrolId || null;
 
   // Patrol Scouts State
   const [allScouts, setAllScouts] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [selectedGroupId, setSelectedGroupId] = useState(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
+  const [selectedGroupId, setSelectedGroupId] = useState(isSuperUser ? 'all' : (userPatrolId || 'all'));
   const [loading, setLoading] = useState(true);
+
+  // Sync selected group if role or patrol changes
+  useEffect(() => {
+    if (isSuperUser) {
+      setSelectedGroupId(prev => prev || 'all');
+    } else if (userPatrolId) {
+      setSelectedGroupId(userPatrolId);
+    } else {
+      setSelectedGroupId('all');
+    }
+  }, [isSuperUser, userPatrolId]);
 
   // Real-time parent submitted absence notices
   const [attendanceExcuses, setAttendanceExcuses] = useState([]);
@@ -228,20 +239,25 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     return () => unsub();
   }, [currentUser]);
 
-  // Filtered Scouts based on Executive Switcher or Assigned Patrol
+  // Filtered Scouts based on Super User Switcher or Assigned Patrol
   const scouts = useMemo(() => {
-    if (isExecutive) {
+    if (isSuperUser) {
       if (selectedGroupId === 'all') return allScouts;
-      return allScouts.filter(s => s.groupId === selectedGroupId || s.patrolId === selectedGroupId);
+      const grp = groups.find(g => g.id === selectedGroupId);
+      return allScouts.filter(s => 
+        s.groupId === selectedGroupId || 
+        s.patrolId === selectedGroupId ||
+        (grp && s.patrolName && s.patrolName.toLowerCase() === grp.name.toLowerCase())
+      );
     }
     // Regular leader scoped strictly to assigned patrol
     return allScouts.filter(s => {
-      if (currentUser?.groupId && s.groupId === currentUser.groupId) return true;
-      if (s.leaderId === currentUser?.uid) return true;
-      if (currentUser?.patrolName && s.patrolName === currentUser.patrolName) return true;
+      if (userPatrolId && (s.groupId === userPatrolId || s.patrolId === userPatrolId)) return true;
+      if (s.leaderId && currentUser?.uid && s.leaderId === currentUser.uid) return true;
+      if (currentUser?.patrolName && s.patrolName && s.patrolName.toLowerCase() === currentUser.patrolName.toLowerCase()) return true;
       return false;
     });
-  }, [allScouts, isExecutive, selectedGroupId, currentUser]);
+  }, [allScouts, isSuperUser, selectedGroupId, currentUser, userPatrolId, groups]);
 
   useEffect(() => {
     if (scouts.length > 0 && !selectedPrintScoutId) {
@@ -254,10 +270,17 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      if (!isExecutive && currentUser?.groupId) {
-        list = list.filter(s => s.groupId === currentUser.groupId || s.leaderId === currentUser.uid);
-      } else if (!isExecutive) {
-        list = list.filter(s => s.leaderId === currentUser?.uid);
+      if (!isSuperUser) {
+        list = list.filter(s => {
+          if (userPatrolId && (s.groupId === userPatrolId || s.patrolId === userPatrolId)) return true;
+          if (currentUser?.patrolName && s.patrolName && s.patrolName.toLowerCase() === currentUser.patrolName.toLowerCase()) return true;
+          if (s.leaderId && currentUser?.uid && s.leaderId === currentUser.uid) return true;
+          if (s.records && Object.keys(s.records).length > 0) {
+            const hasPatrolScout = scouts.some(scout => s.records[scout.uid]);
+            if (hasPatrolScout) return true;
+          }
+          return false;
+        });
       }
 
       list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -267,7 +290,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     });
 
     return () => unsub();
-  }, [currentUser, isExecutive]);
+  }, [currentUser, isSuperUser, userPatrolId, scouts]);
 
   // 5. Fetch Scheduled Events
   useEffect(() => {
@@ -640,7 +663,15 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     else greenCount++;
   });
 
+  const assignedPatrol = groups.find(g => g.id === userPatrolId || (currentUser?.patrolName && g.name.toLowerCase() === currentUser.patrolName.toLowerCase()));
+
   const filteredHistoricalSessions = historicalSessions.filter(s => {
+    if (isSuperUser && selectedGroupId !== 'all') {
+      const grp = groups.find(g => g.id === selectedGroupId);
+      const matchGroup = s.groupId === selectedGroupId || s.patrolId === selectedGroupId || (grp && s.patrolName && s.patrolName.toLowerCase() === grp.name.toLowerCase());
+      const matchScout = scouts.some(scout => s.records && s.records[scout.uid]);
+      if (!matchGroup && !matchScout) return false;
+    }
     const norm = normalizeEventType(s.eventType);
     if (historyProgramFilter !== 'all' && norm !== historyProgramFilter) return false;
     if (historySearch) {
@@ -680,9 +711,13 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">
                   Patrol Attendance & Retention Engine
                 </span>
-                {currentUser?.patrolName && (
-                  <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                    👥 {currentUser.patrolName} Patrol
+                {isSuperUser ? (
+                  <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    👑 Full Troop Access (Super User)
+                  </span>
+                ) : (
+                  <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    🏕️ Assigned Patrol: {assignedPatrol?.name || currentUser?.patrolName || 'Assigned Patrol'}
                   </span>
                 )}
                 {editingSessionId && (
@@ -733,8 +768,8 @@ export default function PatrolAttendance({ currentUser, initialData }) {
           </div>
         </div>
 
-        {/* ── EXECUTIVE PATROL SWITCHER TABS ── */}
-        {isExecutive && groups.length > 0 && (
+        {/* ── SUPER USER PATROL SWITCHER TABS ── */}
+        {isSuperUser && groups.length > 0 && (
           <div className="mt-5 pt-4 border-t border-slate-850 flex items-center gap-2 overflow-x-auto scrollbar-none relative z-10">
             <span className="text-[10px] uppercase font-black text-slate-400 px-2 shrink-0 flex items-center gap-1">
               <Shield size={12} className="text-emerald-400" /> Patrol Filter:
@@ -754,7 +789,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
               </span>
             </button>
             {groups.map(g => {
-              const gScoutCount = allScouts.filter(s => s.groupId === g.id || s.patrolId === g.id).length;
+              const gScoutCount = allScouts.filter(s => s.groupId === g.id || s.patrolId === g.id || (s.patrolName && s.patrolName.toLowerCase() === g.name.toLowerCase())).length;
               const isSelected = selectedGroupId === g.id;
               return (
                 <button
@@ -774,6 +809,17 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* ── REGULAR LEADER PATROL SCOPED NOTICE ── */}
+        {!isSuperUser && (
+          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+              <Shield size={13} />
+              <span>Patrol Scoped Access: <strong>{assignedPatrol?.name || currentUser?.patrolName || 'Assigned Patrol'}</strong></span>
+            </span>
+            <span className="text-[11px] text-slate-400">Displaying attendance records strictly for your assigned patrol</span>
           </div>
         )}
 

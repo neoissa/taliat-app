@@ -169,7 +169,7 @@ export function getBadgeStatusAndProgress(badge, sMerit = {}) {
     plannedTarget: mbData.plannedTarget || null,
     plannedAt: mbData.plannedAt || null,
     earnedDate: mbData.completedDate || mbData.dateCompleted || mbData.earnedDate || mbData.completedAt || null,
-    counselor: mbData.counselorName || mbData.counselor || mbData.approvedBy || null,
+    counselor: mbData.counselorName || mbData.approvedByName || mbData.counselor || mbData.signerName || mbData.approvedBy || null,
     notes: mbData.notes || null,
     steps
   };
@@ -2933,7 +2933,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                               const isDone = reqData === true || reqData?.completed === true || reqData === 'completed' || reqData === 'approved' || reqData?.approved === true;
                               const isPending = !isDone && (reqData?.pending === true || reqData === 'pending');
                               const signOffDate = reqData?.completedAt || reqData?.approvedAt || reqData?.completedDate || null;
-                              const approver = reqData?.approvedBy || reqData?.signerName || null;
+                              const approver = reqData?.approvedByName || reqData?.signerName || (reqData?.approvedBy ? (allUsers.find(u => u.uid === reqData.approvedBy)?.fullName || allUsers.find(u => u.uid === reqData.approvedBy)?.username || reqData.approvedBy) : null);
 
                               return (
                                 <div

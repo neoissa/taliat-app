@@ -130,6 +130,35 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
     const list = [];
     const scoutUsers = users.filter(u => u.role === 'scout');
 
+    const resolveApproverName = (rawApproverIdOrName, explicitName = null, defaultFallback = 'Troop Leader') => {
+      if (explicitName && typeof explicitName === 'string' && explicitName.trim()) {
+        const trimmed = explicitName.trim();
+        const userMatch = users.find(u => u.uid === trimmed || u.id === trimmed);
+        if (userMatch) return userMatch.fullName || userMatch.username || userMatch.displayName || trimmed;
+        if (trimmed.length > 0 && (trimmed.includes(' ') || trimmed.length < 20)) {
+          return trimmed;
+        }
+      }
+      if (rawApproverIdOrName && typeof rawApproverIdOrName === 'string' && rawApproverIdOrName.trim()) {
+        const trimmed = rawApproverIdOrName.trim();
+        const userMatch = users.find(u => u.uid === trimmed || u.id === trimmed);
+        if (userMatch) return userMatch.fullName || userMatch.username || userMatch.displayName || trimmed;
+        return trimmed;
+      }
+      return defaultFallback;
+    };
+
+    const resolveApproverRole = (rawRole, rawApproverIdOrName, defaultRole = 'Leader') => {
+      if (rawRole && typeof rawRole === 'string' && rawRole.trim() && rawRole !== 'Leader') {
+        return rawRole;
+      }
+      if (rawApproverIdOrName && typeof rawApproverIdOrName === 'string') {
+        const userMatch = users.find(u => u.uid === rawApproverIdOrName.trim() || u.id === rawApproverIdOrName.trim());
+        if (userMatch?.leaderPosition) return userMatch.leaderPosition;
+      }
+      return rawRole || defaultRole;
+    };
+
     scoutUsers.forEach(scout => {
       const sData = scoutsAdvancementData[scout.uid] || {};
       const sRanks = sData.ranks || {};
@@ -147,8 +176,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
         // Overall Rank Sign-off
         const isRankDone = rData.completed === true || rData.approved === true || rData.status === 'completed';
         if (isRankDone) {
-          const approver = rData.approvedBy || rData.completedBy || rData.signerName || rData.leaderName || 'Scoutmaster';
-          const approverRole = rData.approverRole || rData.signerRole || 'Scoutmaster';
+          const approver = resolveApproverName(
+            rData.approvedBy || rData.completedBy || rData.signerUid || rData.leaderId,
+            rData.approvedByName || rData.signerName || rData.leaderName || rData.completedByName,
+            'Scoutmaster'
+          );
+          const approverRole = resolveApproverRole(rData.approverRole || rData.signerRole, rData.approvedBy || rData.completedBy, 'Scoutmaster');
           const approvedAt = rData.approvedAt || rData.completedAt || rData.completedDate || rData.updatedAt || new Date().toISOString();
           list.push({
             id: `rank_${scout.uid}_${rank.id}`,
@@ -179,8 +212,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
             const reqData = (rData.completedRequirements && rData.completedRequirements[req.id]) || (rData.steps && rData.steps[req.id]) || rData[req.id];
             const isReqDone = reqData === true || reqData?.completed === true || reqData === 'completed' || reqData === 'approved' || reqData?.approved === true;
             if (isReqDone) {
-              const approver = reqData?.approvedBy || reqData?.signerName || reqData?.completedBy || rData.approvedBy || 'Troop Leader';
-              const approverRole = reqData?.approverRole || reqData?.signerRole || rData.approverRole || 'Leader';
+              const approver = resolveApproverName(
+                reqData?.approvedBy || reqData?.completedBy || reqData?.signerUid || rData.approvedBy,
+                reqData?.approvedByName || reqData?.signerName || reqData?.leaderName || reqData?.completedByName || rData.approvedByName,
+                'Troop Leader'
+              );
+              const approverRole = resolveApproverRole(reqData?.approverRole || reqData?.signerRole || rData.approverRole, reqData?.approvedBy || rData.approvedBy, 'Leader');
               const approvedAt = reqData?.approvedAt || reqData?.completedAt || reqData?.completedDate || rData.approvedAt || rData.completedAt || new Date().toISOString();
               list.push({
                 id: `rankreq_${scout.uid}_${rank.id}_${req.id}`,
@@ -216,8 +253,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
 
         const isBadgeDone = bData.status === 'completed' || bData.isCompleted === true || bData.completed === true || bData.approved === true;
         if (isBadgeDone) {
-          const approver = bData.approvedBy || bData.counselorName || bData.completedBy || 'Merit Badge Counselor';
-          const approverRole = bData.approverRole || 'Counselor';
+          const approver = resolveApproverName(
+            bData.approvedBy || bData.completedBy || bData.counselorId || bData.leaderId,
+            bData.approvedByName || bData.counselorName || bData.signerName || bData.leaderName || bData.completedByName,
+            'Merit Badge Counselor'
+          );
+          const approverRole = resolveApproverRole(bData.approverRole, bData.approvedBy, 'Counselor');
           const approvedAt = bData.approvedAt || bData.earnedDate || bData.completedDate || bData.completedAt || bData.updatedAt || new Date().toISOString();
           list.push({
             id: `mb_${scout.uid}_${badge.id}`,
@@ -247,8 +288,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
           const stepData = (bData.completedSteps && bData.completedSteps[req.id]) || (bData.steps && bData.steps[req.id]) || bData[req.id];
           const isStepDone = stepData === true || stepData?.completed === true || stepData === 'completed' || stepData === 'approved' || stepData?.approved === true;
           if (isStepDone) {
-            const approver = stepData?.approvedBy || stepData?.signerName || bData.approvedBy || 'Merit Badge Counselor';
-            const approverRole = stepData?.approverRole || bData.approverRole || 'Counselor';
+            const approver = resolveApproverName(
+              stepData?.approvedBy || stepData?.completedBy || stepData?.counselorId || bData.approvedBy,
+              stepData?.approvedByName || stepData?.signerName || stepData?.counselorName || stepData?.leaderName || bData.approvedByName || bData.counselorName,
+              'Merit Badge Counselor'
+            );
+            const approverRole = resolveApproverRole(stepData?.approverRole || bData.approverRole, stepData?.approvedBy || bData.approvedBy, 'Counselor');
             const approvedAt = stepData?.approvedAt || stepData?.completedAt || stepData?.completedDate || bData.approvedAt || bData.completedAt || new Date().toISOString();
             list.push({
               id: `mbreq_${scout.uid}_${badge.id}_${req.id}`,
@@ -280,8 +325,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
         const tData = sIslamic[topic.id] || (sIslamic.completedTopics && sIslamic.completedTopics[topic.id]);
         const isTopicDone = tData === true || tData?.completed === true || tData === 'completed' || tData === 'approved' || tData?.approved === true;
         if (isTopicDone) {
-          const approver = tData?.approvedBy || tData?.signerName || sIslamic.approvedBy || 'Murshid / Halqa Leader';
-          const approverRole = tData?.approverRole || 'Halqa Leader';
+          const approver = resolveApproverName(
+            tData?.approvedBy || tData?.completedBy || sIslamic.approvedBy,
+            tData?.approvedByName || tData?.signerName || tData?.leaderName || sIslamic.approvedByName,
+            'Murshid / Halqa Leader'
+          );
+          const approverRole = resolveApproverRole(tData?.approverRole, tData?.approvedBy, 'Halqa Leader');
           const approvedAt = tData?.approvedAt || tData?.completedDate || tData?.completedAt || sIslamic.updatedAt || new Date().toISOString();
           list.push({
             id: `islamic_${scout.uid}_${topic.id}`,
@@ -311,7 +360,11 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
         const cData = sIslamic[char.id] || (sIslamic.completedTopics && sIslamic.completedTopics[char.id]);
         const isCharDone = cData === true || cData?.completed === true || cData === 'completed' || cData === 'approved';
         if (isCharDone) {
-          const approver = cData?.approvedBy || sIslamic.approvedBy || 'Halqa Leader';
+          const approver = resolveApproverName(
+            cData?.approvedBy || cData?.completedBy || sIslamic.approvedBy,
+            cData?.approvedByName || cData?.signerName || cData?.leaderName || sIslamic.approvedByName,
+            'Halqa Leader'
+          );
           const approvedAt = cData?.approvedAt || cData?.completedDate || cData?.completedAt || new Date().toISOString();
           list.push({
             id: `karbala_${scout.uid}_${char.id}`,
@@ -341,8 +394,12 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
       Object.entries(sAssignments).forEach(([assignId, aData]) => {
         const isAssignDone = aData?.completed === true || aData?.status === 'completed' || aData?.approved === true;
         if (isAssignDone) {
-          const approver = aData.approvedBy || aData.gradedBy || aData.leaderName || 'Patrol Leader';
-          const approverRole = aData.approverRole || 'Leader';
+          const approver = resolveApproverName(
+            aData.approvedBy || aData.gradedBy || aData.leaderId,
+            aData.approvedByName || aData.gradedByName || aData.leaderName || aData.signerName,
+            'Patrol Leader'
+          );
+          const approverRole = resolveApproverRole(aData.approverRole, aData.approvedBy || aData.gradedBy, 'Leader');
           const approvedAt = aData.approvedAt || aData.completedAt || aData.gradedAt || aData.submittedAt || new Date().toISOString();
           list.push({
             id: `assign_${scout.uid}_${assignId}`,
@@ -382,7 +439,11 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
         milestones.forEach(m => {
           const mData = sEagle[m.key];
           if (mData && (mData.completed === true || mData.approved === true || mData.status === 'approved' || mData.status === 'completed')) {
-            const approver = mData.approvedBy || 'Eagle Scout Board';
+            const approver = resolveApproverName(
+              mData.approvedBy || mData.leaderId,
+              mData.approvedByName || mData.signerName || mData.counselorName || mData.leaderName,
+              'Eagle Scout Board'
+            );
             const approvedAt = mData.approvedAt || mData.completedAt || new Date().toISOString();
             list.push({
               id: `eagle_${scout.uid}_${m.key}`,
@@ -413,7 +474,11 @@ export default function LeaderHistoryAudit({ currentUser, onNavigate }) {
       const scoutService = serviceLogs.filter(l => l.scoutId === scout.uid || l.userId === scout.uid);
       scoutService.forEach(log => {
         if (log.status === 'approved' || log.verified === true || Number(log.hours) > 0) {
-          const approver = log.approvedBy || log.verifiedBy || 'Service Project Coordinator';
+          const approver = resolveApproverName(
+            log.approvedBy || log.verifiedBy || log.leaderId,
+            log.approvedByName || log.verifiedByName || log.leaderName || log.verifierName,
+            'Service Project Coordinator'
+          );
           const approvedAt = log.approvedAt || log.date || log.createdAt || new Date().toISOString();
           list.push({
             id: `service_${log.id}`,

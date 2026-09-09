@@ -113,6 +113,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [showPrintReport, setShowPrintReport] = useState(false);
   const [showEaglePortal, setShowEaglePortal] = useState(false);
   const [showUniversalPendingModal, setShowUniversalPendingModal] = useState(false);
+  const [allUsersList, setAllUsersList] = useState([]);
 
 
   // Fetch groups for patrol batch completion
@@ -162,6 +163,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      setAllUsersList(allUsers);
       const scouts = allUsers.filter(u => {
         if (u.role !== 'scout') return false;
         if (isSuperUser) return true;
@@ -910,11 +912,24 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
                         </p>
 
                         {/* Sign-off Author details */}
-                        {isCompleted && reqProgress.approvedByName && (
-                          <p className="text-[10px] text-emerald-400/90 font-medium mt-1">
-                            Approved by: <strong className="text-emerald-300">{reqProgress.approvedByName}</strong> {reqProgress.approvedAt ? `on ${reqProgress.approvedAt}` : ''}
-                          </p>
-                        )}
+                        {isCompleted && (reqProgress.approvedByName || reqProgress.approvedBy) && (() => {
+                          const rawName = reqProgress.approvedByName;
+                          const rawUid = reqProgress.approvedBy;
+                          let displayName = rawName;
+                          if (!displayName || (displayName.length >= 20 && !displayName.includes(' '))) {
+                            const u = allUsersList.find(x => x.uid === (displayName || rawUid));
+                            if (u) displayName = u.fullName || u.username || displayName;
+                          }
+                          if (!displayName && rawUid) {
+                            const u = allUsersList.find(x => x.uid === rawUid);
+                            if (u) displayName = u.fullName || u.username || rawUid;
+                          }
+                          return (
+                            <p className="text-[10px] text-emerald-400/90 font-medium mt-1">
+                              Approved by: <strong className="text-emerald-300">{displayName || 'Leader'}</strong> {reqProgress.approvedAt ? `on ${reqProgress.approvedAt}` : ''}
+                            </p>
+                          );
+                        })()}
                         {isPending && reqProgress.submittedAt && (
                           <p className="text-[10px] text-amber-400 font-medium mt-1">
                             Submitted by Scout on <strong className="text-amber-300">{reqProgress.submittedAt}</strong> (Awaiting Leader Sign-off)
