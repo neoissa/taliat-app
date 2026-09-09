@@ -8,9 +8,11 @@ import { publishProgressReport, deletePublishedReport } from '../services/publis
 import SignaturePadModal from './SignaturePadModal';
 import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
+import RosterExportModal from './RosterExportModal';
 import {
   Printer,
   Sparkles,
+  FileSpreadsheet,
   Filter,
   Layers,
   CalendarRange,
@@ -905,6 +907,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
   const [publishSuccessToast, setPublishSuccessToast] = useState('');
   const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
   const [showVaultModal, setShowVaultModal] = useState(false);
+  const [showRosterExportModal, setShowRosterExportModal] = useState(false);
 
   // Modular Item Filter Config Object
   const [config, setConfig] = useState({
@@ -1207,6 +1210,15 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
 
             <button
               type="button"
+              onClick={() => setShowRosterExportModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02] shrink-0"
+            >
+              <FileSpreadsheet size={15} />
+              <span>Export Roster (CSV / PDF)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowVaultModal(true)}
               className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shrink-0"
             >
@@ -1240,14 +1252,23 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
             <span>1-Click Preset Quick-Configs:</span>
           </span>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setShowRosterExportModal(true)}
+              className="p-3 rounded-2xl bg-slate-900 border border-emerald-500/60 hover:border-emerald-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm ring-1 ring-emerald-500/20"
+            >
+              <strong className="text-emerald-300 block font-bold group-hover:text-emerald-200">📥 Export Roster Data</strong>
+              <p className="text-[10px] text-slate-400 mt-0.5">Full dual-parent & medical CSV/PDF</p>
+            </button>
+
             <button
               type="button"
               onClick={() => applyPreset('parent_conference')}
               className="p-3 rounded-2xl bg-slate-900 border border-emerald-500/40 hover:border-emerald-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
             >
               <strong className="text-emerald-300 block font-bold group-hover:text-emerald-200">👨‍👩‍👧 Parent Conference</strong>
-              <p className="text-[10px] text-slate-400 mt-0.5">Active rank + Badges + Notes + Signatures</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Active rank + Badges + Notes</p>
             </button>
 
             <button
@@ -1256,7 +1277,7 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
               className="p-3 rounded-2xl bg-slate-900 border border-amber-500/40 hover:border-amber-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
             >
               <strong className="text-amber-300 block font-bold group-hover:text-amber-200">🎖️ Court of Honor</strong>
-              <p className="text-[10px] text-slate-400 mt-0.5">Completed ranks + All badges + Service</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Completed ranks + All badges</p>
             </button>
 
             <button
@@ -1264,8 +1285,8 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
               onClick={() => applyPreset('eagle_review')}
               className="p-3 rounded-2xl bg-slate-900 border border-sky-500/40 hover:border-sky-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
             >
-              <strong className="text-sky-300 block font-bold group-hover:text-sky-200">🦅 Eagle Candidate Review</strong>
-              <p className="text-[10px] text-slate-400 mt-0.5">Star/Life/Eagle + 21 Badges + Project</p>
+              <strong className="text-sky-300 block font-bold group-hover:text-sky-200">🦅 Eagle Candidate</strong>
+              <p className="text-[10px] text-slate-400 mt-0.5">Star/Life/Eagle + 21 Badges</p>
             </button>
 
             <button
@@ -1273,8 +1294,8 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
               onClick={() => applyPreset('attendance_transcript')}
               className="p-3 rounded-2xl bg-slate-900 border border-teal-500/40 hover:border-teal-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
             >
-              <strong className="text-teal-300 block font-bold group-hover:text-teal-200">📋 Attendance & Hours Transcript</strong>
-              <p className="text-[10px] text-slate-400 mt-0.5">Official hours, nights & service audit</p>
+              <strong className="text-teal-300 block font-bold group-hover:text-teal-200">📋 Attendance & Hours</strong>
+              <p className="text-[10px] text-slate-400 mt-0.5">Official hours, nights & audit</p>
             </button>
 
             <button
@@ -1282,8 +1303,8 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
               onClick={() => applyPreset('master_record')}
               className="p-3 rounded-2xl bg-slate-900 border border-purple-500/40 hover:border-purple-400 hover:bg-slate-800 text-left transition cursor-pointer group shadow-sm"
             >
-              <strong className="text-purple-300 block font-bold group-hover:text-purple-200">📜 Master Record File</strong>
-              <p className="text-[10px] text-slate-400 mt-0.5">Complete comprehensive audit</p>
+              <strong className="text-purple-300 block font-bold group-hover:text-purple-200">📜 Master Record</strong>
+              <p className="text-[10px] text-slate-400 mt-0.5">Complete comprehensive file</p>
             </button>
           </div>
         </div>
@@ -1819,6 +1840,13 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
           </div>
         </div>
       )}
+
+      {/* ── 4. ROSTER EXPORT MODAL (CSV & PDF) ── */}
+      <RosterExportModal
+        isOpen={showRosterExportModal}
+        onClose={() => setShowRosterExportModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

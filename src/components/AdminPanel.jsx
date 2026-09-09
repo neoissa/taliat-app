@@ -96,6 +96,7 @@ import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData
 import LeaderEventRsvps from './LeaderEventRsvps';
 import LeaderParentRequests from './LeaderParentRequests';
 import LeaderBroadcastCenter from './LeaderBroadcastCenter';
+import RosterExportModal from './RosterExportModal';
 
 const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
@@ -157,6 +158,7 @@ export default function AdminPanel({ currentUser, initialTab = 'users', onNaviga
 
   // User Creation Modal / Form State
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showRosterExportModal, setShowRosterExportModal] = useState(false);
   const [newUserType, setNewUserType] = useState('leader'); // 'leader' | 'parent' | 'scout'
   const [newFullName, setNewFullName] = useState('');
   const [newUsername, setNewUsername] = useState('');
@@ -1734,6 +1736,14 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
             </button>
           )}
           <button
+            onClick={() => setShowRosterExportModal(true)}
+            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shadow-md shrink-0"
+            title="Export Troop & Dual-Parent Household Roster to CSV or Formatted PDF"
+          >
+            <FileSpreadsheet size={15} className="text-emerald-400" />
+            <span>Export Roster Data</span>
+          </button>
+          <button
             onClick={() => setShowUserModal(true)}
             className={`font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg ${
               isOwner 
@@ -1807,9 +1817,19 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
               </select>
             </div>
 
-            <span className="text-xs font-mono text-slate-400">
-              Showing {filteredUsers.length} of {users.length} accounts
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRosterExportModal(true)}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <FileSpreadsheet size={13} className="text-emerald-400" />
+                <span>Export Roster (CSV / PDF)</span>
+              </button>
+              <span className="text-xs font-mono text-slate-400">
+                Showing {filteredUsers.length} of {users.length} accounts
+              </span>
+            </div>
           </div>
 
           {/* Users Table */}
@@ -5143,6 +5163,13 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
           </div>
         </div>
       )}
+
+      {/* ── ROSTER EXPORT MODAL (CSV & PDF) ── */}
+      <RosterExportModal
+        isOpen={showRosterExportModal}
+        onClose={() => setShowRosterExportModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

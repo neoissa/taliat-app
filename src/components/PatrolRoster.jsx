@@ -19,11 +19,13 @@ import VideoResources from './VideoResources';
 import ServiceLogs from './ServiceLogs';
 import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
+import RosterExportModal from './RosterExportModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import { 
   Printer, 
+  FileSpreadsheet, 
   ArrowLeft, 
   Save, 
   Award, 
@@ -1128,6 +1130,7 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [expanded, setExpanded] = useState(null);
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showRosterExportModal, setShowRosterExportModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -2104,6 +2107,18 @@ Reminder to log your community service and volunteering hours into the portal.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canAddOrDeleteScouts && (
+            <button
+              type="button"
+              onClick={() => setShowRosterExportModal(true)}
+              className="bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Export Troop & Dual-Parent Household Roster to CSV or Formatted PDF"
+            >
+              <FileSpreadsheet size={13} className="text-emerald-400" />
+              <span>Export Roster</span>
+            </button>
+          )}
+
           {rosterSubTab === 'scouts' && canAddOrDeleteScouts && (
             <button
               onClick={() => { setShowForm((v) => !v); setAddMsg(''); setAddError(''); }}
@@ -4677,6 +4692,13 @@ We wanted to remind scouts to log their community service and volunteering hours
           </div>
         </div>
       )}
+
+      {/* ── ROSTER EXPORT MODAL (CSV & PDF) ── */}
+      <RosterExportModal
+        isOpen={showRosterExportModal}
+        onClose={() => setShowRosterExportModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }
