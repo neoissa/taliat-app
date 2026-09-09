@@ -38,14 +38,14 @@ export const MERIT_BADGE_COUNSELORS = [
       "Emergency Preparedness",
       "Energy",
       "Engineering",
-      "Exploration",
-      "Family Life",
+      "First Aid",
+      "Indian Lore",
       "Inventing",
       "Nuclear Science",
-      "Personal Fitness",
-      "Personal Management",
       "Programming",
-      "Robotics"
+      "Robotics",
+      "Scouting Heritage",
+      "Sustainability"
     ],
     "badgeDetails": [
       {
@@ -182,18 +182,18 @@ export const MERIT_BADGE_COUNSELORS = [
         "icon": "⚙️"
       },
       {
-        "name": "Exploration",
-        "id": "exploration",
-        "eagleRequired": false,
-        "category": "Outdoor & Adventure",
-        "icon": "🧭"
+        "name": "First Aid",
+        "id": "first-aid",
+        "eagleRequired": true,
+        "category": "Safety & Emergency",
+        "icon": "🩹"
       },
       {
-        "name": "Family Life",
-        "id": "family-life",
-        "eagleRequired": true,
-        "category": "Life Skills",
-        "icon": "👨‍👩‍👧"
+        "name": "Indian Lore",
+        "id": "indian-lore",
+        "eagleRequired": false,
+        "category": "Culture & Heritage",
+        "icon": "🏹"
       },
       {
         "name": "Inventing",
@@ -210,20 +210,6 @@ export const MERIT_BADGE_COUNSELORS = [
         "icon": "⚛️"
       },
       {
-        "name": "Personal Fitness",
-        "id": "personal-fitness",
-        "eagleRequired": true,
-        "category": "Athletics & Health",
-        "icon": "🏃"
-      },
-      {
-        "name": "Personal Management",
-        "id": "personal-management",
-        "eagleRequired": true,
-        "category": "Life Skills",
-        "icon": "📊"
-      },
-      {
         "name": "Programming",
         "id": "programming",
         "eagleRequired": false,
@@ -236,59 +222,20 @@ export const MERIT_BADGE_COUNSELORS = [
         "eagleRequired": false,
         "category": "STEM & Computing",
         "icon": "🦾"
-      }
-    ]
-  },
-  {
-    "id": "counselor_dr_kassem",
-    "leaderId": "user_kassem_farhat",
-    "leaderName": "Dr. Kassem Farhat",
-    "email": "kassem.farhat@med.org",
-    "phone": "+1 (313) 555-7721",
-    "role": "Medical Officer / Merit Badge Counselor",
-    "title": "Merit Badge Counselor (Health & Safety)",
-    "bsaCouncil": "Michigan Crossroads Council 780",
-    "councilNumber": 780,
-    "validThrough": "2027-05-31",
-    "validityFormatted": "May 31, 2027",
-    "avatar": "KF",
-    "avatarBg": "bg-gradient-to-br from-teal-600 to-emerald-700",
-    "inHouseSignOffAvailable": true,
-    "bio": "Certified counselor specializing in First Aid, Emergency Medicine, and Public Health.",
-    "authorizedBadges": [
-      "First Aid",
-      "Emergency Preparedness",
-      "Medicine",
-      "Public Health"
-    ],
-    "badgeDetails": [
-      {
-        "name": "First Aid",
-        "id": "first-aid",
-        "eagleRequired": true,
-        "category": "Safety & Emergency",
-        "icon": "🩹"
       },
       {
-        "name": "Emergency Preparedness",
-        "id": "emergency-preparedness",
-        "eagleRequired": true,
-        "category": "Safety & Emergency",
-        "icon": "🚨"
-      },
-      {
-        "name": "Medicine",
-        "id": "medicine",
+        "name": "Scouting Heritage",
+        "id": "scouting-heritage",
         "eagleRequired": false,
-        "category": "Health & Science",
-        "icon": "🩺"
+        "category": "Civics & History",
+        "icon": "⚜️"
       },
       {
-        "name": "Public Health",
-        "id": "public-health",
-        "eagleRequired": false,
-        "category": "Health & Science",
-        "icon": "🏥"
+        "name": "Sustainability",
+        "id": "sustainability",
+        "eagleRequired": true,
+        "category": "Nature & Ecology",
+        "icon": "🌱"
       }
     ]
   }

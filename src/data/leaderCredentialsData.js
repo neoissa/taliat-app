@@ -221,18 +221,18 @@ export const HASSAN_LEADERSHIP_PROFILE = {
       "icon": "⚙️"
     },
     {
-      "name": "Exploration",
-      "id": "exploration",
-      "eagleRequired": false,
-      "category": "Outdoor & Adventure",
-      "icon": "🧭"
+      "name": "First Aid",
+      "id": "first-aid",
+      "eagleRequired": true,
+      "category": "Safety & Emergency",
+      "icon": "🩹"
     },
     {
-      "name": "Family Life",
-      "id": "family-life",
-      "eagleRequired": true,
-      "category": "Life Skills",
-      "icon": "👨‍👩‍👧"
+      "name": "Indian Lore",
+      "id": "indian-lore",
+      "eagleRequired": false,
+      "category": "Culture & Heritage",
+      "icon": "🏹"
     },
     {
       "name": "Inventing",
@@ -249,20 +249,6 @@ export const HASSAN_LEADERSHIP_PROFILE = {
       "icon": "⚛️"
     },
     {
-      "name": "Personal Fitness",
-      "id": "personal-fitness",
-      "eagleRequired": true,
-      "category": "Athletics & Health",
-      "icon": "🏃"
-    },
-    {
-      "name": "Personal Management",
-      "id": "personal-management",
-      "eagleRequired": true,
-      "category": "Life Skills",
-      "icon": "📊"
-    },
-    {
       "name": "Programming",
       "id": "programming",
       "eagleRequired": false,
@@ -275,6 +261,20 @@ export const HASSAN_LEADERSHIP_PROFILE = {
       "eagleRequired": false,
       "category": "STEM & Computing",
       "icon": "🦾"
+    },
+    {
+      "name": "Scouting Heritage",
+      "id": "scouting-heritage",
+      "eagleRequired": false,
+      "category": "Civics & History",
+      "icon": "⚜️"
+    },
+    {
+      "name": "Sustainability",
+      "id": "sustainability",
+      "eagleRequired": true,
+      "category": "Nature & Ecology",
+      "icon": "🌱"
     }
   ]
 };

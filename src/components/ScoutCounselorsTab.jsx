@@ -150,7 +150,7 @@ export default function ScoutCounselorsTab({ currentUser, onNavigate }) {
       </div>
 
       {/* Counselor Selection Tabs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${counselors.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
         {counselors.map((c) => {
           const isSelected = selectedCounselorId === c.id;
           return (

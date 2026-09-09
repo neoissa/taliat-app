@@ -24,6 +24,7 @@ import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import { HASSAN_LEADERSHIP_PROFILE } from './data/leaderCredentialsData';
+import { syncAnehmeBadges } from './utils/anehmeMeritBadges';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
@@ -129,6 +130,13 @@ export default function App() {
 
     const isNeo = currentUser.email === 'neoissa@gmail.com';
     const isHissa = currentUser.username === 'hissa' || currentUser.username === 'hassan' || currentUser.email === 'hissa@talia.app' || currentUser.email === 'hassan@talia.app';
+    const isAnehme = currentUser.username === 'anehme' || currentUser.email === 'anehme@talia.app' || currentUser.email?.toLowerCase().includes('anehme') || currentUser.fullName?.toLowerCase().includes('anehme');
+
+    if (isAnehme) {
+      syncAnehmeBadges(db, currentUser.uid)
+        .then(() => console.log("Anehme merit badges synced successfully."))
+        .catch(err => console.warn("Anehme badges sync failed:", err));
+    }
 
     if (isNeo || isHissa || currentUser.role === 'owner') {
       const userRef = doc(db, 'users', currentUser.uid);

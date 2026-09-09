@@ -3,6 +3,7 @@ import { auth, db, storage } from '../firebase';
 import { doc, getDoc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { syncAnehmeBadges } from '../utils/anehmeMeritBadges';
 import { 
   User,
   Crown,
@@ -252,6 +253,10 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         setSpt(data.spt || data.sptDate || data.yptDate || '');
         setSptFileUrl(data.sptFileUrl || '');
         setSptFileName(data.sptFileName || '');
+
+        if (data.username === 'anehme' || (data.personalEmail && data.personalEmail.includes('anehme')) || (data.email && data.email.includes('anehme')) || (data.fullName && data.fullName.toLowerCase().includes('anehme'))) {
+          syncAnehmeBadges(db, currentUser.uid).catch(err => console.warn('Anehme badges sync in profile:', err));
+        }
         
         if (data.leaderId) {
           const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));

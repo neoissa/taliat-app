@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
+import { syncAnehmeBadges, ANEHME_BADGE_NAMES } from '../utils/anehmeMeritBadges';
 
 export default function Login({ onUserAuthenticated, onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -41,6 +42,7 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
         let forcedOwner = false;
         const isNeo = user.email === 'neoissa@gmail.com';
         const isHissa = cleanInput === 'hissa' || cleanInput === 'hassan' || user.email === 'hissa@talia.app' || user.email === 'hassan@talia.app';
+        const isAnehme = cleanInput === 'anehme' || cleanInput.includes('anehme') || user.email === 'anehme@talia.app';
 
         if (isNeo) {
           forcedRole = 'owner';
@@ -73,6 +75,10 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
           }, { merge: true });
         }
 
+        if (isAnehme) {
+          syncAnehmeBadges(db, user.uid).catch(err => console.warn('Anehme badge sync error:', err));
+        }
+
         if (userDoc.exists()) {
           const data = userDoc.data();
           notifySuccess({
@@ -83,23 +89,23 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
             leaderId: data.leaderId || null,
             leaderPosition: data.leaderPosition || null,
             groupId: data.groupId || data.patrolId || null,
-            fullName: data.fullName || cleanInput.split('@')[0],
+            fullName: data.fullName || (isAnehme ? 'Ali Nehme (Anehme)' : cleanInput.split('@')[0]),
             username: data.username || cleanInput.split('@')[0],
-            rank: data.rank || '',
-            meritBadges: data.meritBadges || [],
+            rank: data.rank || 'First Class',
+            meritBadges: isAnehme ? ANEHME_BADGE_NAMES : (data.meritBadges || []),
             linkedScoutIds: data.linkedScoutIds || [],
           });
         } else {
           const newProfile = {
-            role: forcedRole || 'leader',
+            role: forcedRole || 'scout',
             isOwner: forcedOwner,
             leaderId: null,
             leaderPosition: null,
             groupId: null,
-            fullName: cleanInput.split('@')[0],
+            fullName: isAnehme ? 'Ali Nehme (Anehme)' : cleanInput.split('@')[0],
             username: cleanInput.split('@')[0],
-            rank: '',
-            meritBadges: [],
+            rank: isAnehme ? 'First Class' : '',
+            meritBadges: isAnehme ? ANEHME_BADGE_NAMES : [],
           };
           await setDoc(userRef, newProfile);
           notifySuccess({

@@ -5,6 +5,7 @@ import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK, TOTAL_MERIT_BADGES_FOR_EAG
 import ScoutCounselorsTab from './ScoutCounselorsTab';
 import { getRecommendedBadges } from '../utils/badgeRecommendations';
 import { MERIT_BADGE_COUNSELORS } from '../data/counselorsData';
+import { syncAnehmeBadges } from '../utils/anehmeMeritBadges';
 import {
   Award, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp,
   X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle, Users, CheckCheck, Shield, ChevronRight
@@ -790,7 +791,11 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
     }
     const unsub = onSnapshot(doc(db, 'users', scoutId), (snap) => {
       if (snap.exists()) {
-        setActiveScoutProfile({ uid: snap.id, ...snap.data() });
+        const uData = { uid: snap.id, ...snap.data() };
+        setActiveScoutProfile(uData);
+        if (uData.username === 'anehme' || (uData.email && uData.email.includes('anehme')) || (uData.fullName && uData.fullName.toLowerCase().includes('anehme'))) {
+          syncAnehmeBadges(db, scoutId).catch(err => console.warn("Anehme sync:", err));
+        }
       } else {
         setActiveScoutProfile(null);
       }
