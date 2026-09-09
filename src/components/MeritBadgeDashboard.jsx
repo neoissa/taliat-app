@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK, TOTAL_MERIT_BADGES_FOR_EAGLE } from '../data/meritBadges';
+import ScoutCounselorsTab from './ScoutCounselorsTab';
+import { getRecommendedBadges } from '../utils/badgeRecommendations';
+import { MERIT_BADGE_COUNSELORS } from '../data/counselorsData';
 import {
   Award, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp,
-  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle, Users, CheckCheck, Shield
+  X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle, Users, CheckCheck, Shield, ChevronRight
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -739,7 +742,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
 
 // ── Main Merit Badge Dashboard ────────────────────────────────────────────────
 
-export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutId, readOnly = false }) {
+export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutId, readOnly = false, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
   const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster') && currentUser?.leaderPosition === 'Scoutmaster';
   const isAssistantScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'assistant_leader') && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scout Master');
@@ -1020,10 +1023,13 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
     return true;
   });
 
+  const recommendedBadges = getRecommendedBadges(activeScoutProfile || currentUser, progress);
+
   const filterTabs = [
     { key: 'planned', label: '🎯 My Planned Badges' },
     { key: 'all', label: `All Badges (${MERIT_BADGES.length})` },
     { key: 'eagle', label: '⭐ Eagle Required (14)' },
+    { key: 'counselors', label: '👥 Troop Counselors & Sign-Offs' },
     { key: 'long-duration', label: '⏳ 90-Day Tracking Badges' },
     { key: 'elective', label: '🎨 Electives' },
     { key: 'pending', label: '⏳ Pending Approval' },
@@ -1145,107 +1151,218 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col gap-3 justify-between print-hide">
-        <div className="flex flex-wrap gap-1.5">
-          {filterTabs.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                filter === key
-                  ? 'bg-emerald-600 text-white shadow-md font-bold'
-                  : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      {filter === 'counselors' ? (
+        <ScoutCounselorsTab currentUser={currentUser} onNavigate={onNavigate} />
+      ) : (
+        <>
+          {/* Smart Recommendations & In-House Counselor Fast-Track Banner */}
+          {recommendedBadges.length > 0 && (
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-2xl p-5 shadow-xl space-y-3.5 print-hide">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
+                        Smart Badge Matcher
+                      </span>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                        ⚜️ 28+ In-House Sign-Offs Ready
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
+                      Recommended Badges & In-House Counselor Fast-Track
+                    </h3>
+                  </div>
+                </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
-          {/* Category Dropdown */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 cursor-pointer sm:w-60"
-          >
-            {categoriesList.map(c => (
-              <option key={c.id} value={c.id}>{c.label}</option>
-            ))}
-          </select>
+                <button
+                  type="button"
+                  onClick={() => setFilter('counselors')}
+                  className="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/50 hover:border-emerald-400 text-xs font-black px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shrink-0 shadow-sm"
+                >
+                  <span>👥 Open Counselors Directory</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
 
-          {/* Search Input */}
-          <input
-            type="text"
-            placeholder="Search badges, skills or requirements..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-72"
-          />
-        </div>
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {recommendedBadges.slice(0, 3).map((rec) => {
+                  const fullBadge = MERIT_BADGES.find(b => b.id === rec.id) || rec;
+                  const isPlanned = !!progress[rec.id]?.planned;
+                  return (
+                    <div 
+                      key={rec.id}
+                      className="bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition shadow-sm"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {rec.eagleRequired ? (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-0.5">
+                                <Star size={9} /> Eagle
+                              </span>
+                            ) : (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold uppercase">
+                                Elective
+                              </span>
+                            )}
+                            {rec.hasInHouseCounselor && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-0.5">
+                                <CheckCircle2 size={9} /> In-House
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                            Match {rec.score}%
+                          </span>
+                        </div>
 
-      {/* Fast-Track 90-Day Badges Alert Banner if on 'long-duration' tab */}
-      {filter === 'long-duration' && (
-        <div className="bg-gradient-to-r from-amber-950/60 via-slate-800 to-amber-950/60 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-2 print-hide">
-          <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
-            <Zap size={18} className="text-amber-400" />
-            <span>Eagle Scout Fast-Track: 90-Day & Multi-Week Tracking Badges</span>
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            These merit badges (such as <strong>Personal Fitness</strong>, <strong>Personal Management</strong>, <strong>Family Life</strong>, and <strong>Camping</strong>) have mandatory multi-week tracking logs that cannot be finished in a single weekend. <strong>Start these early in your scouting journey to avoid delays on your path to Eagle!</strong>
-          </p>
-        </div>
-      )}
+                        <h4 className="text-xs font-black text-white">{rec.name}</h4>
+                        <p className="text-[11px] text-emerald-300/90 font-medium mt-0.5 line-clamp-1">
+                          👉 {rec.mainReason}
+                        </p>
+                        {rec.counselorName && (
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            Counselor: <span className="text-white font-semibold">{rec.counselorName}</span>
+                          </p>
+                        )}
+                      </div>
 
-      {/* Planned Badges Roadmap Guide if on 'planned' tab */}
-      {filter === 'planned' && (
-        <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-amber-950/30 border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
-          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
-            <Sparkles size={18} />
-            <span>How to Plan Your Eagle Rank (21 Merit Badges)</span>
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            To achieve the <strong>Eagle Scout Rank</strong>, you need a minimum of <strong>21 merit badges</strong>: exactly <strong>14 Eagle-Required badges</strong> (such as First Aid, Citizenship, Camping, Cooking, Personal Fitness) plus <strong>7 Elective badges</strong>.
-            Click the target icon <span className="text-amber-400 font-bold">🎯</span> on any badge below or browse "All Badges" to add badges to your personal roadmap!
-          </p>
-        </div>
-      )}
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBadge(fullBadge)}
+                          className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold py-1.5 rounded-lg transition text-center"
+                        >
+                          Requirements
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePlanned(rec.id, isPlanned)}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 border ${
+                            isPlanned
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-amber-300 hover:border-amber-500/40'
+                          }`}
+                          title={isPlanned ? "In your planned list" : "Add to planned list"}
+                        >
+                          <Target size={12} />
+                          <span>{isPlanned ? 'Planned' : 'Plan'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* Badge Grid */}
-      {filteredBadges.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 text-sm bg-slate-800/40 rounded-2xl border border-slate-800 space-y-3">
-          <Target size={36} className="mx-auto text-amber-400 opacity-40" />
-          {filter === 'planned' ? (
-            <div>
-              <p className="font-bold text-white">No planned badges added yet!</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Switch to the "All Badges" or "Eagle Required" tab to pick the merit badges you want to earn.
-              </p>
-              <button
-                onClick={() => setFilter('eagle')}
-                className="mt-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+          {/* Filter Tabs & Search Bar */}
+          <div className="flex flex-col gap-3 justify-between print-hide">
+            <div className="flex flex-wrap gap-1.5">
+              {filterTabs.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    filter === key
+                      ? 'bg-emerald-600 text-white shadow-md font-bold'
+                      : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+              {/* Category Dropdown */}
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 cursor-pointer sm:w-60"
               >
-                Browse Eagle Required Badges
-              </button>
+                {categoriesList.map(c => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+
+              {/* Search Input */}
+              <input
+                type="text"
+                placeholder="Search badges, skills or requirements..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-72"
+              />
+            </div>
+          </div>
+
+          {/* Fast-Track 90-Day Badges Alert Banner if on 'long-duration' tab */}
+          {filter === 'long-duration' && (
+            <div className="bg-gradient-to-r from-amber-950/60 via-slate-800 to-amber-950/60 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-2 print-hide">
+              <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
+                <Zap size={18} className="text-amber-400" />
+                <span>Eagle Scout Fast-Track: 90-Day & Multi-Week Tracking Badges</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                These merit badges (such as <strong>Personal Fitness</strong>, <strong>Personal Management</strong>, <strong>Family Life</strong>, and <strong>Camping</strong>) have mandatory multi-week tracking logs that cannot be finished in a single weekend. <strong>Start these early in your scouting journey to avoid delays on your path to Eagle!</strong>
+              </p>
+            </div>
+          )}
+
+          {/* Planned Badges Roadmap Guide if on 'planned' tab */}
+          {filter === 'planned' && (
+            <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-amber-950/30 border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
+              <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
+                <Sparkles size={18} />
+                <span>How to Plan Your Eagle Rank (21 Merit Badges)</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                To achieve the <strong>Eagle Scout Rank</strong>, you need a minimum of <strong>21 merit badges</strong>: exactly <strong>14 Eagle-Required badges</strong> (such as First Aid, Citizenship, Camping, Cooking, Personal Fitness) plus <strong>7 Elective badges</strong>.
+                Click the target icon <span className="text-amber-400 font-bold">🎯</span> on any badge below or browse "All Badges" to add badges to your personal roadmap!
+              </p>
+            </div>
+          )}
+
+          {/* Badge Grid */}
+          {filteredBadges.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 text-sm bg-slate-800/40 rounded-2xl border border-slate-800 space-y-3">
+              <Target size={36} className="mx-auto text-amber-400 opacity-40" />
+              {filter === 'planned' ? (
+                <div>
+                  <p className="font-bold text-white">No planned badges added yet!</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Switch to the "All Badges" or "Eagle Required" tab to pick the merit badges you want to earn.
+                  </p>
+                  <button
+                    onClick={() => setFilter('eagle')}
+                    className="mt-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    Browse Eagle Required Badges
+                  </button>
+                </div>
+              ) : (
+                <p>No badges found matching your criteria.</p>
+              )}
             </div>
           ) : (
-            <p>No badges found matching your criteria.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+              {filteredBadges.map(badge => (
+                <BadgeCard
+                  key={badge.id}
+                  badge={badge}
+                  progress={progress}
+                  onOpen={setSelectedBadge}
+                  onTogglePlanned={handleTogglePlanned}
+                />
+              ))}
+            </div>
           )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-          {filteredBadges.map(badge => (
-            <BadgeCard
-              key={badge.id}
-              badge={badge}
-              progress={progress}
-              onOpen={setSelectedBadge}
-              onTogglePlanned={handleTogglePlanned}
-            />
-          ))}
-        </div>
+        </>
       )}
 
       {/* Badge Detail Modal */}

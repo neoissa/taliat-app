@@ -20,9 +20,9 @@ import {
 // ── DESIGNATED LOCATIONS MAP ──
 export const DESIGNATED_LOCATIONS = {
   highview: 'Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)',
-  leaderResidence: '6514 Kinloch St, Dearborn Heights, MI 48127',
-  leaderHassan: '6514 Kinloch St, Dearborn Heights, MI 48127',
-  pleasantRidge: '6514 Kinloch St, Dearborn Heights, MI 48127', // Preserved alias
+  leaderResidence: '27112 N Pleasant Ridge, Dearborn Heights, MI 48127',
+  leaderHassan: '27112 N Pleasant Ridge, Dearborn Heights, MI 48127',
+  pleasantRidge: '27112 N Pleasant Ridge, Dearborn Heights, MI 48127',
   dBarA: "D' Bar A Scout Ranch (880 E Sutton Rd, Metamora, MI 48455)",
   hypeAthletics: 'Hype Athletics (23302 W Warren Ave, Dearborn Heights, MI 48127)',
   tbd: 'To Be Determined (TBD)'

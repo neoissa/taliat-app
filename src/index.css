@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
-/* ── Print helpers ── */
-.print-only { display: none; }
+/* ── Global Viewport Lockdown (100vh Shell) ── */
+html, body, #root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden !important; /* Globally disable outer window/body scroll */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 @media print {
   /* Hide navigation, sidebars, action buttons */

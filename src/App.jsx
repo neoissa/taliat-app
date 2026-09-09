@@ -23,6 +23,7 @@ import PatrolAttendance from './components/PatrolAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
+import { HASSAN_LEADERSHIP_PROFILE } from './data/leaderCredentialsData';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
@@ -122,15 +123,39 @@ export default function App() {
   const isScout = !isOwner && !isLeader && !isParent;
   const isLeaderOrOwner = isOwner || isLeader;
 
-  // 2. Proactively promote neoissa@gmail.com to owner in the database on load
+  // 2. Proactively sync Owner (neoissa@gmail.com) and Hissa/Hassan leadership credentials on load
   useEffect(() => {
-    if (currentUser && currentUser.email === 'neoissa@gmail.com' && currentUser.role !== 'owner') {
+    if (!currentUser?.uid) return;
+
+    const isNeo = currentUser.email === 'neoissa@gmail.com';
+    const isHissa = currentUser.username === 'hissa' || currentUser.username === 'hassan' || currentUser.email === 'hissa@talia.app' || currentUser.email === 'hassan@talia.app';
+
+    if (isNeo || isHissa || currentUser.role === 'owner') {
       const userRef = doc(db, 'users', currentUser.uid);
-      setDoc(userRef, { role: 'owner', isOwner: true, email: 'neoissa@gmail.com' }, { merge: true })
-        .then(() => console.log("Database owner promotion synced successfully."))
-        .catch(err => console.error("Database promotion sync failed:", err));
+      const updates = {
+        scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
+        scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
+        meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
+        credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+        credentialsValidFormatted: HASSAN_LEADERSHIP_PROFILE.validityFormatted,
+        bsaCouncil: HASSAN_LEADERSHIP_PROFILE.bsaCouncil,
+        certifyingOrg: HASSAN_LEADERSHIP_PROFILE.certifyingOrg,
+        spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+        sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+        yptCompleted: true
+      };
+
+      if (isNeo) {
+        updates.role = 'owner';
+        updates.isOwner = true;
+        updates.email = 'neoissa@gmail.com';
+      }
+
+      setDoc(userRef, updates, { merge: true })
+        .then(() => console.log("Leadership credentials synced successfully."))
+        .catch(err => console.error("Leadership credentials sync failed:", err));
     }
-  }, [currentUser]);
+  }, [currentUser?.uid, currentUser?.email, currentUser?.username, currentUser?.role]);
 
   // Fetch the user's group/patrol data in real-time (supporting Scouts, Leaders, and Parents)
   useEffect(() => {
@@ -466,7 +491,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row font-sans">
+    <div className="h-screen w-screen max-h-screen max-w-screen overflow-hidden bg-slate-900 text-slate-100 flex flex-col md:flex-row font-sans">
       
       {/* ── MOBILE TOP BAR (VISIBLE ON SMALL SCREENS ONLY) ── */}
       <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b p-3.5 sticky top-0 z-40 flex items-center justify-between print-hide ${
@@ -736,7 +761,7 @@ export default function App() {
       )}
 
       {/* ── DESKTOP PERMANENT SIDEBAR NAVIGATION ── */}
-      <aside className={`hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r shrink-0 h-screen sticky top-0 z-30 select-none print-hide ${
+      <aside className={`hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r shrink-0 h-full max-h-screen select-none print-hide ${
         isOwner ? 'border-amber-500/40' : 'border-slate-800'
       }`}>
         {/* Brand Header */}
@@ -957,7 +982,7 @@ export default function App() {
       </aside>
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
-      <main className="flex-1 min-w-0 bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 min-w-0 h-full max-h-screen bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
         {currentTab === 'road-to-eagle' && !isParent && (
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
@@ -1050,7 +1075,7 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'merit-badges' && !isParent && <MeritBadgeDashboard currentUser={currentUser} />}
+        {currentTab === 'merit-badges' && !isParent && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'assignments' && !isParent && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'assignments' && isParent && (
           <ParentDashboard 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
 
 export default function Login({ onUserAuthenticated, onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -38,10 +39,38 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
         
         let forcedRole = null;
         let forcedOwner = false;
-        if (user.email === 'neoissa@gmail.com') {
+        const isNeo = user.email === 'neoissa@gmail.com';
+        const isHissa = cleanInput === 'hissa' || cleanInput === 'hassan' || user.email === 'hissa@talia.app' || user.email === 'hassan@talia.app';
+
+        if (isNeo) {
           forcedRole = 'owner';
           forcedOwner = true;
-          await setDoc(userRef, { role: 'owner', isOwner: true }, { merge: true });
+          await setDoc(userRef, { 
+            role: 'owner', 
+            isOwner: true, 
+            fullName: 'Neo Issa',
+            scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
+            scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
+            meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
+            credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            yptCompleted: true
+          }, { merge: true });
+        } else if (isHissa) {
+          forcedRole = 'leader';
+          await setDoc(userRef, { 
+            role: 'leader',
+            leaderPosition: 'Committee Chair / Troop Leader',
+            fullName: 'Hassan Nehme',
+            scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
+            scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
+            meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
+            credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            yptCompleted: true
+          }, { merge: true });
         }
 
         if (userDoc.exists()) {

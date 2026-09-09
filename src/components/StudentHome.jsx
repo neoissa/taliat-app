@@ -42,6 +42,8 @@ import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankComple
 import { MERIT_BADGES } from '../data/meritBadges';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
+import { getRecommendedBadges } from '../utils/badgeRecommendations';
+import { MERIT_BADGE_COUNSELORS } from '../data/counselorsData';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
@@ -50,6 +52,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [publishedReports, setPublishedReports] = useState([]);
   const [viewingPublishedReport, setViewingPublishedReport] = useState(null);
   const [meritBadgesCount, setMeritBadgesCount] = useState(0);
+  const [meritBadgesProgress, setMeritBadgesProgress] = useState({});
   const [serviceHours, setServiceHours] = useState(0);
   const [eagleData, setEagleData] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
@@ -145,12 +148,15 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     if (!scoutUid) return;
     const unsub = onSnapshot(collection(db, 'user_progress', scoutUid, 'merit_badges'), (snap) => {
       let count = 0;
+      const pMap = {};
       snap.docs.forEach(d => {
         const data = d.data();
-        if (data.completed || data.steps && Object.values(data.steps).every(v => v === true || v?.completed === true)) {
+        pMap[d.id] = data;
+        if (data.completed || (data.steps && Object.values(data.steps).every(v => v === true || v?.completed === true))) {
           count++;
         }
       });
+      setMeritBadgesProgress(pMap);
       setMeritBadgesCount(count);
     }, (err) => console.warn("Merit badge count fallback:", err));
 
@@ -284,6 +290,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const projectStage = eagleData?.eagleProject?.stage || 'proposal';
   const projectDone = !!(eagleData?.eagleProject?.workbookCompleted && eagleData?.eagleProject?.districtApproval);
   const totalPalms = eagleData?.eaglePalms?.totalPalms || 0;
+
+  // Compute smart recommended merit badges
+  const recommendedBadges = getRecommendedBadges(currentUser, meritBadgesProgress);
 
   return (
     <div className="space-y-6 pb-8">
@@ -628,6 +637,92 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </button>
         </div>
       </div>
+
+      {/* ── 2.5. SMART MERIT BADGE RECOMMENDATIONS & TROOP COUNSELORS ── */}
+      {recommendedBadges.length > 0 && (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3.5">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+                <Sparkles size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Smart Badge Recommendation
+                  </span>
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    ⚜️ 28+ In-House Sign-Offs Ready
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-white">
+                  Fast-Track Merit Badges (Authorized Troop Counselors)
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Leader <strong>Hassan A. Issa</strong> is certified to counsel and sign off on <strong>27 official subjects</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('merit-badges')}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              >
+                <span>Browse All 137 Badges</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {recommendedBadges.slice(0, 4).map((rec) => (
+              <div
+                key={rec.id}
+                onClick={() => onNavigate && onNavigate('merit-badges')}
+                className="bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl flex flex-col justify-between gap-3 cursor-pointer transition group shadow-sm hover:scale-[1.01]"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {rec.eagleRequired ? (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-0.5">
+                          <Star size={9} /> Eagle
+                        </span>
+                      ) : (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold uppercase">
+                          Elective
+                        </span>
+                      )}
+                      {rec.hasInHouseCounselor && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                          In-House
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                      Match {rec.score}%
+                    </span>
+                  </div>
+
+                  <h4 className="text-xs font-black text-white group-hover:text-emerald-300 transition">
+                    {rec.name}
+                  </h4>
+                  <p className="text-[11px] text-emerald-300/90 font-medium mt-0.5 line-clamp-2 leading-relaxed">
+                    👉 {rec.mainReason}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="truncate">Counselor: <strong className="text-white">{rec.counselorName}</strong></span>
+                  <ChevronRight size={13} className="text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── 3. SCOUT HOMEWORK & DUE TASKS (VIDEOS & WORKSHEETS) ── */}
       <AssignmentsManager currentUser={currentUser} scoutId={currentUser?.uid} isEmbeddedInProfile={false} />

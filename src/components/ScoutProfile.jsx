@@ -47,6 +47,7 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
+import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
 import AssignmentsManager from './AssignmentsManager';
 import RoadToEagleTracker from './RoadToEagleTracker';
 import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
@@ -1176,6 +1177,21 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           >
             <Clock size={15} />
             <span>⏱️ Service & Volunteering</span>
+          </button>
+        )}
+
+        {!isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('credentials')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'credentials'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Award size={15} />
+            <span>⚜️ Scouting Leadership & Badges</span>
           </button>
         )}
 
@@ -2830,6 +2846,23 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                     )}
 
                     <div 
+                      onClick={() => setActiveProfileTab('credentials')}
+                      className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 hover:border-amber-400 transition cursor-pointer group space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-amber-400 block text-[10px] uppercase font-bold flex items-center gap-1">
+                          <Award size={12} /> Scouting Leadership & Counselor (27 Subjects)
+                        </span>
+                        <ChevronRight size={13} className="text-amber-400 group-hover:translate-x-0.5 transition" />
+                      </div>
+                      <strong className="text-white text-xs block">Committee Chair • Troop 1318 • Pack 1318 • SIRA</strong>
+                      <div className="flex items-center justify-between text-[10px] text-slate-300 pt-1 border-t border-slate-800">
+                        <span className="text-emerald-400 font-semibold">✓ Valid Thru May 31, 2027</span>
+                        <span className="text-amber-300 font-bold">27 Badges Assigned</span>
+                      </div>
+                    </div>
+
+                    <div 
                       onClick={() => setActiveProfileTab('spt')}
                       className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
                         spt 
@@ -2899,6 +2932,23 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                       <span className="text-amber-400 block text-[10px] uppercase font-black tracking-wider">Supreme Authority</span>
                       <strong className="text-white text-xs block">{isOwner ? '👑 Troop Owner & Superadmin' : '⚜️ Executive Troop Admin'}</strong>
                       <span className="text-[10px] text-slate-400">Full system override privileges enabled</span>
+                    </div>
+
+                    <div 
+                      onClick={() => setActiveProfileTab('credentials')}
+                      className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 hover:border-amber-400 transition cursor-pointer group space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-amber-400 block text-[10px] uppercase font-bold flex items-center gap-1">
+                          <Award size={12} /> Scouting Leadership & Counselor (27 Subjects)
+                        </span>
+                        <ChevronRight size={13} className="text-amber-400 group-hover:translate-x-0.5 transition" />
+                      </div>
+                      <strong className="text-white text-xs block">Committee Chair • Troop 1318 • Pack 1318 • SIRA</strong>
+                      <div className="flex items-center justify-between text-[10px] text-slate-300 pt-1 border-t border-slate-800">
+                        <span className="text-emerald-400 font-semibold">✓ Valid Thru May 31, 2027</span>
+                        <span className="text-amber-300 font-bold">27 Badges Assigned</span>
+                      </div>
                     </div>
 
                     <div 
@@ -3054,6 +3104,204 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: SCOUTING LEADERSHIP, CERTIFICATIONS & MERIT BADGE COUNSELOR ── */}
+      {activeProfileTab === 'credentials' && !isScout && (
+        <div className="space-y-6 animate-fadeIn font-sans">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-2 border-amber-500/50 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider mb-2">
+                  <span>⚜️ Scouting America Verified Credentials</span>
+                  <span class="text-amber-400">•</span>
+                  <span>Michigan Crossroads Council 780</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                  <span>Scouting Leadership & Certified Counselor Profile</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Official BSA leadership appointments, outdoor & youth safety certifications, and certified counselor credentials valid through <strong className="text-amber-300">{HASSAN_LEADERSHIP_PROFILE.validityFormatted}</strong>.
+                </p>
+              </div>
+
+              <div className="bg-slate-950/90 border border-amber-500/40 p-4 rounded-2xl text-center shrink-0 shadow-inner">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Credentials Validity</span>
+                <span className="text-base font-black text-amber-400 flex items-center justify-center gap-1 mt-0.5">
+                  <ShieldCheck size={16} className="text-emerald-400" />
+                  <span>Valid Thru May 31, 2027</span>
+                </span>
+                <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">✓ Certified Adult Leader</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 1. Official Leadership Appointments Grid */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-base">
+                  ⚜️
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Official Scouting Leadership Appointments</h3>
+                  <p className="text-[11px] text-slate-400">Unit leadership, committee roles, and volunteer cub scouting appointments</p>
+                </div>
+              </div>
+              <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-3 py-1 rounded-full">
+                7 Official Appointments
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {HASSAN_LEADERSHIP_PROFILE.leadershipPositions.map((pos, idx) => (
+                <div key={idx} className={`p-4 rounded-2xl border transition ${
+                  pos.isPrimary
+                    ? 'bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/50 shadow-md'
+                    : 'bg-slate-900/80 border-slate-750'
+                }`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-xs font-black text-white">{pos.badge}</span>
+                    {pos.isPrimary && (
+                      <span className="text-[9px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded uppercase">Primary</span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-bold text-amber-300">{pos.role}</h4>
+                  <p className="text-xs text-slate-300 mt-0.5 font-medium">{pos.organization}</p>
+                  {pos.initiative && (
+                    <p className="text-[11px] text-teal-400 font-medium">Initiative: {pos.initiative}</p>
+                  )}
+                  {pos.location && (
+                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                      <MapPin size={11} className="text-slate-500" />
+                      <span>{pos.location}</span>
+                    </p>
+                  )}
+                  {pos.validThrough && (
+                    <p className="text-[10px] text-emerald-400 font-semibold mt-1">
+                      ✓ Validity: Thru May 31, 2027
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Scouting Training & Safety Certifications */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-base">
+                  🛡️
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Scouting America Training & Certifications</h3>
+                  <p className="text-[11px] text-slate-400">Outdoor leadership, youth protection, and specialized scout training</p>
+                </div>
+              </div>
+              <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1 rounded-full">
+                3 Active Certifications
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {HASSAN_LEADERSHIP_PROFILE.trainings.map((trn) => (
+                <div key={trn.id} className="bg-slate-900 border border-slate-750 p-4 rounded-2xl space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-slate-400">{trn.code}</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                      {trn.status}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white leading-tight">{trn.name}</h4>
+                    <p className="text-[11px] text-slate-400 mt-1">Issuer: {trn.issuer}</p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Expires:</span>
+                    <strong className="text-amber-300">May 31, 2027</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Assigned Merit Badge Counselor Subjects (27 Badges) */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/20 to-teal-500/20 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-xl shadow-lg shrink-0">
+                  🏅
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Assigned Merit Badge Counselor Subjects</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Certified by Michigan Crossroads Council 780 across <strong className="text-amber-300">27 official subjects</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1 rounded-xl">
+                  11 Eagle-Required
+                </span>
+                <span className="text-xs bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold px-3 py-1 rounded-xl">
+                  16 Electives
+                </span>
+                <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-3 py-1 rounded-xl">
+                  27 Total Badges
+                </span>
+              </div>
+            </div>
+
+            {/* Badges Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects.map((mb, idx) => (
+                <div 
+                  key={mb.id || idx}
+                  className={`p-3.5 rounded-2xl border transition group hover:scale-[1.01] ${
+                    mb.eagleRequired 
+                      ? 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-500/40 hover:border-emerald-400 shadow-md' 
+                      : 'bg-slate-900/90 border-slate-750 hover:border-teal-500/40'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-750 flex items-center justify-center text-xl shrink-0 shadow-inner group-hover:scale-110 transition">
+                      {mb.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="text-xs font-bold text-white truncate group-hover:text-amber-300 transition">
+                          {mb.name}
+                        </h4>
+                        {mb.eagleRequired && (
+                          <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded uppercase shrink-0">
+                            Eagle
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 truncate">{mb.category}</span>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80 text-[10px]">
+                        <span className="text-emerald-400 font-semibold">✓ Certified Counselor</span>
+                        {onNavigate && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigate('merit-badges')}
+                            className="text-amber-400 hover:text-amber-300 font-bold transition flex items-center gap-0.5"
+                          >
+                            <span>View Specs</span>
+                            <ChevronRight size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
