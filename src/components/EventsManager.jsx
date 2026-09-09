@@ -60,6 +60,7 @@ import {
   CheckCheck
 } from 'lucide-react';
 import ConferenceCountdown from './ConferenceCountdown';
+import AdminCalendarSync from './AdminCalendarSync';
 import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
@@ -272,6 +273,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
   // ── RECURRING CALENDAR GENERATOR STATE ──
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [showMasterSyncModal, setShowMasterSyncModal] = useState(false);
   const [generatorTab, setGeneratorTab] = useState('overview'); // 'overview' | 'preview'
   const [generatorMode, setGeneratorMode] = useState('upcoming_month'); // 'upcoming_month' | 'custom_month' | 'next_4_weeks' | 'full_season'
   
@@ -1195,6 +1197,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 flex-wrap">
+          {(isLeader || isExecutive) && (
+            <button
+              onClick={() => setShowMasterSyncModal(true)}
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md shrink-0 border border-slate-700"
+              title="Import & Sync Official 2026–27 Scout Year Calendar Excel (.xlsx)"
+            >
+              <Calendar size={15} className="text-emerald-400" />
+              <span>📥 Import Master Calendar (.xlsx)</span>
+            </button>
+          )}
+
           {isExecutive && (
             <button
               onClick={() => {
@@ -2972,6 +2985,39 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MASTER CALENDAR SYNC & INGESTION MODAL ── */}
+      {showMasterSyncModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-6xl p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto my-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                  🗓️
+                </div>
+                <h3 className="font-extrabold text-white text-base">
+                  Master Calendar Ingestion & Seeding Engine
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowMasterSyncModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <AdminCalendarSync
+              currentUser={currentUser}
+              onNavigate={(tab) => {
+                setShowMasterSyncModal(false);
+                if (onNavigate) onNavigate(tab);
+              }}
+              onClose={() => setShowMasterSyncModal(false)}
+            />
           </div>
         </div>
       )}

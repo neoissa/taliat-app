@@ -97,6 +97,7 @@ import LeaderEventRsvps from './LeaderEventRsvps';
 import LeaderParentRequests from './LeaderParentRequests';
 import LeaderBroadcastCenter from './LeaderBroadcastCenter';
 import RosterExportModal from './RosterExportModal';
+import AdminCalendarSync from './AdminCalendarSync';
 
 const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
@@ -1789,14 +1790,26 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setActiveTab('calendar-sync')}
+            className={`border font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md shrink-0 ${
+              activeTab === 'calendar-sync'
+                ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-950/50'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+            }`}
+            title="Import & Sync Official 2026–27 Scout Year Calendar (.xlsx)"
+          >
+            <Calendar size={15} className="text-emerald-400" />
+            <span>🗓️ Master Calendar Sync</span>
+          </button>
           {onNavigate && (
             <button
               onClick={() => onNavigate('events')}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md"
               title="Open 2026-2027 Calendar Generator & Events Hub"
             >
-              <Calendar size={15} className="text-emerald-400" />
+              <Calendar size={15} className="text-teal-400" />
               <span>⚡ Calendar Generator</span>
             </button>
           )}
@@ -1828,6 +1841,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
           { id: 'users', label: `Global User Directory (${users.length})`, icon: Users },
           { id: 'patrols', label: `Patrol Architecture & Edit (${groups.length})`, icon: FolderTree },
           { id: 'patrol-progress', label: 'Patrol Progress & Insights', icon: TrendingUp },
+          { id: 'calendar-sync', label: 'Master Calendar Ingestion (.xlsx)', icon: Calendar },
           { id: 'history', label: `Approval History & Audit Trail (${filteredApprovalHistory.length})`, icon: History },
           { id: 'rsvps', label: 'Event RSVPs & Attendance Monitor', icon: UserCheck },
           { id: 'requests', label: 'Parent Inquiries & Requests', icon: MessageSquare },
@@ -3316,6 +3330,14 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── MASTER CALENDAR INGESTION & SYNC TAB ── */}
+      {activeTab === 'calendar-sync' && (
+        <AdminCalendarSync
+          currentUser={currentUser}
+          onNavigate={onNavigate}
+        />
       )}
 
       {/* ── CREATE USER MODAL ── */}
