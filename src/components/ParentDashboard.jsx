@@ -12,6 +12,7 @@ import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import { signPublishedReportByParent } from '../services/publishedReportsService';
 import { createParentRequest, cancelMeetingRequestByParent } from '../services/parentRequestService';
+import { syncParentProfileToChildren } from '../services/familyProfileSyncService';
 import ConferenceCountdown from './ConferenceCountdown';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
@@ -30,6 +31,7 @@ import {
   Clock,
   BookOpen,
   Heart,
+  HeartPulse,
   Shield,
   ShieldCheck,
   AlertTriangle,
@@ -279,8 +281,11 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [parent2Email, setParent2Email] = useState('');
   const [parent2Relation, setParent2Relation] = useState('Mother');
   const [familyAddress, setFamilyAddress] = useState('');
+  const [cityStateZip, setCityStateZip] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState('Emergency Contact');
+  const [scoutHealthMap, setScoutHealthMap] = useState({}); // { [scoutId]: { allergies, medicalNotes, dietaryRestrictions } }
   const [familySaving, setFamilySaving] = useState(false);
   const [familyMsg, setFamilyMsg] = useState('');
 
@@ -329,9 +334,11 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         setParent2Phone(data.parent2Phone || '');
         setParent2Email(data.parent2Email || '');
         setParent2Relation(data.parent2Relation || 'Mother');
-        setFamilyAddress(data.familyAddress || data.address || '');
+        setFamilyAddress(data.familyAddress || data.homeAddress || data.address || '');
+        setCityStateZip(data.cityStateZip || '');
         setEmergencyContactName(data.emergencyContactName || '');
         setEmergencyContactPhone(data.emergencyContactPhone || '');
+        setEmergencyContactRelation(data.emergencyContactRelation || 'Emergency Contact');
       }
     });
     return () => unsub();
@@ -429,6 +436,20 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     });
 
     setLinkedScouts(matchingScouts);
+    setScoutHealthMap(prev => {
+      const next = { ...prev };
+      matchingScouts.forEach(s => {
+        if (!next[s.uid]) {
+          next[s.uid] = {
+            allergies: s.allergies || '',
+            medicalNotes: s.medicalNotes || '',
+            dietaryRestrictions: s.dietaryRestrictions || ''
+          };
+        }
+      });
+      return next;
+    });
+
     if (matchingScouts.length > 0 && selectedScoutId !== 'all' && !matchingScouts.some(s => s.uid === selectedScoutId)) {
       setSelectedScoutId(matchingScouts[0].uid);
       setAbsenceScoutId(matchingScouts[0].uid);
@@ -805,14 +826,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     }
   };
 
-  // Save Dual-Parent Profile
+  // Save Dual-Parent Profile and Sync to Linked Children
   const handleSaveFamilyProfile = async (e) => {
     e.preventDefault();
     if (!currentUser?.uid) return;
     setFamilySaving(true);
     setFamilyMsg('');
 
-    const payload = {
+    const familyProfile = {
       primaryAccountHolder: primaryAccountHolder || 'parent1',
       parent1Name: parent1Name.trim(),
       parent1Phone: parent1Phone.trim(),
@@ -823,17 +844,26 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       parent2Email: parent2Email.trim().toLowerCase(),
       parent2Relation: parent2Relation || 'Mother',
       familyAddress: familyAddress.trim(),
+      cityStateZip: cityStateZip.trim(),
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim(),
-      updatedAt: serverTimestamp()
+      emergencyContactRelation: emergencyContactRelation.trim() || 'Emergency Contact'
     };
 
     try {
-      await setDoc(doc(db, 'users', currentUser.uid), payload, { merge: true });
-      setFamilyMsg('✓ Family household profile updated successfully!');
+      const syncResult = await syncParentProfileToChildren({
+        parentUid: currentUser.uid,
+        familyProfile,
+        scoutHealthMap,
+        linkedScoutIds: linkedScouts.map(s => s.uid)
+      });
+
+      const count = syncResult?.syncedScoutCount || 0;
+      setFamilyMsg(`✓ Household profile & ${count} linked scout profile${count === 1 ? '' : 's'} updated and synced!`);
       setIsEditingFamily(false);
-      setTimeout(() => setFamilyMsg(''), 3000);
+      setTimeout(() => setFamilyMsg(''), 4000);
     } catch (err) {
+      console.error("Failed to sync family profile:", err);
       alert("Failed to update profile: " + err.message);
     } finally {
       setFamilySaving(false);
@@ -3933,14 +3963,17 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
             {/* 4. Address & Emergency */}
             <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider">Household Address & Emergency Contact</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
+              <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Home size={14} />
+                <span>Household Address & Emergency Contact</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="sm:col-span-2 md:col-span-3">
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Home Street Address</label>
                   <input
                     type="text"
                     disabled={!isEditingFamily}
-                    placeholder="123 Scouting Way, City, State ZIP"
+                    placeholder="123 Scouting Way"
                     value={familyAddress}
                     onChange={(e) => setFamilyAddress(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
@@ -3948,16 +3981,190 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact (Name & Phone)</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">City, State, Zip</label>
                   <input
                     type="text"
                     disabled={!isEditingFamily}
-                    placeholder="Grandparent / Relative (555) 123-4567"
+                    placeholder="Dearborn, MI 48126"
+                    value={cityStateZip}
+                    onChange={(e) => setCityStateZip(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Name</label>
+                  <input
+                    type="text"
+                    disabled={!isEditingFamily}
+                    placeholder="e.g. Grandparent / Relative"
                     value={emergencyContactName}
                     onChange={(e) => setEmergencyContactName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Phone</label>
+                  <input
+                    type="tel"
+                    disabled={!isEditingFamily}
+                    placeholder="(555) 123-4567"
+                    value={emergencyContactPhone}
+                    onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Relationship</label>
+                  <input
+                    type="text"
+                    disabled={!isEditingFamily}
+                    placeholder="e.g. Grandparent, Uncle, Family Friend"
+                    value={emergencyContactRelation}
+                    onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Linked Scouts Health & Safety Profiles */}
+            <div className="bg-slate-900/80 p-5 rounded-2xl border border-red-500/30 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2 flex-wrap gap-2">
+                <div>
+                  <h4 className="font-extrabold text-red-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse size={14} />
+                    <span>Linked Scouts Health, Allergies & Dietary Profiles</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Parent-managed health records automatically synchronize with linked scout documents and are locked from scout editing.
+                  </p>
+                </div>
+                <span className="text-[10px] bg-red-950/80 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-full font-bold">
+                  🔒 Parent-Only Governance
+                </span>
+              </div>
+
+              {linkedScouts.length === 0 ? (
+                <p className="text-xs text-slate-400 italic p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+                  No scouts currently linked to this guardian account.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {linkedScouts.map((scout) => {
+                    const health = scoutHealthMap[scout.uid] || {
+                      allergies: scout.allergies || '',
+                      medicalNotes: scout.medicalNotes || '',
+                      dietaryRestrictions: scout.dietaryRestrictions || ''
+                    };
+
+                    return (
+                      <div 
+                        key={scout.uid}
+                        className="bg-slate-950/80 p-4 rounded-2xl border border-slate-755 space-y-3 shadow-md"
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">⚜️</span>
+                            <strong className="text-xs font-bold text-white">
+                              {scout.fullName || scout.username}
+                            </strong>
+                            <span className="text-[10px] bg-slate-800 text-emerald-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                              {scout.rank || 'Scout'} Rank
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400">
+                            ID: {scout.uid?.substring(0, 8)}...
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                              Allergies & Medical Alerts
+                            </label>
+                            <textarea
+                              rows={2}
+                              disabled={!isEditingFamily}
+                              value={health.allergies || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setScoutHealthMap(prev => ({
+                                  ...prev,
+                                  [scout.uid]: {
+                                    ...(prev[scout.uid] || {}),
+                                    allergies: val
+                                  }
+                                }));
+                              }}
+                              placeholder="e.g. Peanuts, Bee stings, Inhaler needed..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                              Dietary Restrictions
+                            </label>
+                            <textarea
+                              rows={2}
+                              disabled={!isEditingFamily}
+                              value={health.dietaryRestrictions || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setScoutHealthMap(prev => ({
+                                  ...prev,
+                                  [scout.uid]: {
+                                    ...(prev[scout.uid] || {}),
+                                    dietaryRestrictions: val
+                                  }
+                                }));
+                              }}
+                              placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                            Confidential Medical Instructions & Physician Notes
+                          </label>
+                          <textarea
+                            rows={2}
+                            disabled={!isEditingFamily}
+                            value={health.medicalNotes || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setScoutHealthMap(prev => ({
+                                ...prev,
+                                  [scout.uid]: {
+                                  ...(prev[scout.uid] || {}),
+                                  medicalNotes: val
+                                }
+                              }));
+                            }}
+                            placeholder="Medication administration instructions, emergency protocols, or confidential health notes for troop leadership..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Sync Notice Banner */}
+            <div className="bg-sky-950/40 border border-sky-500/30 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                <ShieldCheck size={16} />
+              </div>
+              <div className="text-xs text-slate-300">
+                <strong className="text-white block font-bold">Automatic Multi-Child Profile Propagation</strong>
+                Saving updates will instantly sync parent contact info, household address, emergency contacts, and medical profiles across all <strong>{linkedScouts.length}</strong> linked child scout records.
               </div>
             </div>
 
@@ -3968,7 +4175,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg"
               >
                 <Save size={15} />
-                <span>{familySaving ? 'Saving Profile...' : 'Save Household Updates'}</span>
+                <span>{familySaving ? 'Saving & Propagating...' : 'Save Household Updates & Sync to Scouts'}</span>
               </button>
             )}
           </form>

@@ -25,7 +25,8 @@ import {
   KeyRound,
   MapPin,
   Phone,
-  Video
+  Video,
+  Megaphone
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
@@ -156,6 +157,21 @@ export default function LeaderHome({ currentUser, onNavigate }) {
     }, (err) => console.warn('Parent requests fallback in LeaderHome:', err));
     return () => unsub();
   }, [currentUser, isTroopWideAuthority]);
+
+  // 4.8 Fetch Troop Broadcasts
+  const [recentBroadcasts, setRecentBroadcasts] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'troop_broadcasts'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => {
+        const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : new Date(a.createdAt || 0).getTime();
+        const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      setRecentBroadcasts(list.slice(0, 3));
+    }, (err) => console.warn('LeaderHome broadcasts fallback:', err));
+    return () => unsub();
+  }, []);
 
   // 5. Aggregate Real-Time Pending Approvals
   useEffect(() => {
@@ -411,6 +427,15 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 <span>⏳ Review Submissions ({totalPendingApprovals})</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('broadcasts')}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+            >
+              <Megaphone size={15} />
+              <span>📢 Broadcast Update</span>
+            </button>
 
             <button
               type="button"
@@ -696,6 +721,82 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       })()}
 
       <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
+
+      {/* ── 1.9 RECENT TROOP BROADCASTS & NOTIFICATIONS ── */}
+      {recentBroadcasts.length > 0 && (
+        <div className="bg-slate-850/90 border border-slate-750 rounded-3xl p-5 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-sm">
+                <Megaphone size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">
+                    📢 Recent Troop Announcements & Broadcasts
+                  </h3>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                    Active Feed
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Published updates pushed directly to parents, scouts, and patrol messenger streams.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('broadcasts')}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-950/40 shrink-0"
+              >
+                <Megaphone size={13} />
+                <span>Open Broadcast Center &rarr;</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {recentBroadcasts.map((b) => (
+              <div
+                key={b.id || b.broadcastId}
+                className="bg-slate-900/90 border border-slate-750 hover:border-emerald-500/50 p-4 rounded-2xl space-y-2.5 transition flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[10px] bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded-md font-bold">
+                      {b.category || 'General Announcement'}
+                    </span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                      b.priority === 'urgent' 
+                        ? 'bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse'
+                        : b.priority === 'high'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}>
+                      {b.priority || 'Normal'}
+                    </span>
+                  </div>
+
+                  <h4 className="text-xs font-black text-white line-clamp-1 leading-snug">
+                    {b.title}
+                  </h4>
+
+                  <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
+                    {b.message}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span className="truncate">By {b.authorName || 'Leader'}</span>
+                  <span>{b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── 2. SLEEK ACTIONABLE NOTIFICATION & TESTING CENTER ── */}
       {totalPendingApprovals > 0 ? (

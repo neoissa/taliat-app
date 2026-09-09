@@ -59,11 +59,44 @@ service cloud.firestore {
       );
     }
 
+    // Helper: check if update is not modifying sensitive parent-managed fields
+    function isNotModifyingParentManagedFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'allergies',
+        'medicalNotes',
+        'dietaryRestrictions',
+        'emergencyContactName',
+        'emergencyContactPhone',
+        'emergencyContactRelation',
+        'parent1Name',
+        'parent1Relation',
+        'parent1Phone',
+        'parent1Email',
+        'parent2Name',
+        'parent2Relation',
+        'parent2Phone',
+        'parent2Email',
+        'homeAddress',
+        'cityStateZip'
+      ]);
+    }
+
     // 1. Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Allow users to update their own profile (e.g. parents updating dual-parent info), or leaders/admins updating users
-      allow create, update: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Allow executives, leaders, parents of the user, or parents editing their own profile to update fields.
+      // Scouts editing their own profile cannot modify sensitive parent-managed fields.
+      allow update: if isAuthenticated() && (
+        isExecutive() || 
+        isLeader() || 
+        isParentOf(userId) || 
+        (request.auth.uid == userId && (
+          isParent() || 
+          resource.data.role != 'scout' || 
+          isNotModifyingParentManagedFields()
+        ))
+      );
       allow delete: if isExecutive();
 
       match /private/{docId} {

@@ -95,6 +95,7 @@ import {
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import LeaderEventRsvps from './LeaderEventRsvps';
 import LeaderParentRequests from './LeaderParentRequests';
+import LeaderBroadcastCenter from './LeaderBroadcastCenter';
 
 const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
@@ -3089,117 +3090,7 @@ Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
 
       {/* ── 5. TROOP BROADCASTS TAB ── */}
       {activeTab === 'broadcasts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-4">
-            <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-              <Megaphone size={18} className="text-amber-400" />
-              <span>Publish Troop Broadcast</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Only executives can push global announcements to all patrols and parent notification centers.
-            </p>
-
-            {broadcastMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-700">{broadcastMsg}</p>}
-
-            <form onSubmit={handleSendBroadcast} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Broadcast Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Urgent Weather Update / Campout Departure"
-                  value={broadcastTitle}
-                  onChange={(e) => setBroadcastTitle(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Priority</label>
-                  <select
-                    value={broadcastPriority}
-                    onChange={(e) => setBroadcastPriority(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="high">High Priority</option>
-                    <option value="urgent">🚨 Urgent Alert</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Push Scope</label>
-                  <select
-                    value={broadcastScope}
-                    onChange={(e) => setBroadcastScope(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="all">⚡ Push to All Patrols</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} Patrol Only</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Broadcast Message Body *</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Enter full details of the announcement to push across all parent feeds and patrol streams..."
-                  value={broadcastMessage}
-                  onChange={(e) => setBroadcastMessage(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={broadcastSending}
-                className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Send size={15} />
-                <span>{broadcastSending ? 'Broadcasting...' : 'Publish Broadcast'}</span>
-              </button>
-            </form>
-          </div>
-
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-extrabold text-white text-base">Broadcast History ({broadcasts.length})</h3>
-            <div className="space-y-3">
-              {broadcasts.length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-8 text-center bg-slate-850 rounded-3xl border border-slate-755">
-                  No announcements published yet.
-                </p>
-              ) : (
-                broadcasts.map(b => (
-                  <div key={b.id} className="bg-slate-850 border border-slate-755 p-5 rounded-3xl space-y-2 shadow-md">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          b.priority === 'urgent' ? 'bg-red-950 text-red-300 border-red-600' :
-                          b.priority === 'high' ? 'bg-amber-950 text-amber-300 border-amber-600' :
-                          'bg-slate-900 text-slate-300 border-slate-700'
-                        }`}>
-                          {b.priority?.toUpperCase()}
-                        </span>
-                        <strong className="text-sm font-bold text-white">{b.title}</strong>
-                      </div>
-                      <span className="text-[10px] font-mono text-slate-400">{b.createdAt?.split('T')[0] || ''}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed font-sans">{b.message}</p>
-                    <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1">
-                      <span>Author: {b.authorName}</span>
-                      <span>Scope: {b.scope === 'all' ? 'Troop-Wide' : 'Patrol Scoped'}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <LeaderBroadcastCenter currentUser={currentUser} onNavigate={onNavigate} />
       )}
 
       {/* ── 5. EVENT RSVPS & ATTENDANCE MONITOR TAB ── */}

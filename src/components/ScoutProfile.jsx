@@ -730,30 +730,28 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         scoutPhone: scoutPhone.trim(),
         phone: scoutPhone.trim(),
         photoURL: photoUrl || null,
-        bsaId: bsaId.trim() || null,
-        emergencyContactName: emergencyContactName.trim() || null,
-        emergencyContactPhone: emergencyContactPhone.trim() || null,
-        emergencyContactRelation: emergencyContactRelation.trim() || null,
-        homeAddress: homeAddress.trim() || null,
-        cityStateZip: cityStateZip.trim() || null,
-        allergies: allergies.trim() || null,
-        medicalNotes: medicalNotes.trim() || null,
-        dietaryRestrictions: dietaryRestrictions.trim() || null,
-        spt: spt.trim() || null,
-        sptDate: spt.trim() || null,
-        sptFileUrl: sptFileUrl || null,
-        sptFileName: sptFileName || null
+        bsaId: bsaId.trim() || null
       };
+
+      // Only non-scouts (parents, leaders, admins, owners) can edit emergency and address fields directly here
+      if (!isScout) {
+        updates.emergencyContactName = emergencyContactName.trim() || null;
+        updates.emergencyContactPhone = emergencyContactPhone.trim() || null;
+        updates.emergencyContactRelation = emergencyContactRelation.trim() || null;
+        updates.homeAddress = homeAddress.trim() || null;
+        updates.cityStateZip = cityStateZip.trim() || null;
+        updates.allergies = allergies.trim() || null;
+        updates.medicalNotes = medicalNotes.trim() || null;
+        updates.dietaryRestrictions = dietaryRestrictions.trim() || null;
+        updates.spt = spt.trim() || null;
+        updates.sptDate = spt.trim() || null;
+        updates.sptFileUrl = sptFileUrl || null;
+        updates.sptFileName = sptFileName || null;
+      }
 
       if (isScout) {
         updates.schoolGrade = schoolGrade.trim() || null;
         updates.birthDate = birthDate.trim() || null;
-        updates.parent1Name = parent1Name.trim() || null;
-        updates.parent1Relation = parent1Relation.trim() || 'Father';
-        updates.parent2Name = parent2Name.trim() || null;
-        updates.parent2Relation = parent2Relation.trim() || 'Mother';
-        updates.parentEmail = parentEmail.trim() || null;
-        updates.parentPhone = parentPhone.trim() || null;
         updates.scoutPosition = scoutPosition || 'General Scout / Member';
         updates.position = scoutPosition || 'General Scout / Member';
         updates.previousPositions = previousPositions;
@@ -2111,29 +2109,41 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                        <MapPin size={12} /> City, State, Zip
+                      <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center justify-between gap-1">
+                        <span className="flex items-center gap-1"><MapPin size={12} /> City, State, Zip</span>
+                        {isScout && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-sky-400 font-normal lowercase bg-sky-950/60 border border-sky-800/60 px-1.5 py-0.5 rounded-full">
+                            <Lock size={9} /> Parent-Managed
+                          </span>
+                        )}
                       </label>
                       <input
                         type="text"
                         value={cityStateZip}
                         onChange={(e) => setCityStateZip(e.target.value)}
                         placeholder="Dearborn, MI 48126"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        disabled={isScout}
+                        className={`w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 ${isScout ? 'opacity-80 cursor-not-allowed bg-slate-950 border-slate-800' : ''}`}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                      <MapPin size={12} /> Street Address
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 flex items-center justify-between gap-1">
+                      <span className="flex items-center gap-1"><MapPin size={12} /> Street Address</span>
+                      {isScout && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-sky-400 font-normal lowercase bg-sky-950/60 border border-sky-800/60 px-1.5 py-0.5 rounded-full">
+                          <Lock size={9} /> Parent-Managed
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
                       value={homeAddress}
                       onChange={(e) => setHomeAddress(e.target.value)}
                       placeholder="e.g. 123 Scouting Way"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      disabled={isScout}
+                      className={`w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 ${isScout ? 'opacity-80 cursor-not-allowed bg-slate-950 border-slate-800' : ''}`}
                     />
                   </div>
 
@@ -2362,80 +2372,92 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                   {/* ── FAMILY & EMERGENCY CONTACTS SECTION (FOR SCOUTS) ── */}
                   {isScout && (
                     <div className="pt-3 border-t border-slate-700/60 space-y-3">
-                      <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Users size={14} /> Family & Emergency Contacts
-                      </h4>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Primary Guardian / Parent 1 Name</label>
-                          <input
-                            type="text"
-                            value={parent1Name}
-                            onChange={(e) => setParent1Name(e.target.value)}
-                            placeholder="e.g. Ahmad Nehme"
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Relationship</label>
-                          <select
-                            value={parent1Relation}
-                            onChange={(e) => setParent1Relation(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                          >
-                            <option value="Father">Father</option>
-                            <option value="Mother">Mother</option>
-                            <option value="Guardian">Guardian</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Email</label>
-                          <input
-                            type="email"
-                            value={parentEmail}
-                            onChange={(e) => setParentEmail(e.target.value)}
-                            placeholder="parent@example.com"
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Guardian 1 Phone</label>
-                          <input
-                            type="tel"
-                            value={parentPhone}
-                            onChange={(e) => setParentPhone(e.target.value)}
-                            placeholder="+1234567890"
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                          />
-                        </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Users size={14} /> Family & Emergency Contacts
+                        </h4>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-[11px] font-semibold text-sky-300 w-fit">
+                          <Lock size={11} /> Managed by Parent Account
+                        </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-750">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Contact Name</label>
-                          <input
-                            type="text"
-                            value={emergencyContactName}
-                            onChange={(e) => setEmergencyContactName(e.target.value)}
-                            placeholder="e.g. Uncle Ali"
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                          />
+                      <div className="p-3 bg-sky-950/30 border border-sky-800/40 rounded-xl flex items-start gap-2.5 text-xs text-sky-200">
+                        <ShieldCheck size={16} className="text-sky-400 mt-0.5 shrink-0" />
+                        <p className="leading-relaxed">
+                          Dual-parent household contact information and emergency contacts are centrally managed by your parent in the <strong className="text-white font-semibold">Parent Portal</strong> and automatically synchronized to your scout records.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Parent 1 */}
+                        <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              {parent1Relation || 'Parent 1 / Guardian'}
+                            </span>
+                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
+                              Primary Contact
+                            </span>
+                          </div>
+                          <div className="text-sm font-semibold text-white">
+                            {parent1Name || <span className="text-slate-500 italic text-xs">Not recorded</span>}
+                          </div>
+                          <div className="pt-1.5 border-t border-slate-800/80 space-y-1 text-xs text-slate-300">
+                            <div className="flex items-center gap-2">
+                              <Mail size={12} className="text-slate-500 shrink-0" />
+                              <span className="truncate">{parentEmail || <span className="text-slate-500 italic">No email</span>}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone size={12} className="text-slate-500 shrink-0" />
+                              <span>{parentPhone || <span className="text-slate-500 italic">No phone</span>}</span>
+                            </div>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Emergency Phone</label>
-                          <input
-                            type="tel"
-                            value={emergencyContactPhone}
-                            onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                            placeholder="+1234567890"
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                          />
+                        {/* Parent 2 */}
+                        <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              {parent2Relation || 'Parent 2 / Guardian'}
+                            </span>
+                            <span className="text-[10px] text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-full font-medium">
+                              Secondary Contact
+                            </span>
+                          </div>
+                          <div className="text-sm font-semibold text-white">
+                            {parent2Name || <span className="text-slate-500 italic text-xs">Not recorded</span>}
+                          </div>
+                          <div className="pt-1.5 border-t border-slate-800/80 space-y-1 text-xs text-slate-300">
+                            <div className="flex items-center gap-2">
+                              <Mail size={12} className="text-slate-500 shrink-0" />
+                              <span className="truncate">{fullUserData?.parent2Email || <span className="text-slate-500 italic">No email</span>}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone size={12} className="text-slate-500 shrink-0" />
+                              <span>{fullUserData?.parent2Phone || <span className="text-slate-500 italic">No phone</span>}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Emergency Contact */}
+                        <div className="sm:col-span-2 bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <AlertCircle size={12} /> Emergency Contact
+                            </span>
+                            {emergencyContactRelation && (
+                              <span className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
+                                {emergencyContactRelation}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm font-semibold text-white">
+                            {emergencyContactName || <span className="text-slate-500 italic text-xs">No emergency contact specified</span>}
+                          </div>
+                          <div className="pt-1.5 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-300">
+                            <Phone size={12} className="text-amber-500 shrink-0" />
+                            <span>{emergencyContactPhone || <span className="text-slate-500 italic">No emergency phone</span>}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2557,50 +2579,96 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
 
                   {/* ── HEALTH & MEDICAL NOTES SECTION ── */}
                   <div className="pt-3 border-t border-slate-700/60 space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
                         <HeartPulse size={14} /> Health, Allergies & Dietary Restrictions
                       </h4>
-                      <span className="text-[10px] text-slate-400">
-                        {isScout ? 'Confidential Scout Record' : 'For Campouts & Troop Catering'}
-                      </span>
+                      {isScout ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-[11px] font-semibold text-red-300 w-fit">
+                          <Lock size={11} /> Managed by Parent Account
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">
+                          For Campouts & Troop Catering
+                        </span>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Allergies & Medical Alerts</label>
-                        <textarea
-                          rows={2}
-                          value={allergies}
-                          onChange={(e) => setAllergies(e.target.value)}
-                          placeholder="e.g. Peanuts, Bee stings, Inhaler required..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                        />
-                      </div>
+                    {isScout ? (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-red-950/30 border border-red-800/40 rounded-xl flex items-start gap-2.5 text-xs text-red-200">
+                          <ShieldCheck size={16} className="text-red-400 mt-0.5 shrink-0" />
+                          <p className="leading-relaxed">
+                            Confidential health, allergies, and dietary profiles are locked for safety and maintained exclusively by parents and troop health officers in the <strong className="text-white font-semibold">Parent Portal</strong>.
+                          </p>
+                        </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Dietary Restrictions</label>
-                        <textarea
-                          rows={2}
-                          value={dietaryRestrictions}
-                          onChange={(e) => setDietaryRestrictions(e.target.value)}
-                          placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                        />
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800">
+                            <label className="block text-[11px] font-bold text-red-400 uppercase tracking-wider mb-1.5">
+                              Allergies & Medical Alerts
+                            </label>
+                            <p className="text-xs text-white bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 min-h-[50px] leading-relaxed">
+                              {allergies || <span className="text-slate-500 italic">None reported</span>}
+                            </p>
+                          </div>
 
-                    {isScout && (
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Confidential Medical & Health Notes</label>
-                        <textarea
-                          rows={2}
-                          value={medicalNotes}
-                          onChange={(e) => setMedicalNotes(e.target.value)}
-                          placeholder="Confidential health notes visible only to Troop Leadership and Medical First Aiders..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                        />
+                          <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800">
+                            <label className="block text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-1.5">
+                              Dietary Restrictions
+                            </label>
+                            <p className="text-xs text-white bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 min-h-[50px] leading-relaxed">
+                              {dietaryRestrictions || <span className="text-slate-500 italic">None reported (Standard Troop Catering)</span>}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800">
+                          <label className="block text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1.5">
+                            Confidential Medical & Health Notes
+                          </label>
+                          <p className="text-xs text-white bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 min-h-[50px] leading-relaxed">
+                            {medicalNotes || <span className="text-slate-500 italic">No confidential medical notes filed by parent.</span>}
+                          </p>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Allergies & Medical Alerts</label>
+                            <textarea
+                              rows={2}
+                              value={allergies}
+                              onChange={(e) => setAllergies(e.target.value)}
+                              placeholder="e.g. Peanuts, Bee stings, Inhaler required..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Dietary Restrictions</label>
+                            <textarea
+                              rows={2}
+                              value={dietaryRestrictions}
+                              onChange={(e) => setDietaryRestrictions(e.target.value)}
+                              placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Confidential Medical & Health Notes</label>
+                          <textarea
+                            rows={2}
+                            value={medicalNotes}
+                            onChange={(e) => setMedicalNotes(e.target.value)}
+                            placeholder="Confidential health notes visible only to Troop Leadership and Medical First Aiders..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
 

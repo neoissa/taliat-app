@@ -327,6 +327,12 @@ export default function App() {
       setAdminExtraData(extraData);
       setMobileMenuOpen(false);
       return;
+    } else if (tab === 'broadcasts' || tab === 'troop-broadcasts' || tab === 'broadcast') {
+      setCurrentTab('admin');
+      setAdminInitialTab('broadcasts');
+      setAdminExtraData(extraData);
+      setMobileMenuOpen(false);
+      return;
     } else if (tab === 'admin') {
       if (extraData?.tab) {
         setAdminInitialTab(extraData.tab);
