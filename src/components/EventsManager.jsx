@@ -57,11 +57,21 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  CheckCheck
+  CheckCheck,
+  ChevronRight,
+  MessageCircle,
+  Share2,
+  Smartphone
 } from 'lucide-react';
 import ConferenceCountdown from './ConferenceCountdown';
 import AdminCalendarSync from './AdminCalendarSync';
-import { formatKashafEventWhatsApp, applyIslamicTransliteration, getEventAudienceInfo } from '../utils/kashafVoice';
+import { 
+  formatKashafEventWhatsApp, 
+  generateEventReminderWhatsApp, 
+  applyIslamicTransliteration, 
+  getEventAudienceInfo,
+  getKashafGreeting
+} from '../utils/kashafVoice';
 import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
   generateScoutingYearSchedule, 
@@ -221,8 +231,19 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
-  const [copiedSuccess, setCopiedSuccess] = useState(false);
+
+  // ── WHATSAPP REMINDER GENERATOR STATE ──
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsappModalEvent, setWhatsappModalEvent] = useState(null);
+  const [whatsappReminderType, setWhatsappReminderType] = useState('general'); // 'general' | 'urgent' | 'rsvp' | 'packing'
+  const [whatsappPatrolId, setWhatsappPatrolId] = useState('all');
+  const [whatsappCustomNote, setWhatsappCustomNote] = useState('');
+  const [whatsappIncludeRsvpLink, setWhatsappIncludeRsvpLink] = useState(true);
+  const [whatsappRecipientType, setWhatsappRecipientType] = useState('parent'); // 'parent' | 'scout' | 'leader'
+  const [whatsappRecipientName, setWhatsappRecipientName] = useState('');
+  const [whatsappRecipientPhone, setWhatsappRecipientPhone] = useState('');
+  const [whatsappLiveText, setWhatsappLiveText] = useState('');
+  const [whatsappCopiedToast, setWhatsappCopiedToast] = useState(false);
 
   // Users & Global RSVPs Collections
   const [users, setUsers] = useState([]);
@@ -407,12 +428,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     }
   }, [selectedEvent, currentUser?.uid, eventRsvps]);
 
-  // Update WhatsApp text when selected event changes (leaders only)
-  useEffect(() => {
-    if (selectedEvent && isLeader) {
-      setCustomWhatsAppMsg(formatKashafEventWhatsApp(selectedEvent));
-    }
-  }, [selectedEvent, isLeader]);
+
 
   // Current selected month label for Generator
   const currentMonthLabel = useMemo(() => {
@@ -989,11 +1005,117 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     }
   };
 
-  // Copy WhatsApp Broadcast Text
-  const handleCopyWhatsApp = () => {
-    navigator.clipboard.writeText(customWhatsAppMsg);
-    setCopiedSuccess(true);
-    setTimeout(() => setCopiedSuccess(false), 2500);
+  // ── WHATSAPP REMINDER GENERATOR HELPERS ──
+  const buildWhatsAppMessage = (ev, type, patrolId, customNote, includeRsvp, recipType, recipName) => {
+    if (!ev) return '';
+    let pName = '';
+    if (patrolId && patrolId !== 'all') {
+      const g = groups.find(grp => grp.id === patrolId);
+      pName = g?.name ? `${g.name} Patrol` : '';
+    } else if (ev.targetGroupId && ev.targetGroupId !== 'all') {
+      const g = groups.find(grp => grp.id === ev.targetGroupId);
+      pName = g?.name ? `${g.name} Patrol` : '';
+    }
+
+    return generateEventReminderWhatsApp(ev, {
+      patrolName: pName,
+      reminderType: type,
+      recipientType: recipType,
+      recipientName: recipName,
+      customNote,
+      includeRsvpLink: includeRsvp,
+      appUrl: 'https://taliat-app.vercel.app/'
+    });
+  };
+
+  const handleOpenWhatsAppReminder = (ev, directRecipient = null) => {
+    if (!ev) return;
+    setWhatsappModalEvent(ev);
+    const initialType = 'general';
+    const initialPatrolId = ev.targetGroupId || 'all';
+    const initialNote = '';
+    const initialIncludeRsvp = true;
+    const initialRecipType = directRecipient ? (directRecipient.role === 'scout' ? 'scout' : 'parent') : 'parent';
+    const initialRecipName = directRecipient ? (directRecipient.parentName || directRecipient.name || '') : '';
+    const initialPhone = directRecipient ? (directRecipient.parentPhone || directRecipient.userPhone || '') : '';
+
+    setWhatsappReminderType(initialType);
+    setWhatsappPatrolId(initialPatrolId);
+    setWhatsappCustomNote(initialNote);
+    setWhatsappIncludeRsvpLink(initialIncludeRsvp);
+    setWhatsappRecipientType(initialRecipType);
+    setWhatsappRecipientName(initialRecipName);
+    setWhatsappRecipientPhone(initialPhone);
+
+    const generated = buildWhatsAppMessage(
+      ev, 
+      initialType, 
+      initialPatrolId, 
+      initialNote, 
+      initialIncludeRsvp, 
+      initialRecipType, 
+      initialRecipName
+    );
+    setWhatsappLiveText(generated);
+    setShowWhatsAppModal(true);
+  };
+
+  const handleUpdateReminderOption = (changes) => {
+    const nextType = changes.type !== undefined ? changes.type : whatsappReminderType;
+    const nextPatrolId = changes.patrolId !== undefined ? changes.patrolId : whatsappPatrolId;
+    const nextCustomNote = changes.customNote !== undefined ? changes.customNote : whatsappCustomNote;
+    const nextIncludeRsvp = changes.includeRsvp !== undefined ? changes.includeRsvp : whatsappIncludeRsvpLink;
+    const nextRecipType = changes.recipType !== undefined ? changes.recipType : whatsappRecipientType;
+    const nextRecipName = changes.recipName !== undefined ? changes.recipName : whatsappRecipientName;
+    const nextPhone = changes.phone !== undefined ? changes.phone : whatsappRecipientPhone;
+
+    if (changes.type !== undefined) setWhatsappReminderType(nextType);
+    if (changes.patrolId !== undefined) setWhatsappPatrolId(nextPatrolId);
+    if (changes.customNote !== undefined) setWhatsappCustomNote(nextCustomNote);
+    if (changes.includeRsvp !== undefined) setWhatsappIncludeRsvpLink(nextIncludeRsvp);
+    if (changes.recipType !== undefined) setWhatsappRecipientType(nextRecipType);
+    if (changes.recipName !== undefined) setWhatsappRecipientName(nextRecipName);
+    if (changes.phone !== undefined) setWhatsappRecipientPhone(nextPhone);
+
+    const generated = buildWhatsAppMessage(
+      whatsappModalEvent,
+      nextType,
+      nextPatrolId,
+      nextCustomNote,
+      nextIncludeRsvp,
+      nextRecipType,
+      nextRecipName
+    );
+    setWhatsappLiveText(generated);
+  };
+
+  const handleResetWhatsAppTemplate = () => {
+    const generated = buildWhatsAppMessage(
+      whatsappModalEvent,
+      whatsappReminderType,
+      whatsappPatrolId,
+      whatsappCustomNote,
+      whatsappIncludeRsvpLink,
+      whatsappRecipientType,
+      whatsappRecipientName
+    );
+    setWhatsappLiveText(generated);
+  };
+
+  const handleCopyWhatsAppMsgText = () => {
+    if (!whatsappLiveText) return;
+    navigator.clipboard.writeText(whatsappLiveText);
+    setWhatsappCopiedToast(true);
+    setTimeout(() => setWhatsappCopiedToast(false), 2500);
+  };
+
+  const getWhatsAppDispatchUrl = () => {
+    const cleanPhone = (whatsappRecipientPhone || '').replace(/[^0-9]/g, '');
+    const encodedText = encodeURIComponent(whatsappLiveText || '');
+    if (cleanPhone) {
+      return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+    }
+    return `https://wa.me/?text=${encodedText}`;
   };
 
   // Preview List filtered in generator modal
@@ -2315,6 +2437,28 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                           <span className="truncate">{ev.location}</span>
                         </div>
                       )}
+
+                      {/* Action Bar on Card: Quick WhatsApp Reminder */}
+                      {isLeader && (
+                        <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-755/80 mt-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenWhatsAppReminder(ev);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 hover:border-emerald-500/60 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            title="Generate and send WhatsApp reminder message"
+                          >
+                            <MessageSquare size={12} className="text-emerald-400" />
+                            <span>💬 WhatsApp Reminder</span>
+                          </button>
+
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {ev.isStandalone ? 'Weekly' : 'Event'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -2380,6 +2524,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
                 {isLeader && (
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Send WhatsApp Reminder Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenWhatsAppReminder(selectedEvent)}
+                      className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-950/40 hover:scale-[1.02]"
+                      title="Generate and broadcast WhatsApp reminder message with event info"
+                    >
+                      <MessageSquare size={14} className="text-emerald-200" />
+                      <span>💬 Send WhatsApp Reminder</span>
+                    </button>
+
                     {/* Print Roster / Muster Sheet */}
                     <button
                       type="button"
@@ -2779,7 +2934,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                                   </div>
 
                                   {/* Contact Links */}
-                                  <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-0.5">
+                                  <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-0.5 flex-wrap">
                                     {(att.parentPhone || att.userPhone) && (
                                       <a
                                         href={`tel:${att.parentPhone || att.userPhone}`}
@@ -2787,6 +2942,20 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                                       >
                                         <Phone size={10} /> {att.parentPhone || att.userPhone}
                                       </a>
+                                    )}
+                                    {(att.parentPhone || att.userPhone) && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenWhatsAppReminder(selectedEvent, att);
+                                        }}
+                                        className="text-[10px] text-emerald-300 hover:text-emerald-100 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/40 px-2 py-0.5 rounded-lg flex items-center gap-1 font-mono font-bold transition cursor-pointer"
+                                        title={`Send WhatsApp reminder directly to ${att.name}`}
+                                      >
+                                        <MessageSquare size={10} />
+                                        <span>💬 WhatsApp</span>
+                                      </button>
                                     )}
                                     {att.userEmail && (
                                       <a
@@ -3018,6 +3187,309 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               }}
               onClose={() => setShowMasterSyncModal(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ── WHATSAPP REMINDER GENERATOR & BROADCAST MODAL ── */}
+      {showWhatsAppModal && whatsappModalEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto my-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-emerald-950/50 shrink-0">
+                  💬
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-white text-base">
+                      WhatsApp Reminder & Broadcast Messenger
+                    </h3>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono font-bold">
+                      KashafVoice v4.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Faith-rooted, highly readable WhatsApp reminder formatted with Islamic transliteration, event details, and packing lists.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWhatsAppModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Event Summary Banner */}
+            <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                    {whatsappModalEvent.category || whatsappModalEvent.eventType || 'Event'}
+                  </span>
+                  <strong className="text-white text-sm font-bold truncate">{whatsappModalEvent.title}</strong>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400 flex-wrap font-medium">
+                  <span className="flex items-center gap-1 text-emerald-400"><Calendar size={12} /> {whatsappModalEvent.date}</span>
+                  <span className="flex items-center gap-1"><Clock size={12} /> {whatsappModalEvent.time}</span>
+                  {whatsappModalEvent.location && (
+                    <span className="flex items-center gap-1 truncate max-w-[260px]"><MapPin size={12} /> {whatsappModalEvent.location}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Target Audience Badge */}
+              {(() => {
+                const aud = getEventAudienceInfo(whatsappModalEvent, currentUser, groups, linkedScouts);
+                return (
+                  <span className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full border self-start sm:self-auto ${aud.colorClass}`}>
+                    <span>{aud.icon}</span>
+                    <span className="font-bold">{aud.badge}</span>
+                  </span>
+                );
+              })()}
+            </div>
+
+            {/* Template / Reminder Style Preset Tabs */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                1. Select Reminder Type & Purpose
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'general', label: '📢 Standard Reminder', desc: 'Full event details, date, time, venue, and gear' },
+                  { id: 'urgent', label: '🚨 Urgent / Tomorrow', desc: 'High-priority alert for tomorrow or tonight' },
+                  { id: 'rsvp', label: '📝 RSVP Confirmation', desc: 'Focus on attendance confirmation & carpool rides' },
+                  { id: 'packing', label: '🎒 Gear & Uniform', desc: 'Emphasize Class A uniform & packing list' }
+                ].map(tmpl => (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => handleUpdateReminderOption({ type: tmpl.id })}
+                    className={`p-2.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                      whatsappReminderType === tmpl.id
+                        ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-md shadow-emerald-950/40'
+                        : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-white block">{tmpl.label}</span>
+                    <span className="text-[10px] text-slate-400 mt-1 leading-snug">{tmpl.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customization Options Bar */}
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-3 text-xs">
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                2. Audience & Customization Settings
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Patrol / Troop Scope */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                    Patrol / Unit Closing Signature
+                  </label>
+                  <select
+                    value={whatsappPatrolId}
+                    onChange={(e) => handleUpdateReminderOption({ patrolId: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="all">Troop-Wide (Dhulfiqār Scouts Team)</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name} Patrol</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Recipient Role Greeting */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                    Recipient Greeting Tone
+                  </label>
+                  <select
+                    value={whatsappRecipientType}
+                    onChange={(e) => handleUpdateReminderOption({ recipType: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="parent">🌿 Dear Parents (Assalāmu ʿAlaykum dear parents)</option>
+                    <option value="scout">⚜️ Dear Scout (Assalāmu ʿAlaykum dear Scout)</option>
+                    <option value="leader">🛡️ Dear Leader (Assalāmu ʿAlaykum dear Leader)</option>
+                  </select>
+                </div>
+
+                {/* Direct Contact Phone (Optional) */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center justify-between">
+                    <span>Direct Phone (Optional)</span>
+                    {whatsappRecipientPhone && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateReminderOption({ phone: '', recipName: '' })}
+                        className="text-[9px] text-rose-400 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 313-555-0199 (Blank = Group Chat)"
+                    value={whatsappRecipientPhone}
+                    onChange={(e) => handleUpdateReminderOption({ phone: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Leader Custom Note Input */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-1">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                    Custom Leader Note (Optional insert)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Please remember to arrive 15 minutes early for roll call..."
+                    value={whatsappCustomNote}
+                    onChange={(e) => handleUpdateReminderOption({ customNote: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="pt-4 sm:pt-2 flex items-center">
+                  <label className="flex items-center gap-2 text-xs text-slate-300 font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={whatsappIncludeRsvpLink}
+                      onChange={(e) => handleUpdateReminderOption({ includeRsvp: e.target.checked })}
+                      className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                    />
+                    <span>Include Portal & RSVP Link</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Dual Grid: Live Editor + Simulated WhatsApp Bubble Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left: Editable Textarea */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-slate-300 uppercase text-[11px] flex items-center gap-1.5">
+                    <Edit3 size={13} className="text-emerald-400" />
+                    <span>3. Edit Message Text</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetWhatsAppTemplate}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer hover:underline"
+                    title="Reset text to the default generated template"
+                  >
+                    <Sparkles size={11} />
+                    <span>Reset to Template</span>
+                  </button>
+                </div>
+                <textarea
+                  rows={13}
+                  value={whatsappLiveText}
+                  onChange={(e) => setWhatsappLiveText(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono leading-relaxed resize-y"
+                  placeholder="Generated message..."
+                />
+                <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono">
+                  <span>{whatsappLiveText.length} characters &bull; {whatsappLiveText.split('\n').length} lines</span>
+                  <span>*bold* _italics_ supported</span>
+                </div>
+              </div>
+
+              {/* Right: WhatsApp Simulated Chat Box */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-slate-300 uppercase text-[11px] flex items-center gap-1.5">
+                    <Smartphone size={13} className="text-emerald-400" />
+                    <span>WhatsApp Chat Live Preview</span>
+                  </label>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                    {whatsappRecipientPhone ? `Direct to ${whatsappRecipientPhone}` : 'Troop / Patrol Group Chat'}
+                  </span>
+                </div>
+
+                {/* Simulated WhatsApp Chat Background */}
+                <div className="bg-[#0b141a] border border-[#1f2c34] rounded-2xl p-4 min-h-[290px] max-h-[340px] overflow-y-auto space-y-2 shadow-inner flex flex-col justify-between">
+                  {/* Chat Message Bubble */}
+                  <div className="self-end bg-[#005c4b] text-white rounded-2xl rounded-tr-sm p-3.5 max-w-[95%] shadow-md space-y-2 border border-emerald-600/30">
+                    <div className="text-[11px] sm:text-xs leading-relaxed whitespace-pre-wrap font-sans text-slate-100">
+                      {whatsappLiveText}
+                    </div>
+                    <div className="flex items-center justify-end gap-1 text-[9px] text-emerald-200/70 font-mono pt-1">
+                      <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-sky-300 font-bold">✓✓</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center pt-2">
+                    <span className="text-[9px] text-slate-500 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800">
+                      🔒 Messages are end-to-end encrypted in WhatsApp
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Action Footer */}
+            <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-slate-400">
+                {whatsappRecipientPhone ? (
+                  <span>Will open WhatsApp chat directly with <strong>{whatsappRecipientPhone}</strong></span>
+                ) : (
+                  <span>Will launch WhatsApp to share with any group or parent contact</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleCopyWhatsAppMsgText}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
+                >
+                  {whatsappCopiedToast ? (
+                    <>
+                      <Check size={14} className="text-emerald-400" />
+                      <span className="text-emerald-400 font-bold">Copied to Clipboard!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      <span>Copy Text</span>
+                    </>
+                  )}
+                </button>
+
+                <a
+                  href={getWhatsAppDispatchUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/60 hover:scale-[1.02]"
+                >
+                  <Send size={14} />
+                  <span>{whatsappRecipientPhone ? 'Send Direct via WhatsApp' : 'Open in WhatsApp / Share to Chat'}</span>
+                  <ExternalLink size={12} />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsAppModal(false)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

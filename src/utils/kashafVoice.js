@@ -255,16 +255,55 @@ We are pleased to provide your parent access credentials for the *Dhulfiqār Sco
 }
 
 /**
- * Generates a warm, structured WhatsApp message for Planned Events (KashafVoice v4.0).
+ * Generates a warm, structured WhatsApp reminder or announcement message for Planned Events (KashafVoice v4.0).
  */
-export function formatKashafEventWhatsApp(event, patrolName = '') {
+export function generateEventReminderWhatsApp(event, options = {}) {
   if (!event) return '';
 
+  const opts = typeof options === 'string' ? { patrolName: options } : (options || {});
+  const {
+    patrolName = '',
+    reminderType = 'general', // 'general' | 'urgent' | 'rsvp' | 'packing' | 'meeting'
+    recipientType = 'parent', // 'parent' | 'leader' | 'scout'
+    recipientName = '',
+    customNote = '',
+    includeRsvpLink = true,
+    appUrl = 'https://taliat-app.vercel.app/'
+  } = opts;
+
   const titleFormatted = applyIslamicTransliteration(event.title || 'Scouting Event');
-  const greeting = LOCKED_GREETING;
-  
-  // 1–2 lines purpose context
-  const purposeLine = `We wanted to share an update regarding our upcoming *${titleFormatted}*.`;
+  const greeting = getKashafGreeting(recipientType, recipientName);
+
+  // Format date nicely (e.g. "Friday, Sep 18, 2026")
+  let dateDisplay = event.date || '';
+  if (event.date) {
+    try {
+      const dParts = event.date.split('-');
+      if (dParts.length === 3) {
+        const dObj = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+        dateDisplay = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    } catch {
+      dateDisplay = event.date;
+    }
+  }
+
+  // Purpose line based on reminderType
+  let purposeLine = '';
+  if (reminderType === 'urgent') {
+    purposeLine = `🚨 *Urgent Reminder: Upcoming Event Tomorrow / Tonight!*
+We would like to remind all families about our upcoming *${titleFormatted}*.`;
+  } else if (reminderType === 'rsvp') {
+    purposeLine = `📝 *Action Needed: Attendance & RSVP Confirmation!*
+Please confirm your scout's attendance and carpool seats for our upcoming *${titleFormatted}*.`;
+  } else if (reminderType === 'packing') {
+    purposeLine = `🎒 *Gear & Preparation Reminder: ${titleFormatted}*
+Please review the required uniform and packing checklist for our upcoming session.`;
+  } else {
+    purposeLine = `📢 *Upcoming Scouting Session Reminder:*
+We wanted to share a friendly reminder regarding our upcoming *${titleFormatted}*.`;
+  }
+
   const blocks = [greeting, purposeLine];
 
   // Warm description in 1–3 line blocks
@@ -273,13 +312,24 @@ export function formatKashafEventWhatsApp(event, patrolName = '') {
     blocks.push(descClean);
   }
 
+  // Islamic Occasion Note (if present)
+  if (event.islamicOccasions && Array.isArray(event.islamicOccasions) && event.islamicOccasions.length > 0) {
+    const occStr = event.islamicOccasions.join(', ');
+    blocks.push(`🕌 *Islamic Milestone / Occasion:* ${applyIslamicTransliteration(occStr)}`);
+  } else if (event.islamicOccasion && typeof event.islamicOccasion === 'string' && event.islamicOccasion.trim()) {
+    blocks.push(`🕌 *Islamic Milestone / Occasion:* ${applyIslamicTransliteration(event.islamicOccasion.trim())}`);
+  }
+
   // Structured event details (only if present in raw event)
   const details = [];
-  if (event.date) details.push(`📅 *Date:* ${event.date}${event.time ? ` at ${event.time}` : ''}`);
-  if (event.location) details.push(`📍 *Location:* ${event.location}`);
-  if (event.meetingPoint) details.push(`🚩 *Meeting Point:* ${event.meetingPoint}`);
+  if (dateDisplay) {
+    const timeStr = event.time || (event.startTime && event.endTime ? `${event.startTime} – ${event.endTime}` : '');
+    details.push(`📅 *Date:* ${dateDisplay}${timeStr ? ` at ${timeStr}` : ''}`);
+  }
+  if (event.location) details.push(`📍 *Location / Venue:* ${event.location}`);
+  if (event.meetingPoint) details.push(`🚩 *Assembly / Meeting Point:* ${event.meetingPoint}`);
   if (event.registrationDeadline || event.deadline) {
-    details.push(`⏳ *Registration Deadline:* ${event.registrationDeadline || event.deadline}`);
+    details.push(`⏳ *Registration / RSVP Deadline:* ${event.registrationDeadline || event.deadline}`);
   }
 
   if (details.length > 0) {
@@ -288,14 +338,25 @@ export function formatKashafEventWhatsApp(event, patrolName = '') {
 
   // Equipment Checklist (one emoji per bullet, one bullet per line)
   if (event.requiredItems && event.requiredItems.trim()) {
-    const rawItems = event.requiredItems.split('\n').map(l => l.trim()).filter(Boolean);
+    const rawItems = event.requiredItems.split(/[\n;]+/).map(l => l.trim()).filter(Boolean);
     const itemBullets = rawItems.map(item => {
       const clean = item.replace(/^[-*•\d+.)]\s*/, '').trim();
       return `🎒 ${clean}`;
     });
     if (itemBullets.length > 0) {
-      blocks.push(`*Packing Checklist:*\n${itemBullets.join('\n')}`);
+      blocks.push(`*Required Gear & Packing Checklist:*\n${itemBullets.join('\n')}`);
     }
+  }
+
+  // Leader custom note
+  if (customNote && customNote.trim()) {
+    blocks.push(`📌 *Leader Note:*\n${applyIslamicTransliteration(customNote.trim())}`);
+  }
+
+  // RSVP Call to Action
+  if (includeRsvpLink) {
+    blocks.push(`🔗 *Portal Link & RSVPs:* ${appUrl}
+_Please submit your RSVP and indicate if you can drive scouts in the carpool._`);
   }
 
   // Scriptural Block (Optional)
@@ -310,6 +371,13 @@ export function formatKashafEventWhatsApp(event, patrolName = '') {
   }
 
   return fullMsg + getLockedClosing(patrolName);
+}
+
+/**
+ * Backward-compatible wrapper for formatKashafEventWhatsApp
+ */
+export function formatKashafEventWhatsApp(event, optionsOrPatrol = '') {
+  return generateEventReminderWhatsApp(event, optionsOrPatrol);
 }
 
 /**
