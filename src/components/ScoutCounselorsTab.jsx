@@ -117,6 +117,10 @@ export default function ScoutCounselorsTab({ currentUser, onNavigate }) {
     }
   };
 
+  const authorizedCounselorsForBadge = requestModalBadge 
+    ? counselors.filter(c => (c.authorizedBadges || []).some(bName => bName.toLowerCase() === requestModalBadge.name.toLowerCase() || bName.toLowerCase().replace(/[^a-z0-9]/g, '') === requestModalBadge.id.replace(/[^a-z0-9]/g, '')))
+    : (requestCounselor ? [requestCounselor] : []);
+
   return (
     <div className="space-y-6 font-sans animate-fadeIn">
       
@@ -377,20 +381,61 @@ export default function ScoutCounselorsTab({ currentUser, onNavigate }) {
               </div>
             ) : (
               <form onSubmit={handleSendBlueCardRequest} className="space-y-4">
-                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1.5 text-xs text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Assigned Counselor:</span>
-                    <strong className="text-amber-300">{requestCounselor.leaderName}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Badge Classification:</span>
-                    <strong className={requestModalBadge.eagleRequired ? "text-emerald-400 font-bold" : "text-slate-200"}>
-                      {requestModalBadge.eagleRequired ? "⭐ Eagle-Required Badge" : "General Elective"}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">BSA Council:</span>
-                    <strong className="text-slate-300">{requestCounselor.bsaCouncil}</strong>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs text-slate-300">
+                  {authorizedCounselorsForBadge.length > 1 ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block">
+                          Select Sign-Off Counselor:
+                        </label>
+                        <span className="text-[10px] text-emerald-400 font-bold">
+                          {authorizedCounselorsForBadge.length} Available
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {authorizedCounselorsForBadge.map((c) => {
+                          const isChosen = requestCounselor?.id === c.id;
+                          return (
+                            <div
+                              key={c.id}
+                              onClick={() => setRequestCounselor(c)}
+                              className={`p-2.5 rounded-xl border-2 transition cursor-pointer flex items-center gap-2.5 ${
+                                isChosen
+                                  ? 'bg-amber-500/20 border-amber-500 text-white shadow-sm ring-1 ring-amber-500/30'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shadow ${c.avatarBg}`}>
+                                {c.avatar}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-bold block truncate text-white">{c.leaderName}</span>
+                                <span className="text-[10px] text-slate-400 block truncate">{c.title}</span>
+                              </div>
+                              {isChosen && <Check size={16} className="text-amber-400 shrink-0" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Assigned Counselor:</span>
+                      <strong className="text-amber-300 font-bold">{requestCounselor.leaderName}</strong>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-800/80 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Badge Classification:</span>
+                      <strong className={requestModalBadge.eagleRequired ? "text-emerald-400 font-bold" : "text-slate-200"}>
+                        {requestModalBadge.eagleRequired ? "⭐ Eagle-Required Badge" : "General Elective"}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">BSA Council:</span>
+                      <strong className="text-slate-300">{requestCounselor.bsaCouncil}</strong>
+                    </div>
                   </div>
                 </div>
 

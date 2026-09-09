@@ -238,6 +238,99 @@ export const MERIT_BADGE_COUNSELORS = [
         "icon": "🌱"
       }
     ]
+  },
+  {
+    "id": "counselor_ahmad_i",
+    "leaderId": "user_ahmad_i",
+    "leaderName": "Ahmad I.",
+    "email": "ahmadi@talia.app",
+    "phone": "+1 (313) 555-0188",
+    "role": "Troop Leader / Merit Badge Counselor",
+    "title": "Merit Badge Counselor",
+    "bsaCouncil": "Michigan Crossroads Council 780",
+    "councilNumber": 780,
+    "validThrough": "2027-05-31",
+    "validityFormatted": "May 31, 2027",
+    "avatar": "AI",
+    "avatarBg": "bg-gradient-to-br from-emerald-600 to-teal-700",
+    "inHouseSignOffAvailable": true,
+    "bio": "Certified Scouting America Merit Badge Counselor for Michigan Crossroads Council 780. Authorized to test, guide, and sign off on Business, Life Skills, and Eagle-Required badges.",
+    "authorizedBadges": [
+      "American Business",
+      "Communication",
+      "Cooking",
+      "Cycling",
+      "Family Life",
+      "First Aid",
+      "Home Repairs",
+      "Personal Management",
+      "Reading"
+    ],
+    "badgeDetails": [
+      {
+        "name": "American Business",
+        "id": "american-business",
+        "eagleRequired": false,
+        "category": "Business & Management",
+        "icon": "💼"
+      },
+      {
+        "name": "Communication",
+        "id": "communication",
+        "eagleRequired": true,
+        "category": "Life Skills",
+        "icon": "💬"
+      },
+      {
+        "name": "Cooking",
+        "id": "cooking",
+        "eagleRequired": true,
+        "category": "Life Skills",
+        "icon": "🍳"
+      },
+      {
+        "name": "Cycling",
+        "id": "cycling",
+        "eagleRequired": true,
+        "category": "Outdoor & Athletics",
+        "icon": "🚴"
+      },
+      {
+        "name": "Family Life",
+        "id": "family-life",
+        "eagleRequired": true,
+        "category": "Life Skills",
+        "icon": "👨‍👩‍👧"
+      },
+      {
+        "name": "First Aid",
+        "id": "first-aid",
+        "eagleRequired": true,
+        "category": "Safety & Emergency",
+        "icon": "🩹"
+      },
+      {
+        "name": "Home Repairs",
+        "id": "home-repairs",
+        "eagleRequired": false,
+        "category": "Trades & Craftsmanship",
+        "icon": "🔨"
+      },
+      {
+        "name": "Personal Management",
+        "id": "personal-management",
+        "eagleRequired": true,
+        "category": "Life Skills",
+        "icon": "📊"
+      },
+      {
+        "name": "Reading",
+        "id": "reading",
+        "eagleRequired": false,
+        "category": "Arts & Electives",
+        "icon": "📖"
+      }
+    ]
   }
 ];
 
