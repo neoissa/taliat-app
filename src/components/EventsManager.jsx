@@ -193,6 +193,25 @@ export const SCOUT_TIME_PRESETS = [
   { id: 'all_day', label: '🌅 All Day Campout', start: '08:00', end: '18:00', isAllDay: true, desc: 'All Day Event' }
 ];
 
+export const STANDARD_GEAR_OPTIONS = [
+  { id: 'class_a', label: 'Complete Class A Field Uniform', icon: '👔', category: 'uniform' },
+  { id: 'class_b', label: 'Activity Uniform (Class B Shirt)', icon: '👕', category: 'uniform' },
+  { id: 'handbook', label: 'Scout Handbook', icon: '📖', category: 'essentials' },
+  { id: 'pen_notebook', label: 'Pen & Notebook', icon: '📝', category: 'essentials' },
+  { id: 'water_bottle', label: 'Refillable Water Bottle (32oz+)', icon: '💧', category: 'essentials' },
+  { id: 'sleeping_bag', label: 'Warm Sleeping Bag & Ground Pad', icon: '🛏️', category: 'camping' },
+  { id: 'tent_tarp', label: 'Ground Tarp / Tent', icon: '⛺', category: 'camping' },
+  { id: 'mess_kit', label: 'Mess Kit & Cutlery', icon: '🍽️', category: 'camping' },
+  { id: 'flashlight', label: 'Flashlight or Headlamp with Extra Batteries', icon: '🔦', category: 'tools' },
+  { id: 'first_aid', label: 'Personal First Aid Kit', icon: '🩹', category: 'tools' },
+  { id: 'pocket_knife', label: "Pocket Knife (Totin' Chip)", icon: '🔪', category: 'tools' },
+  { id: 'hiking_boots', label: 'Sturdy Hiking Boots & Wool Socks', icon: '🥾', category: 'outdoor' },
+  { id: 'rain_gear', label: 'Rain Jacket / Weather Layering', icon: '🧥', category: 'outdoor' },
+  { id: 'prayer_rug', label: 'Prayer Rug / Turbah / Small Compass', icon: '🧭', category: 'faith' },
+  { id: 'work_gloves', label: 'Heavy Duty Work Gloves', icon: '🧤', category: 'tools' },
+  { id: 'sun_bug', label: 'Sunscreen & Insect Repellent', icon: '☀️', category: 'outdoor' }
+];
+
 export default function EventsManager({ currentUser, onNavigate, linkedScouts: propsLinkedScouts = [] }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isScoutmaster = currentUser?.role === 'leader' && currentUser?.leaderPosition === 'Scoutmaster';
@@ -570,7 +589,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setIsAllDay(false);
     setTimeMode('picker');
     setTime('6:30 PM – 9:30 PM');
-    setLocation('Highview Elementary School (Troop Headquarters)');
+    setLocation('Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)');
     setCategory('meeting');
     setDescription('');
     setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -644,6 +663,75 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       setStartTime(preset.start);
       setEndTime(preset.end);
       setTime(preset.desc || `${formatTime12h(preset.start)} – ${formatTime12h(preset.end)}`);
+    }
+  };
+
+  // ── REQUIRED GEAR / ITEMS CHECKLIST HELPERS ──
+  const isGearItemChecked = (itemLabel) => {
+    if (!requiredItems) return false;
+    const lowerReq = requiredItems.toLowerCase();
+    const lowerItem = itemLabel.toLowerCase();
+    if (lowerReq.includes(lowerItem)) return true;
+    if (itemLabel.includes('Class A') && lowerReq.includes('class a')) return true;
+    if (itemLabel.includes('Class B') && lowerReq.includes('class b')) return true;
+    if (itemLabel.includes('Handbook') && lowerReq.includes('handbook')) return true;
+    if (itemLabel.includes('Pen & Notebook') && (lowerReq.includes('notebook') || lowerReq.includes('pen'))) return true;
+    if (itemLabel.includes('Water Bottle') && lowerReq.includes('water bottle')) return true;
+    if (itemLabel.includes('Sleeping Bag') && lowerReq.includes('sleeping bag')) return true;
+    if (itemLabel.includes('Mess Kit') && lowerReq.includes('mess kit')) return true;
+    if (itemLabel.includes('Flashlight') && (lowerReq.includes('flashlight') || lowerReq.includes('headlamp'))) return true;
+    if (itemLabel.includes('First Aid') && lowerReq.includes('first aid')) return true;
+    if (itemLabel.includes('Hiking Boots') && lowerReq.includes('hiking boots')) return true;
+    if (itemLabel.includes('Prayer Rug') && (lowerReq.includes('prayer rug') || lowerReq.includes('turbah'))) return true;
+    if (itemLabel.includes('Work Gloves') && lowerReq.includes('gloves')) return true;
+    if (itemLabel.includes('Pocket Knife') && lowerReq.includes('knife')) return true;
+    if (itemLabel.includes('Rain Jacket') && (lowerReq.includes('rain') || lowerReq.includes('poncho'))) return true;
+    if (itemLabel.includes('Sunscreen') && (lowerReq.includes('sunscreen') || lowerReq.includes('repellent'))) return true;
+    return false;
+  };
+
+  const handleToggleGearItem = (itemLabel) => {
+    const isChecked = isGearItemChecked(itemLabel);
+    let itemsArray = requiredItems ? requiredItems.split(',').map(s => s.trim()).filter(Boolean) : [];
+    
+    if (isChecked) {
+      itemsArray = itemsArray.filter(i => {
+        const iLow = i.toLowerCase();
+        if (iLow === itemLabel.toLowerCase()) return false;
+        if (itemLabel.includes('Class A') && iLow.includes('class a')) return false;
+        if (itemLabel.includes('Class B') && iLow.includes('class b')) return false;
+        if (itemLabel.includes('Handbook') && iLow.includes('handbook')) return false;
+        if (itemLabel.includes('Pen & Notebook') && (iLow.includes('notebook') || iLow.includes('pen'))) return false;
+        if (itemLabel.includes('Water Bottle') && iLow.includes('water bottle')) return false;
+        if (itemLabel.includes('Sleeping Bag') && iLow.includes('sleeping bag')) return false;
+        if (itemLabel.includes('Mess Kit') && iLow.includes('mess kit')) return false;
+        if (itemLabel.includes('Flashlight') && (iLow.includes('flashlight') || iLow.includes('headlamp'))) return false;
+        if (itemLabel.includes('First Aid') && iLow.includes('first aid')) return false;
+        if (itemLabel.includes('Hiking Boots') && iLow.includes('hiking boots')) return false;
+        if (itemLabel.includes('Prayer Rug') && (iLow.includes('prayer rug') || iLow.includes('turbah'))) return false;
+        if (itemLabel.includes('Work Gloves') && iLow.includes('gloves')) return false;
+        if (itemLabel.includes('Pocket Knife') && iLow.includes('knife')) return false;
+        if (itemLabel.includes('Rain Jacket') && (iLow.includes('rain') || iLow.includes('poncho'))) return false;
+        if (itemLabel.includes('Sunscreen') && (iLow.includes('sunscreen') || iLow.includes('repellent'))) return false;
+        return true;
+      });
+    } else {
+      itemsArray.push(itemLabel);
+    }
+    setRequiredItems(itemsArray.join(', '));
+  };
+
+  const handleApplyGearPackage = (presetType) => {
+    if (presetType === 'friday_meeting') {
+      setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Refillable Water Bottle (32oz+), Pen & Notebook');
+    } else if (presetType === 'tuesday_halqa') {
+      setRequiredItems('Activity Uniform (Class B Shirt), Scout Handbook, Workshop Materials, Refillable Water Bottle (32oz+)');
+    } else if (presetType === 'overnight_camp') {
+      setRequiredItems('Complete Class A Field Uniform, Activity Uniform (Class B Shirt), Scout Handbook, Warm Sleeping Bag & Ground Pad, Mess Kit & Cutlery, Flashlight or Headlamp with Extra Batteries, Personal First Aid Kit, Sturdy Hiking Boots & Wool Socks, Rain Jacket / Weather Layering, Refillable Water Bottle (32oz+), Prayer Rug / Turbah / Small Compass');
+    } else if (presetType === 'service_project') {
+      setRequiredItems('Activity Uniform (Class B Shirt), Heavy Duty Work Gloves, Refillable Water Bottle (32oz+), Personal First Aid Kit');
+    } else if (presetType === 'clear') {
+      setRequiredItems('');
     }
   };
 
@@ -2057,7 +2145,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 </div>
                 <input
                   type="text"
-                  placeholder="e.g. Highview Elementary School (Troop Headquarters)"
+                  placeholder="e.g. Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
@@ -2065,22 +2153,36 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setLocation('Highview Elementary School (6514 Kinloch St. Dearborn Heights 48127)')}
+                    onClick={() => setLocation('Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)')}
                     className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-emerald-950 hover:text-emerald-300 text-slate-300 border border-slate-750 hover:border-emerald-700 rounded-lg transition cursor-pointer"
                   >
-                    🏫 Highview Elementary (6514 Kinloch St)
+                    🏫 Highview Elementary (25225 Richardson St)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLocation('Campout / Outdoor Campsite')}
+                    onClick={() => setLocation('6514 Kinloch St, Dearborn Heights, MI 48127')}
                     className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-amber-950 hover:text-amber-300 text-slate-300 border border-slate-750 hover:border-amber-700 rounded-lg transition cursor-pointer"
                   >
-                    🏕️ Campout Site
+                    🏠 Leader Hassan Issa (6514 Kinloch St)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLocation('Masjid / Community Hall')}
+                    onClick={() => setLocation('Hype Athletics (23302 W Warren Ave, Dearborn Heights, MI 48127)')}
+                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-purple-950 hover:text-purple-300 text-slate-300 border border-slate-750 hover:border-purple-700 rounded-lg transition cursor-pointer"
+                  >
+                    🏟️ Hype Athletics (23302 W Warren Ave)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation("D' Bar A Scout Ranch (880 E Sutton Rd, Metamora, MI 48455)")}
                     className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-sky-950 hover:text-sky-300 text-slate-300 border border-slate-750 hover:border-sky-700 rounded-lg transition cursor-pointer"
+                  >
+                    🏕️ D' Bar A Scout Ranch
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation('Masjid / Community Hall (Dearborn Heights, MI)')}
+                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-teal-950 hover:text-teal-300 text-slate-300 border border-slate-750 hover:border-teal-700 rounded-lg transition cursor-pointer"
                   >
                     🕌 Masjid / Community Hall
                   </button>
@@ -2121,15 +2223,108 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Required Gear / Items to Bring</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Class A Uniform, Pocket Knife, Water Bottle, Mess Kit"
-                  value={requiredItems}
-                  onChange={(e) => setRequiredItems(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+              {/* ── INTERACTIVE REQUIRED GEAR & PACKING CHECKLIST ── */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <CheckSquare size={14} className="text-emerald-400" />
+                      <span>Required Gear & Items Checklist</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Select checkboxes to automatically build the required gear list, or type custom items below.
+                    </p>
+                  </div>
+
+                  {/* Quick Package Presets */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyGearPackage('friday_meeting')}
+                      className="text-[10px] font-bold px-2 py-1 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/50 rounded-lg transition cursor-pointer"
+                      title="Class A, Handbook, Pen & Notebook, Water Bottle"
+                    >
+                      🏕️ Friday Meeting
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyGearPackage('tuesday_halqa')}
+                      className="text-[10px] font-bold px-2 py-1 bg-teal-950/60 hover:bg-teal-900 text-teal-300 border border-teal-600/50 rounded-lg transition cursor-pointer"
+                      title="Class B, Handbook, Materials, Water Bottle"
+                    >
+                      🕌 Tuesday Halqa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyGearPackage('overnight_camp')}
+                      className="text-[10px] font-bold px-2 py-1 bg-sky-950/60 hover:bg-sky-900 text-sky-300 border border-sky-600/50 rounded-lg transition cursor-pointer"
+                      title="Full Camping Pack: Sleeping Bag, Mess Kit, Boots, First Aid, Prayer Rug, etc."
+                    >
+                      ⛺ Campout
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyGearPackage('service_project')}
+                      className="text-[10px] font-bold px-2 py-1 bg-amber-950/60 hover:bg-amber-900 text-amber-300 border border-amber-600/50 rounded-lg transition cursor-pointer"
+                      title="Class B, Work Gloves, Water Bottle, First Aid"
+                    >
+                      🤝 Service
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyGearPackage('clear')}
+                      className="text-[10px] font-semibold px-1.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                      title="Clear checklist"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {/* Checkbox Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {STANDARD_GEAR_OPTIONS.map((gear) => {
+                    const checked = isGearItemChecked(gear.label);
+                    return (
+                      <button
+                        key={gear.id}
+                        type="button"
+                        onClick={() => handleToggleGearItem(gear.label)}
+                        className={`text-left p-2 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer ${
+                          checked
+                            ? 'bg-emerald-950/50 border-emerald-500 text-white shadow-sm'
+                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm shrink-0">{gear.icon}</span>
+                          <span className="text-xs font-medium truncate">{gear.label}</span>
+                        </div>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold shrink-0 border ${
+                          checked
+                            ? 'bg-emerald-500 border-emerald-400 text-slate-950'
+                            : 'border-slate-700 bg-slate-950 text-transparent'
+                        }`}>
+                          ✓
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Editable Freeform Text Box for Custom / Additional Gear */}
+                <div className="pt-2 border-t border-slate-850">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                    Compiled Gear List & Custom Additions (Editable Text)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Complete Class A Field Uniform, Scout Handbook, Water Bottle, Swim Trunks..."
+                    value={requiredItems}
+                    onChange={(e) => setRequiredItems(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -2417,14 +2612,29 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                       {(() => {
                         const aud = getEventAudienceInfo(ev, currentUser, groups, linkedScouts);
                         return (
-                          <div className="pt-0.5">
+                          <div className="pt-0.5 flex items-center gap-1.5 flex-wrap">
                             <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${aud.colorClass}`}>
                               <span>{aud.icon}</span>
                               <span className="font-bold">{aud.badge}</span>
                             </span>
+
+                            {/* Islamic Occasion Badge on Card */}
+                            {(ev.islamicOccasion || (ev.islamicOccasions && ev.islamicOccasions.length > 0)) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35">
+                                <span>🕌</span>
+                                <span className="truncate max-w-[200px]">{ev.islamicOccasion || ev.islamicOccasions?.map(i => i.name).join(' & ')}</span>
+                              </span>
+                            )}
                           </div>
                         );
                       })()}
+
+                      {/* Special Excel Note snippet if present and not already displayed as Islamic occasion */}
+                      {(ev.rawNotes || ev.notes) && !ev.islamicOccasion && (!ev.islamicOccasions || ev.islamicOccasions.length === 0) && (
+                        <div className="text-[10px] text-amber-300/90 font-medium bg-amber-950/30 border border-amber-500/20 px-2 py-0.5 rounded-lg truncate max-w-full">
+                          <span>📝 Note: {ev.rawNotes || ev.notes}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 flex-wrap">
                         <span>⏰ {ev.time}</span>
@@ -2494,6 +2704,11 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                     {selectedEvent.isStandalone && (
                       <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                         <Zap size={10} /> Standalone Session
+                      </span>
+                    )}
+                    {(selectedEvent.islamicOccasion || (selectedEvent.islamicOccasions && selectedEvent.islamicOccasions.length > 0)) && (
+                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span>🕌</span> {selectedEvent.islamicOccasion || selectedEvent.islamicOccasions?.map(i => i.name).join(' & ')}
                       </span>
                     )}
                   </div>
@@ -2617,6 +2832,38 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   <ExternalLink size={12} />
                 </a>
               </div>
+
+              {/* ── ISLAMIC OCCASION & SPIRITUAL MILESTONE CARD ── */}
+              {(selectedEvent.islamicOccasion || (selectedEvent.islamicOccasions && selectedEvent.islamicOccasions.length > 0)) && (
+                <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/40 border-2 border-amber-500/40 rounded-2xl p-4 flex items-start gap-3.5 shadow-lg">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-bold text-xl shrink-0 shadow-inner">
+                    🕌
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-amber-400 block">
+                      Islamic Occasion & Spiritual Milestone
+                    </span>
+                    <h4 className="text-sm font-black text-white">
+                      {selectedEvent.islamicOccasion || selectedEvent.islamicOccasions?.map(i => i.name).join(' & ')}
+                    </h4>
+                    {selectedEvent.rawNotes && (
+                      <p className="text-[11px] text-slate-300 italic pt-0.5">
+                        "{selectedEvent.rawNotes}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Special Calendar Notes / Remarks */}
+              {(selectedEvent.rawNotes || selectedEvent.notes) && !selectedEvent.islamicOccasion && (!selectedEvent.islamicOccasions || selectedEvent.islamicOccasions.length === 0) && (
+                <div className="p-3.5 bg-slate-900/90 border border-slate-750 rounded-2xl text-xs space-y-1">
+                  <strong className="text-amber-300 uppercase text-[10px] block font-bold flex items-center gap-1.5">
+                    <span>📝</span> Special Calendar Notes & Remarks:
+                  </strong>
+                  <p className="text-slate-200">{selectedEvent.rawNotes || selectedEvent.notes}</p>
+                </div>
+              )}
 
               {/* Description */}
               {selectedEvent.description && (

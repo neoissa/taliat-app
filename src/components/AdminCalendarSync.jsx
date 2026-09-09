@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import { db } from '../firebase.js';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { 
   Calendar, 
   Upload, 
@@ -26,6 +28,7 @@ import {
   HelpCircle, 
   CalendarDays, 
   CheckSquare, 
+  CheckSquare2,
   X,
   Send,
   Lock,
@@ -45,6 +48,15 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState('');
 
+  // Live Firestore Events Tracker
+  const [liveEventsMap, setLiveEventsMap] = useState({});
+
+  // Selective Import State
+  const [selectedEventIds, setSelectedEventIds] = useState(new Set());
+  const [singleImportingId, setSingleImportingId] = useState(null);
+  const [singleImportSuccessId, setSingleImportSuccessId] = useState(null);
+  const [batchActionTarget, setBatchActionTarget] = useState('all'); // 'all' | 'selected'
+
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('all'); // 'all' | 'youth_program' | 'scouting_program' | 'leader_meeting' | 'camp' | 'special_event' | 'blackout'
@@ -55,9 +67,36 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
   const [committing, setCommitting] = useState(false);
   const [commitProgress, setCommitProgress] = useState({ current: 0, total: 0 });
   const [commitSuccess, setCommitSuccess] = useState(false);
+  const [commitSuccessMsg, setCommitSuccessMsg] = useState('');
   const [commitError, setCommitError] = useState('');
   const [overwriteMode, setOverwriteMode] = useState('merge'); // 'merge' | 'replace'
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Subscribe to live Firestore events to show real-time live status
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'events'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        map[d.id] = data;
+        if (data.date && data.startTime) {
+          const key = `${data.date}_${data.startTime.replace(/:/g, '')}`;
+          map[key] = data;
+        }
+      });
+      setLiveEventsMap(map);
+    }, (err) => {
+      console.warn('Live events snapshot error:', err);
+    });
+    return () => unsub();
+  }, []);
+
+  const isEventLiveInFirestore = (ev) => {
+    if (!ev) return false;
+    if (liveEventsMap[ev.id]) return true;
+    const key = `${ev.date}_${(ev.startTime || '1830').replace(/:/g, '')}`;
+    return !!liveEventsMap[key];
+  };
 
   // 1. Handle File Upload (Drag & Drop or File Input)
   const handleFileUpload = (e) => {
@@ -76,6 +115,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
         setParsedData(result);
         setFileName(file.name);
         setCalendarSource('uploaded');
+        setSelectedEventIds(new Set());
         setParsing(false);
       } catch (err) {
         console.error('Failed to parse uploaded Excel file:', err);
@@ -100,6 +140,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
       setParsedData(MASTER_CALENDAR_DATA);
       setFileName('2026–27 Scout Year Calendar.xlsx');
       setCalendarSource('bundled');
+      setSelectedEventIds(new Set());
       setParsing(false);
     }, 200);
   };
@@ -152,9 +193,79 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
     });
   }, [parsedData, searchQuery]);
 
-  // 5. Commit to Firestore
+  // Multi-Selection State Helpers
+  const allFilteredSelected = useMemo(() => {
+    if (!filteredEvents || filteredEvents.length === 0) return false;
+    return filteredEvents.every(e => selectedEventIds.has(e.id));
+  }, [filteredEvents, selectedEventIds]);
+
+  const selectedEventsList = useMemo(() => {
+    if (!parsedData?.events) return [];
+    return parsedData.events.filter(e => selectedEventIds.has(e.id));
+  }, [parsedData, selectedEventIds]);
+
+  const handleToggleSelectEvent = (eventId, e) => {
+    if (e) e.stopPropagation();
+    setSelectedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        filteredEvents.forEach(e => next.delete(e.id));
+        return next;
+      });
+    } else {
+      setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        filteredEvents.forEach(e => next.add(e.id));
+        return next;
+      });
+    }
+  };
+
+  // 5. Single-Event Import Action
+  const handleImportSingleEvent = async (ev, e) => {
+    if (e) e.stopPropagation();
+    if (!ev) return;
+
+    setSingleImportingId(ev.id);
+    setCommitError('');
+    setCommitSuccess(false);
+
+    try {
+      const result = await commitEventsToFirestore([ev], { overwriteMode: 'merge' });
+      if (result.success) {
+        setSingleImportSuccessId(ev.id);
+        setTimeout(() => setSingleImportSuccessId(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to import single event:', err);
+      setCommitError(`Error importing "${ev.title}": ${err.message}`);
+    } finally {
+      setSingleImportingId(null);
+    }
+  };
+
+  // 6. Open Batch / Selective Commit Modal
+  const handleOpenBatchCommit = (targetMode = 'all') => {
+    setBatchActionTarget(targetMode);
+    setShowConfirmModal(true);
+  };
+
+  // 7. Execute Batch Commit (All or Selected Subset)
   const handleExecuteCommit = async () => {
-    if (!parsedData?.events || parsedData.events.length === 0) return;
+    const targetEvents = batchActionTarget === 'selected' ? selectedEventsList : (parsedData?.events || []);
+    if (!targetEvents || targetEvents.length === 0) return;
 
     setCommitting(true);
     setCommitError('');
@@ -162,7 +273,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
     setShowConfirmModal(false);
 
     try {
-      const result = await commitEventsToFirestore(parsedData.events, {
+      const result = await commitEventsToFirestore(targetEvents, {
         overwriteMode,
         onProgress: (cur, tot) => {
           setCommitProgress({ current: cur, total: tot });
@@ -171,6 +282,14 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
 
       if (result.success) {
         setCommitSuccess(true);
+        setCommitSuccessMsg(
+          batchActionTarget === 'selected'
+            ? `✓ Successfully imported ${targetEvents.length} selected events into Firestore!`
+            : `✓ All ${targetEvents.length} events successfully committed to Firestore!`
+        );
+        if (batchActionTarget === 'selected') {
+          setSelectedEventIds(new Set());
+        }
       }
     } catch (err) {
       console.error('Failed to commit calendar events to Firestore:', err);
@@ -234,7 +353,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
 
           <label
             htmlFor="excel-calendar-upload"
-            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shadow-md hover:border-emerald-500/50"
+            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-750 transition cursor-pointer flex items-center gap-2 shadow-md hover:border-emerald-500/50"
             title="Upload custom .xlsx or updated schedule"
           >
             <Upload size={15} className="text-emerald-400" />
@@ -245,7 +364,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             <button
               type="button"
               onClick={handleResetToMasterDataset}
-              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-3.5 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-3.5 py-3 rounded-2xl border border-slate-750 transition cursor-pointer flex items-center gap-1.5"
               title="Reset to bundled master dataset"
             >
               <RefreshCw size={14} className="text-amber-400" />
@@ -253,9 +372,22 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             </button>
           )}
 
+          {selectedEventIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => handleOpenBatchCommit('selected')}
+              disabled={committing || parsing}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/60 hover:scale-[1.02] animate-pulse"
+              title={`Import ${selectedEventIds.size} checked events`}
+            >
+              <CheckSquare2 size={16} />
+              <span>Import Selected ({selectedEventIds.size})</span>
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => setShowConfirmModal(true)}
+            onClick={() => handleOpenBatchCommit('all')}
             disabled={committing || parsing || stats.totalIngestibleEvents === 0}
             className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/60 hover:scale-[1.02] disabled:opacity-50 disabled:pointer-events-none"
           >
@@ -279,10 +411,10 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
             <div>
               <h4 className="text-xs font-bold text-emerald-300">
-                ✓ All {parsedData?.events?.length || 0} events successfully committed to Firestore!
+                {commitSuccessMsg || `✓ All ${parsedData?.events?.length || 0} events successfully committed to Firestore!`}
               </h4>
               <p className="text-[11px] text-emerald-200/80">
-                The Troop Calendar and Attendance sessions have been fully updated with all locations, times, and Islamic occasion notes.
+                The Troop Calendar and Attendance sessions have been updated with all designated locations, times, and Islamic occasion notes.
               </p>
             </div>
           </div>
@@ -454,11 +586,57 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             </button>
           </div>
 
-          <span className="text-[11px] text-slate-400 font-medium">
-            Showing <strong className="text-white font-mono">{activeTab === 'events' ? filteredEvents.length : filteredBlackouts.length}</strong> records
-          </span>
+          <div className="flex items-center gap-3">
+            {activeTab === 'events' && (
+              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>{Object.keys(liveEventsMap).length > 0 ? `${Object.keys(liveEventsMap).length} Live in Firestore` : 'Checking Firestore...'}</span>
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400 font-medium">
+              Showing <strong className="text-white font-mono">{activeTab === 'events' ? filteredEvents.length : filteredBlackouts.length}</strong> records
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* ── SELECTIVE MULTI-ACTION FLOATING BAR ── */}
+      {activeTab === 'events' && selectedEventIds.size > 0 && (
+        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border-2 border-emerald-500/60 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl animate-scaleUp">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center justify-center font-bold text-sm">
+              ✓
+            </div>
+            <div>
+              <span className="text-xs font-black text-white">
+                {selectedEventIds.size} of {filteredEvents.length} events selected
+              </span>
+              <p className="text-[11px] text-emerald-300/80">
+                You can import only these selected items or uncheck them.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setSelectedEventIds(new Set())}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition cursor-pointer border border-slate-700"
+            >
+              Deselect All
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenBatchCommit('selected')}
+              disabled={committing}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/60"
+            >
+              <Sparkles size={14} />
+              <span>📥 Import Selected ({selectedEventIds.size}) to Firestore</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── TAB 1: DRY-RUN EVENTS TABLE ── */}
       {activeTab === 'events' && (
@@ -467,13 +645,24 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-750 font-bold">
-                  <th className="py-3 px-4">#</th>
+                  <th className="py-3 px-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={handleToggleSelectAllFiltered}
+                      title={allFilteredSelected ? 'Deselect all filtered' : 'Select all filtered'}
+                      className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer accent-emerald-500"
+                    />
+                  </th>
+                  <th className="py-3 px-3 w-10">#</th>
+                  <th className="py-3 px-3">Live Status</th>
                   <th className="py-3 px-4">Date & Day</th>
                   <th className="py-3 px-4">Time & Duration</th>
                   <th className="py-3 px-4">Event Title & Type</th>
                   <th className="py-3 px-4">Assigned Location</th>
                   <th className="py-3 px-4">Islamic Occasion / Notes</th>
                   <th className="py-3 px-4">Scope & Visibility</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 font-medium">
@@ -481,6 +670,10 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                   const dObj = new Date(ev.date + 'T12:00:00');
                   const dayName = dObj.toLocaleDateString('en-US', { weekday: 'short' });
                   const formattedDate = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const isLive = isEventLiveInFirestore(ev);
+                  const isSelected = selectedEventIds.has(ev.id);
+                  const isCurrentlyImporting = singleImportingId === ev.id;
+                  const isJustImported = singleImportSuccessId === ev.id;
 
                   let badgeColor = 'bg-slate-800 text-slate-300 border-slate-700';
                   let typeIcon = '📅';
@@ -502,11 +695,47 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                   }
 
                   return (
-                    <tr key={ev.id || index} className="hover:bg-slate-800/60 transition">
-                      <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                    <tr 
+                      key={ev.id || index} 
+                      onClick={() => handleToggleSelectEvent(ev.id)}
+                      className={`transition cursor-pointer select-none ${
+                        isSelected 
+                          ? 'bg-emerald-950/40 border-l-4 border-l-emerald-500' 
+                          : isLive 
+                          ? 'hover:bg-slate-800/60 bg-slate-900/30' 
+                          : 'hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleSelectEvent(ev.id, e)}
+                          className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer accent-emerald-500"
+                        />
+                      </td>
+
+                      {/* Row Index */}
+                      <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
                         {index + 1}
                       </td>
 
+                      {/* Live in Firestore Status Badge */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {isLive ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
+                            <CheckCircle2 size={10} className="text-emerald-400" />
+                            <span>Live</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            <span>Ready</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Date & Day */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="font-bold text-white flex items-center gap-1.5">
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-750 font-mono text-slate-300">
@@ -517,6 +746,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                         <div className="text-[10px] font-mono text-slate-400 mt-0.5">{ev.date}</div>
                       </td>
 
+                      {/* Time & Duration */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="font-bold text-slate-200 flex items-center gap-1">
                           <Clock size={11} className="text-emerald-400" />
@@ -527,6 +757,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                         </div>
                       </td>
 
+                      {/* Event Title & Type */}
                       <td className="py-3 px-4">
                         <div className="font-bold text-white flex items-center gap-1.5">
                           <span>{typeIcon}</span>
@@ -539,6 +770,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                         </div>
                       </td>
 
+                      {/* Location */}
                       <td className="py-3 px-4 text-slate-300 max-w-xs">
                         <div className="flex items-start gap-1">
                           <MapPin size={12} className="text-rose-400 shrink-0 mt-0.5" />
@@ -546,6 +778,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                         </div>
                       </td>
 
+                      {/* Islamic Occasion & Notes */}
                       <td className="py-3 px-4 max-w-xs">
                         {ev.islamicOccasions && ev.islamicOccasions.length > 0 ? (
                           <div className="space-y-1">
@@ -566,6 +799,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                         )}
                       </td>
 
+                      {/* Scope & Role Visibility */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {ev.leaderOnly ? (
                           <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-bold flex items-center gap-1">
@@ -576,6 +810,47 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                             <Users size={10} /> Troop-Wide
                           </span>
                         )}
+                      </td>
+
+                      {/* Individual Import Action Button */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleImportSingleEvent(ev, e)}
+                          disabled={isCurrentlyImporting}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 mx-auto cursor-pointer shadow-sm ${
+                            isJustImported
+                              ? 'bg-emerald-600 text-white'
+                              : isCurrentlyImporting
+                              ? 'bg-slate-800 text-emerald-400 border border-emerald-500/50'
+                              : isLive
+                              ? 'bg-slate-800 hover:bg-emerald-950 text-slate-300 hover:text-emerald-300 border border-slate-700 hover:border-emerald-600'
+                              : 'bg-emerald-600/90 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                          }`}
+                          title={isLive ? 'Re-sync / update this single event in Firestore' : 'Import this single event into Firestore'}
+                        >
+                          {isCurrentlyImporting ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : isJustImported ? (
+                            <>
+                              <Check size={12} />
+                              <span>Imported!</span>
+                            </>
+                          ) : isLive ? (
+                            <>
+                              <RefreshCw size={11} className="text-emerald-400" />
+                              <span>Re-Sync</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={11} />
+                              <span>Import</span>
+                            </>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -658,10 +933,10 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
             <div className="bg-slate-900 border border-slate-750 p-4 rounded-xl space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-base">👑</span>
-                <h4 className="text-sm font-bold text-white">Leader Executive Council Headquarters</h4>
+                <h4 className="text-sm font-bold text-white">Leader Hassan Issa Residence (Executive Council HQ)</h4>
               </div>
               <p className="text-xs text-amber-400 font-mono font-bold">
-                {DESIGNATED_LOCATIONS.pleasantRidge}
+                {DESIGNATED_LOCATIONS.leaderResidence}
               </p>
               <p className="text-xs text-slate-400">
                 Applied to all Monday 9:00 PM executive leadership meetings.
@@ -708,7 +983,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                 </div>
                 <div>
                   <h3 className="text-base font-black text-white">
-                    Confirm Master Calendar Ingestion
+                    {batchActionTarget === 'selected' ? `Confirm Selective Ingestion (${selectedEventsList.length} Events)` : 'Confirm Full Master Calendar Ingestion'}
                   </h3>
                   <p className="text-xs text-slate-400">Commit parsed schedule to Firestore `/events`</p>
                 </div>
@@ -729,8 +1004,10 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                   <span className="font-bold text-white font-mono">{fileName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Total Ingestible Events:</span>
-                  <span className="font-bold text-emerald-400 font-mono">{stats.totalIngestibleEvents}</span>
+                  <span className="text-slate-400">Target Ingestion Count:</span>
+                  <span className="font-bold text-emerald-400 font-mono">
+                    {batchActionTarget === 'selected' ? `${selectedEventsList.length} Selected Events` : `${stats.totalIngestibleEvents} Total Events`}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Blackouts Bypassed:</span>
@@ -799,7 +1076,7 @@ export default function AdminCalendarSync({ currentUser, onNavigate, onClose }) 
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
                 disabled={committing}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
               >
                 Cancel
               </button>

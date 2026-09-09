@@ -20,29 +20,139 @@ import {
 // ── DESIGNATED LOCATIONS MAP ──
 export const DESIGNATED_LOCATIONS = {
   highview: 'Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)',
-  pleasantRidge: '27112 N Pleasant Ridge, Dearborn Heights, MI 48127',
+  leaderResidence: '6514 Kinloch St, Dearborn Heights, MI 48127',
+  leaderHassan: '6514 Kinloch St, Dearborn Heights, MI 48127',
+  pleasantRidge: '6514 Kinloch St, Dearborn Heights, MI 48127', // Preserved alias
   dBarA: "D' Bar A Scout Ranch (880 E Sutton Rd, Metamora, MI 48455)",
   hypeAthletics: 'Hype Athletics (23302 W Warren Ave, Dearborn Heights, MI 48127)',
   tbd: 'To Be Determined (TBD)'
 };
 
+// ── DIACRITIC-INSENSITIVE TEXT STRIPPER ──
+export function stripDiacritics(str) {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[āĀ]/g, 'a')
+    .replace(/[īĪ]/g, 'i')
+    .replace(/[ūŪ]/g, 'u')
+    .replace(/[ṭṬ]/g, 't')
+    .replace(/[ḍḌ]/g, 'd')
+    .replace(/[ṣṢ]/g, 's')
+    .replace(/[ḥḤ]/g, 'h')
+    .replace(/[ʿʾ`']/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 // ── ISLAMIC OCCASIONS DICTIONARY ──
 export const ISLAMIC_OCCASIONS_MAP = [
-  { keywords: ['imam ali', 'birth of imam ali'], name: 'Birth of Imam Ali (as)', icon: '🕌', tag: 'Islamic Celebration' },
-  { keywords: ['sy. fatimah', 'sayyidah fatemah', 'birth of sy. fatimah', 'fatemah'], name: 'Birth of Sy. Fatimah (as)', icon: '🌸', tag: 'Islamic Celebration' },
-  { keywords: ['imam mahdi', 'birth of imam mahdi'], name: 'Birth of Imam Mahdi (aj)', icon: '⭐', tag: 'Islamic Celebration' },
-  { keywords: ['sy. zainab', 'birth of sy. zainab'], name: 'Birth of Sy. Zainab (as)', icon: '🌹', tag: 'Islamic Celebration' },
-  { keywords: ['imam hussain', 'al-abbas', 'imam sajjad'], name: "Birth of Imam Hussain, Al-'Abbas & Imam Sajjad (as)", icon: '✨', tag: 'Islamic Celebration' },
-  { keywords: ['imam al-ridha', 'al-ridha'], name: 'Birth of Imam Al-Ridha (as)', icon: '🌟', tag: 'Islamic Celebration' },
-  { keywords: ['eid al-ghadir', 'ghadir'], name: 'Eid Al-Ghadīr Celebration', icon: '👑', tag: 'Eid Celebration' },
-  { keywords: ['eid ul-fitr', 'eid al-fitr', 'fitr'], name: 'Eid ul-Fiṭr', icon: '🌙', tag: 'Eid Celebration' },
-  { keywords: ['eid al-adha', 'adha'], name: 'Eid al-Adha (10 Dhūl-Ḥijjah)', icon: '🐑', tag: 'Eid Celebration' },
-  { keywords: ['martyrdom sayyidah fatemah', 'majlis martyrdom'], name: 'Youth Majlis Martyrdom Sayyidah Fatemah (as)', icon: '🕯️', tag: 'Youth Majlis' },
-  { keywords: ['martyrdom imam ali'], name: 'Youth Majlis Martyrdom Imam Ali (as)', icon: '🕯️', tag: 'Youth Majlis' },
-  { keywords: ['shahr ramadan', 'ramadan'], name: 'Shahr Ramadan Season', icon: '🌙', tag: 'Ramadan' },
-  { keywords: ['potluck iftar', 'iftar'], name: 'Scout Family Potluck Ifṭār', icon: '🍲', tag: 'Community Iftar' },
-  { keywords: ['scout-only iftar'], name: 'Scout-Only Ifṭār & Reflections', icon: '🍽️', tag: 'Scout Iftar' },
-  { keywords: ['sirat conference', 'winter break/sirat'], name: 'Sirat Youth Conference & Winter Break', icon: '🧭', tag: 'Conference' }
+  { 
+    id: 'birth_imam_ali', 
+    keywords: ['birth of imam ali', 'wiladat imam ali', '13 rajab'], 
+    name: 'Birth of Imam Ali (as)', 
+    icon: '🕌', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'martyrdom_imam_ali', 
+    keywords: ['martyrdom imam ali', 'shahadat imam ali', 'majlis martyrdom imam ali', '21 ramadan'], 
+    name: 'Martyrdom of Imam Ali (as) - Youth Majlis', 
+    icon: '🕯️', 
+    tag: 'Youth Majlis' 
+  },
+  { 
+    id: 'birth_fatimah', 
+    keywords: ['birth of sy. fatimah', 'birth of sayyidah fatimah', 'birth of sy. fatemah', 'birth of fatimah', 'birth of fatemah', '20 jumada'], 
+    name: 'Birth of Sayyidah Fatimah al-Zahra (as)', 
+    icon: '🌸', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'martyrdom_fatimah', 
+    keywords: ['martyrdom sayyidah fatemah', 'martyrdom sayyidah fatimah', 'martyrdom fatimah', 'martyrdom fatemah', 'fatimiyyah'], 
+    name: 'Martyrdom of Sayyidah Fatimah (as) - Youth Majlis', 
+    icon: '🕯️', 
+    tag: 'Youth Majlis' 
+  },
+  { 
+    id: 'birth_zainab', 
+    keywords: ['birth of sy. zainab', 'birth of sayyidah zainab', 'birth of sy. zaynab', 'birth of zainab', '5 jumada'], 
+    name: 'Birth of Sayyidah Zainab (as)', 
+    icon: '🌹', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'birth_shaban_heroes', 
+    keywords: ['birth of imam hussain', 'imam hussain, al-abbas', 'al-abbas, imam sajjad', 'shaban celebrations'], 
+    name: 'Birth of Imam Hussain, Abu Fadl al-Abbas & Imam Sajjad (as)', 
+    icon: '✨', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'birth_mahdi', 
+    keywords: ['birth of imam mahdi', '15 shaban', 'imam mahdi (aj)'], 
+    name: "Birth of Imam al-Mahdi (aj) - 15th Sha'ban", 
+    icon: '⭐', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'birth_ridha', 
+    keywords: ['birth of imam al-ridha', 'birth of imam ridha', 'birth of imam reza', '11 dhu al-qadah'], 
+    name: 'Birth of Imam Al-Ridha (as)', 
+    icon: '🌟', 
+    tag: 'Islamic Celebration' 
+  },
+  { 
+    id: 'eid_ghadir', 
+    keywords: ['eid al-ghadir', 'eid al ghadir', 'ghadir celebration', 'eid-e-ghadir', '18 dhu al-hijjah'], 
+    name: 'Eid Al-Ghadir Celebration', 
+    icon: '👑', 
+    tag: 'Eid Celebration' 
+  },
+  { 
+    id: 'eid_fitr', 
+    keywords: ['eid ul-fitr', 'eid al-fitr', 'eid fitr', '1 shawwal'], 
+    name: 'Eid ul-Fitr', 
+    icon: '🌙', 
+    tag: 'Eid Celebration' 
+  },
+  { 
+    id: 'eid_adha', 
+    keywords: ['eid al-adha', 'eid al adha', 'eid adha', '10 dhul-hijjah', '10 dhu al-hijjah'], 
+    name: 'Eid al-Adha (10 Dhul-Hijjah)', 
+    icon: '🐑', 
+    tag: 'Eid Celebration' 
+  },
+  { 
+    id: 'ramadan_season', 
+    keywords: ['shahr ramadan', 'holy month of ramadan', 'ramadan prep'], 
+    name: 'Shahr Ramadan Season', 
+    icon: '🌙', 
+    tag: 'Ramadan' 
+  },
+  { 
+    id: 'family_iftar', 
+    keywords: ['scout family potluck iftar', 'family potluck iftar', 'potluck iftar'], 
+    name: 'Scout Family Potluck Iftar', 
+    icon: '🍲', 
+    tag: 'Community Iftar' 
+  },
+  { 
+    id: 'scout_iftar', 
+    keywords: ['scout-only iftar', 'scout only iftar'], 
+    name: 'Scout-Only Iftar & Reflections', 
+    icon: '🍽️', 
+    tag: 'Scout Iftar' 
+  },
+  { 
+    id: 'sirat_conf', 
+    keywords: ['sirat conference', 'winter break/sirat'], 
+    name: 'Sirat Youth Conference & Winter Break', 
+    icon: '🧭', 
+    tag: 'Conference' 
+  }
 ];
 
 // ── DEFAULT CAMP PACKING LISTS ──
@@ -313,7 +423,7 @@ export function resolveEventLocation(rawLocation = '', eventType = '', eventTitl
 
   // If specific known location provided in spreadsheet
   if (loc.includes('Highview')) return DESIGNATED_LOCATIONS.highview;
-  if (loc.includes('Pleasant Ridge')) return DESIGNATED_LOCATIONS.pleasantRidge;
+  if (loc.includes('Kinloch') || loc.includes('Pleasant Ridge') || loc.includes('Hassan')) return DESIGNATED_LOCATIONS.leaderResidence;
   if (loc.includes("D' BAR A") || loc.includes("D' Bar A") || loc.includes("D Bar A")) return DESIGNATED_LOCATIONS.dBarA;
   if (loc.includes('Hype')) return DESIGNATED_LOCATIONS.hypeAthletics;
   if (loc.length > 5 && loc.toLowerCase() !== 'tbd') return loc.replace(/\r\n/g, ', ').replace(/\n/g, ', ');
@@ -326,7 +436,7 @@ export function resolveEventLocation(rawLocation = '', eventType = '', eventTitl
   if (eventType === 'leader_meeting') {
     if (titleLower.includes('retreat')) return 'Leader Camp Retreat Grounds (TBD)';
     if (titleLower.includes('orientation')) return 'TBD (Orientation Hall / Virtual)';
-    return DESIGNATED_LOCATIONS.pleasantRidge;
+    return DESIGNATED_LOCATIONS.leaderResidence;
   }
 
   if (eventType === 'camp') {
@@ -345,13 +455,13 @@ export function resolveEventLocation(rawLocation = '', eventType = '', eventTitl
  * Matches Islamic Occasions and remarks from Notes column
  */
 export function extractIslamicOccasions(notes = '', eventTitle = '') {
-  const combined = `${notes} ${eventTitle}`.toLowerCase();
+  const combined = stripDiacritics(`${notes} ${eventTitle}`);
   const matched = [];
 
   ISLAMIC_OCCASIONS_MAP.forEach(occ => {
-    const hasKeyword = occ.keywords.some(k => combined.includes(k.toLowerCase()));
+    const hasKeyword = occ.keywords.some(k => combined.includes(stripDiacritics(k)));
     if (hasKeyword && !matched.some(m => m.name === occ.name)) {
-      matched.push(occ);
+      matched.push({ name: occ.name, icon: occ.icon, tag: occ.tag });
     }
   });
 
@@ -445,6 +555,7 @@ export function parseMasterCalendarWorkbook(workbookOrBuffer) {
       location: locationStr,
       description: description.trim(),
       rawNotes: rawNotes || '',
+      notes: rawNotes || '',
       isBlackout: isBlackout,
       isStandalone: true,
       season: '2026-2027',
@@ -452,6 +563,7 @@ export function parseMasterCalendarWorkbook(workbookOrBuffer) {
       allowedRoles: allowedRoles,
       requiredItems: requiredItems,
       packingList: eventType === 'camp' ? DEFAULT_CAMP_PACKING_LIST : [],
+      islamicOccasion: islamicOccasions.length > 0 ? islamicOccasions.map(i => i.name).join(' & ') : '',
       islamicOccasions: islamicOccasions.map(i => ({ name: i.name, icon: i.icon, tag: i.tag })),
       isIslamicSpecial: islamicOccasions.length > 0,
       pushToAllPatrols: true,
