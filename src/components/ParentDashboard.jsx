@@ -230,6 +230,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [meritProgressMap, setMeritProgressMap] = useState({});
   const [islamicProgressMap, setIslamicProgressMap] = useState({});
   const [scoutSubmissionsMap, setScoutSubmissionsMap] = useState({});
+  const [scoutHomeworkMap, setScoutHomeworkMap] = useState({});
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [eventsList, setEventsList] = useState([]);
@@ -379,6 +380,13 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
       setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    const unsubHw = onSnapshot(collection(db, 'scout_homework'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => {
+        map[d.id] = d.data();
+      });
+      setScoutHomeworkMap(map);
+    });
 
     const unsubNotifs = onSnapshot(collection(db, 'parent_notifications'), (snap) => {
       const list = snap.docs
@@ -403,6 +411,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       unsubAttendance();
       unsubTasks();
       unsubAssign();
+      unsubHw();
       unsubNotifs();
       unsubRequests();
     };
@@ -1001,21 +1010,76 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const buildScoutHomework = (scout) => {
     if (!scout) return [];
     const scoutSubs = scoutSubmissionsMap[scout.uid] || {};
-    return assignmentsList.map(assign => {
-      const sub = scoutSubs[assign.id];
-      const isApproved = sub?.status === 'approved' || sub?.completed === true;
-      const isPendingReview = sub?.status === 'submitted' || sub?.status === 'pending_review' || (sub?.submissionText && !isApproved);
-      const isPending = !isApproved && !isPendingReview;
+    const scoutGroupId = scout.groupId || scout.patrolId || null;
 
-      return {
-        ...assign,
-        scoutId: scout.uid,
-        scoutName: scout.fullName || scout.username,
-        submission: sub || null,
-        status: isApproved ? 'completed' : isPendingReview ? 'in_review' : 'pending',
-        leaderFeedback: sub?.leaderFeedback || sub?.leaderNote || assign.instructions || ''
-      };
-    });
+    return assignmentsList
+      .filter(assign => {
+        if (assign.archived) return false;
+
+        // Strict Scope / Target filter
+        if (assign.assignedTarget === 'patrol') {
+          if (assign.targetGroupId && scoutGroupId && assign.targetGroupId !== scoutGroupId) {
+            return false;
+          }
+          if (assign.groupId && scoutGroupId && assign.groupId !== 'all' && assign.groupId !== scoutGroupId) {
+            return false;
+          }
+          if (!scoutGroupId && (assign.targetGroupId || (assign.groupId && assign.groupId !== 'all'))) {
+            return false;
+          }
+        } else if (assign.assignedTarget === 'scout' || assign.assignedTarget === 'single_scout') {
+          const targetUid = assign.targetScoutUid || assign.targetScoutId || assign.scoutId;
+          if (targetUid && targetUid !== scout.uid) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map(assign => {
+        const key = `${assign.id}_${scout.uid}`;
+        const sub = scoutHomeworkMap[key] || scoutSubs[assign.id] || null;
+
+        const isApproved = sub?.status === 'approved' || sub?.status === 'completed' || sub?.completed === true;
+        const isPendingReview = !isApproved && (
+          sub?.status === 'submitted' ||
+          sub?.status === 'pending_review' ||
+          Boolean(sub?.submissionText && sub.submissionText.trim().length > 0) ||
+          Boolean(sub?.submissionDate)
+        );
+
+        let isOverdue = false;
+        let diffDays = null;
+        if (assign.dueDate) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const due = new Date(assign.dueDate);
+          due.setHours(0, 0, 0, 0);
+          diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+          if (diffDays < 0) {
+            isOverdue = true;
+          }
+        }
+
+        let status = 'pending';
+        if (isApproved) {
+          status = 'completed';
+        } else if (isPendingReview) {
+          status = 'in_review';
+        } else if (isOverdue) {
+          status = 'overdue';
+        }
+
+        return {
+          ...assign,
+          scoutId: scout.uid,
+          scoutName: scout.fullName || scout.username,
+          submission: sub || null,
+          status,
+          isOverdue,
+          diffDays,
+          leaderFeedback: sub?.leaderFeedback || sub?.feedback || sub?.leaderNote || assign.instructions || ''
+        };
+      });
   };
 
   const allScopedHomework = scopedScouts.flatMap(s => buildScoutHomework(s));
@@ -1728,9 +1792,11 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 border ${
                           hw.status === 'in_review'
                             ? 'bg-sky-950 text-sky-300 border-sky-500/40'
+                            : hw.status === 'overdue'
+                            ? 'bg-red-950 text-red-300 border-red-500/40'
                             : 'bg-amber-950 text-amber-300 border-amber-500/40'
                         }`}>
-                          {hw.status === 'in_review' ? '📤 Under Review' : '⏳ Needs Submission'}
+                          {hw.status === 'in_review' ? '📤 Under Review' : hw.status === 'overdue' ? '⚠️ Overdue' : '⏳ Needs Submission'}
                         </span>
                       </div>
 
@@ -1943,9 +2009,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                         <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${
                           hw.status === 'in_review'
                             ? 'bg-sky-950 text-sky-300 border-sky-500/50'
+                            : hw.status === 'overdue'
+                            ? 'bg-red-950 text-red-300 border-red-500/50'
                             : 'bg-amber-950 text-amber-300 border-amber-500/50'
                         }`}>
-                          {hw.status === 'in_review' ? '📤 Submitted — Awaiting Review' : '⏳ Pending Scout Submission'}
+                          {hw.status === 'in_review' 
+                            ? '📤 Submitted — Awaiting Review' 
+                            : hw.status === 'overdue'
+                            ? '⚠️ Overdue — Action Needed'
+                            : '⏳ Pending Scout Submission'}
                         </span>
                       </div>
                     </div>
@@ -1957,8 +2029,23 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                       )}
                     </div>
 
+                    {/* Scout Submission Details if already submitted */}
+                    {hw.submission?.submissionText && (
+                      <div className="bg-slate-900/80 border border-slate-750 p-3.5 rounded-2xl text-xs text-slate-300 space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-sky-400 block">
+                          📝 Child's Submission Text:
+                        </span>
+                        <p className="whitespace-pre-wrap font-sans text-slate-200">{hw.submission.submissionText}</p>
+                        {hw.submission.submittedAt && (
+                          <span className="text-[10px] text-slate-400 block pt-1">
+                            Submitted on {new Date(hw.submission.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-755 px-1">
-                      <span className="font-mono font-bold text-amber-300 flex items-center gap-1.5">
+                      <span className={`font-mono font-bold flex items-center gap-1.5 ${hw.status === 'overdue' ? 'text-red-400' : 'text-amber-300'}`}>
                         <Clock size={13} />
                         <span>{relDue}</span>
                       </span>
@@ -2007,6 +2094,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                           <span className="text-[11px] text-slate-400">{hw.category || 'General'}</span>
                         </div>
                         <strong className="text-white text-sm block font-bold">{hw.title}</strong>
+                        {hw.submission?.submissionText && (
+                          <p className="text-slate-400 text-xs line-clamp-1 italic">"{hw.submission.submissionText}"</p>
+                        )}
                       </div>
                       <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-3 py-1 rounded-full font-bold flex items-center gap-1 shrink-0 self-start sm:self-auto">
                         <Check size={12} /> Completed & Signed Off

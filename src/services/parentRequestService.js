@@ -5,6 +5,7 @@ import {
   setDoc, 
   updateDoc, 
   getDocs, 
+  getDoc,
   query, 
   where, 
   serverTimestamp, 
@@ -332,7 +333,40 @@ export async function confirmMeetingRequest({
       }
     }
 
-    // 3. Record Executive Audit Trail in /audit_logs
+    // 3. Auto-Add Conference Details and Notes to /scout_notes/{scoutId}
+    try {
+      const reqSnap = await getDoc(reqRef);
+      const reqData = reqSnap.exists() ? reqSnap.data() : {};
+      const targetScoutId = reqData.scoutId;
+      if (targetScoutId) {
+        const scoutNotesRef = doc(db, 'scout_notes', targetScoutId);
+        const scoutNotesSnap = await getDoc(scoutNotesRef);
+        const existingNotes = scoutNotesSnap.exists() && Array.isArray(scoutNotesSnap.data().notes)
+          ? scoutNotesSnap.data().notes
+          : [];
+
+        const meetingLogNote = {
+          id: `conf_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          text: `🤝 Confirmed Parent Conference with ${reqData.parentName || 'Parent / Guardian'}\nTopic: ${meetingTopic || reqData.meetingTopic || 'Scout Advancement & Review'}\n📅 Scheduled Date: ${confirmedDate} at ${confirmedTime || '6:30 PM'}\n📍 Venue: ${meetingLocation || 'Troop Headquarters'}${confirmationNote ? `\n📝 Leader Notes: "${confirmationNote}"` : ''}`,
+          date: confirmedDate || new Date().toISOString().split('T')[0],
+          authorId: leaderUid || null,
+          authorName: leaderName,
+          authorPosition: leaderRole || 'Leader',
+          type: 'parent_conference',
+          createdAt: confirmedAt
+        };
+
+        await setDoc(scoutNotesRef, {
+          notes: [...existingNotes, meetingLogNote],
+          updatedAt: serverTimestamp(),
+          updatedBy: leaderUid || 'leader'
+        }, { merge: true });
+      }
+    } catch (noteErr) {
+      console.warn("Auto-append to scout notes warning:", noteErr);
+    }
+
+    // 4. Record Executive Audit Trail in /audit_logs
     try {
       await addDoc(collection(db, 'audit_logs'), {
         actionType: 'LEADER_CONFIRMED_MEETING',

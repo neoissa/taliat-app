@@ -472,8 +472,12 @@ export default function App() {
       <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b p-3.5 sticky top-0 z-40 flex items-center justify-between print-hide ${
         isOwner ? 'border-amber-500/50 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950' : 'border-slate-800'
       }`}>
-        <div className="flex items-center gap-2.5">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 ${
+        <div 
+          onClick={() => handleTabClick('profile')}
+          className="flex items-center gap-2.5 cursor-pointer group"
+          title="Open My Profile"
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 group-hover:scale-105 transition ${
             isOwner 
               ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300' 
               : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300'
@@ -491,7 +495,7 @@ export default function App() {
           </div>
           <div className="min-w-0">
             <h1 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
-              <span className="truncate">Dhulfiqār Scouts</span>
+              <span className="truncate group-hover:text-emerald-300 transition">Dhulfiqār Scouts</span>
               {isOwner ? (
                 <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
                   👑 OWNER
@@ -588,8 +592,12 @@ export default function App() {
                 </div>
               ) : null}
 
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative ${
+              <div 
+                onClick={() => handleTabClick('profile')}
+                className="flex items-center gap-3 p-1.5 -m-1.5 rounded-xl hover:bg-slate-800/80 cursor-pointer transition group"
+                title="Open My Profile"
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover:scale-105 transition ${
                   isOwner 
                     ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50' 
                     : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40'
@@ -609,12 +617,35 @@ export default function App() {
                   }`}></span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-black text-white truncate leading-tight">{currentUser.fullName || currentUser.username}</h4>
+                  <div className="flex items-center justify-between gap-1">
+                    <h4 className="text-sm font-black text-white truncate leading-tight group-hover:text-emerald-300 transition">
+                      {currentUser.fullName || currentUser.username}
+                    </h4>
+                    <ChevronRight size={13} className="text-slate-500 group-hover:text-emerald-400 shrink-0 transition" />
+                  </div>
                   <p className={`text-[11px] font-semibold capitalize truncate mt-0.5 ${
                     isOwner ? 'text-amber-400' : 'text-emerald-400'
                   }`}>{roleLabel}</p>
                 </div>
               </div>
+
+              {/* View / Edit Profile Button */}
+              <button
+                type="button"
+                onClick={() => handleTabClick('profile')}
+                className={`w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl text-xs font-bold transition cursor-pointer border shadow-sm ${
+                  currentTab === 'profile'
+                    ? isOwner 
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' 
+                      : 'bg-emerald-500 text-slate-950 border-emerald-400 font-black'
+                    : isOwner
+                    ? 'bg-slate-950/80 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    : 'bg-slate-950/80 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                <User size={13} className={currentTab === 'profile' ? 'text-slate-950' : isOwner ? 'text-amber-400' : 'text-emerald-400'} />
+                <span>{currentTab === 'profile' ? 'Viewing Profile' : 'View / Edit Profile'}</span>
+              </button>
 
               {/* Patrol / Organization Badge with Icon */}
               <div className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2.5 shadow-inner ${
@@ -739,8 +770,12 @@ export default function App() {
         </div>
 
         {/* User Profile Mini-Card */}
-        <div className={`p-4 mx-3 my-3 rounded-2xl border shadow-lg space-y-3 ${
-          isOwner 
+        <div className={`p-4 mx-3 my-3 rounded-2xl border shadow-lg space-y-3 transition ${
+          currentTab === 'profile'
+            ? isOwner 
+              ? 'bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 border-amber-400 shadow-amber-950/60 ring-1 ring-amber-400/50' 
+              : 'bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-950 border-emerald-400 shadow-emerald-950/50 ring-1 ring-emerald-400/50'
+            : isOwner 
             ? 'bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-950 border-amber-500/60 shadow-amber-950/40' 
             : isLeader || isExecutive 
             ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border-emerald-500/50 shadow-emerald-950/30'
@@ -769,9 +804,13 @@ export default function App() {
             </div>
           ) : null}
 
-          {/* User Row: Avatar + Name + Role */}
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group ${
+          {/* User Row: Avatar + Name + Role (Interactive / Clickable) */}
+          <div 
+            onClick={() => handleTabClick('profile')}
+            className="flex items-center gap-3 p-1.5 -m-1.5 rounded-xl hover:bg-slate-800/80 cursor-pointer transition group/user"
+            title="Click to view & edit your profile"
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover/user:scale-105 transition ${
               isOwner 
                 ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50 ring-2 ring-amber-500/20' 
                 : isLeader || isExecutive
@@ -794,12 +833,35 @@ export default function App() {
               }`} title="Online"></span>
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-sm font-black text-white truncate leading-tight">{currentUser.fullName || currentUser.username}</h4>
+              <div className="flex items-center justify-between gap-1">
+                <h4 className="text-sm font-black text-white truncate leading-tight group-hover/user:text-emerald-300 transition">
+                  {currentUser.fullName || currentUser.username}
+                </h4>
+                <ChevronRight size={13} className="text-slate-500 group-hover/user:text-emerald-400 shrink-0 transition" />
+              </div>
               <p className={`text-[11px] font-bold capitalize truncate mt-0.5 ${
                 isOwner ? 'text-amber-300 font-black' : isLeader || isExecutive ? 'text-emerald-300 font-extrabold' : 'text-slate-400'
               }`}>{roleLabel}</p>
             </div>
           </div>
+
+          {/* Dedicated View / Edit Profile Button */}
+          <button
+            type="button"
+            onClick={() => handleTabClick('profile')}
+            className={`w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl text-xs font-bold transition cursor-pointer border shadow-sm ${
+              currentTab === 'profile'
+                ? isOwner 
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-amber-950/40' 
+                  : 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-emerald-950/40'
+                : isOwner
+                ? 'bg-slate-950/80 hover:bg-amber-500/20 text-amber-300 border-amber-500/30 hover:border-amber-400'
+                : 'bg-slate-950/80 hover:bg-emerald-500/20 text-emerald-300 hover:text-white border-emerald-500/30 hover:border-emerald-400'
+            }`}
+          >
+            <User size={13} className={currentTab === 'profile' ? 'text-slate-950' : isOwner ? 'text-amber-400' : 'text-emerald-400'} />
+            <span>{currentTab === 'profile' ? 'Viewing Profile' : 'View / Edit Profile'}</span>
+          </button>
 
           {/* Patrol Unit / Group Badge with Icon */}
           <div className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2.5 shadow-inner ${
