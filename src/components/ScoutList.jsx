@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import ScoutProgressReport from './ScoutProgressReport';
-import { Users, ChevronRight, Search, Filter, Award, Shield, User, Sparkles } from 'lucide-react';
+import AdvancementTracker from './AdvancementTracker';
+import { Users, ChevronRight, Search, Filter, Award, Shield, User, Sparkles, ArrowLeft, CheckSquare, FileText } from 'lucide-react';
 
 export default function ScoutList({ currentUser }) {
   const [allScouts, setAllScouts] = useState([]);
@@ -10,6 +11,7 @@ export default function ScoutList({ currentUser }) {
   const [selectedPatrolFilter, setSelectedPatrolFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScout, setSelectedScout] = useState(null);
+  const [selectedScoutViewMode, setSelectedScoutViewMode] = useState('interactive'); // 'interactive' | 'report'
   const [loading, setLoading] = useState(true);
 
   // Authority & Role Calculation
@@ -103,12 +105,98 @@ export default function ScoutList({ currentUser }) {
   }, [allScouts, groups, selectedPatrolFilter, isSuperUser, userPatrolId, currentUser, searchQuery]);
 
   if (selectedScout) {
+    const scoutPatrolObj = groups.find(g => g.id === (selectedScout.groupId || selectedScout.patrolId));
+    const pName = scoutPatrolObj?.name || selectedScout.patrolName || selectedScout.patrol || 'Assigned Patrol';
+    const userPhoto = selectedScout.photoURL || selectedScout.avatar || selectedScout.photo || selectedScout.profilePic;
+    const initials = (selectedScout.fullName?.charAt(0) || selectedScout.username?.charAt(0) || 'S').toUpperCase();
+
     return (
-      <ScoutProgressReport
-        scout={selectedScout}
-        currentUser={currentUser}
-        onBack={() => setSelectedScout(null)}
-      />
+      <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
+        {/* Top Breadcrumb & Profile Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-850 border border-slate-750 p-4 sm:p-5 rounded-2xl shadow-xl">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setSelectedScout(null)}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 cursor-pointer shrink-0 shadow-sm"
+              title="Return to Scout Directory"
+            >
+              <ArrowLeft size={15} />
+              <span>← Back to Directory</span>
+            </button>
+
+            {/* Scout Quick Profile Badge */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center text-emerald-300 font-black text-sm shrink-0 overflow-hidden shadow-sm">
+                {userPhoto ? (
+                  <img
+                    src={userPhoto}
+                    alt={selectedScout.fullName || selectedScout.username}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-extrabold text-white truncate flex items-center gap-2">
+                  <span>{selectedScout.fullName || selectedScout.username}</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-bold px-2 py-0.5 rounded-md shrink-0">
+                    ⚜️ {selectedScout.rank || 'Scout'}
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-400 truncate">
+                  🏕️ {pName} • BSA ID: <strong className="text-slate-300 font-mono">{selectedScout.bsaId || '—'}</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-750 self-start md:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setSelectedScoutViewMode('interactive')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                selectedScoutViewMode === 'interactive'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <CheckSquare size={13} />
+              <span>7 Ranks Checklist & Sign-Off</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedScoutViewMode('report')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                selectedScoutViewMode === 'report'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileText size={13} />
+              <span>Official Progress Report</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Mode View */}
+        {selectedScoutViewMode === 'interactive' ? (
+          <AdvancementTracker
+            scoutId={selectedScout.uid}
+            currentUser={currentUser}
+            onBack={() => setSelectedScout(null)}
+          />
+        ) : (
+          <ScoutProgressReport
+            scout={selectedScout}
+            currentUser={currentUser}
+            onBack={() => setSelectedScout(null)}
+          />
+        )}
+      </div>
     );
   }
 

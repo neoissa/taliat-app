@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage } from '../data/ranksData';
-import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck } from 'lucide-react';
+import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck, ArrowLeft, FileText, Shield } from 'lucide-react';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import RoadToEagleTracker from './RoadToEagleTracker';
@@ -91,7 +91,7 @@ function getCategoryThematicIcon(catName = '') {
   return '📜';
 }
 
-export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false }) {
+export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false, onBack }) {
   const [selectedScoutId, setSelectedScoutId] = useState('');
   const [scoutsList, setScoutsList] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -635,6 +635,57 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
           </div>
         </div>
       )}
+
+      {/* Top Toolbar / Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl print-hide shadow-lg">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="px-3 py-1.5 bg-slate-750 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-650 cursor-pointer shadow-sm"
+              title="Return to previous view"
+            >
+              <ArrowLeft size={13} />
+              <span>Back</span>
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>⚜️ 7 Ranks Advancement Checklist</span>
+              {scoutData && (
+                <span className="text-emerald-400 font-normal">
+                  — <strong className="text-white">{scoutData.fullName || scoutData.username}</strong>
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowPrintReport(true)}
+            className="px-3 py-1.5 bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-600 cursor-pointer shadow-sm"
+            title="Generate comprehensive progress report transcript"
+          >
+            <FileText size={13} className="text-emerald-400" />
+            <span>Official Progress Report</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowEaglePortal(!showEaglePortal)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer shadow-sm ${
+              showEaglePortal
+                ? 'bg-amber-600 text-white border-amber-500'
+                : 'bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-600'
+            }`}
+          >
+            <Sparkles size={13} className="text-amber-400" />
+            <span>{showEaglePortal ? 'Back to 7 Ranks' : 'Road to Eagle Portal'}</span>
+          </button>
+        </div>
+      </div>
 
       {/* Ranks Tabs Bar */}
       <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-700/60 print-hide">

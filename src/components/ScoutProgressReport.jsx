@@ -55,13 +55,27 @@ import RankIcon from './RankIcon';
 
 // ── ADVANCEMENT PLAN DEFAULT GENERATOR ──
 export function generateDefaultAdvancementPlan(scoutProfile = {}, currentRankId = 'scout') {
-  const joinedDateStr = scoutProfile?.joinedDate || scoutProfile?.createdAt?.split?.('T')?.[0] || new Date().toISOString().split('T')[0];
-  const joinedDate = new Date(joinedDateStr);
+  let joinedDateStr = scoutProfile?.joinedDate;
+  if (!joinedDateStr && scoutProfile?.createdAt) {
+    if (typeof scoutProfile.createdAt === 'string') joinedDateStr = scoutProfile.createdAt.split('T')[0];
+    else if (scoutProfile.createdAt?.toDate) joinedDateStr = scoutProfile.createdAt.toDate().toISOString().split('T')[0];
+    else if (scoutProfile.createdAt?.seconds) joinedDateStr = new Date(scoutProfile.createdAt.seconds * 1000).toISOString().split('T')[0];
+  }
+  if (!joinedDateStr) joinedDateStr = new Date().toISOString().split('T')[0];
+
+  let joinedDate = new Date(joinedDateStr);
+  if (isNaN(joinedDate.getTime())) joinedDate = new Date();
 
   const addMonths = (base, m) => {
-    const d = new Date(base);
-    d.setMonth(d.getMonth() + m);
-    return d.toISOString().split('T')[0];
+    try {
+      const d = new Date(base);
+      if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+      d.setMonth(d.getMonth() + m);
+      if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+      return d.toISOString().split('T')[0];
+    } catch (e) {
+      return new Date().toISOString().split('T')[0];
+    }
   };
 
   // Standard BSA pacing intervals from joined date:
@@ -78,15 +92,21 @@ export function generateDefaultAdvancementPlan(scoutProfile = {}, currentRankId 
 
   let targetEagleDate = targetRanks.eagle;
   if (scoutProfile?.dob || scoutProfile?.birthday) {
-    const dob = new Date(scoutProfile.dob || scoutProfile.birthday);
-    const bday18 = new Date(dob);
-    bday18.setFullYear(bday18.getFullYear() + 18);
-    // Eagle target should ideally be 6 months before 18th birthday
-    const eagleTargetFromDob = new Date(bday18);
-    eagleTargetFromDob.setMonth(eagleTargetFromDob.getMonth() - 6);
-    if (eagleTargetFromDob > joinedDate) {
-      targetEagleDate = eagleTargetFromDob.toISOString().split('T')[0];
-      targetRanks.eagle = targetEagleDate;
+    try {
+      const dobStr = scoutProfile.dob || scoutProfile.birthday;
+      const dob = new Date(dobStr);
+      if (!isNaN(dob.getTime())) {
+        const bday18 = new Date(dob);
+        bday18.setFullYear(bday18.getFullYear() + 18);
+        const eagleTargetFromDob = new Date(bday18);
+        eagleTargetFromDob.setMonth(eagleTargetFromDob.getMonth() - 6);
+        if (!isNaN(eagleTargetFromDob.getTime()) && eagleTargetFromDob > joinedDate) {
+          targetEagleDate = eagleTargetFromDob.toISOString().split('T')[0];
+          targetRanks.eagle = targetEagleDate;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed calculating 18th bday target:', e);
     }
   }
 
@@ -486,9 +506,20 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
     return () => unsubAttendance();
   }, [scoutUid]);
 
+  // Safety timeout so report never gets stuck on loading spinner
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [scoutUid]);
+
   // 8. Fetch Leader Notes, Road to Eagle, and Advancement Plan
   useEffect(() => {
-    if (!scoutUid) return;
+    if (!scoutUid) {
+      setLoading(false);
+      return;
+    }
     const unsubNotes = onSnapshot(doc(db, 'scout_notes', scoutUid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -497,15 +528,15 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
         setFocusAreasText(data.focusAreas || '');
         setParentActionItems(data.parentActionItems || '');
       }
-    });
+    }, (err) => console.warn('Notes listener fallback:', err));
 
     const unsubEagle = onSnapshot(doc(db, 'user_progress', scoutUid, 'road_to_eagle', 'data'), (snap) => {
       if (snap.exists()) setEagleData(snap.data() || {});
-    });
+    }, (err) => console.warn('Eagle listener fallback:', err));
 
     const unsubRoadmap = onSnapshot(doc(db, 'user_progress', scoutUid, 'road_to_eagle', 'project_roadmap'), (snap) => {
       if (snap.exists()) setEagleRoadmap(snap.data() || {});
-    });
+    }, (err) => console.warn('Roadmap listener fallback:', err));
 
     const unsubPlan = onSnapshot(doc(db, 'user_progress', scoutUid, 'advancement_plan'), (snap) => {
       if (snap.exists()) {
@@ -524,6 +555,9 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
       } else {
         setAdvancementPlan(null);
       }
+      setLoading(false);
+    }, (err) => {
+      console.warn('Plan listener fallback:', err);
       setLoading(false);
     });
 
@@ -682,17 +716,17 @@ export default function ScoutProgressReport({ scout, currentUser, onBack }) {
   };
 
   // Latest Achieved Rank & Target In-Progress Rank
-  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout.rank);
-  const nextTargetRank = getNextIncompleteRank(ranksProgress);
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout?.rank || profileData?.rank || 'Scout') || RANKS_DATA[0];
+  const nextTargetRank = getNextIncompleteRank(ranksProgress) || RANKS_DATA[1] || RANKS_DATA[0];
   const currentRankData = latestAchievedRank;
   const targetRankData = nextTargetRank;
-  const currentRankIndex = getRankIndex(latestAchievedRank.id);
-  const isLifeOrEagle = latestAchievedRank.id === 'life' || latestAchievedRank.id === 'eagle';
+  const currentRankIndex = getRankIndex(latestAchievedRank?.id || 'scout');
+  const isLifeOrEagle = latestAchievedRank?.id === 'life' || latestAchievedRank?.id === 'eagle';
 
   // Target Rank Granular Requirements
-  const targetRankDoc = ranksProgress[targetRankData.id] || {};
+  const targetRankDoc = (targetRankData?.id ? ranksProgress[targetRankData.id] : {}) || {};
   const currentRankDoc = targetRankDoc;
-  const currentRankReqs = targetRankData.categories ? targetRankData.categories.flatMap(c => c.requirements) : (targetRankData.requirements || []);
+  const currentRankReqs = targetRankData?.categories ? targetRankData.categories.flatMap(c => c.requirements) : (targetRankData?.requirements || []);
   
   const currentRankCompletedReqs = currentRankReqs.filter(req => {
     const s = targetRankDoc.completedRequirements?.[req.id] || targetRankDoc.steps?.[req.id];
