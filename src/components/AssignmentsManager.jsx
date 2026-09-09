@@ -204,8 +204,18 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
       });
       const unsubScouts = onSnapshot(query(collection(db, 'users'), where('role', '==', 'scout')), (snap) => {
         let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        if (!isOwner && currentUser?.groupId) {
-          list = list.filter(s => s.groupId === currentUser.groupId || s.leaderId === currentUser.uid);
+        const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && 
+          (currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
+        const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster;
+        const leaderPatrolId = currentUser?.groupId || currentUser?.patrolId;
+
+        if (!isExecutive && leaderPatrolId) {
+          list = list.filter(s => 
+            s.groupId === leaderPatrolId || 
+            s.patrolId === leaderPatrolId || 
+            s.leaderId === currentUser.uid || 
+            (currentUser?.patrolName && (s.patrolName === currentUser.patrolName || s.patrol === currentUser.patrolName))
+          );
         }
         setScoutsList(list);
       });

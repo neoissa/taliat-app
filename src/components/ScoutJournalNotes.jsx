@@ -84,8 +84,18 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
     const q = query(collection(db, 'users'), where('role', '==', 'scout'));
     const unsub = onSnapshot(q, (snap) => {
       let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      if (!isOwner && currentUser?.groupId) {
-        list = list.filter(s => s.groupId === currentUser.groupId || s.leaderId === currentUser.uid);
+      const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && 
+        (currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
+      const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster;
+      const leaderPatrolId = currentUser?.groupId || currentUser?.patrolId;
+
+      if (!isExecutive && leaderPatrolId) {
+        list = list.filter(s => 
+          s.groupId === leaderPatrolId || 
+          s.patrolId === leaderPatrolId || 
+          s.leaderId === currentUser.uid || 
+          (currentUser?.patrolName && (s.patrolName === currentUser.patrolName || s.patrol === currentUser.patrolName))
+        );
       }
       setScoutsList(list);
       if (list.length > 0 && !selectedScoutId) {
@@ -93,7 +103,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
       }
     });
     return () => unsub();
-  }, [isLeaderOrOwner, isOwner, currentUser?.groupId, currentUser?.uid]);
+  }, [isLeaderOrOwner, isOwner, currentUser?.groupId, currentUser?.patrolId, currentUser?.uid, currentUser?.leaderPosition, currentUser?.role]);
 
   // 2. Fetch Selected Scout Profile
   useEffect(() => {

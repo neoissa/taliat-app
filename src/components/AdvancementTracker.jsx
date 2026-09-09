@@ -99,10 +99,9 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
   const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster') && currentUser?.leaderPosition === 'Scoutmaster';
-  const isAssistantLeader = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'assistant_leader') && (currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader' || currentUser?.leaderPosition === 'Assistant Scout Master');
-  const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster || isAssistantLeader;
-  const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isExecutive);
-  const isLeaderOrOwner = isOwner || isLeader || isExecutive;
+  const isSuperUser = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster;
+  const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isSuperUser);
+  const isLeaderOrOwner = isOwner || isLeader || isSuperUser;
   const isScout = !isLeaderOrOwner && currentUser?.role === 'scout';
   const isBatchMode = isLeaderOrOwner && String(selectedScoutId).startsWith('patrol:');
   const scoutId = customScoutId || (isLeaderOrOwner ? (isBatchMode ? (scoutsList[0]?.uid || currentUser?.uid) : (selectedScoutId || currentUser?.uid)) : currentUser?.uid);
@@ -165,8 +164,11 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       const scouts = allUsers.filter(u => {
         if (u.role !== 'scout') return false;
-        if (isOwner || isScoutmaster) return true;
-        return u.leaderId === currentUser?.uid || (currentUser?.groupId && u.groupId === currentUser?.groupId);
+        if (isSuperUser) return true;
+        const leaderGroupId = currentUser?.groupId || currentUser?.patrolId;
+        const scoutGroupId = u.groupId || u.patrolId;
+        return u.leaderId === currentUser?.uid || 
+          (leaderGroupId && (scoutGroupId === leaderGroupId || u.patrolName === currentUser?.patrolName || u.patrol === currentUser?.patrolName));
       });
       setScoutsList(scouts);
       if (scouts.length > 0 && !selectedScoutId) {
@@ -177,7 +179,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, customScoutId, currentUser?.role, currentUser?.uid, currentUser?.groupId, isOwner, isScoutmaster]);
+  }, [isLeaderOrOwner, customScoutId, currentUser?.role, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, isSuperUser]);
 
   // Listen to all rank progress documents in real-time
   useEffect(() => {
