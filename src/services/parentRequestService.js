@@ -4,6 +4,7 @@ import {
   doc, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   getDocs, 
   getDoc,
   query, 
@@ -1153,7 +1154,7 @@ export async function updateLeaderMeeting({
 }
 
 /**
- * Leader cancels a confirmed or scheduled meeting
+ * Leader cancels a confirmed or scheduled meeting and removes it from the list if unaccepted
  */
 export async function cancelMeetingByLeader({
   requestId,
@@ -1164,24 +1165,13 @@ export async function cancelMeetingByLeader({
   parentUid = null,
   parentEmail = null,
   scoutName = 'your scout',
-  meetingTopic = 'Scout Conference'
+  meetingTopic = 'Scout Conference',
+  removeDoc = true // When true, deletes the document from Firestore so it is removed from the list immediately
 }) {
   try {
     if (!requestId) throw new Error('Request ID is required.');
     const reqRef = doc(db, 'parent_requests', requestId);
     const cancelledAt = new Date().toISOString();
-
-    const updateData = {
-      status: 'cancelled_by_leader',
-      cancelledBy: leaderName,
-      cancelledByUid: leaderUid || null,
-      cancelledByRole: leaderRole || 'Leader',
-      cancelledAt,
-      cancelReason: cancelReason || 'Meeting cancelled by troop leadership.',
-      updatedAt: serverTimestamp()
-    };
-
-    await updateDoc(reqRef, updateData);
 
     // 1. Audit Log
     try {
@@ -1194,7 +1184,7 @@ export async function cancelMeetingByLeader({
         performedBy: leaderName,
         performedByUid: leaderUid || null,
         role: leaderRole || 'Leader',
-        details: `Conference cancelled by ${leaderName}.${cancelReason ? ` Reason: "${cancelReason}"` : ''}`,
+        details: `Conference cancelled ${removeDoc ? 'and removed from list ' : ''}by ${leaderName}.${cancelReason ? ` Reason: "${cancelReason}"` : ''}`,
         scoutName,
         cancelReason: cancelReason || '',
         timestamp: serverTimestamp(),
@@ -1204,7 +1194,7 @@ export async function cancelMeetingByLeader({
       console.warn("Audit log fallback for leader cancellation:", auditErr);
     }
 
-    // 2. Parent Notification
+    // 2. Parent Notification (if parent contact exists)
     if (parentUid || parentEmail) {
       try {
         await dispatchParentNotification({
@@ -1221,9 +1211,61 @@ export async function cancelMeetingByLeader({
       }
     }
 
-    return { success: true, cancelledAt };
+    // 3. Remove document from Firestore collection
+    if (removeDoc) {
+      await deleteDoc(reqRef);
+    } else {
+      await updateDoc(reqRef, {
+        status: 'cancelled_by_leader',
+        cancelledBy: leaderName,
+        cancelledByUid: leaderUid || null,
+        cancelledByRole: leaderRole || 'Leader',
+        cancelledAt,
+        cancelReason: cancelReason || 'Meeting cancelled by troop leadership.',
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    return { success: true, cancelledAt, removed: removeDoc };
   } catch (err) {
     console.error("Error cancelling meeting by leader:", err);
+    throw err;
+  }
+}
+
+/**
+ * Direct delete / purge of a parent request or conference from Firestore
+ */
+export async function deleteParentRequest({
+  requestId,
+  leaderUid,
+  leaderName = 'Troop Leader',
+  scoutName = 'Scout'
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    await deleteDoc(reqRef);
+
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_DELETED_REQUEST',
+        action: 'DELETED_REQUEST',
+        category: 'LEADER_PORTAL',
+        target: `Parent Request: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        timestamp: serverTimestamp(),
+        createdAt: new Date().toISOString()
+      });
+    } catch (auditErr) {
+      console.warn("Audit log fallback for delete request:", auditErr);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error deleting parent request:", err);
     throw err;
   }
 }

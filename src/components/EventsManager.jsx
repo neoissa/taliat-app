@@ -76,14 +76,15 @@ import {
 import { dispatchParentNotification, dispatchScoutNotification, dispatchBulkScoutNotifications, dispatchPatrolStreamAlert } from '../utils/notificationPipeline';
 import { 
   generateScoutingYearSchedule, 
-  generateMonthSchedule,
-  generateRangeSchedule,
-  seedCalendarEventsList,
+  generateMonthSchedule, 
+  generateRangeSchedule, 
+  seedCalendarEventsList, 
   seedCalendarEvents, 
-  deleteEventsBatch,
+  deleteEventsBatch, 
   purgeGeneratedCalendarEvents, 
   RECURRING_SCHEDULE_CONFIG 
 } from '../utils/calendarGenerator';
+import { cancelMeetingByLeader } from '../services/parentRequestService';
 
 // ── TIME RANGE SELECTOR HELPERS ──
 export function formatTime12h(time24) {
@@ -428,6 +429,35 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
     return () => unsub();
   }, [isParent, isExecutive, currentUser, linkedScouts]);
+
+  const [cancellingConfId, setCancellingConfId] = useState(null);
+
+  const handleCancelConference = async (conf) => {
+    const confId = conf.id || conf.requestId;
+    if (!window.confirm(`Are you sure you want to cancel and remove the conference for ${conf.scoutName || 'this scout'} on ${conf.confirmedDate}? This will remove it from the schedule immediately.`)) {
+      return;
+    }
+    try {
+      setCancellingConfId(confId);
+      await cancelMeetingByLeader({
+        requestId: confId,
+        leaderUid: currentUser?.uid,
+        leaderName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
+        leaderRole: currentUser?.role || 'Leader',
+        cancelReason: 'Cancelled by troop leader.',
+        parentUid: conf.parentUid || null,
+        parentEmail: conf.parentEmail || null,
+        scoutName: conf.scoutName || 'Scout Member',
+        meetingTopic: conf.meetingTopic || 'Leader Conference',
+        removeDoc: true
+      });
+    } catch (err) {
+      console.error("Failed to cancel conference:", err);
+      alert("Failed to cancel conference: " + err.message);
+    } finally {
+      setCancellingConfId(null);
+    }
+  };
 
   // Sync existing RSVP if user already submitted
   useEffect(() => {
@@ -2493,7 +2523,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                     </div>
 
                     {onNavigate && !isParent && (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           type="button"
                           onClick={() => onNavigate('parent-requests', {
@@ -2504,6 +2534,16 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                           className="px-3 py-1.5 bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 border border-sky-500/50 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                         >
                           <span>✏️ Edit / Reschedule</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelConference(conf)}
+                          disabled={cancellingConfId === (conf.id || conf.requestId)}
+                          className="px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-600/50 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          title="Cancel and remove this conference from schedule"
+                        >
+                          <Trash2 size={11} />
+                          <span>{cancellingConfId === (conf.id || conf.requestId) ? 'Removing...' : 'Cancel'}</span>
                         </button>
                         <button
                           type="button"

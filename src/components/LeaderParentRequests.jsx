@@ -36,7 +36,8 @@ import {
   CheckCheck,
   Plus,
   Edit3,
-  CheckSquare
+  CheckSquare,
+  Trash2
 } from 'lucide-react';
 import { 
   acknowledgeParentRequest, 
@@ -45,7 +46,8 @@ import {
   updateLeaderMeeting, 
   declineMeetingRequestByLeader, 
   cancelMeetingByLeader, 
-  completeConference 
+  completeConference,
+  deleteParentRequest
 } from '../services/parentRequestService';
 import ConferenceCountdown from './ConferenceCountdown';
 import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
@@ -100,6 +102,7 @@ export default function LeaderParentRequests({
   // Cancel Meeting by Leader Modal State
   const [cancellingMeetingByLeader, setCancellingMeetingByLeader] = useState(null);
   const [leaderCancelReason, setLeaderCancelReason] = useState('');
+  const [leaderCancelRemoveDoc, setLeaderCancelRemoveDoc] = useState(true);
   const [isSubmittingCancelLeader, setIsSubmittingCancelLeader] = useState(false);
 
   // Sync initialFilterTab when prop changes
@@ -390,19 +393,42 @@ export default function LeaderParentRequests({
         parentUid: cancellingMeetingByLeader.parentUid,
         parentEmail: cancellingMeetingByLeader.parentEmail,
         scoutName: cancellingMeetingByLeader.scoutName,
-        meetingTopic: cancellingMeetingByLeader.meetingTopic || 'Scout Conference'
+        meetingTopic: cancellingMeetingByLeader.meetingTopic || 'Scout Conference',
+        removeDoc: leaderCancelRemoveDoc
       });
 
-      setActionSuccessMsg(`✓ Conference for ${cancellingMeetingByLeader.scoutName} CANCELLED and parent notified.`);
+      setActionSuccessMsg(`✓ Conference for ${cancellingMeetingByLeader.scoutName} CANCELLED ${leaderCancelRemoveDoc ? 'and removed from schedule' : ''}.`);
       setTimeout(() => {
         setCancellingMeetingByLeader(null);
         setLeaderCancelReason('');
+        setLeaderCancelRemoveDoc(true);
         setActionSuccessMsg('');
       }, 2000);
     } catch (err) {
       alert("Failed to cancel conference: " + err.message);
     } finally {
       setIsSubmittingCancelLeader(false);
+    }
+  };
+
+  // Permanently delete / purge request where no data exchange happened
+  const handleDeleteRequest = async (req) => {
+    const reqId = req.requestId || req.id;
+    if (!window.confirm(`Are you sure you want to permanently remove this request for ${req.scoutName || 'this scout'}? Since no data exchange occurred, this will delete the record completely from the registry.`)) {
+      return;
+    }
+    try {
+      await deleteParentRequest({
+        requestId: reqId,
+        leaderUid: currentUser?.uid,
+        leaderName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
+        scoutName: req.scoutName || 'Scout'
+      });
+      setActionSuccessMsg(`✓ Request for ${req.scoutName || 'Scout'} removed from registry.`);
+      setTimeout(() => setActionSuccessMsg(''), 2500);
+    } catch (err) {
+      console.error("Failed to delete request:", err);
+      alert("Failed to remove request: " + err.message);
     }
   };
 
@@ -1074,14 +1100,25 @@ export default function LeaderParentRequests({
                         )}
 
                         {(isCancelled || isDeclined || isCompleted) && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenMeetingConfirm(req)}
-                            className="px-3.5 py-2 bg-slate-800 hover:bg-sky-900 text-sky-300 hover:text-white rounded-xl text-xs font-bold transition border border-sky-500/40 flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <Calendar size={13} />
-                            <span>🔄 Schedule New Conference</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMeetingConfirm(req)}
+                              className="px-3.5 py-2 bg-slate-800 hover:bg-sky-900 text-sky-300 hover:text-white rounded-xl text-xs font-bold transition border border-sky-500/40 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Calendar size={13} />
+                              <span>🔄 Schedule New</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRequest(req)}
+                              className="px-3 py-2 bg-slate-850 hover:bg-rose-950 text-slate-400 hover:text-rose-300 rounded-xl text-xs font-bold transition border border-slate-750 hover:border-rose-600/60 flex items-center gap-1.5 cursor-pointer"
+                              title="Permanently remove this request from the list"
+                            >
+                              <Trash2 size={13} />
+                              <span>Purge</span>
+                            </button>
+                          </>
                         )}
                       </>
                     )}
@@ -1098,18 +1135,31 @@ export default function LeaderParentRequests({
                     )}
 
                     {!isMeeting && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResolvingRequest(req);
-                          setResolutionStatus('resolved');
-                          setResolutionNote('');
-                        }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950/40"
-                      >
-                        <Check size={13} />
-                        <span>{isResolved ? 'Update Resolution' : 'Resolve & Reply'}</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResolvingRequest(req);
+                            setResolutionStatus('resolved');
+                            setResolutionNote('');
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-950/40"
+                        >
+                          <Check size={13} />
+                          <span>{isResolved ? 'Update Resolution' : 'Resolve & Reply'}</span>
+                        </button>
+                        {(isResolved || req.status === 'cancelled_by_parent') && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRequest(req)}
+                            className="px-3 py-2 bg-slate-850 hover:bg-rose-950 text-slate-400 hover:text-rose-300 rounded-xl text-xs font-bold transition border border-slate-750 hover:border-rose-600/60 flex items-center gap-1.5 cursor-pointer"
+                            title="Permanently remove from registry"
+                          >
+                            <Trash2 size={13} />
+                            <span>Purge</span>
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1549,6 +1599,23 @@ export default function LeaderParentRequests({
                 <p className="text-[10px] text-slate-400 mt-1">
                   An immediate notification will be sent to the parent informing them of this cancellation.
                 </p>
+              </div>
+
+              <div 
+                className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 flex items-start gap-2.5 cursor-pointer hover:border-slate-700 transition" 
+                onClick={() => setLeaderCancelRemoveDoc(!leaderCancelRemoveDoc)}
+              >
+                <input
+                  type="checkbox"
+                  id="leaderCancelRemoveDoc"
+                  checked={leaderCancelRemoveDoc}
+                  onChange={(e) => setLeaderCancelRemoveDoc(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-0 cursor-pointer"
+                />
+                <label htmlFor="leaderCancelRemoveDoc" className="text-xs text-slate-300 cursor-pointer select-none">
+                  <strong className="text-white block">Remove & purge from conference list</strong>
+                  <span className="text-[11px] text-slate-400">Since no confirmation or data exchange occurred, delete this request from the active list immediately.</span>
+                </label>
               </div>
 
               <div className="flex gap-2 pt-2">
