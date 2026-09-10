@@ -23,6 +23,14 @@ import PatrolAttendance from './components/PatrolAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
+import DynamicIcon from './components/DynamicIcon';
+import MobileTabManager from './components/MobileTabManager';
+import { 
+  subscribeToNavPreferences, 
+  saveNavPreferences, 
+  resetNavPreferences, 
+  buildResolvedNavState 
+} from './services/navigationPreferenceService';
 import { HASSAN_LEADERSHIP_PROFILE } from './data/leaderCredentialsData';
 import { syncAnehmeBadges } from './utils/anehmeMeritBadges';
 import { auth, db } from './firebase';
@@ -49,7 +57,8 @@ import {
   Compass,
   Sparkles,
   ChevronRight,
-  Crown
+  Crown,
+  Sliders
 } from 'lucide-react';
 
 export default function App() {
@@ -62,6 +71,8 @@ export default function App() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
+  const [navState, setNavState] = useState(null);
 
   // Live ticking clock for header and sidebar navigation
   useEffect(() => {
@@ -123,6 +134,31 @@ export default function App() {
   const isParent = !isOwner && !isLeader && currentUser?.role === 'parent';
   const isScout = !isOwner && !isLeader && !isParent;
   const isLeaderOrOwner = isOwner || isLeader;
+
+  const userRoleContext = {
+    isOwner,
+    isScoutmaster,
+    isAssistantScoutmaster,
+    isExecutive,
+    isLeader,
+    isParent,
+    isScout,
+    isLeaderOrOwner
+  };
+
+  // Real-time navigation layout preferences synchronization
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setNavState(buildResolvedNavState(null, userRoleContext));
+      return;
+    }
+
+    const unsub = subscribeToNavPreferences(currentUser.uid, userRoleContext, (resolvedState) => {
+      setNavState(resolvedState);
+    });
+
+    return () => unsub();
+  }, [currentUser?.uid, isOwner, isLeader, isExecutive, isParent, isScout]);
 
   // 2. Proactively sync Owner (neoissa@gmail.com) and Hissa/Hassan leadership credentials on load
   useEffect(() => {
@@ -413,104 +449,62 @@ export default function App() {
     ? 'Parent / Guardian' 
     : 'Scout';
 
-  // ── DEFINE NAVIGATION ITEMS BY ROLE ──
-  const getNavItems = () => {
-    if (isOwner) {
-      return [
-        { id: 'home', label: 'Owner Hub', icon: '🏠' },
-        { id: 'admin', label: '👑 Owner Admin Hub', icon: '⚡' },
-        { id: 'roster', label: 'Patrol Roster', icon: '👥' },
-        { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
-        { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
-        { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: '🏅' },
-        { id: 'reports', label: 'Reports Center', icon: '📈' },
-        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
-        { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
-        { id: 'events', label: 'Troop Calendar', icon: '📅' },
-        { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
-        { id: 'journal', label: 'Leader Journal & Notes', icon: '📝' },
-        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
-        { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
-        { id: 'resources', label: 'Resources & Guide', icon: '📚' },
-        { id: 'profile', label: 'My Profile', icon: '👤' }
-      ];
-    } else if (isLeader) {
-      return [
-        { id: 'home', label: 'Leader Hub', icon: '🏠' },
-        ...(isExecutive ? [{ id: 'admin', label: '👑 Executive Hub', icon: '⚡' }] : []),
-        { id: 'roster', label: 'Patrol Roster', icon: '👥' },
-        { id: 'attendance', label: 'Patrol Attendance', icon: '📋' },
-        { id: 'scouts', label: 'Advancement Tracker', icon: '📊' },
-        { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: '🏅' },
-        { id: 'reports', label: 'Reports Center', icon: '📈' },
-        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
-        { id: 'assignments', label: 'Homework & Tasks', icon: '🎒' },
-        { id: 'events', label: 'Troop Calendar', icon: '📅' },
-        { id: 'lesson-plans', label: 'Lesson Plans', icon: '📋' },
-        { id: 'journal', label: 'Leader Journal & Notes', icon: '📝' },
-        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
-        { id: 'chat', label: 'Patrol Messenger', icon: '💬', badge: unreadChatCount },
-        { id: 'resources', label: 'Resources & Guide', icon: '📚' },
-        { id: 'profile', label: 'My Profile', icon: '👤' }
-      ];
-    } else if (isParent) {
-      return [
-        { id: 'home', label: 'Parent Hub', icon: '👨‍👩‍👧' },
-        { id: 'feed', label: 'Alerts & Feed', icon: '🔔' },
-        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
-        { id: 'events', label: 'Troop Calendar', icon: '📅' },
-        { id: 'resources', label: 'Safety & Guides', icon: '📚' },
-        { id: 'profile', label: 'Family Profile', icon: '👤' }
-      ];
-    } else {
-      // Scout Navigation
-      return [
-        { id: 'home', label: 'Home Dashboard', icon: '🏠' },
-        { id: 'feed', label: 'Alerts & Feed', icon: '🔔', badge: unreadAlertsCount },
-        { id: 'advancement', label: 'My 7 Ranks', icon: '⚜️' },
-        { id: 'assignments', label: 'My Homework', icon: '🎒' },
-        { id: 'merit-badges', label: 'My Merit Badges', icon: '🏅' },
-        { id: 'road-to-eagle', label: 'Road to Eagle', icon: '🦅' },
-        { id: 'events', label: 'Troop Calendar', icon: '📅' },
-        { id: 'islamic', label: 'Islamic Knowledge', icon: '🕌' },
-        { id: 'journal', label: 'My Journal & Notes', icon: '📝' },
-        { id: 'chat', label: userGroupName ? `${userGroupName} Chat` : 'Patrol Chat', icon: '💬', badge: unreadChatCount },
-        { id: 'resources', label: 'Resources', icon: '📚' },
-        { id: 'profile', label: 'My Profile', icon: '👤' }
-      ];
-    }
+  // ── SAVE & RESET NAVIGATION PREFERENCES ──
+  const handleSaveNavPreferences = async (updatedNav) => {
+    if (!currentUser?.uid) return;
+    await saveNavPreferences(currentUser.uid, updatedNav);
+    setNavState(buildResolvedNavState(updatedNav, userRoleContext));
   };
 
-  const navItems = getNavItems();
+  const handleResetNavPreferences = async () => {
+    if (!currentUser?.uid) return null;
+    const resetState = await resetNavPreferences(currentUser.uid, userRoleContext);
+    setNavState(resetState);
+    return resetState;
+  };
 
-  // ── DEFINE MOBILE BOTTOM NAVIGATION ITEMS ──
+  // Dynamic navigation items filtered by visibility and assigned real-time badge counts
+  const navItems = (navState?.tabs || [])
+    .filter(tab => tab.visible)
+    .map(tab => {
+      let badge = 0;
+      if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat') badge = unreadChatCount;
+      if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
+      return {
+        ...tab,
+        badge
+      };
+    });
+
+  // Dynamic mobile bottom navigation items (custom pinned quick slots + permanent Menu)
   const getMobileBottomNavItems = () => {
-    if (isParent) {
-      return [
-        { id: 'home', label: 'Overview', icon: '🏠' },
-        { id: 'events', label: 'Calendar', icon: '📅' },
-        { id: 'feed', label: 'Alerts', icon: '🔔', badge: unreadAlertsCount },
-        { id: 'road-to-eagle', label: 'Eagle', icon: '🦅' },
-        { id: '__more__', label: 'Menu', icon: '☰' }
-      ];
-    } else if (isScout) {
-      return [
-        { id: 'home', label: 'Home', icon: '🏠' },
-        { id: 'advancement', label: '7 Ranks', icon: '⚜️' },
-        { id: 'events', label: 'Calendar', icon: '📅' },
-        { id: 'chat', label: 'Chat', icon: '💬', badge: unreadChatCount },
-        { id: '__more__', label: 'Menu', icon: '☰' }
-      ];
-    } else {
-      // Leader / Owner
-      return [
-        { id: 'home', label: 'Home', icon: '🏠' },
-        { id: 'roster', label: 'Roster', icon: '👥' },
-        { id: 'attendance', label: 'Attendance', icon: '📋' },
-        { id: 'events', label: 'Calendar', icon: '📅' },
-        { id: '__more__', label: 'More', icon: '☰' }
-      ];
+    const bottomIds = navState?.bottomTabIds || [];
+    const items = [];
+
+    for (const tabId of bottomIds) {
+      const foundTab = (navState?.tabs || []).find(t => t.id === tabId);
+      if (foundTab && foundTab.visible !== false) {
+        let badge = 0;
+        if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat') badge = unreadChatCount;
+        if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
+        items.push({
+          id: foundTab.id,
+          label: foundTab.label,
+          icon: foundTab.icon,
+          badge
+        });
+      }
     }
+
+    // Always append the permanent More/Menu drawer button
+    items.push({
+      id: '__more__',
+      label: 'Menu',
+      icon: '☰',
+      badge: 0
+    });
+
+    return items;
   };
 
   const handleBottomNavClick = (itemId) => {
@@ -767,7 +761,7 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => handleTabClick(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left min-h-[44px] ${
                       isActive
                         ? isOwner
                           ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-amber-300 border-l-4 border-amber-500 font-extrabold shadow-sm'
@@ -775,12 +769,18 @@ export default function App() {
                         : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-base shrink-0">{item.icon}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                        <DynamicIcon 
+                          name={item.icon} 
+                          size={18} 
+                          className={isActive ? (isOwner ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-400'} 
+                        />
+                      </div>
                       <span className="truncate">{item.label}</span>
                     </div>
                     {item.badge > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
+                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0">
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}
@@ -789,12 +789,23 @@ export default function App() {
               })}
             </nav>
 
-            {/* Logout Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950">
+            {/* Customization & Logout Footer */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950 space-y-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setCustomizeNavOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-850 text-emerald-300 hover:text-emerald-200 text-xs font-bold py-2.5 rounded-xl border border-slate-800 hover:border-emerald-500/40 transition cursor-pointer min-h-[44px]"
+              >
+                <Sliders size={14} className="text-emerald-400" />
+                <span>Customize Navigation & Quick Bar</span>
+              </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition cursor-pointer min-h-[44px]"
               >
                 <LogOut size={14} />
                 <span>Sign Out</span>
@@ -998,7 +1009,15 @@ export default function App() {
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-base shrink-0 group-hover:scale-110 transition">{item.icon}</span>
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    <DynamicIcon 
+                      name={item.icon} 
+                      size={18} 
+                      className={`transition-transform group-hover:scale-110 ${
+                        isActive ? (isOwner ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-400 group-hover:text-slate-200'
+                      }`} 
+                    />
+                  </div>
                   <span className="truncate">{item.label}</span>
                 </div>
                 {item.badge > 0 ? (
@@ -1014,13 +1033,21 @@ export default function App() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-slate-800/90 bg-slate-950">
+        <div className="p-3 border-t border-slate-800/90 bg-slate-950 space-y-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setCustomizeNavOpen(true)}
+            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-300 text-xs font-bold py-2 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer"
+          >
+            <Sliders size={13} className="text-emerald-400" />
+            <span>Customize Tabs</span>
+          </button>
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-800 transition cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-red-600/80 hover:text-white text-slate-300 text-xs font-bold py-2 rounded-xl border border-slate-800 transition cursor-pointer"
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -1142,7 +1169,7 @@ export default function App() {
       </main>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR (THUMB-FRIENDLY & NATIVE APP EXPERIENCE) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl px-2 py-1 flex items-center justify-around select-none shadow-2xl print-hide">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl px-1 py-1 flex items-center justify-around select-none shadow-2xl print-hide">
         {getMobileBottomNavItems().map(item => {
           const isMore = item.id === '__more__';
           const isActive = !isMore && (currentTab === item.id || (!currentTab && item.id === 'home'));
@@ -1151,7 +1178,7 @@ export default function App() {
               key={item.id}
               type="button"
               onClick={() => handleBottomNavClick(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition cursor-pointer relative min-w-0 ${
+              className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition cursor-pointer relative min-w-0 min-h-[44px] ${
                 isActive
                   ? isOwner
                     ? 'text-amber-300 font-black'
@@ -1159,17 +1186,27 @@ export default function App() {
                   : 'text-slate-400 hover:text-slate-200 font-medium'
               }`}
             >
-              <div className="relative">
-                <span className={`text-lg block transition-transform ${isActive ? 'scale-110' : ''}`}>
-                  {item.icon}
-                </span>
+              <div className="relative flex items-center justify-center w-7 h-7">
+                {isMore ? (
+                  <span className="text-lg font-black leading-none">☰</span>
+                ) : (
+                  <DynamicIcon 
+                    name={item.icon} 
+                    size={18} 
+                    className={`transition-transform ${
+                      isActive 
+                        ? (isOwner ? 'scale-110 text-amber-400' : 'scale-110 text-emerald-400') 
+                        : 'text-slate-400'
+                    }`}
+                  />
+                )}
                 {item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2.5 bg-red-500 text-white text-[8px] font-black px-1 rounded-full animate-pulse">
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black px-1 rounded-full animate-pulse">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] truncate leading-tight mt-0.5 ${isActive ? 'font-black' : 'font-semibold'}`}>
+              <span className={`text-[10px] truncate leading-tight mt-0.5 max-w-[64px] text-center ${isActive ? 'font-black' : 'font-semibold'}`}>
                 {item.label}
               </span>
               {isActive && (
@@ -1179,6 +1216,17 @@ export default function App() {
           );
         })}
       </nav>
+
+      {/* ── MOBILE & DESKTOP TAB CUSTOMIZATION DRAWER/MODAL ── */}
+      <MobileTabManager
+        isOpen={customizeNavOpen}
+        onClose={() => setCustomizeNavOpen(false)}
+        navState={navState}
+        onSave={handleSaveNavPreferences}
+        onReset={handleResetNavPreferences}
+        currentUser={currentUser}
+        userRoleContext={userRoleContext}
+      />
     </div>
   );
 }
