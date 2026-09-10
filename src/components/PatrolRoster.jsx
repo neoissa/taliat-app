@@ -20,6 +20,7 @@ import ServiceLogs from './ServiceLogs';
 import IslamicBasics from './IslamicBasics';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import RosterExportModal from './RosterExportModal';
+import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 import { MERIT_BADGES, TOTAL_EAGLE_REQUIRED_FOR_RANK } from '../data/meritBadges';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankCompletionPercentage, isRankCompleted } from '../data/ranksData';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
@@ -67,7 +68,7 @@ import {
 
 const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
-function ScoutDetail({ scout, currentUser, onBack }) {
+function ScoutDetail({ scout, currentUser, onBack, onScheduleMeeting }) {
   const [notesList, setNotesList] = useState([]);
   const [newNoteText, setNewNoteText] = useState('');
   const [newNoteDate, setNewNoteDate] = useState(new Date().toISOString().split('T')[0]);
@@ -351,13 +352,25 @@ function ScoutDetail({ scout, currentUser, onBack }) {
           Back to Roster
         </button>
 
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-900/30"
-        >
-          <Printer size={14} />
-          Print Progress Report
-        </button>
+        <div className="flex items-center gap-2">
+          {onScheduleMeeting && (
+            <button
+              onClick={() => onScheduleMeeting(scout)}
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-teal-900/30"
+            >
+              <Calendar size={14} />
+              <span>Schedule Parent Meeting</span>
+            </button>
+          )}
+
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-900/30"
+          >
+            <Printer size={14} />
+            <span>Print Progress Report</span>
+          </button>
+        </div>
       </div>
 
       {/* Roster detail view dashboard (Screen Only) */}
@@ -1153,6 +1166,12 @@ export default function PatrolRoster({ currentUser = {} }) {
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [activeWhatsappPhone, setActiveWhatsappPhone] = useState(null);
   const [activeWhatsappName, setActiveWhatsappName] = useState('');
+
+  // Schedule Parent Meeting Modal State
+  const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
+  const [scheduleModalTargetScout, setScheduleModalTargetScout] = useState(null);
+  const [scheduleModalTargetPatrolId, setScheduleModalTargetPatrolId] = useState(null);
+  const [scheduleModalTargetType, setScheduleModalTargetType] = useState('single_parent');
 
   // Parent Account Provisioning State
   const [parents, setParents] = useState([]);
@@ -2062,11 +2081,29 @@ Reminder to log your community service and volunteering hours into the portal.
 
   if (selected) {
     return (
-      <ScoutDetail
-        scout={selected}
-        currentUser={currentUser}
-        onBack={() => setSelected(null)}
-      />
+      <>
+        <ScoutDetail
+          scout={selected}
+          currentUser={currentUser}
+          onBack={() => setSelected(null)}
+          onScheduleMeeting={(scout) => {
+            setScheduleModalTargetScout(scout);
+            setScheduleModalTargetPatrolId(scout?.groupId || scout?.patrolId || null);
+            setScheduleModalTargetType('single_parent');
+            setShowScheduleMeetingModal(true);
+          }}
+        />
+
+        {/* Schedule Parent Meeting Modal */}
+        <ScheduleParentMeetingModal
+          isOpen={showScheduleMeetingModal}
+          onClose={() => setShowScheduleMeetingModal(false)}
+          currentUser={currentUser}
+          initialScout={scheduleModalTargetScout}
+          initialPatrolId={scheduleModalTargetPatrolId}
+          initialTargetType={scheduleModalTargetType}
+        />
+      </>
     );
   }
 
@@ -2106,7 +2143,24 @@ Reminder to log your community service and volunteering hours into the portal.
               : `${searchedScouts.length} scout${searchedScouts.length !== 1 ? 's' : ''} in roster`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {canAddOrDeleteScouts && (
+            <button
+              type="button"
+              onClick={() => {
+                setScheduleModalTargetScout(null);
+                setScheduleModalTargetPatrolId(activeGroupTab !== 'all' ? activeGroupTab : null);
+                setScheduleModalTargetType(activeGroupTab !== 'all' ? 'patrol_parents' : 'single_parent');
+                setShowScheduleMeetingModal(true);
+              }}
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Schedule a 1-on-1 or Patrol Parent Meeting"
+            >
+              <Calendar size={13} />
+              <span>Schedule Meeting</span>
+            </button>
+          )}
+
           {canAddOrDeleteScouts && (
             <button
               type="button"
@@ -2666,7 +2720,24 @@ Reminder to log your community service and volunteering hours into the portal.
                         </div>
 
                         {/* Patrol Quick Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {patrol.scouts.length > 0 && patrol.id !== 'unassigned' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setScheduleModalTargetScout(null);
+                                setScheduleModalTargetPatrolId(patrol.id);
+                                setScheduleModalTargetType('patrol_parents');
+                                setShowScheduleMeetingModal(true);
+                              }}
+                              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                              title="Schedule conference for all parents of this patrol"
+                            >
+                              <Users size={13} />
+                              <span>📅 Patrol Parent Meeting</span>
+                            </button>
+                          )}
+
                           {patrol.scouts.length > 0 && (
                             <button
                               onClick={() => {
@@ -2776,6 +2847,21 @@ Reminder to log your community service and volunteering hours into the portal.
 
                                     {/* ── SCOUT QUICK ACTIONS CLUSTER ── */}
                                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setScheduleModalTargetScout(scout);
+                                          setScheduleModalTargetPatrolId(scout.groupId || scout.patrolId || null);
+                                          setScheduleModalTargetType('single_parent');
+                                          setShowScheduleMeetingModal(true);
+                                        }}
+                                        className="p-1.5 bg-slate-900/90 hover:bg-teal-950 text-teal-400 hover:text-teal-300 rounded-lg border border-slate-700 hover:border-teal-500/50 transition cursor-pointer"
+                                        title="Schedule Parent Conference"
+                                      >
+                                        <Calendar size={13} />
+                                      </button>
+
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2907,6 +2993,20 @@ Reminder to log your community service and volunteering hours into the portal.
                                         className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-emerald-950/40"
                                       >
                                         <span>Open Granular Portal & Notes &rarr;</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setScheduleModalTargetScout(scout);
+                                          setScheduleModalTargetPatrolId(scout.groupId || scout.patrolId || null);
+                                          setScheduleModalTargetType('single_parent');
+                                          setShowScheduleMeetingModal(true);
+                                        }}
+                                        className="bg-slate-800 hover:bg-slate-750 text-teal-300 hover:text-white border border-teal-500/40 text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                      >
+                                        <Calendar size={13} />
+                                        <span>Schedule Parent Conference</span>
                                       </button>
 
                                       {scoutApprovals > 0 && (
@@ -4698,6 +4798,16 @@ We wanted to remind scouts to log their community service and volunteering hours
         isOpen={showRosterExportModal}
         onClose={() => setShowRosterExportModal(false)}
         currentUser={currentUser}
+      />
+
+      {/* ── SCHEDULE PARENT MEETING MODAL ── */}
+      <ScheduleParentMeetingModal
+        isOpen={showScheduleMeetingModal}
+        onClose={() => setShowScheduleMeetingModal(false)}
+        currentUser={currentUser}
+        initialScout={scheduleModalTargetScout}
+        initialPatrolId={scheduleModalTargetPatrolId}
+        initialTargetType={scheduleModalTargetType}
       />
     </div>
   );

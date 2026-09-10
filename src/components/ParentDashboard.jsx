@@ -11,7 +11,7 @@ import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, getRankComple
 import { MERIT_BADGES } from '../data/meritBadges';
 import { ISLAMIC_BASICS_TOPICS } from '../data/islamicBasicsData';
 import { signPublishedReportByParent } from '../services/publishedReportsService';
-import { createParentRequest, cancelMeetingRequestByParent } from '../services/parentRequestService';
+import { createParentRequest, cancelMeetingRequestByParent, parentRespondToMeetingInvite } from '../services/parentRequestService';
 import { syncParentProfileToChildren } from '../services/familyProfileSyncService';
 import ConferenceCountdown from './ConferenceCountdown';
 import RankIcon from './RankIcon';
@@ -295,6 +295,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [cancelReason, setCancelReason] = useState('');
   const [isCancellingConference, setIsCancellingConference] = useState(false);
   const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
+
+  // Parent RSVP & Reschedule State for Leader-Initiated Meetings
+  const [reschedulingConference, setReschedulingConference] = useState(null);
+  const [proposedAltDate, setProposedAltDate] = useState('');
+  const [proposedAltTime, setProposedAltTime] = useState('6:30 PM');
+  const [rescheduleNote, setRescheduleNote] = useState('');
+  const [isSubmittingRsvp, setIsSubmittingRsvp] = useState(false);
+  const [rsvpSuccessMsg, setRsvpSuccessMsg] = useState('');
 
   // Published Reports & Parent Signature State
   const [publishedReports, setPublishedReports] = useState([]);
@@ -996,15 +1004,48 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   });
 
   // Family Parent Requests (Conferences, Absences, Signatures)
+  const linkedPatrolIds = linkedScouts.map(s => s.groupId || s.patrolId).filter(Boolean);
   const familyRequests = parentRequestsList.filter(r => {
     if (r.parentUid && (r.parentUid === currentUser?.uid || r.parentUid === parentDoc?.uid)) return true;
     if (r.parentEmail && parentEmails.includes(r.parentEmail.toLowerCase().trim())) return true;
     if (r.scoutId && linkedUids.includes(r.scoutId)) return true;
+    if (r.targetType === 'patrol_parents' && r.patrolId && linkedPatrolIds.includes(r.patrolId)) return true;
+    if (r.targetType === 'all_unit') return true;
     return false;
   });
 
   const confirmedConferences = familyRequests.filter(r => r.requestType === 'meeting_request' && r.status === 'confirmed');
-  const pendingConferences = familyRequests.filter(r => r.requestType === 'meeting_request' && (r.status === 'pending_review' || r.status === 'acknowledged'));
+  const pendingConferences = familyRequests.filter(r => r.requestType === 'meeting_request' && (r.status === 'pending_review' || r.status === 'acknowledged' || r.status === 'reschedule_requested'));
+
+  // Parent RSVP Submission Handler
+  const handleParentRsvpSubmit = async (conf, rsvpStatus, altDate = null, altTime = null, note = '') => {
+    setIsSubmittingRsvp(true);
+    setRsvpSuccessMsg('');
+    try {
+      await parentRespondToMeetingInvite({
+        requestId: conf.requestId || conf.id,
+        parentUid: currentUser?.uid || parentDoc?.uid,
+        parentName: parentDoc?.fullName || currentUser?.fullName || primaryName || 'Parent',
+        rsvpStatus,
+        parentNote: note,
+        proposedAlternateDate: altDate,
+        proposedAlternateTime: altTime
+      });
+      setRsvpSuccessMsg(
+        rsvpStatus === 'attending'
+          ? '✓ Attendance Confirmed! We look forward to meeting with leadership.'
+          : rsvpStatus === 'reschedule_requested'
+          ? '✓ Alternate time proposal sent to leadership.'
+          : '✓ Meeting invitation declined.'
+      );
+      if (reschedulingConference) setReschedulingConference(null);
+      setTimeout(() => setRsvpSuccessMsg(''), 4000);
+    } catch (err) {
+      alert("Failed to submit RSVP: " + err.message);
+    } finally {
+      setIsSubmittingRsvp(false);
+    }
+  };
 
   // Build Homework List for Scoped Scouts
   const buildScoutHomework = (scout) => {
@@ -1491,19 +1532,51 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 </button>
               </div>
 
+              {rsvpSuccessMsg && (
+                <div className="p-3 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-300 animate-fadeIn flex items-center gap-2">
+                  <CheckCircle2 size={16} />
+                  <span>{rsvpSuccessMsg}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {/* Confirmed Conferences */}
                 {confirmedConferences.map(conf => (
                   <div 
                     key={conf.requestId || conf.id}
-                    className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/60 p-5 rounded-2xl space-y-3 shadow-lg flex flex-col justify-between"
+                    className={`border-2 p-5 rounded-2xl space-y-3 shadow-lg flex flex-col justify-between ${
+                      conf.initiatedBy === 'leader' && conf.rsvpStatus !== 'attending'
+                        ? 'bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-900 border-purple-500/70 shadow-purple-950/30'
+                        : 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-500/60'
+                    }`}
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 size={12} />
-                          <span>Confirmed Conference</span>
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                            conf.initiatedBy === 'leader'
+                              ? 'bg-purple-500 text-slate-950'
+                              : 'bg-emerald-500 text-slate-950'
+                          }`}>
+                            <CheckCircle2 size={12} />
+                            <span>{conf.initiatedBy === 'leader' ? 'Leader Invitation' : 'Confirmed Conference'}</span>
+                          </span>
+
+                          {conf.rsvpStatus && (
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                              conf.rsvpStatus === 'attending'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-500'
+                                : conf.rsvpStatus === 'reschedule_requested'
+                                ? 'bg-amber-950 text-amber-300 border-amber-500'
+                                : conf.rsvpStatus === 'declined'
+                                ? 'bg-rose-950 text-rose-300 border-rose-500'
+                                : 'bg-slate-800 text-slate-300 border-slate-700'
+                            }`}>
+                              RSVP: {conf.rsvpStatus.replace('_', ' ')}
+                            </span>
+                          )}
+                        </div>
+
                         <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="pill" />
                       </div>
 
@@ -1524,34 +1597,72 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                       <div className="bg-slate-950/70 border border-slate-800 p-3 rounded-xl space-y-1.5 text-xs">
                         <div className="flex items-center gap-1.5 text-slate-200">
                           <User size={12} className="text-emerald-400 shrink-0" />
-                          <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || 'Troop Leader'} ({conf.confirmedByRole || 'Scoutmaster'})</span>
+                          <span><strong>Confirmed Leader:</strong> {conf.confirmedBy || conf.leaderName || 'Troop Leader'} ({conf.confirmedByRole || conf.leaderRole || 'Scoutmaster'})</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-200">
                           <MapPin size={12} className="text-emerald-400 shrink-0" />
                           <span><strong>Venue / Location:</strong> {conf.meetingLocation || 'Troop Headquarters'}</span>
                         </div>
-                        {conf.confirmationNote && (
+                        {(conf.confirmationNote || conf.meetingAgenda) && (
                           <p className="text-xs text-emerald-200/90 italic pt-1 border-t border-slate-800">
-                            📝 Leader Note: "{conf.confirmationNote}"
+                            📝 {conf.confirmationNote ? `Leader Note: "${conf.confirmationNote}"` : `Agenda: "${conf.meetingAgenda}"`}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                      <span className="text-[10px] text-emerald-400 font-mono">✓ Confirmed with Leadership</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCancellingConference(conf);
-                          setCancelReason('');
-                        }}
-                        className="px-3 py-1.5 bg-red-950/60 hover:bg-red-900/80 text-red-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-red-500/40 cursor-pointer"
-                      >
-                        <XCircle size={13} />
-                        <span>Cancel Meeting</span>
-                      </button>
-                    </div>
+                    {conf.initiatedBy === 'leader' && conf.rsvpStatus !== 'attending' && conf.rsvpStatus !== 'declined' ? (
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800 flex-wrap">
+                        <span className="text-[11px] text-purple-300 font-semibold">Please Confirm Attendance:</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleParentRsvpSubmit(conf, 'attending')}
+                            disabled={isSubmittingRsvp}
+                            className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-md"
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>Accept & Attend</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReschedulingConference(conf);
+                              setProposedAltDate(conf.confirmedDate || new Date().toISOString().split('T')[0]);
+                              setProposedAltTime(conf.confirmedTime || '6:30 PM');
+                              setRescheduleNote('');
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <Clock size={13} />
+                            <span>Reschedule</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleParentRsvpSubmit(conf, 'declined')}
+                            disabled={isSubmittingRsvp}
+                            className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 rounded-xl text-xs font-semibold transition cursor-pointer"
+                          >
+                            <span>Decline</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <span className="text-[10px] text-emerald-400 font-mono">✓ Confirmed with Leadership</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCancellingConference(conf);
+                            setCancelReason('');
+                          }}
+                          className="px-3 py-1.5 bg-red-950/60 hover:bg-red-900/80 text-red-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-red-500/40 cursor-pointer"
+                        >
+                          <XCircle size={13} />
+                          <span>Cancel Meeting</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -4650,6 +4761,108 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           saving={isSubmittingParentSignature}
           onSave={handleSaveParentSignature}
         />
+      )}
+
+      {/* ── MODAL: RESCHEDULE PROPOSAL MODAL (PARENT RSVP) ── */}
+      {reschedulingConference && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+          <div className="bg-slate-900 border border-amber-500/50 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-slate-900 p-6 border-b border-amber-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-300">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base">Propose Alternate Conference Time</h3>
+                  <p className="text-xs text-slate-300">Suggest a new date/time to Leader {reschedulingConference.confirmedBy || reschedulingConference.leaderName || 'Leadership'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReschedulingConference(null)}
+                className="text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleParentRsvpSubmit(
+                  reschedulingConference,
+                  'reschedule_requested',
+                  proposedAltDate,
+                  proposedAltTime,
+                  rescheduleNote
+                );
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
+                <p><strong>Scout:</strong> {reschedulingConference.scoutName}</p>
+                <p><strong>Original Scheduled Time:</strong> {reschedulingConference.confirmedDate} @ {reschedulingConference.confirmedTime}</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Proposed Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={proposedAltDate}
+                    onChange={(e) => setProposedAltDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Proposed Time</label>
+                  <select
+                    value={proposedAltTime}
+                    onChange={(e) => setProposedAltTime(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-sans"
+                  >
+                    <option value="6:00 PM">6:00 PM</option>
+                    <option value="6:30 PM">6:30 PM</option>
+                    <option value="7:00 PM">7:00 PM</option>
+                    <option value="7:30 PM">7:30 PM</option>
+                    <option value="8:00 PM">8:00 PM</option>
+                    <option value="Flexible">Flexible Time</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Reason / Note for Leadership</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Assalāmu ʿAlaykum, we have a conflicting appointment at 6:30 PM. Would 7:30 PM work instead?..."
+                  value={rescheduleNote}
+                  onChange={(e) => setRescheduleNote(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 font-sans"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingRsvp}
+                  className="flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Clock size={14} />
+                  <span>{isSubmittingRsvp ? 'Submitting...' : 'Send Reschedule Proposal'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReschedulingConference(null)}
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ── MODAL: VIEW PUBLISHED REPORT WITH VERIFICATION STAMP ── */}

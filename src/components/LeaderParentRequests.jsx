@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { acknowledgeParentRequest, resolveParentRequest, confirmMeetingRequest, declineMeetingRequestByLeader } from '../services/parentRequestService';
 import ConferenceCountdown from './ConferenceCountdown';
+import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 
 export default function LeaderParentRequests({ 
   currentUser = {}, 
@@ -52,6 +53,7 @@ export default function LeaderParentRequests({
   const [groups, setGroups] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
 
   // Filter States
   const [activeTab, setActiveTab] = useState(initialFilterTab || 'pending'); // 'all' | 'pending' | 'absence_notice' | 'signed_report' | 'meeting_request' | 'form_submission' | 'resolved'
@@ -374,12 +376,23 @@ export default function LeaderParentRequests({
           </div>
         </div>
 
-        {actionSuccessMsg && (
-          <div className="p-3 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-300 animate-fadeIn flex items-center gap-2">
-            <CheckCircle2 size={16} />
-            <span>{actionSuccessMsg}</span>
-          </div>
-        )}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          {actionSuccessMsg && (
+            <div className="p-3 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-300 animate-fadeIn flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              <span>{actionSuccessMsg}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowScheduleMeetingModal(true)}
+            className="px-5 py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/50 shrink-0 hover:scale-[1.02]"
+          >
+            <Plus size={16} />
+            <span>➕ Schedule Meeting with Parents</span>
+          </button>
+        </div>
       </div>
 
       {/* ── TOP KPI TILES ── */}
@@ -569,6 +582,27 @@ export default function LeaderParentRequests({
                       <span>{badge.icon}</span>
                       <span>{badge.label}</span>
                     </span>
+
+                    {req.initiatedBy === 'leader' && (
+                      <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span>⚜️</span>
+                        <span>Leader Initiated</span>
+                      </span>
+                    )}
+
+                    {req.rsvpStatus && (
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                        req.rsvpStatus === 'attending'
+                          ? 'bg-emerald-950 text-emerald-300 border-emerald-500'
+                          : req.rsvpStatus === 'reschedule_requested'
+                          ? 'bg-amber-950 text-amber-300 border-amber-500'
+                          : req.rsvpStatus === 'declined'
+                          ? 'bg-rose-950 text-rose-300 border-rose-500'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}>
+                        <span>RSVP: {req.rsvpStatus.replace('_', ' ')}</span>
+                      </span>
+                    )}
 
                     <span className="text-xs text-slate-400 font-mono">
                       📅 {new Date(req.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
@@ -1132,6 +1166,13 @@ export default function LeaderParentRequests({
           </div>
         </div>
       )}
+
+      {/* Schedule Parent Meeting Modal */}
+      <ScheduleParentMeetingModal
+        isOpen={showScheduleMeetingModal}
+        onClose={() => setShowScheduleMeetingModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

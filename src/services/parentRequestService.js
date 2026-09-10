@@ -718,3 +718,299 @@ export async function resolveParentRequest({
   }
 }
 
+/**
+ * Leader directly initiates and schedules a meeting with a single parent or all parents of a patrol/unit.
+ */
+export async function createLeaderInitiatedMeeting({
+  leaderUid,
+  leaderName = 'Troop Leader',
+  leaderRole = 'Scoutmaster',
+  targetType = 'single_parent', // 'single_parent' | 'patrol_parents' | 'all_unit'
+  scoutId = null,
+  scoutName = null,
+  parentUid = null,
+  parentName = null,
+  parentEmail = null,
+  parentPhone = null,
+  patrolId = null,
+  patrolName = null,
+  meetingDate,
+  meetingTime = '6:30 PM',
+  meetingDuration = '30 mins',
+  meetingLocation = 'Troop Headquarters (Highview Elementary School)',
+  meetingTopic = 'Scoutmaster Conference & Progress Review',
+  meetingAgenda = '',
+  leaderNotes = '',
+  rsvpRequired = true,
+  targetedParents = [] // Array of { parentUid, parentName, parentEmail, parentPhone, scoutId, scoutName, patrolId, patrolName }
+}) {
+  try {
+    if (!meetingDate) throw new Error('Meeting date is required.');
+    if (!meetingTopic) throw new Error('Meeting topic is required.');
+
+    const createdIds = [];
+    const createdAt = new Date().toISOString();
+
+    // Helper to send individual invite and notification
+    const dispatchSingleInvite = async (target) => {
+      const randSuffix = Math.random().toString(36).substring(2, 7);
+      const datePrefix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const reqId = `meet_${datePrefix}_${randSuffix}`;
+
+      const meetingDoc = {
+        requestId: reqId,
+        requestType: 'meeting_request',
+        initiatedBy: 'leader',
+        targetType,
+        status: 'confirmed', // Scheduled and confirmed by leader
+        rsvpStatus: 'pending', // 'pending' | 'attending' | 'declined' | 'reschedule_requested'
+        parentUid: target.parentUid || null,
+        parentName: target.parentName || 'Parent / Guardian',
+        parentEmail: target.parentEmail || null,
+        parentPhone: target.parentPhone || null,
+        scoutId: target.scoutId || null,
+        scoutName: target.scoutName || 'Scout Member',
+        patrolId: target.patrolId || patrolId || null,
+        patrolName: target.patrolName || patrolName || 'Troop 1318',
+        targetLeaderUid: leaderUid || null,
+        targetLeaderName: leaderName,
+        targetLeaderRole: leaderRole,
+        leaderUid: leaderUid || null,
+        leaderName,
+        leaderRole,
+        confirmedBy: leaderName,
+        confirmedByUid: leaderUid || null,
+        confirmedByRole: leaderRole,
+        confirmedDate: meetingDate,
+        confirmedTime: meetingTime,
+        meetingDuration: meetingDuration || '30 mins',
+        meetingLocation: meetingLocation || 'Troop Headquarters',
+        meetingTopic,
+        meetingAgenda: meetingAgenda || '',
+        message: meetingAgenda || `Meeting invitation from Leader ${leaderName} regarding ${meetingTopic}`,
+        confirmationNote: leaderNotes || '',
+        rsvpRequired: Boolean(rsvpRequired),
+        createdAt,
+        confirmedAt: createdAt,
+        timestamp: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'parent_requests', reqId), meetingDoc);
+      createdIds.push(reqId);
+
+      // In-app Notification to Parent
+      if (target.parentUid || target.parentEmail) {
+        try {
+          await dispatchParentNotification({
+            recipientUid: target.parentUid,
+            parentEmail: target.parentEmail,
+            title: `📅 New Conference Invitation: ${meetingTopic}`,
+            message: `Leader ${leaderName} (${leaderRole}) has scheduled a meeting with you regarding ${target.scoutName || 'Scout'}.\n📅 Date: ${meetingDate} @ ${meetingTime}\n📍 Venue: ${meetingLocation}\n\nPlease review and confirm your attendance in the Parent Portal.`,
+            type: 'event',
+            priority: 'urgent',
+            actionUrl: '/#parent-requests',
+            metadata: {
+              requestId: reqId,
+              meetingDate,
+              meetingTime,
+              meetingLocation,
+              meetingTopic,
+              leaderName,
+              leaderRole
+            }
+          });
+        } catch (notifErr) {
+          console.warn("Parent meeting invite notification warning:", notifErr);
+        }
+      }
+
+      // Email Dispatch to Parent via /mail
+      if (target.parentEmail) {
+        try {
+          await addDoc(collection(db, 'mail'), {
+            to: [target.parentEmail],
+            message: {
+              subject: `[Dhulfiqār Scouts] 📅 Meeting Invitation: ${meetingTopic} with Leader ${leaderName}`,
+              text: `Assalāmu ʿAlaykum ${target.parentName || 'Parent'},\n\nLeader ${leaderName} (${leaderRole}) has scheduled a conference with you regarding ${target.scoutName || 'your scout'}.\n\n📅 Date: ${meetingDate}\n⏰ Time: ${meetingTime} (${meetingDuration || '30 mins'})\n📍 Location: ${meetingLocation}\n📌 Topic: ${meetingTopic}\n${meetingAgenda ? `📝 Agenda / Notes: ${meetingAgenda}\n` : ''}\nPlease open your Parent Portal to confirm attendance: https://taliat-app.web.app`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                  <div style="background: linear-gradient(135deg, #065f46, #0284c7); padding: 16px; border-radius: 8px; color: #ffffff; text-align: center;">
+                    <h2 style="margin: 0; font-size: 20px;">Dhulfiqār Troop & Pack 1318</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Leader Conference Invitation</p>
+                  </div>
+                  <div style="padding: 20px 0;">
+                    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+                      <strong style="color: #166534; font-size: 15px; display: block;">📅 Meeting Scheduled by Leadership</strong>
+                      <span style="color: #15803d; font-size: 13px;">Leader ${leaderName} (${leaderRole}) invites you to a conference.</span>
+                    </div>
+                    <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.8;">
+                      <p style="margin: 4px 0;"><strong>Scout:</strong> ${target.scoutName || 'All Patrol Youth'}</p>
+                      <p style="margin: 4px 0;"><strong>Patrol:</strong> ${target.patrolName || patrolName || 'Troop 1318'}</p>
+                      <p style="margin: 4px 0;"><strong>Topic:</strong> <span style="color: #0284c7; font-weight: bold;">${meetingTopic}</span></p>
+                      <p style="margin: 4px 0;"><strong>📅 Date:</strong> <span style="color: #059669; font-weight: bold;">${meetingDate}</span></p>
+                      <p style="margin: 4px 0;"><strong>⏰ Time:</strong> <span style="color: #059669; font-weight: bold;">${meetingTime} (${meetingDuration || '30 mins'})</span></p>
+                      <p style="margin: 4px 0;"><strong>📍 Location / Format:</strong> ${meetingLocation}</p>
+                      ${meetingAgenda ? `<p style="margin: 8px 0 4px 0; border-top: 1px solid #e2e8f0; padding-top: 8px;"><strong>Agenda / Leader Note:</strong> <em>"${meetingAgenda}"</em></p>` : ''}
+                    </div>
+                    <div style="margin: 25px 0; text-align: center;">
+                      <a href="https://taliat-app.web.app/#parent-requests" style="background-color: #059669; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+                        Confirm Attendance & RSVP &rarr;
+                      </a>
+                    </div>
+                  </div>
+                  <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; text-align: center;">
+                    Dhulfiqār Scouting Leadership Portal &bull; Michigan Crossroads Council 780
+                  </div>
+                </div>
+              `
+            }
+          });
+        } catch (mailErr) {
+          console.warn("Parent meeting email queue error:", mailErr);
+        }
+      }
+    };
+
+    if (targetType === 'single_parent') {
+      await dispatchSingleInvite({
+        parentUid,
+        parentName,
+        parentEmail,
+        parentPhone,
+        scoutId,
+        scoutName,
+        patrolId,
+        patrolName
+      });
+    } else if (Array.isArray(targetedParents) && targetedParents.length > 0) {
+      for (const parentTarget of targetedParents) {
+        await dispatchSingleInvite(parentTarget);
+      }
+    } else {
+      // Fallback query users for patrol or all unit
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      const scoutsInScope = allUsers.filter(u => {
+        if (u.role !== 'scout') return false;
+        if (targetType === 'patrol_parents' && patrolId) {
+          return u.groupId === patrolId || u.patrolId === patrolId || u.patrolName === patrolName;
+        }
+        return true;
+      });
+
+      const processedParents = new Set();
+      for (const s of scoutsInScope) {
+        const pEmail = s.parentEmail;
+        const pPhone = s.parentPhone;
+        const pUid = Array.isArray(s.parentUids) && s.parentUids.length > 0 ? s.parentUids[0] : null;
+        const pKey = pUid || pEmail || pPhone || s.uid;
+
+        if (!processedParents.has(pKey)) {
+          processedParents.add(pKey);
+          await dispatchSingleInvite({
+            parentUid: pUid,
+            parentName: s.parentName || `Parent of ${s.fullName || s.username}`,
+            parentEmail: pEmail,
+            parentPhone: pPhone,
+            scoutId: s.uid,
+            scoutName: s.fullName || s.username,
+            patrolId: s.groupId || s.patrolId || patrolId,
+            patrolName: s.patrolName || patrolName || 'Troop 1318'
+          });
+        }
+      }
+    }
+
+    return { success: true, count: createdIds.length, createdIds };
+  } catch (err) {
+    console.error("Error creating leader initiated meeting:", err);
+    throw err;
+  }
+}
+
+/**
+ * Parent responds to a leader-initiated meeting invite (RSVP)
+ */
+export async function parentRespondToMeetingInvite({
+  requestId,
+  parentUid,
+  parentName = 'Parent',
+  rsvpStatus = 'attending', // 'attending' | 'declined' | 'reschedule_requested'
+  parentNote = '',
+  proposedAlternateDate = null,
+  proposedAlternateTime = null
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const snap = await getDoc(reqRef);
+    if (!snap.exists()) throw new Error('Meeting request not found.');
+
+    const reqData = snap.data();
+    const respondedAt = new Date().toISOString();
+
+    let newStatus = reqData.status;
+    if (rsvpStatus === 'attending') {
+      newStatus = 'confirmed';
+    } else if (rsvpStatus === 'declined') {
+      newStatus = 'declined_by_parent';
+    } else if (rsvpStatus === 'reschedule_requested') {
+      newStatus = 'pending_review';
+    }
+
+    await updateDoc(reqRef, {
+      status: newStatus,
+      rsvpStatus,
+      parentRsvpNote: parentNote.trim(),
+      proposedAlternateDate: proposedAlternateDate || null,
+      proposedAlternateTime: proposedAlternateTime || null,
+      parentRespondedAt: respondedAt,
+      updatedAt: serverTimestamp()
+    });
+
+    // Notify Leader of Parent's Response
+    const leaderUid = reqData.leaderUid || reqData.confirmedByUid || reqData.targetLeaderUid;
+    if (leaderUid) {
+      try {
+        const notifTitle = rsvpStatus === 'attending'
+          ? `✓ Meeting RSVP Confirmed: ${parentName}`
+          : rsvpStatus === 'reschedule_requested'
+            ? `🔄 Reschedule Requested by ${parentName}`
+            : `❌ Meeting Declined by ${parentName}`;
+
+        const notifMsg = `Parent ${parentName} for scout ${reqData.scoutName || 'Scout'} has updated their RSVP status to: ${rsvpStatus.toUpperCase()}.\n📅 Meeting: ${reqData.confirmedDate || reqData.proposedDate} @ ${reqData.confirmedTime || reqData.proposedTime}${parentNote ? `\n📝 Note: "${parentNote}"` : ''}${proposedAlternateDate ? `\nAlternate Proposed: ${proposedAlternateDate} @ ${proposedAlternateTime || 'Flexible'}` : ''}`;
+
+        const leaderNotifDoc = {
+          recipientUid: leaderUid,
+          requestId,
+          requestType: 'meeting_request',
+          title: notifTitle,
+          message: notifMsg,
+          parentName,
+          scoutName: reqData.scoutName || '',
+          rsvpStatus,
+          actionUrl: '/#admin-requests',
+          read: false,
+          createdAt: respondedAt,
+          timestamp: serverTimestamp()
+        };
+
+        await addDoc(collection(db, 'leader_notifications'), leaderNotifDoc);
+        try {
+          await addDoc(collection(db, 'users', leaderUid, 'notifications'), leaderNotifDoc);
+        } catch (subErr) {
+          console.warn("Leader notification subcollection write fallback:", subErr);
+        }
+      } catch (leaderNotifErr) {
+        console.warn("Failed to notify leader of parent RSVP:", leaderNotifErr);
+      }
+    }
+
+    return { success: true, respondedAt, rsvpStatus };
+  } catch (err) {
+    console.error("Error responding to meeting invite:", err);
+    throw err;
+  }
+}
+
+

@@ -31,6 +31,7 @@ import {
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
 import ConferenceCountdown from './ConferenceCountdown';
+import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
@@ -51,6 +52,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const [pendingMap, setPendingMap] = useState({});
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [selectedPendingScoutId, setSelectedPendingScoutId] = useState(null);
+  const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
 
   // Resolved Patrol for Leader
   const leaderGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
@@ -430,8 +432,17 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             <button
               type="button"
+              onClick={() => setShowScheduleMeetingModal(true)}
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
+            >
+              <Users size={15} />
+              <span>🤝 Schedule Parent Meeting</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => onNavigate && onNavigate('broadcasts')}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-950/40 hover:scale-[1.02]"
             >
               <Megaphone size={15} />
               <span>📢 Broadcast Update</span>
@@ -581,13 +592,23 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                       </h3>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'pending' })}
-                    className="text-xs text-purple-300 hover:text-purple-200 font-bold self-start sm:self-auto cursor-pointer underline underline-offset-4"
-                  >
-                    View All in Console &rarr;
-                  </button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleMeetingModal(true)}
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                    >
+                      <Plus size={13} />
+                      <span>Schedule Meeting</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'pending' })}
+                      className="text-xs text-purple-300 hover:text-purple-200 font-bold cursor-pointer underline underline-offset-4"
+                    >
+                      Console &rarr;
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1262,6 +1283,13 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         scoutId={selectedPendingScoutId || scouts[0]?.uid || currentUser?.uid}
         currentUser={currentUser}
         onNavigate={onNavigate}
+      />
+
+      {/* Schedule Parent Meeting Modal */}
+      <ScheduleParentMeetingModal
+        isOpen={showScheduleMeetingModal}
+        onClose={() => setShowScheduleMeetingModal(false)}
+        currentUser={currentUser}
       />
     </div>
   );
