@@ -540,10 +540,19 @@ export function parseMasterCalendarWorkbook(workbookOrBuffer) {
       description += ` 🕌 Islamic Occasion: ${islamicOccasions.map(i => i.name).join(' & ')}.`;
     }
 
+    let inferredSubtype = 'weekly_patrol_session';
+    if (eventType === 'camp') inferredSubtype = 'overnight_campout';
+    else if (eventType === 'leader_meeting') inferredSubtype = 'leadership_meeting';
+    else if (eventType === 'merit_badge') inferredSubtype = 'workshop';
+    else if (eventType === 'open_house' || eventType === 'parent_conference') inferredSubtype = 'parent_orientation';
+    else if (rawEvent.toLowerCase().includes('hike')) inferredSubtype = 'hiking';
+    else if (rawEvent.toLowerCase().includes('service')) inferredSubtype = 'community_service';
+
     const eventDoc = {
       id: eventDocId,
       title: rawEvent,
-      eventType: eventType,
+      eventType: eventType === 'youth_program' || eventType === 'scouting_program' ? 'meeting' : eventType,
+      activitySubtype: inferredSubtype,
       category: category,
       categoryLabel: categoryLabel,
       date: dateISO,
@@ -569,6 +578,9 @@ export function parseMasterCalendarWorkbook(workbookOrBuffer) {
       pushToAllPatrols: true,
       isGlobalScope: true,
       targetGroupId: 'all',
+      targetScope: 'troop_wide',
+      requiresRsvp: !isBlackout,
+      serviceHoursCredited: 0,
       sourceSheetIndex: index + 1,
       importedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

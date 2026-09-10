@@ -61,7 +61,14 @@ import {
   ChevronRight,
   MessageCircle,
   Share2,
-  Smartphone
+  Smartphone,
+  Award,
+  Trees,
+  HeartHandshake,
+  Flame,
+  BookOpen,
+  Target,
+  Trophy
 } from 'lucide-react';
 import ConferenceCountdown from './ConferenceCountdown';
 import AdminCalendarSync from './AdminCalendarSync';
@@ -85,6 +92,205 @@ import {
   RECURRING_SCHEDULE_CONFIG 
 } from '../utils/calendarGenerator';
 import { cancelMeetingByLeader } from '../services/parentRequestService';
+
+// ── ACTIVITY CLASSIFICATION ENGINE CONSTANTS ──
+export const EVENT_TYPES = [
+  {
+    id: 'scouting',
+    label: 'Scouting Activity',
+    icon: '🏕️',
+    description: 'Outdoor adventures, hiking, fishing, sports, and scoutcraft',
+    badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    colorTheme: 'emerald'
+  },
+  {
+    id: 'volunteering',
+    label: 'Volunteering & Service',
+    icon: '🤝',
+    description: 'Community service, conservation, environmental cleanups, and credited service hours',
+    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    colorTheme: 'amber'
+  },
+  {
+    id: 'meeting',
+    label: 'Troop / Patrol Meeting',
+    icon: '📋',
+    description: 'Weekly troop meetings, patrol leader council (PLC), and advancement sessions',
+    badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    colorTheme: 'blue'
+  },
+  {
+    id: 'camp',
+    label: 'Overnight Campout',
+    icon: '⛺',
+    description: 'Weekend camping, wilderness survival, camporees, and outdoor expeditions',
+    badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+    colorTheme: 'sky'
+  },
+  {
+    id: 'faith',
+    label: 'Halqa & Faith Gathering',
+    icon: '🕌',
+    description: 'Islamic studies, spiritual halqas, Qur’an circles, and religious occasions',
+    badgeClass: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
+    colorTheme: 'teal'
+  },
+  {
+    id: 'ceremony',
+    label: 'Court of Honor / Ceremony',
+    icon: '🎖️',
+    description: 'Rank advancement ceremonies, Eagle courts of honor, and troop awards',
+    badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    colorTheme: 'purple'
+  }
+];
+
+export const ACTIVITY_SUBTYPES = {
+  scouting: [
+    { id: 'hiking', label: 'Hiking & Trail Trek', icon: '🥾' },
+    { id: 'fishing', label: 'Fishing & Aquatics', icon: '🎣' },
+    { id: 'sports', label: 'Sports & Athletics', icon: '⚽' },
+    { id: 'knot_crafts', label: 'Pioneering & Rope Crafts', icon: '🪢' },
+    { id: 'orienteering', label: 'Navigation & Orienteering', icon: '🧭' },
+    { id: 'first_aid_drill', label: 'First Aid Drills & Simulation', icon: '🩹' },
+    { id: 'campcraft', label: 'Campcraft & Cooking Skills', icon: '🍳' },
+    { id: 'swimming', label: 'Swimming & Water Safety', icon: '🏊' },
+    { id: 'shooting_sports', label: 'Archery & Marksmanship', icon: '🎯' },
+    { id: 'other_scouting', label: 'General Scouting Activity', icon: '⚜️' }
+  ],
+  volunteering: [
+    { id: 'community_service', label: 'Community Service Outreach', icon: '🤝' },
+    { id: 'environmental_cleanup', label: 'Environmental & Trail Cleanup', icon: '🌲' },
+    { id: 'food_drive', label: 'Food Drive & Distribution', icon: '🥫' },
+    { id: 'masjid_service', label: 'Masjid Service & Maintenance', icon: '🕌' },
+    { id: 'tree_planting', label: 'Tree Planting & Conservation', icon: '🌱' },
+    { id: 'park_cleanup', label: 'Park & Public Space Cleanup', icon: '🏞️' },
+    { id: 'elderly_support', label: 'Senior & Elder Assistance', icon: '👴' },
+    { id: 'other_service', label: 'General Service Project', icon: '🤝' }
+  ],
+  service: [
+    { id: 'community_service', label: 'Community Service Outreach', icon: '🤝' },
+    { id: 'environmental_cleanup', label: 'Environmental & Trail Cleanup', icon: '🌲' },
+    { id: 'food_drive', label: 'Food Drive & Distribution', icon: '🥫' },
+    { id: 'masjid_service', label: 'Masjid Service & Maintenance', icon: '🕌' },
+    { id: 'tree_planting', label: 'Tree Planting & Conservation', icon: '🌱' },
+    { id: 'park_cleanup', label: 'Park & Public Space Cleanup', icon: '🏞️' },
+    { id: 'elderly_support', label: 'Senior & Elder Assistance', icon: '👴' },
+    { id: 'other_service', label: 'General Service Project', icon: '🤝' }
+  ],
+  meeting: [
+    { id: 'weekly_patrol_session', label: 'Weekly Troop / Patrol Meeting', icon: '🏕️' },
+    { id: 'leadership_meeting', label: 'Patrol Leaders Council (PLC)', icon: '👔' },
+    { id: 'court_of_honor', label: 'Court of Honor & Advancement', icon: '🎖️' },
+    { id: 'workshop', label: 'Merit Badge / Skill Workshop', icon: '💡' },
+    { id: 'parent_orientation', label: 'Parent Orientation & Info Session', icon: '👨‍👩‍👧' },
+    { id: 'other_meeting', label: 'General Troop Meeting', icon: '📋' }
+  ],
+  camp: [
+    { id: 'overnight_campout', label: 'Overnight Weekend Campout', icon: '⛺' },
+    { id: 'wilderness_survival', label: 'Wilderness Survival Expedition', icon: '🔥' },
+    { id: 'camporee', label: 'District / Council Camporee', icon: '🚩' },
+    { id: 'winter_camp', label: 'Winter Survival Camp', icon: '❄️' },
+    { id: 'other_camp', label: 'General Outdoor Camp', icon: '⛺' }
+  ],
+  campout: [
+    { id: 'overnight_campout', label: 'Overnight Weekend Campout', icon: '⛺' },
+    { id: 'wilderness_survival', label: 'Wilderness Survival Expedition', icon: '🔥' },
+    { id: 'camporee', label: 'District / Council Camporee', icon: '🚩' },
+    { id: 'winter_camp', label: 'Winter Survival Camp', icon: '❄️' },
+    { id: 'other_camp', label: 'General Outdoor Camp', icon: '⛺' }
+  ],
+  faith: [
+    { id: 'halqa', label: 'Youth Islamic Halqa', icon: '🕌' },
+    { id: 'quran_study', label: 'Qur’an Study & Tajweed Circle', icon: '📖' },
+    { id: 'tahajjud_night', label: 'Tahajjud & Spiritual Night Program', icon: '🌙' },
+    { id: 'interfaith_outreach', label: 'Interfaith Dialogue & Goodwill', icon: '🕊️' },
+    { id: 'other_faith', label: 'General Faith Gathering', icon: '🕌' }
+  ],
+  ceremony: [
+    { id: 'court_of_honor', label: 'Court of Honor & Rank Badges', icon: '🎖️' },
+    { id: 'eagle_ceremony', label: 'Eagle Scout Court of Honor', icon: '🦅' },
+    { id: 'investiture', label: 'Investiture & Promise Ceremony', icon: '⚜️' },
+    { id: 'other_ceremony', label: 'Special Troop Ceremony', icon: '🎖️' }
+  ]
+};
+
+export const SERVICE_HOURS_PRESETS = [1, 2, 3, 4, 6, 8];
+
+export function getActivityClassification(ev) {
+  if (!ev) {
+    return {
+      eventType: 'meeting',
+      typeLabel: 'Troop Meeting',
+      typeIcon: '📋',
+      subtype: 'weekly_patrol_session',
+      subtypeLabel: 'Weekly Meeting',
+      subtypeIcon: '🏕️',
+      isService: false,
+      serviceHoursCredited: 0,
+      badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+    };
+  }
+
+  // 1. Resolve primary eventType
+  let primaryType = ev.eventType || ev.category || 'meeting';
+  if (primaryType === 'campout') primaryType = 'camp';
+  if (primaryType === 'service_project') primaryType = 'volunteering';
+
+  // 2. Resolve subtype
+  let subtype = ev.activitySubtype || '';
+  if (!subtype) {
+    const lowerTitle = (ev.title || '').toLowerCase();
+    const lowerDesc = (ev.description || '').toLowerCase();
+    const combined = `${lowerTitle} ${lowerDesc}`;
+    
+    if (combined.includes('hik') || combined.includes('trail')) subtype = 'hiking';
+    else if (combined.includes('fish')) subtype = 'fishing';
+    else if (combined.includes('sport') || combined.includes('soccer') || combined.includes('basket')) subtype = 'sports';
+    else if (combined.includes('clean') || combined.includes('litter') || combined.includes('trash')) subtype = 'environmental_cleanup';
+    else if (combined.includes('food') || combined.includes('pantry')) subtype = 'food_drive';
+    else if (combined.includes('tree') || combined.includes('plant')) subtype = 'tree_planting';
+    else if (combined.includes('masjid') || combined.includes('mosque')) subtype = 'masjid_service';
+    else if (combined.includes('knot') || combined.includes('pioneer') || combined.includes('lash')) subtype = 'knot_crafts';
+    else if (combined.includes('first aid') || combined.includes('cpr') || combined.includes('drill')) subtype = 'first_aid_drill';
+    else if (combined.includes('orient') || combined.includes('compass') || combined.includes('navigat')) subtype = 'orienteering';
+    else if (combined.includes('court of honor') || combined.includes('advancement')) subtype = 'court_of_honor';
+    else if (combined.includes('halqa') || combined.includes('quran') || combined.includes('spiritual')) subtype = 'halqa';
+    else if (combined.includes('camp') || combined.includes('survival') || combined.includes('tents')) subtype = 'overnight_campout';
+    else if (primaryType === 'scouting') subtype = 'hiking';
+    else if (primaryType === 'volunteering' || primaryType === 'service') subtype = 'community_service';
+    else if (primaryType === 'faith') subtype = 'halqa';
+    else if (primaryType === 'camp') subtype = 'overnight_campout';
+    else subtype = 'weekly_patrol_session';
+  }
+
+  const typeCfg = EVENT_TYPES.find(t => t.id === primaryType) || {
+    id: primaryType,
+    label: primaryType.charAt(0).toUpperCase() + primaryType.slice(1),
+    icon: '📅',
+    badgeClass: 'bg-slate-700 text-slate-200 border-slate-600'
+  };
+
+  const subtypeList = ACTIVITY_SUBTYPES[primaryType] || ACTIVITY_SUBTYPES[ev.category] || [];
+  const foundSubtype = subtypeList.find(s => s.id === subtype);
+  const subtypeLabel = foundSubtype ? foundSubtype.label : (subtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  const subtypeIcon = foundSubtype ? foundSubtype.icon : (typeCfg.icon || '📌');
+
+  const isService = primaryType === 'volunteering' || primaryType === 'service' || subtype.includes('service') || subtype.includes('cleanup') || subtype.includes('food_drive');
+  const serviceHours = Number(ev.serviceHoursCredited || (isService && ev.durationHours ? ev.durationHours : 0)) || 0;
+
+  return {
+    eventType: primaryType,
+    typeLabel: typeCfg.label,
+    typeIcon: typeCfg.icon,
+    subtype,
+    subtypeLabel,
+    subtypeIcon,
+    isService,
+    serviceHoursCredited: serviceHours,
+    badgeClass: typeCfg.badgeClass
+  };
+}
 
 // ── TIME RANGE SELECTOR HELPERS ──
 export function formatTime12h(time24) {
@@ -285,7 +491,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [timeHorizon, setTimeHorizon] = useState('upcoming');
 
   // Category Filtering & Search
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'standalone' | 'campouts' | 'service' | 'faith'
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'standalone' | 'scouting' | 'volunteering' | 'camp' | 'faith' | 'meeting'
   const [searchQuery, setSearchQuery] = useState('');
 
   // Event Creator Form states
@@ -299,6 +505,11 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [timeMode, setTimeMode] = useState('picker'); // 'picker' | 'presets' | 'custom'
   const [isAllDay, setIsAllDay] = useState(false);
   const [location, setLocation] = useState('Highview Elementary School (Troop Headquarters)');
+  const [eventType, setEventType] = useState('scouting'); // 'scouting' | 'volunteering' | 'meeting' | 'camp' | 'faith' | 'ceremony'
+  const [activitySubtype, setActivitySubtype] = useState('hiking');
+  const [customSubtypeText, setCustomSubtypeText] = useState('');
+  const [serviceHoursCredited, setServiceHoursCredited] = useState(0);
+  const [requiresRsvp, setRequiresRsvp] = useState(true);
   const [category, setCategory] = useState('meeting'); // 'campout' | 'meeting' | 'service' | 'faith' | 'ceremony'
   const [description, setDescription] = useState('');
   const [requiredItems, setRequiredItems] = useState('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -557,9 +768,36 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
     // 2. Subcategory Filter
     if (filterTab === 'standalone') list = list.filter(ev => ev.isStandalone);
-    if (filterTab === 'campouts') list = list.filter(ev => ev.category === 'campout');
-    if (filterTab === 'service') list = list.filter(ev => ev.category === 'service');
-    if (filterTab === 'faith') list = list.filter(ev => ev.category === 'faith');
+    if (filterTab === 'scouting') {
+      list = list.filter(ev => {
+        const cls = getActivityClassification(ev);
+        return cls.eventType === 'scouting' || ['hiking', 'fishing', 'sports', 'knot_crafts', 'orienteering', 'first_aid_drill', 'campcraft', 'swimming', 'shooting_sports'].includes(cls.subtype);
+      });
+    }
+    if (filterTab === 'volunteering' || filterTab === 'service') {
+      list = list.filter(ev => {
+        const cls = getActivityClassification(ev);
+        return cls.isService || cls.eventType === 'volunteering' || cls.eventType === 'service' || (Number(ev.serviceHoursCredited) > 0);
+      });
+    }
+    if (filterTab === 'camp' || filterTab === 'campouts') {
+      list = list.filter(ev => {
+        const cls = getActivityClassification(ev);
+        return cls.eventType === 'camp' || ev.category === 'campout' || cls.subtype.includes('camp');
+      });
+    }
+    if (filterTab === 'faith') {
+      list = list.filter(ev => {
+        const cls = getActivityClassification(ev);
+        return cls.eventType === 'faith' || ev.category === 'faith' || ev.islamicOccasion || (ev.islamicOccasions && ev.islamicOccasions.length > 0);
+      });
+    }
+    if (filterTab === 'meeting') {
+      list = list.filter(ev => {
+        const cls = getActivityClassification(ev);
+        return cls.eventType === 'meeting' || ev.category === 'meeting' || ev.isStandalone;
+      });
+    }
 
     // 3. Search Filter
     if (searchQuery.trim()) {
@@ -569,7 +807,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
         const matchesDate = (ev.date || '').toLowerCase().includes(q);
         const matchesLoc = (ev.location || '').toLowerCase().includes(q);
         const matchesDesc = (ev.description || '').toLowerCase().includes(q);
-        return matchesTitle || matchesDate || matchesLoc || matchesDesc;
+        const matchesSubtype = (ev.activitySubtype || '').toLowerCase().includes(q);
+        return matchesTitle || matchesDate || matchesLoc || matchesDesc || matchesSubtype;
       });
     }
 
@@ -604,12 +843,12 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     if (!isLeader) return false;
 
     // An event set for the whole troop cannot be edited or deleted by normal leaders
-    const isTroopWide = !ev.targetGroupId || ev.targetGroupId === 'all' || ev.isGlobalScope || ev.pushToAllPatrols;
+    const isTroopWide = !ev.targetGroupId || ev.targetGroupId === 'all' || ev.isGlobalScope || ev.pushToAllPatrols || ev.targetScope === 'troop_wide';
     if (isTroopWide) return false;
 
     // Regular leaders can ONLY edit events that are scoped specifically to their group / patrol
     const userPatrolId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-    return Boolean(userPatrolId && (ev.targetGroupId === userPatrolId || ev.targetGroupId === currentUser?.groupId || ev.targetGroupId === currentUser?.patrolId));
+    return Boolean(userPatrolId && (ev.targetGroupId === userPatrolId || ev.targetGroupId === currentUser?.groupId || ev.targetGroupId === currentUser?.patrolId || ev.targetScope === userPatrolId));
   };
 
   const handleOpenNew = () => {
@@ -622,6 +861,11 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setTimeMode('picker');
     setTime('6:30 PM – 9:30 PM');
     setLocation('Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)');
+    setEventType('scouting');
+    setActivitySubtype('hiking');
+    setCustomSubtypeText('');
+    setServiceHoursCredited(0);
+    setRequiresRsvp(true);
     setCategory('meeting');
     setDescription('');
     setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -638,15 +882,21 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       alert("You only have permission to edit events scoped specifically to your assigned patrol unit. Troop-wide events can only be modified by the Scoutmaster or Troop Administrators.");
       return;
     }
+    const cls = getActivityClassification(ev);
     setEditingId(ev.id);
     setTitle(ev.title || '');
     setDate(ev.date || '');
     setLocation(ev.location || '');
-    setCategory(ev.category || 'meeting');
+    setEventType(ev.eventType || (ev.category === 'campout' ? 'camp' : ev.category === 'service' ? 'volunteering' : ev.category) || cls.eventType || 'meeting');
+    setActivitySubtype(ev.activitySubtype || cls.subtype || 'hiking');
+    setCustomSubtypeText('');
+    setServiceHoursCredited(ev.serviceHoursCredited !== undefined ? ev.serviceHoursCredited : (cls.isService ? 3 : 0));
+    setRequiresRsvp(ev.requiresRsvp !== undefined ? ev.requiresRsvp : true);
+    setCategory(ev.category || (ev.eventType === 'camp' ? 'campout' : ev.eventType === 'volunteering' ? 'service' : ev.eventType) || 'meeting');
     setDescription(ev.description || '');
     setRequiredItems(ev.requiredItems || '');
     setQuranVerse(ev.quranVerse || '');
-    setTargetGroupId(ev.targetGroupId || 'all');
+    setTargetGroupId(ev.targetGroupId || (ev.targetScope === 'troop_wide' ? 'all' : ev.targetScope) || 'all');
     setTime(ev.time || '6:30 PM – 9:30 PM');
 
     const parsed = parseTimeRange(ev.time);
@@ -789,7 +1039,19 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setSaving(true);
     const userPatrolId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
     const scope = isExecutive ? targetGroupId : (userPatrolId || 'all');
+    const targetScopeVal = scope === 'all' ? 'troop_wide' : scope;
+    const finalSubtype = customSubtypeText.trim() ? customSubtypeText.trim().toLowerCase().replace(/\s+/g, '_') : activitySubtype;
+    const isServiceCategory = eventType === 'volunteering' || eventType === 'service' || finalSubtype.includes('service') || finalSubtype.includes('cleanup') || finalSubtype.includes('food_drive');
+    const finalServiceHours = isServiceCategory || Number(serviceHoursCredited) > 0 ? Number(serviceHoursCredited) : 0;
     
+    let legacyCat = category;
+    if (eventType === 'camp') legacyCat = 'campout';
+    else if (eventType === 'volunteering') legacyCat = 'service';
+    else if (eventType === 'meeting') legacyCat = 'meeting';
+    else if (eventType === 'faith') legacyCat = 'faith';
+    else if (eventType === 'ceremony') legacyCat = 'ceremony';
+    else if (eventType === 'scouting') legacyCat = 'meeting';
+
     let calculatedDurStr = isAllDay ? '8 hrs' : (startTime && endTime ? calculateDuration(startTime, endTime) : '3 hrs');
     let calculatedHours = 3;
     if (isAllDay) {
@@ -813,7 +1075,12 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       durationHours: calculatedHours,
       duration: calculatedDurStr,
       location: location.trim(),
-      category,
+      eventType,
+      activitySubtype: finalSubtype,
+      serviceHoursCredited: finalServiceHours,
+      requiresRsvp: Boolean(requiresRsvp),
+      targetScope: targetScopeVal,
+      category: legacyCat,
       description: description.trim(),
       requiredItems: requiredItems.trim(),
       quranVerse: quranVerse.trim(),
@@ -1547,16 +1814,18 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
           {[
             { id: 'all', label: 'All Categories' },
             { id: 'standalone', label: '⚡ Standalone Weekly Meetings' },
-            { id: 'campouts', label: '⛺ Overnight Campouts' },
-            { id: 'service', label: '🤝 Community Service' },
-            { id: 'faith', label: '🕌 Halqas & Faith' }
+            { id: 'scouting', label: '🏕️ Scouting Activities (Hikes, Fishing, Sports)' },
+            { id: 'volunteering', label: '🤝 Volunteering & Service (Credited Hours)' },
+            { id: 'camp', label: '⛺ Overnight Campouts' },
+            { id: 'faith', label: '🕌 Halqas & Faith' },
+            { id: 'meeting', label: '📋 Troop Meetings' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilterTab(tab.id)}
               className={`px-3 py-1 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
                 filterTab === tab.id
-                  ? 'bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold'
+                  ? 'bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950 border border-transparent'
               }`}
             >
@@ -1975,31 +2244,210 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+              {/* Date & Date Info */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                />
+              </div>
+
+              {/* ── ACTIVITY CLASSIFICATION ENGINE: EVENT TYPE ── */}
+              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🎯</span>
+                    <label className="text-xs font-black text-slate-200 uppercase tracking-wide">
+                      Activity Classification & Event Type *
+                    </label>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Select primary category</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="meeting">🏕️ Troop Meeting / Standalone Session</option>
-                    <option value="campout">⛺ Overnight Campout</option>
-                    <option value="service">🤝 Service Project</option>
-                    <option value="faith">🕌 Halqa / Spiritual Circle</option>
-                    <option value="ceremony">🎖️ Court of Honor / Ceremony</option>
-                  </select>
+                {/* Primary Category Grid (6 Types) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {EVENT_TYPES.map(t => {
+                    const isSelected = eventType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setEventType(t.id);
+                          const subtypes = ACTIVITY_SUBTYPES[t.id] || [];
+                          if (subtypes.length > 0) {
+                            setActivitySubtype(subtypes[0].id);
+                          }
+                          setCustomSubtypeText('');
+                          if (t.id === 'volunteering' || t.id === 'service') {
+                            if (!serviceHoursCredited || serviceHoursCredited === 0) {
+                              setServiceHoursCredited(3);
+                            }
+                          } else {
+                            setServiceHoursCredited(0);
+                          }
+                          if (t.id === 'camp') setCategory('campout');
+                          else if (t.id === 'volunteering') setCategory('service');
+                          else if (t.id === 'meeting') setCategory('meeting');
+                          else if (t.id === 'faith') setCategory('faith');
+                          else if (t.id === 'ceremony') setCategory('ceremony');
+                          else setCategory('meeting');
+                        }}
+                        className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? `${t.badgeClass} ring-1 ring-emerald-500 shadow-md`
+                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-base">{t.icon}</span>
+                          {isSelected && <span className="text-[10px] text-emerald-400 font-black">✓ Active</span>}
+                        </div>
+                        <div className="mt-1.5">
+                          <strong className="text-xs font-bold text-white block leading-tight">{t.label}</strong>
+                          <span className="text-[10px] text-slate-400 block line-clamp-1 mt-0.5">{t.description}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Dynamic Granular Activity Subtype Selector */}
+                <div className="pt-2 border-t border-slate-850 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                      <span>📌</span>
+                      <span>Granular Activity Subtype:</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {activitySubtype ? (ACTIVITY_SUBTYPES[eventType]?.find(s => s.id === activitySubtype)?.label || activitySubtype) : 'None'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {(ACTIVITY_SUBTYPES[eventType] || ACTIVITY_SUBTYPES.scouting).map(st => {
+                      const isSubSelected = activitySubtype === st.id && !customSubtypeText;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => {
+                            setActivitySubtype(st.id);
+                            setCustomSubtypeText('');
+                            if (st.id.includes('service') || st.id.includes('cleanup') || st.id.includes('food_drive')) {
+                              if (!serviceHoursCredited || serviceHoursCredited === 0) setServiceHoursCredited(3);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
+                            isSubSelected
+                              ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm font-bold'
+                              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850'
+                          }`}
+                        >
+                          <span>{st.icon}</span>
+                          <span>{st.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Subtype Text Option */}
+                  <div className="pt-1">
+                    <input
+                      type="text"
+                      placeholder="Or specify custom activity subtype (e.g. Pioneering Tower, River Kayaking, Food Pantry)..."
+                      value={customSubtypeText}
+                      onChange={(e) => {
+                        setCustomSubtypeText(e.target.value);
+                        if (e.target.value.trim()) {
+                          setActivitySubtype(e.target.value.trim().toLowerCase().replace(/\s+/g, '_'));
+                        }
+                      }}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Service Hours Credited Field (Highlighted for Volunteering/Service) */}
+                {(eventType === 'volunteering' || eventType === 'service' || activitySubtype.includes('service') || activitySubtype.includes('cleanup') || activitySubtype.includes('food_drive') || Number(serviceHoursCredited) > 0) && (
+                  <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 space-y-2 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                        <span className="text-sm">⏳</span>
+                        <span>Service Hours Credited to Scouts</span>
+                      </label>
+                      <span className="text-[10px] text-amber-400 font-bold bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-full">
+                        BSA Rank Credit
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Attendance recorded for this event will automatically award these service hours toward scouts' rank advancement (Tenderfoot through Eagle).
+                    </p>
+
+                    <div className="flex items-center gap-3 flex-wrap pt-1">
+                      <div className="flex items-center gap-1">
+                        {SERVICE_HOURS_PRESETS.map(h => (
+                          <button
+                            key={h}
+                            type="button"
+                            onClick={() => setServiceHoursCredited(h)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                              Number(serviceHoursCredited) === h
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
+                                : 'bg-slate-900 border-amber-500/30 text-amber-300 hover:bg-amber-950'
+                            }`}
+                          >
+                            {h} hr{h > 1 ? 's' : ''}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          max="48"
+                          step="0.5"
+                          value={serviceHoursCredited}
+                          onChange={(e) => setServiceHoursCredited(parseFloat(e.target.value) || 0)}
+                          className="w-20 bg-slate-900 border border-amber-500/50 rounded-xl px-2.5 py-1 text-xs text-amber-200 text-center font-mono font-bold focus:outline-none focus:border-amber-400"
+                        />
+                        <span className="text-xs text-amber-300 font-medium">hrs total</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* RSVP & Attendance Requirement Control */}
+                <div className="pt-2 border-t border-slate-850 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={requiresRsvp}
+                        onChange={(e) => setRequiresRsvp(e.target.checked)}
+                        className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                      />
+                      <span>Pre-Event Attendance RSVP Required</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 ml-6 mt-0.5">
+                      {requiresRsvp 
+                        ? 'Families will be asked to confirm attendance, carpool seats, and dietary restrictions.' 
+                        : 'Open attendance event — no RSVP required, all scouts and families welcome.'}
+                    </p>
+                  </div>
+
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    requiresRsvp 
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
+                      : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                  }`}>
+                    {requiresRsvp ? '📝 RSVP Enabled' : '🔓 Open Attendance'}
+                  </span>
                 </div>
               </div>
 
@@ -2659,6 +3107,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
           ) : (
             <div className="space-y-2.5 max-h-[750px] overflow-y-auto pr-1">
               {filteredEvents.map(ev => {
+                const cls = getActivityClassification(ev);
                 const isSelected = selectedEvent?.id === ev.id;
                 const isChecked = selectedEventIds.has(ev.id);
                 const rsvpSum = getEventRsvpSummary(ev);
@@ -2710,6 +3159,20 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                           }`}>
                             📅 {ev.date}
                           </span>
+                          
+                          {/* Activity Subtype Chip */}
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${cls.badgeClass}`}>
+                            <span>{cls.subtypeIcon}</span>
+                            <span>{cls.subtypeLabel}</span>
+                          </span>
+
+                          {cls.serviceHoursCredited > 0 && (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                              <span>⏳</span>
+                              <span>{cls.serviceHoursCredited}h Service</span>
+                            </span>
+                          )}
+
                           {isPast && (
                             <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
                               ✓ Past
@@ -2720,6 +3183,11 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                               isFriday ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'
                             }`}>
                               {isFriday ? 'Fri' : isTuesday ? 'Tue' : 'Weekly'}
+                            </span>
+                          )}
+                          {ev.requiresRsvp === false && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                              🔓 Open
                             </span>
                           )}
                         </div>
@@ -2821,121 +3289,152 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 : 'bg-slate-850 border-slate-755'
             }`}>
               {/* Event Header */}
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-750 pb-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">
-                      {selectedEvent.category || selectedEvent.eventType || 'meeting'}
-                    </span>
-                    {(selectedEvent.date || '') < todayStr ? (
-                      <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <History size={11} /> Completed / Past Session
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <CalendarDays size={11} /> Upcoming Event
-                      </span>
-                    )}
-                    {selectedEvent.isStandalone && (
-                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <Zap size={10} /> Standalone Session
-                      </span>
-                    )}
-                    {(selectedEvent.islamicOccasion || (selectedEvent.islamicOccasions && selectedEvent.islamicOccasions.length > 0)) && (
-                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <span>🕌</span> {selectedEvent.islamicOccasion || selectedEvent.islamicOccasions?.map(i => i.name).join(' & ')}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-black text-white">{selectedEvent.title}</h3>
-                  
-                  {/* High Visibility Target Audience Banner */}
-                  {(() => {
-                    const aud = getEventAudienceInfo(selectedEvent, currentUser, groups, linkedScouts);
-                    return (
-                      <div className={`p-3 rounded-2xl border flex items-center gap-2.5 text-xs ${aud.colorClass}`}>
-                        <span className="text-xl shrink-0">{aud.icon}</span>
-                        <div className="min-w-0">
-                          <strong className="block text-xs uppercase tracking-wider font-black">{aud.badge}</strong>
-                          <span className="text-[11px] opacity-90 block">{aud.label}</span>
-                        </div>
+              {(() => {
+                const cls = getActivityClassification(selectedEvent);
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-750 pb-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Primary Event Type Badge */}
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border flex items-center gap-1 ${cls.badgeClass}`}>
+                          <span>{cls.typeIcon}</span>
+                          <span>{cls.typeLabel}</span>
+                        </span>
+
+                        {/* Granular Activity Subtype Badge */}
+                        <span className="text-[10px] font-bold bg-slate-800 text-slate-200 border border-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                          <span>{cls.subtypeIcon}</span>
+                          <span>{cls.subtypeLabel}</span>
+                        </span>
+
+                        {/* Service Hours Credited Badge */}
+                        {cls.serviceHoursCredited > 0 && (
+                          <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <span>⏳</span>
+                            <span>{cls.serviceHoursCredited} Service Hours Credited</span>
+                          </span>
+                        )}
+
+                        {(selectedEvent.date || '') < todayStr ? (
+                          <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <History size={11} /> Completed / Past Session
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <CalendarDays size={11} /> Upcoming Event
+                          </span>
+                        )}
+                        {selectedEvent.isStandalone && (
+                          <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Zap size={10} /> Standalone Session
+                          </span>
+                        )}
+                        {selectedEvent.requiresRsvp === false ? (
+                          <span className="text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span>🔓</span> Open Attendance
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span>📝</span> RSVP Required
+                          </span>
+                        )}
+                        {(selectedEvent.islamicOccasion || (selectedEvent.islamicOccasions && selectedEvent.islamicOccasions.length > 0)) && (
+                          <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span>🕌</span> {selectedEvent.islamicOccasion || selectedEvent.islamicOccasions?.map(i => i.name).join(' & ')}
+                          </span>
+                        )}
                       </div>
-                    );
-                  })()}
+                      <h3 className="text-xl font-black text-white">{selectedEvent.title}</h3>
+                      
+                      {/* High Visibility Target Audience Banner */}
+                      {(() => {
+                        const aud = getEventAudienceInfo(selectedEvent, currentUser, groups, linkedScouts);
+                        return (
+                          <div className={`p-3 rounded-2xl border flex items-center gap-2.5 text-xs ${aud.colorClass}`}>
+                            <span className="text-xl shrink-0">{aud.icon}</span>
+                            <div className="min-w-0">
+                              <strong className="block text-xs uppercase tracking-wider font-black">{aud.badge}</strong>
+                              <span className="text-[11px] opacity-90 block">{aud.label}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
-                  <div className="flex items-center gap-4 text-xs text-slate-300 pt-1 flex-wrap font-medium">
-                    <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-400" /> {selectedEvent.date}</span>
-                    <span className="flex items-center gap-1.5"><Clock size={13} className="text-emerald-400" /> {selectedEvent.time}</span>
-                    {getEventDisplayDuration(selectedEvent) && (
-                      <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {getEventDisplayDuration(selectedEvent)} duration</span>
-                    )}
-                  </div>
-                </div>
-
-                {isLeader && (
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {/* Send WhatsApp Reminder Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenWhatsAppReminder(selectedEvent)}
-                      className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-950/40 hover:scale-[1.02]"
-                      title="Generate and broadcast WhatsApp reminder message with event info"
-                    >
-                      <MessageSquare size={14} className="text-emerald-200" />
-                      <span>💬 Send WhatsApp Reminder</span>
-                    </button>
-
-                    {/* Print Roster / Muster Sheet */}
-                    <button
-                      type="button"
-                      onClick={() => setShowPrintRosterModal(true)}
-                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
-                      title="Print Attendance & RSVP Check-in Roster"
-                    >
-                      <Printer size={14} className="text-emerald-400" />
-                      <span>Print Roster</span>
-                    </button>
-
-                    {/* Take Attendance (Enabled for all leaders on all events) */}
-                    <button
-                      type="button"
-                      onClick={() => onNavigate && onNavigate('attendance', { 
-                        date: selectedEvent.date, 
-                        eventType: mapCategoryToEventType(selectedEvent.category || selectedEvent.eventType), 
-                        notes: selectedEvent.title 
-                      })}
-                      className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-teal-950/40 hover:scale-[1.02]"
-                      title="Take Roll Call / Attendance for this event"
-                    >
-                      <CheckSquare size={14} />
-                      <span>📋 Take Attendance</span>
-                    </button>
-
-                    {canUserEditEvent(selectedEvent) ? (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(selectedEvent)}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
-                          title="Edit Patrol Event"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(selectedEvent.id)}
-                          className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
-                          title="Delete Patrol Event"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                      <div className="flex items-center gap-4 text-xs text-slate-300 pt-1 flex-wrap font-medium">
+                        <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-400" /> {selectedEvent.date}</span>
+                        <span className="flex items-center gap-1.5"><Clock size={13} className="text-emerald-400" /> {selectedEvent.time}</span>
+                        {getEventDisplayDuration(selectedEvent) && (
+                          <span className="flex items-center gap-1.5"><Hourglass size={13} className="text-emerald-400" /> {getEventDisplayDuration(selectedEvent)} duration</span>
+                        )}
                       </div>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 bg-slate-900 border border-slate-750 px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 shadow-inner" title="Troop-wide event managed by Scoutmaster or Troop Administrator">
-                        <span>🔒</span> Troop-Wide Event
-                      </span>
+                    </div>
+
+                    {isLeader && (
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        {/* Send WhatsApp Reminder Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWhatsAppReminder(selectedEvent)}
+                          className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-950/40 hover:scale-[1.02]"
+                          title="Generate and broadcast WhatsApp reminder message with event info"
+                        >
+                          <MessageSquare size={14} className="text-emerald-200" />
+                          <span>💬 Send WhatsApp Reminder</span>
+                        </button>
+
+                        {/* Print Roster / Muster Sheet */}
+                        <button
+                          type="button"
+                          onClick={() => setShowPrintRosterModal(true)}
+                          className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
+                          title="Print Attendance & RSVP Check-in Roster"
+                        >
+                          <Printer size={14} className="text-emerald-400" />
+                          <span>Print Roster</span>
+                        </button>
+
+                        {/* Take Attendance (Enabled for all leaders on all events) */}
+                        <button
+                          type="button"
+                          onClick={() => onNavigate && onNavigate('attendance', { 
+                            date: selectedEvent.date, 
+                            eventType: mapCategoryToEventType(selectedEvent.category || selectedEvent.eventType), 
+                            notes: selectedEvent.title 
+                          })}
+                          className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-teal-950/40 hover:scale-[1.02]"
+                          title="Take Roll Call / Attendance for this event"
+                        >
+                          <CheckSquare size={14} />
+                          <span>📋 Take Attendance</span>
+                        </button>
+
+                        {canUserEditEvent(selectedEvent) ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleOpenEdit(selectedEvent)}
+                              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                              title="Edit Patrol Event"
+                            >
+                              <Edit3 size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(selectedEvent.id)}
+                              className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                              title="Delete Patrol Event"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 bg-slate-900 border border-slate-755 px-2.5 py-1.5 rounded-xl font-medium flex items-center gap-1 shadow-inner" title="Troop-wide event managed by Scoutmaster or Troop Administrator">
+                            <span>🔒</span> Troop-Wide Event
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* ── PROMINENT LOCATION & VENUE CARD ── */}
               <div className="bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 border border-emerald-500/35 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-lg">
@@ -2967,6 +3466,42 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   <ExternalLink size={12} />
                 </a>
               </div>
+
+              {/* ── SERVICE HOURS CREDITED HERO CARD ── */}
+              {(() => {
+                const cls = getActivityClassification(selectedEvent);
+                if (cls.serviceHoursCredited <= 0) return null;
+                return (
+                  <div className="bg-gradient-to-r from-amber-950/50 via-slate-900 to-amber-950/50 border-2 border-amber-500/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg animate-fadeIn">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 flex items-center justify-center font-bold text-xl shrink-0 shadow-inner">
+                        ⏳
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                            🌟 BSA Service Hours Credited
+                          </span>
+                          <span className="text-xs font-black text-amber-200">
+                            {cls.serviceHoursCredited} Hours Available
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-black text-white mt-0.5">
+                          Volunteering & Community Service Credit
+                        </h4>
+                        <p className="text-[11px] text-slate-300 mt-0.5">
+                          Scouts attending this session will automatically earn <strong>{cls.serviceHoursCredited} hours</strong> toward their rank advancement service requirement.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="px-3.5 py-2 bg-amber-500/15 border border-amber-500/40 rounded-xl text-center shrink-0 self-start sm:self-auto shadow-inner">
+                      <span className="text-lg font-black text-amber-300 font-mono block">+{cls.serviceHoursCredited}h</span>
+                      <span className="text-[9px] uppercase font-bold text-amber-400/90 tracking-wider">Service Credit</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── ISLAMIC OCCASION & SPIRITUAL MILESTONE CARD ── */}
               {(selectedEvent.islamicOccasion || (selectedEvent.islamicOccasions && selectedEvent.islamicOccasions.length > 0)) && (
@@ -3027,6 +3562,15 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   </h4>
                   {rsvpSuccessMsg && <span className="text-xs text-emerald-400 font-bold">{rsvpSuccessMsg}</span>}
                 </div>
+
+                {selectedEvent.requiresRsvp === false && (
+                  <div className="bg-sky-950/40 border border-sky-500/30 rounded-xl p-3 text-xs text-sky-300 flex items-center gap-2.5">
+                    <span className="text-lg">🔓</span>
+                    <p className="leading-snug text-[11px]">
+                      <strong>Open Attendance Session:</strong> Pre-event RSVP is not required. Attendance will be recorded during roll-call at the venue. You may still indicate carpool driver availability below if you wish to assist other scouts.
+                    </p>
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmitRsvp} className="space-y-3.5">
                   <div className="flex gap-2">

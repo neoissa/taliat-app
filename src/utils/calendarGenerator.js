@@ -24,7 +24,11 @@ export const RECURRING_SCHEDULE_CONFIG = {
   friday: {
     title: 'Friday Weekly Meeting',
     eventType: 'meeting',
+    activitySubtype: 'weekly_patrol_session',
     category: 'meeting',
+    targetScope: 'troop_wide',
+    requiresRsvp: true,
+    serviceHoursCredited: 0,
     startDate: '2026-10-02',
     endDate: '2027-06-25',
     dayOfWeek: 5, // Friday
@@ -43,7 +47,11 @@ export const RECURRING_SCHEDULE_CONFIG = {
   tuesday: {
     title: 'Tuesday Youth Program',
     eventType: 'meeting',
+    activitySubtype: 'weekly_patrol_session',
     category: 'meeting',
+    targetScope: 'troop_wide',
+    requiresRsvp: true,
+    serviceHoursCredited: 0,
     startDate: '2026-09-08',
     endDate: '2027-06-29',
     dayOfWeek: 2, // Tuesday
@@ -136,8 +144,12 @@ export function generateRangeSchedule(options = {}) {
       events.push({
         id: docId,
         title: fridayCfg.title,
-        eventType: fridayCfg.eventType,
-        category: fridayCfg.category,
+        eventType: fridayCfg.eventType || 'meeting',
+        activitySubtype: fridayCfg.activitySubtype || 'weekly_patrol_session',
+        category: fridayCfg.category || 'meeting',
+        targetScope: fridayCfg.targetScope || 'troop_wide',
+        requiresRsvp: fridayCfg.requiresRsvp !== undefined ? fridayCfg.requiresRsvp : true,
+        serviceHoursCredited: fridayCfg.serviceHoursCredited || 0,
         date: dateStr,
         startTime: fridayCfg.startTime,
         endTime: fridayCfg.endTime,
@@ -168,8 +180,12 @@ export function generateRangeSchedule(options = {}) {
       events.push({
         id: docId,
         title: tuesdayCfg.title,
-        eventType: tuesdayCfg.eventType,
-        category: tuesdayCfg.category,
+        eventType: tuesdayCfg.eventType || 'meeting',
+        activitySubtype: tuesdayCfg.activitySubtype || 'weekly_patrol_session',
+        category: tuesdayCfg.category || 'meeting',
+        targetScope: tuesdayCfg.targetScope || 'troop_wide',
+        requiresRsvp: tuesdayCfg.requiresRsvp !== undefined ? tuesdayCfg.requiresRsvp : true,
+        serviceHoursCredited: tuesdayCfg.serviceHoursCredited || 0,
         date: dateStr,
         startTime: tuesdayCfg.startTime,
         endTime: tuesdayCfg.endTime,

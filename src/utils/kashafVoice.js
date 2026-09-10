@@ -326,6 +326,19 @@ We wanted to share a friendly reminder regarding our upcoming *${titleFormatted}
     const timeStr = event.time || (event.startTime && event.endTime ? `${event.startTime} – ${event.endTime}` : '');
     details.push(`📅 *Date:* ${dateDisplay}${timeStr ? ` at ${timeStr}` : ''}`);
   }
+
+  // Activity Subtype bullet if defined
+  if (event.activitySubtype) {
+    const cleanSubtype = event.activitySubtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    details.push(`🎯 *Activity Category:* ${cleanSubtype}`);
+  }
+
+  // Service Hours Credited bullet if > 0
+  const serviceHoursNum = Number(event.serviceHoursCredited || 0);
+  if (serviceHoursNum > 0) {
+    details.push(`⏳ *Service Hours Credited:* ${serviceHoursNum} hrs (Rank Advancement Service Credit)`);
+  }
+
   if (event.location) details.push(`📍 *Location / Venue:* ${event.location}`);
   if (event.meetingPoint) details.push(`🚩 *Assembly / Meeting Point:* ${event.meetingPoint}`);
   if (event.registrationDeadline || event.deadline) {
@@ -355,8 +368,13 @@ We wanted to share a friendly reminder regarding our upcoming *${titleFormatted}
 
   // RSVP Call to Action
   if (includeRsvpLink) {
-    blocks.push(`🔗 *Portal Link & RSVPs:* ${appUrl}
+    if (event.requiresRsvp === false) {
+      blocks.push(`🔗 *Portal Link:* ${appUrl}
+_Note: This is an open attendance event. No pre-RSVP required — all scouts and families are welcome!_`);
+    } else {
+      blocks.push(`🔗 *Portal Link & RSVPs:* ${appUrl}
 _Please submit your RSVP and indicate if you can drive scouts in the carpool._`);
+    }
   }
 
   // Scriptural Block (Optional)
