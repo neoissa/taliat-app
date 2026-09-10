@@ -65,6 +65,7 @@ import {
 } from 'lucide-react';
 import ConferenceCountdown from './ConferenceCountdown';
 import AdminCalendarSync from './AdminCalendarSync';
+import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 import { 
   formatKashafEventWhatsApp, 
   generateEventReminderWhatsApp, 
@@ -277,6 +278,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [leaderUpdatingRsvp, setLeaderUpdatingRsvp] = useState(false);
   const [leaderRsvpMsg, setLeaderRsvpMsg] = useState('');
   const [showPrintRosterModal, setShowPrintRosterModal] = useState(false);
+  const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
 
   // ── TIME HORIZON TABS: 'upcoming' | 'past' | 'all' ──
   const [timeHorizon, setTimeHorizon] = useState('upcoming');
@@ -2372,60 +2374,153 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               </div>
             </div>
 
-            {onNavigate && (
-              <button
-                type="button"
-                onClick={() => onNavigate(isParent ? 'parent-hub' : 'parent-requests')}
-                className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto hover:underline"
-              >
-                <span>{isParent ? 'Open Parent Hub' : 'Manage Inquiries'}</span>
-                <ChevronRight size={14} />
-              </button>
-            )}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {!isParent && (
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleMeetingModal(true)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Plus size={13} />
+                  <span>➕ Schedule Conference</span>
+                </button>
+              )}
+
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate(isParent ? 'parent-hub' : 'parent-requests', { filterTab: 'meeting_request' })}
+                  className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto hover:underline bg-sky-950/60 border border-sky-500/40 px-3 py-1.5 rounded-xl transition"
+                >
+                  <span>{isParent ? 'Open Parent Hub' : 'Manage Inquiries'}</span>
+                  <ChevronRight size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {confirmedConferences.map(conf => (
-              <div
-                key={conf.id || conf.requestId}
-                className="bg-slate-950/80 border border-sky-500/40 p-4 rounded-2xl space-y-3 shadow-md"
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <span className="text-[10px] font-mono font-bold text-sky-400 block uppercase">
-                      {conf.patrolName || 'Troop 313'}
-                    </span>
-                    <strong className="text-sm font-black text-white block">
-                      {conf.scoutName}
-                    </strong>
-                    <span className="text-xs text-slate-300">
-                      Parent: <strong>{conf.parentName}</strong>
-                    </span>
-                  </div>
-                  <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="pill" />
-                </div>
+            {confirmedConferences.map(conf => {
+              const waMsg = encodeURIComponent(
+                `Salam ${conf.parentName}, reminder regarding the upcoming conference for ${conf.scoutName} scheduled for ${conf.confirmedDate} at ${conf.confirmedTime || '6:30 PM'} at ${conf.meetingLocation || 'Troop Headquarters'}.`
+              );
+              const waPhone = (conf.parentPhone || '').replace(/[^0-9]/g, '');
 
-                <div className="space-y-1.5 text-xs text-slate-300 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-                  <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
-                    <Calendar size={13} className="text-emerald-400 shrink-0" />
-                    <span>{conf.confirmedDate} at {conf.confirmedTime || '6:30 PM'}</span>
+              return (
+                <div
+                  key={conf.id || conf.requestId}
+                  className="bg-slate-950/90 border border-sky-500/40 hover:border-sky-400/80 transition p-4 sm:p-5 rounded-2xl space-y-3 shadow-md flex flex-col justify-between"
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-[10px] font-mono font-bold text-sky-400 uppercase bg-sky-950/70 border border-sky-500/30 px-2 py-0.5 rounded-md">
+                          {conf.patrolName || 'Troop 1318'}
+                        </span>
+                        {conf.rsvpStatus && (
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                            conf.rsvpStatus === 'attending'
+                              ? 'bg-emerald-950 text-emerald-300 border-emerald-500'
+                              : conf.rsvpStatus === 'reschedule_requested'
+                              ? 'bg-amber-950 text-amber-300 border-amber-500'
+                              : conf.rsvpStatus === 'declined'
+                              ? 'bg-rose-950 text-rose-300 border-rose-500'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}>
+                            {conf.rsvpStatus === 'attending' ? '✓ RSVP: Confirmed' : conf.rsvpStatus === 'reschedule_requested' ? '🔄 Reschedule Req' : '⏳ RSVP: Pending'}
+                          </span>
+                        )}
+                      </div>
+                      <strong className="text-sm font-black text-white block">
+                        {conf.scoutName}
+                      </strong>
+                      <span className="text-xs text-slate-300">
+                        Parent: <strong>{conf.parentName}</strong>
+                      </span>
+                      {conf.meetingTopic && (
+                        <div className="text-[11px] text-sky-300 font-medium mt-0.5">
+                          📌 {conf.meetingTopic}
+                        </div>
+                      )}
+                    </div>
+                    <ConferenceCountdown date={conf.confirmedDate} time={conf.confirmedTime} variant="pill" />
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin size={13} className="text-sky-400 shrink-0" />
-                    <span className="truncate">{conf.meetingLocation || 'Troop Headquarters'}</span>
+
+                  <div className="space-y-1.5 text-xs text-slate-300 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                      <Calendar size={13} className="text-emerald-400 shrink-0" />
+                      <span>{conf.confirmedDate} at {conf.confirmedTime || '6:30 PM'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={13} className="text-sky-400 shrink-0" />
+                      <span className="truncate">{conf.meetingLocation || 'Troop Headquarters'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <UserCheck size={13} className="text-sky-400 shrink-0" />
+                      <span>Leader: <strong>{conf.confirmedBy || 'Troop Leader'}</strong> ({conf.confirmedByRole || 'Leader'})</span>
+                    </div>
+                    {conf.confirmationNote && (
+                      <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800">
+                        "{conf.confirmationNote}"
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <UserCheck size={13} className="text-sky-400 shrink-0" />
-                    <span>Leader: <strong>{conf.confirmedBy || 'Troop Leader'}</strong> ({conf.confirmedByRole || 'Leader'})</span>
+
+                  {/* Actions Toolbar on Card */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      {waPhone && (
+                        <a
+                          href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded-xl text-[11px] font-bold transition flex items-center gap-1"
+                          title="Message parent on WhatsApp"
+                        >
+                          <span>💬 WhatsApp</span>
+                        </a>
+                      )}
+                      {conf.parentPhone && (
+                        <a
+                          href={`tel:${conf.parentPhone}`}
+                          className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-[11px] font-bold transition flex items-center gap-1"
+                          title="Call parent"
+                        >
+                          <Phone size={11} />
+                          <span>Call</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {onNavigate && !isParent && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('parent-requests', {
+                            requestId: conf.id || conf.requestId,
+                            confirmMeeting: true,
+                            filterTab: 'meeting_request'
+                          })}
+                          className="px-3 py-1.5 bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 border border-sky-500/50 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>✏️ Edit / Reschedule</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('parent-requests', {
+                            requestId: conf.id || conf.requestId,
+                            filterTab: 'meeting_request'
+                          })}
+                          className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer hover:text-white"
+                        >
+                          <span>Manage &rarr;</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {conf.confirmationNote && (
-                    <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800">
-                      "{conf.confirmationNote}"
-                    </p>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -3740,6 +3835,13 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
           </div>
         </div>
       )}
+
+      {/* Schedule Parent Meeting Modal */}
+      <ScheduleParentMeetingModal
+        isOpen={showScheduleMeetingModal}
+        onClose={() => setShowScheduleMeetingModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

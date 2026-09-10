@@ -1013,4 +1013,323 @@ export async function parentRespondToMeetingInvite({
   }
 }
 
+/**
+ * Leader modifies/reschedules an existing conference request or invitation
+ */
+export async function updateLeaderMeeting({
+  requestId,
+  leaderUid,
+  leaderName = 'Troop Leader',
+  leaderRole = 'Scoutmaster',
+  confirmedDate,
+  confirmedTime = '6:30 PM',
+  meetingLocation = 'Troop Headquarters (Highview Elementary School)',
+  confirmationNote = '',
+  meetingTopic = 'Scout Advancement & Review',
+  parentUid = null,
+  parentEmail = null,
+  parentPhone = null,
+  scoutName = 'your scout'
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    if (!confirmedDate) throw new Error('Confirmed date is required.');
+
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const updatedDateIso = new Date().toISOString();
+
+    const updateData = {
+      status: 'confirmed',
+      rsvpStatus: 'pending', // Reset RSVP so parent can re-confirm if rescheduled
+      confirmedDate,
+      confirmedTime: confirmedTime || '6:30 PM',
+      meetingLocation: meetingLocation || 'Troop Headquarters',
+      confirmationNote: confirmationNote || '',
+      meetingTopic: meetingTopic || 'Scout Advancement & Review',
+      confirmedBy: leaderName,
+      confirmedByUid: leaderUid || null,
+      confirmedByRole: leaderRole || 'Leader',
+      lastModifiedBy: leaderName,
+      lastModifiedAt: updatedDateIso,
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(reqRef, updateData);
+
+    // 1. Record Audit Log
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_UPDATED_MEETING',
+        action: 'UPDATED_MEETING',
+        category: 'LEADER_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        role: leaderRole || 'Leader',
+        details: `Conference rescheduled to ${confirmedDate} at ${confirmedTime} at ${meetingLocation}.${confirmationNote ? ` Note: "${confirmationNote}"` : ''}`,
+        scoutName,
+        confirmedDate,
+        confirmedTime,
+        meetingLocation,
+        timestamp: serverTimestamp(),
+        createdAt: updatedDateIso
+      });
+    } catch (auditErr) {
+      console.warn("Audit log fallback for meeting update:", auditErr);
+    }
+
+    // 2. Send Parent In-App Notification
+    if (parentUid || parentEmail) {
+      try {
+        await dispatchParentNotification({
+          recipientUid: parentUid,
+          parentEmail: parentEmail,
+          title: `📅 Conference Schedule Updated: ${scoutName}`,
+          message: `Leader ${leaderName} (${leaderRole}) updated the meeting details for ${scoutName}.\n📅 New Date: ${confirmedDate} @ ${confirmedTime}\n📍 Venue: ${meetingLocation}${confirmationNote ? `\n📝 Leader Note: "${confirmationNote}"` : ''}`,
+          type: 'event',
+          priority: 'urgent',
+          actionUrl: '/#parent-requests',
+          metadata: {
+            requestId,
+            confirmedDate,
+            confirmedTime,
+            meetingLocation,
+            leaderName
+          }
+        });
+      } catch (notifErr) {
+        console.warn("Parent meeting update notification warning:", notifErr);
+      }
+    }
+
+    // 3. Email Dispatch via /mail
+    if (parentEmail) {
+      try {
+        await addDoc(collection(db, 'mail'), {
+          to: [parentEmail],
+          message: {
+            subject: `[Dhulfiqār Scouts] 📅 Conference Updated: ${meetingTopic} for ${scoutName}`,
+            text: `Assalāmu ʿAlaykum,\n\nLeader ${leaderName} (${leaderRole}) has updated the conference schedule for ${scoutName}.\n\n📅 Date: ${confirmedDate}\n⏰ Time: ${confirmedTime}\n📍 Location: ${meetingLocation}\n📌 Topic: ${meetingTopic}\n${confirmationNote ? `📝 Note: ${confirmationNote}\n` : ''}\nPlease review and confirm in your Parent Portal: https://taliat-app.web.app/#parent-requests`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                <div style="background: linear-gradient(135deg, #0284c7, #065f46); padding: 16px; border-radius: 8px; color: #ffffff; text-align: center;">
+                  <h2 style="margin: 0; font-size: 20px;">Dhulfiqār Troop 313</h2>
+                  <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Conference Schedule Updated</p>
+                </div>
+                <div style="padding: 20px 0;">
+                  <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+                    <strong style="color: #0369a1; font-size: 15px; display: block;">📅 Meeting Details Modified</strong>
+                    <span style="color: #0284c7; font-size: 13px;">Leader ${leaderName} has updated the date, time, or venue.</span>
+                  </div>
+                  <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; font-size: 14px; color: #334155; line-height: 1.8;">
+                    <p style="margin: 4px 0;"><strong>Scout:</strong> ${scoutName}</p>
+                    <p style="margin: 4px 0;"><strong>Topic:</strong> ${meetingTopic}</p>
+                    <p style="margin: 4px 0;"><strong>📅 Date:</strong> ${confirmedDate}</p>
+                    <p style="margin: 4px 0;"><strong>⏰ Time:</strong> ${confirmedTime}</p>
+                    <p style="margin: 4px 0;"><strong>📍 Venue:</strong> ${meetingLocation}</p>
+                    ${confirmationNote ? `<p style="margin: 8px 0 4px 0; border-top: 1px solid #e2e8f0; padding-top: 8px;"><strong>Leader Note:</strong> <em>"${confirmationNote}"</em></p>` : ''}
+                  </div>
+                  <div style="margin: 25px 0; text-align: center;">
+                    <a href="https://taliat-app.web.app/#parent-requests" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+                      View in Parent Portal &rarr;
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `
+          }
+        });
+      } catch (mailErr) {
+        console.warn("Mail queue error for meeting update:", mailErr);
+      }
+    }
+
+    return { success: true, updatedDateIso };
+  } catch (err) {
+    console.error("Error updating leader meeting:", err);
+    throw err;
+  }
+}
+
+/**
+ * Leader cancels a confirmed or scheduled meeting
+ */
+export async function cancelMeetingByLeader({
+  requestId,
+  leaderUid,
+  leaderName = 'Troop Leader',
+  leaderRole = 'Scoutmaster',
+  cancelReason = '',
+  parentUid = null,
+  parentEmail = null,
+  scoutName = 'your scout',
+  meetingTopic = 'Scout Conference'
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const cancelledAt = new Date().toISOString();
+
+    const updateData = {
+      status: 'cancelled_by_leader',
+      cancelledBy: leaderName,
+      cancelledByUid: leaderUid || null,
+      cancelledByRole: leaderRole || 'Leader',
+      cancelledAt,
+      cancelReason: cancelReason || 'Meeting cancelled by troop leadership.',
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(reqRef, updateData);
+
+    // 1. Audit Log
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_CANCELLED_MEETING',
+        action: 'CANCELLED_MEETING',
+        category: 'LEADER_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        role: leaderRole || 'Leader',
+        details: `Conference cancelled by ${leaderName}.${cancelReason ? ` Reason: "${cancelReason}"` : ''}`,
+        scoutName,
+        cancelReason: cancelReason || '',
+        timestamp: serverTimestamp(),
+        createdAt: cancelledAt
+      });
+    } catch (auditErr) {
+      console.warn("Audit log fallback for leader cancellation:", auditErr);
+    }
+
+    // 2. Parent Notification
+    if (parentUid || parentEmail) {
+      try {
+        await dispatchParentNotification({
+          recipientUid: parentUid,
+          parentEmail: parentEmail,
+          title: `❌ Conference Cancelled: ${scoutName}`,
+          message: `Leader ${leaderName} (${leaderRole}) has cancelled the scheduled conference regarding "${meetingTopic}".\n📝 Reason: "${cancelReason || 'Cancelled by leadership'}"`,
+          type: 'general',
+          priority: 'urgent',
+          actionUrl: '/#parent-requests'
+        });
+      } catch (notifErr) {
+        console.warn("Parent cancel notification error:", notifErr);
+      }
+    }
+
+    return { success: true, cancelledAt };
+  } catch (err) {
+    console.error("Error cancelling meeting by leader:", err);
+    throw err;
+  }
+}
+
+/**
+ * Leader marks a conference as completed & resolved with final summary notes
+ */
+export async function completeConference({
+  requestId,
+  leaderUid,
+  leaderName = 'Troop Leader',
+  leaderRole = 'Scoutmaster',
+  completionNotes = '',
+  scoutId = null,
+  scoutName = 'Scout',
+  parentUid = null,
+  parentEmail = null
+}) {
+  try {
+    if (!requestId) throw new Error('Request ID is required.');
+    const reqRef = doc(db, 'parent_requests', requestId);
+    const completedAt = new Date().toISOString();
+
+    const updateData = {
+      status: 'resolved',
+      resolvedBy: leaderName,
+      resolvedByUid: leaderUid || null,
+      resolvedByRole: leaderRole || 'Leader',
+      resolvedAt: completedAt,
+      resolutionNote: completionNotes || 'Conference completed and documented by leadership.',
+      completedAt,
+      completionNotes: completionNotes || '',
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(reqRef, updateData);
+
+    // 1. Append notes to scout profile if scoutId exists
+    if (scoutId) {
+      try {
+        const scoutNotesRef = doc(db, 'scout_notes', scoutId);
+        const sSnap = await getDoc(scoutNotesRef);
+        const existingNotes = sSnap.exists() ? (sSnap.data().notes || []) : [];
+        const completionLog = {
+          id: `conf_${Date.now()}`,
+          text: `🤝 Completed Parent Conference with leadership (${leaderName})\n📝 Summary & Action Items: "${completionNotes || 'Conference conducted successfully.'}"`,
+          date: new Date().toISOString().split('T')[0],
+          authorId: leaderUid || null,
+          authorName: leaderName,
+          authorPosition: leaderRole || 'Leader',
+          type: 'parent_conference_completed',
+          createdAt: completedAt
+        };
+
+        await setDoc(scoutNotesRef, {
+          notes: [...existingNotes, completionLog],
+          updatedAt: serverTimestamp(),
+          updatedBy: leaderUid || 'leader'
+        }, { merge: true });
+      } catch (noteErr) {
+        console.warn("Scout note append fallback:", noteErr);
+      }
+    }
+
+    // 2. Audit Log
+    try {
+      await addDoc(collection(db, 'audit_logs'), {
+        actionType: 'LEADER_COMPLETED_CONFERENCE',
+        action: 'COMPLETED_CONFERENCE',
+        category: 'LEADER_PORTAL',
+        target: `Parent Conference: ${scoutName}`,
+        requestId,
+        performedBy: leaderName,
+        performedByUid: leaderUid || null,
+        role: leaderRole || 'Leader',
+        details: `Conference completed and marked resolved by ${leaderName}.${completionNotes ? ` Notes: "${completionNotes}"` : ''}`,
+        scoutName,
+        timestamp: serverTimestamp(),
+        createdAt: completedAt
+      });
+    } catch (auditErr) {
+      console.warn("Audit log fallback for completion:", auditErr);
+    }
+
+    // 3. Parent notification
+    if (parentUid || parentEmail) {
+      try {
+        await dispatchParentNotification({
+          recipientUid: parentUid,
+          parentEmail: parentEmail,
+          title: `✓ Conference Completed: ${scoutName}`,
+          message: `Thank you for meeting with Leader ${leaderName}. Your conference has been marked completed in the troop registry.${completionNotes ? `\n📝 Summary: "${completionNotes}"` : ''}`,
+          type: 'general',
+          priority: 'normal',
+          actionUrl: '/#parent-tasks'
+        });
+      } catch (notifErr) {
+        console.warn("Parent completion notification fallback:", notifErr);
+      }
+    }
+
+    return { success: true, completedAt };
+  } catch (err) {
+    console.error("Error completing conference:", err);
+    throw err;
+  }
+}
+
 
