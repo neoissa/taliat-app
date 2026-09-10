@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 import {
   BookOpen,
   Calendar,
@@ -12,6 +13,9 @@ import {
   Filter,
   Printer,
   FileText,
+  FileSpreadsheet,
+  Download,
+  ChevronDown,
   User,
   Users,
   CheckCircle2,
@@ -27,7 +31,7 @@ import {
   Check
 } from 'lucide-react';
 
-const CATEGORIES = [
+const SCOUT_CATEGORIES = [
   { id: 'General Note', label: '📝 General Note', color: 'bg-slate-700 text-slate-200' },
   { id: 'Campout & Outdoors', label: '⛺ Campout & Outdoors', color: 'bg-emerald-900/60 text-emerald-300 border-emerald-500/40' },
   { id: 'Troop Meeting & Halqa', label: '🕌 Meeting & Halqa', color: 'bg-teal-900/60 text-teal-300 border-teal-500/40' },
@@ -38,15 +42,27 @@ const CATEGORIES = [
   { id: 'Spiritual / Dua Reflection', label: '🤲 Spiritual / Du\'a Reflection', color: 'bg-purple-900/60 text-purple-300 border-purple-500/40' }
 ];
 
+const LEADER_CATEGORIES = [
+  { id: 'General Leadership Note', label: '📝 General Leadership Note', color: 'bg-slate-700 text-slate-200' },
+  { id: 'Patrol & Troop Meeting Log', label: '🛡️ Patrol & Troop Meeting Log', color: 'bg-indigo-900/60 text-indigo-300 border-indigo-500/40' },
+  { id: 'Campout & Outdoors Log', label: '⛺ Campout & Outdoors Log', color: 'bg-emerald-900/60 text-emerald-300 border-emerald-500/40' },
+  { id: 'Halqa & Islamic Lesson Log', label: '🕌 Halqa & Lesson Log', color: 'bg-teal-900/60 text-teal-300 border-teal-500/40' },
+  { id: 'Service Project Log', label: '❤️ Service Project Log', color: 'bg-rose-900/60 text-rose-300 border-rose-500/40' },
+  { id: 'Advancement & Scout Review', label: '⚜️ Advancement & Review Note', color: 'bg-amber-900/60 text-amber-300 border-amber-500/40' },
+  { id: 'Merit Badge Counseling', label: '🏅 Merit Badge Counseling', color: 'bg-sky-900/60 text-sky-300 border-sky-500/40' },
+  { id: 'Spiritual / Dua Reflection', label: '🤲 Spiritual / Du\'a Reflection', color: 'bg-purple-900/60 text-purple-300 border-purple-500/40' }
+];
+
 export default function ScoutJournalNotes({ currentUser, customScoutId }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster';
   const isLeaderOrOwner = isOwner || isLeader;
 
-  // Selected Scout State
-  const [selectedScoutId, setSelectedScoutId] = useState(customScoutId || currentUser?.uid);
-  const [scoutsList, setScoutsList] = useState([]);
-  const [scoutProfile, setScoutProfile] = useState(null);
+  const categories = isLeaderOrOwner ? LEADER_CATEGORIES : SCOUT_CATEGORIES;
+  const defaultCategory = isLeaderOrOwner ? 'General Leadership Note' : 'General Note';
+
+  // Target User/Owner of this journal (the current user themselves by default)
+  const targetUserId = customScoutId || currentUser?.uid;
 
   // Journal Notes State
   const [notes, setNotes] = useState([]);
@@ -56,7 +72,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteDate, setNoteDate] = useState(new Date().toISOString().split('T')[0]);
-  const [noteCategory, setNoteCategory] = useState('General Note');
+  const [noteCategory, setNoteCategory] = useState(defaultCategory);
   const [noteText, setNoteText] = useState('');
   const [noteMood, setNoteMood] = useState('⭐');
   const [savingNote, setSavingNote] = useState(false);
@@ -78,53 +94,15 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
   // Print Mode State
   const [showPrintView, setShowPrintView] = useState(false);
 
-  // 1. Fetch Scouts List for Leaders
+  // Real-Time Journal Notes Listener (bound directly to current user's journal)
   useEffect(() => {
-    if (!isLeaderOrOwner) return;
-    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
-    const unsub = onSnapshot(q, (snap) => {
-      let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && 
-        (currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
-      const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster;
-      const leaderPatrolId = currentUser?.groupId || currentUser?.patrolId;
-
-      if (!isExecutive && leaderPatrolId) {
-        list = list.filter(s => 
-          s.groupId === leaderPatrolId || 
-          s.patrolId === leaderPatrolId || 
-          s.leaderId === currentUser.uid || 
-          (currentUser?.patrolName && (s.patrolName === currentUser.patrolName || s.patrol === currentUser.patrolName))
-        );
-      }
-      setScoutsList(list);
-      if (list.length > 0 && !selectedScoutId) {
-        setSelectedScoutId(list[0].uid);
-      }
-    });
-    return () => unsub();
-  }, [isLeaderOrOwner, isOwner, currentUser?.groupId, currentUser?.patrolId, currentUser?.uid, currentUser?.leaderPosition, currentUser?.role]);
-
-  // 2. Fetch Selected Scout Profile
-  useEffect(() => {
-    if (!selectedScoutId) return;
-    const unsub = onSnapshot(doc(db, 'users', selectedScoutId), (snap) => {
-      if (snap.exists()) {
-        setScoutProfile(snap.data());
-      }
-    });
-    return () => unsub();
-  }, [selectedScoutId]);
-
-  // 3. Real-Time Journal Notes Listener
-  useEffect(() => {
-    if (!selectedScoutId) {
+    if (!targetUserId) {
       setNotes([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const docRef = doc(db, 'user_progress', selectedScoutId, 'journal', 'entries');
+    const docRef = doc(db, 'user_progress', targetUserId, 'journal', 'entries');
     const unsub = onSnapshot(docRef, (snap) => {
       if (snap.exists() && Array.isArray(snap.data().notes)) {
         const sorted = [...snap.data().notes].sort((a, b) => {
@@ -142,12 +120,12 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
       setLoading(false);
     });
     return () => unsub();
-  }, [selectedScoutId]);
+  }, [targetUserId]);
 
   // 4. Save New Note
   const handleCreateNote = async (e) => {
     e.preventDefault();
-    if (!selectedScoutId || !noteText.trim()) return;
+    if (!targetUserId || !noteText.trim()) return;
     setSavingNote(true);
     setFormMsg('');
 
@@ -155,20 +133,20 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
       id: Date.now().toString(),
       title: noteTitle.trim() || noteCategory,
       date: noteDate || new Date().toISOString().split('T')[0],
-      category: noteCategory || 'General Note',
+      category: noteCategory || defaultCategory,
       text: noteText.trim(),
       mood: noteMood || '⭐',
       pinned: false,
       authorId: currentUser?.uid || '',
-      authorName: currentUser?.fullName || currentUser?.username || 'Scout',
-      authorRole: currentUser?.role || 'scout',
+      authorName: currentUser?.fullName || currentUser?.username || (isLeaderOrOwner ? 'Leader' : 'Scout'),
+      authorRole: currentUser?.role || (isLeaderOrOwner ? 'leader' : 'scout'),
       createdAt: new Date().toISOString()
     };
 
     const updated = [newEntry, ...notes];
 
     try {
-      const docRef = doc(db, 'user_progress', selectedScoutId, 'journal', 'entries');
+      const docRef = doc(db, 'user_progress', targetUserId, 'journal', 'entries');
       await setDoc(docRef, { notes: updated }, { merge: true });
       setNoteTitle('');
       setNoteText('');
@@ -186,7 +164,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
   // 5. Save Inline Edit
   const handleSaveEdit = async (noteId) => {
-    if (!selectedScoutId || !noteId || !editText.trim()) return;
+    if (!targetUserId || !noteId || !editText.trim()) return;
     const updated = notes.map(n => {
       if (n.id === noteId) {
         return {
@@ -204,7 +182,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
     });
 
     try {
-      const docRef = doc(db, 'user_progress', selectedScoutId, 'journal', 'entries');
+      const docRef = doc(db, 'user_progress', targetUserId, 'journal', 'entries');
       await setDoc(docRef, { notes: updated }, { merge: true });
       setEditingNoteId(null);
     } catch (err) {
@@ -214,13 +192,13 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
   // 6. Toggle Pin
   const handleTogglePin = async (noteId) => {
-    if (!selectedScoutId || !noteId) return;
+    if (!targetUserId || !noteId) return;
     const updated = notes.map(n => {
       if (n.id === noteId) return { ...n, pinned: !n.pinned };
       return n;
     });
     try {
-      const docRef = doc(db, 'user_progress', selectedScoutId, 'journal', 'entries');
+      const docRef = doc(db, 'user_progress', targetUserId, 'journal', 'entries');
       await setDoc(docRef, { notes: updated }, { merge: true });
     } catch (err) {
       console.error("Failed to toggle pin:", err);
@@ -229,11 +207,11 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
   // 7. Delete Note
   const handleDeleteNote = async (noteId) => {
-    if (!selectedScoutId || !noteId) return;
+    if (!targetUserId || !noteId) return;
     if (!window.confirm("Are you sure you want to permanently delete this journal note?")) return;
     const updated = notes.filter(n => n.id !== noteId);
     try {
-      const docRef = doc(db, 'user_progress', selectedScoutId, 'journal', 'entries');
+      const docRef = doc(db, 'user_progress', targetUserId, 'journal', 'entries');
       await setDoc(docRef, { notes: updated }, { merge: true });
     } catch (err) {
       console.error("Failed to delete note:", err);
@@ -244,7 +222,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
     setEditingNoteId(note.id);
     setEditTitle(note.title || note.category || '');
     setEditDate(note.date || '');
-    setEditCategory(note.category || 'General Note');
+    setEditCategory(note.category || defaultCategory);
     setEditText(note.text || '');
     setEditMood(note.mood || '⭐');
   };
@@ -277,13 +255,169 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
     return true;
   });
 
-  const scoutName = scoutProfile?.fullName || scoutProfile?.username || currentUser?.fullName || 'Scout';
-  const scoutRank = scoutProfile?.rank || 'Scout';
-  const scoutPatrol = scoutProfile?.patrolName || 'Taliʿa Patrol';
+  // Export Menu State
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const userName = currentUser?.fullName || currentUser?.username || (isLeaderOrOwner ? 'Leader' : 'Scout');
+  const userRank = currentUser?.leaderPosition || currentUser?.rank || (isLeaderOrOwner ? 'Troop Leader' : 'Scout');
+  const userPatrol = currentUser?.patrolName || (isLeaderOrOwner ? 'Leadership' : 'Taliʿa Patrol');
+
+  // Export to Excel (.xlsx)
+  const handleExportExcel = () => {
+    if (notes.length === 0) {
+      alert("No notes available to export.");
+      return;
+    }
+
+    const dataToExport = filteredNotes.map(n => ({
+      "Date": n.date || '',
+      "Title / Topic": n.title || n.category || '',
+      "Category": n.category || '',
+      "Mood / Tag": n.mood || '',
+      "Content / Notes": n.text || '',
+      "Author": n.authorName || (isLeaderOrOwner ? 'Leader' : 'Scout'),
+      "Role": n.authorRole || (isLeaderOrOwner ? 'leader' : 'scout'),
+      "Pinned": n.pinned ? 'Yes' : 'No',
+      "Last Updated": n.updatedAt ? new Date(n.updatedAt).toLocaleDateString() : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    ws['!cols'] = [
+      { wch: 12 }, // Date
+      { wch: 30 }, // Title
+      { wch: 25 }, // Category
+      { wch: 10 }, // Mood
+      { wch: 60 }, // Content
+      { wch: 18 }, // Author
+      { wch: 12 }, // Role
+      { wch: 8 },  // Pinned
+      { wch: 14 }  // Last Updated
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const sheetTitle = isLeaderOrOwner ? 'Leader Notes' : 'Scout Journal';
+    XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
+
+    const sanitizedName = (userName || 'Journal').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `${sanitizedName}_Journal_Notes_${dateStr}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+    setShowExportMenu(false);
+  };
+
+  // Export to Word Document (.doc)
+  const handleExportDoc = () => {
+    if (notes.length === 0) {
+      alert("No notes available to export.");
+      return;
+    }
+
+    const sanitizedName = (userName || 'Journal').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `${sanitizedName}_Journal_Notes_${dateStr}.doc`;
+
+    const notesHtml = filteredNotes.map(n => `
+      <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 16px; background-color: #f8fafc; font-family: Calibri, Arial, sans-serif;">
+        <table style="width: 100%; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px;">
+          <tr>
+            <td style="font-size: 13pt; font-weight: bold; color: #0f172a;">
+              ${n.mood || '⭐'} ${n.title || n.category || 'Journal Note'}
+            </td>
+            <td style="text-align: right; font-size: 10pt; color: #475569; font-weight: bold;">
+              ${n.date || ''}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="font-size: 9.5pt; color: #059669; font-weight: bold; padding-top: 2px;">
+              Category: ${n.category || ''} ${n.pinned ? ' • [PINNED]' : ''}
+            </td>
+          </tr>
+        </table>
+        <p style="font-size: 11pt; color: #1e293b; line-height: 1.5; white-space: pre-wrap; margin: 8px 0;">
+          ${(n.text || '').replace(/\n/g, '<br/>')}
+        </p>
+        <div style="font-size: 8.5pt; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 4px; text-align: right;">
+          Author: ${n.authorName || 'User'} (${n.authorRole || 'leader'}) ${n.updatedAt ? ` • Updated: ${new Date(n.updatedAt).toLocaleDateString()}` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    const docContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${sanitizedName} Journal Notes</title>
+        <style>
+          @page {
+            margin: 1.0in;
+          }
+          body {
+            font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+            color: #0f172a;
+          }
+          h1 {
+            color: #065f46;
+            font-size: 20pt;
+            margin-bottom: 2px;
+          }
+          h2 {
+            color: #334155;
+            font-size: 13pt;
+            font-weight: normal;
+            margin-top: 0;
+            margin-bottom: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <div style="border-bottom: 2px solid #065f46; padding-bottom: 10px; margin-bottom: 20px;">
+          <h1>Dhulfiqār Scouts BSA</h1>
+          <h2>${isLeaderOrOwner ? 'Official Leader Journal & Meeting Notes Record' : 'Official Scout Journal & Dated Notes Record'}</h2>
+          <table style="width: 100%; font-size: 10pt; color: #475569;">
+            <tr>
+              <td><strong>${isLeaderOrOwner ? 'Leader:' : 'Scout:'}</strong> ${userName}</td>
+              <td style="text-align: right;"><strong>Date Exported:</strong> ${new Date().toLocaleDateString()}</td>
+            </tr>
+            <tr>
+              <td><strong>Role / Rank:</strong> ${userRank} &bull; <strong>Patrol:</strong> ${userPatrol}</td>
+              <td style="text-align: right;"><strong>Total Entries:</strong> ${filteredNotes.length}</td>
+            </tr>
+          </table>
+        </div>
+        ${notesHtml}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', docContent], {
+      type: 'application/msword'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
 
   const handlePrint = () => {
     const originalTitle = document.title;
-    const sanitizedName = (scoutName || 'Scout').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+    const sanitizedName = (userName || 'User').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
     const dateStr = new Date().toISOString().split('T')[0];
     
     document.title = `${sanitizedName}_Journal_Notes_${dateStr}`;
@@ -311,23 +445,83 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-black text-white tracking-tight">
-                  Scout Journal & Dated Notes
+                  {isLeaderOrOwner ? 'Leader Journal & Dated Notes' : 'My Scout Journal & Dated Notes'}
                 </h2>
                 <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full font-mono font-bold">
                   {notes.length} Total Entr{notes.length === 1 ? 'y' : 'ies'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Log campout reflections, meeting notes, skill takeaways, and leadership goals.
+                {isLeaderOrOwner 
+                  ? 'Log meeting minutes, patrol observations, campout logs, halqa takeaways, and leadership notes.' 
+                  : 'Log campout reflections, meeting notes, skill takeaways, and personal goals.'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Export Hub Dropdown */}
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <Download size={14} className="text-emerald-400" />
+                <span>Export</span>
+                <ChevronDown size={13} className={`text-slate-400 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-2xl p-1.5 shadow-2xl z-50 space-y-1 animate-fadeIn">
+                  <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                    Export Format
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-200 hover:text-emerald-300 hover:bg-slate-800/80 rounded-xl transition text-left cursor-pointer"
+                  >
+                    <FileSpreadsheet size={15} className="text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div>Export to Excel</div>
+                      <div className="text-[10px] font-normal text-slate-400">Microsoft Excel (.xlsx)</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportDoc}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-200 hover:text-sky-300 hover:bg-slate-800/80 rounded-xl transition text-left cursor-pointer"
+                  >
+                    <FileText size={15} className="text-sky-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div>Export to Word</div>
+                      <div className="text-[10px] font-normal text-slate-400">Microsoft Word (.doc)</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      handlePrint();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-200 hover:text-amber-300 hover:bg-slate-800/80 rounded-xl transition text-left cursor-pointer"
+                  >
+                    <Printer size={15} className="text-amber-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div>Export to PDF</div>
+                      <div className="text-[10px] font-normal text-slate-400">Printable PDF Report</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handlePrint}
-              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Print / Save PDF"
             >
               <Printer size={14} className="text-amber-400" />
               <span>Print PDF</span>
@@ -339,30 +533,10 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
             >
               <Plus size={15} />
-              <span>{showAddForm ? 'Close Form' : 'New Journal Note'}</span>
+              <span>{showAddForm ? 'Close Form' : (isLeaderOrOwner ? 'New Leader Note' : 'New Journal Note')}</span>
             </button>
           </div>
         </div>
-
-        {/* Leader Scout Selector Dropdown */}
-        {isLeaderOrOwner && scoutsList.length > 0 && (
-          <div className="pt-3 border-t border-slate-750 flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-              <Users size={14} className="text-emerald-400" /> Viewing Scout:
-            </span>
-            <select
-              value={selectedScoutId}
-              onChange={(e) => setSelectedScoutId(e.target.value)}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-bold cursor-pointer max-w-xs focus:outline-none focus:border-emerald-500"
-            >
-              {scoutsList.map(s => (
-                <option key={s.uid} value={s.uid}>
-                  {s.fullName || s.username} ({s.rank || 'Scout'} • @{s.username})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* ── 2. NEW ENTRY CREATION MODAL / COLLAPSIBLE FORM ── */}
@@ -371,7 +545,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
           <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
             <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
               <Sparkles size={15} className="text-emerald-400" />
-              <span>Log New Scout Journal Entry</span>
+              <span>{isLeaderOrOwner ? 'Log New Leadership Note' : 'Log New Scout Journal Entry'}</span>
             </h3>
             <button
               type="button"
@@ -385,11 +559,11 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Note Title / Activity
+                Note Title / Topic
               </label>
               <input
                 type="text"
-                placeholder="e.g. Pine Bush Winter Campout"
+                placeholder={isLeaderOrOwner ? "e.g. PLC Meeting Minutes / Camp Logistics" : "e.g. Pine Bush Winter Campout"}
                 value={noteTitle}
                 onChange={(e) => setNoteTitle(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-emerald-500"
@@ -418,7 +592,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
                 onChange={(e) => setNoteCategory(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
-                {CATEGORIES.map(c => (
+                {categories.map(c => (
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
@@ -427,9 +601,11 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
           {/* Mood / Rating Picker */}
           <div className="flex items-center gap-2 pt-1 text-xs">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Scout Spirit Tag:</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">
+              {isLeaderOrOwner ? 'Status / Mood Tag:' : 'Scout Spirit Tag:'}
+            </span>
             <div className="flex gap-1.5">
-              {['⭐', '🏕️', '🔥', '🏆', '💡', '🤝', '🤲', '🌲'].map(emoji => (
+              {['⭐', '🛡️', '🏕️', '🔥', '🏆', '💡', '🤝', '🤲'].map(emoji => (
                 <button
                   type="button"
                   key={emoji}
@@ -448,14 +624,14 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Your Reflection & Detailed Notes
+              {isLeaderOrOwner ? 'Meeting Minutes, Observations & Action Items' : 'Your Reflection & Detailed Notes'}
             </label>
             <textarea
               required
               rows={4}
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              placeholder="What happened? What skills did you practice? What did you learn or plan to accomplish next?"
+              placeholder={isLeaderOrOwner ? "Meeting notes, scout performance observations, event takeaways, or future action items..." : "What happened? What skills did you practice? What did you learn or plan to accomplish next?"}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 leading-relaxed"
             />
           </div>
@@ -474,33 +650,33 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
               className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-5 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center gap-1.5"
             >
               <Check size={14} />
-              <span>{savingNote ? 'Saving...' : 'Post to Journal'}</span>
+              <span>{savingNote ? 'Saving...' : 'Save Note'}</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* ── 3. SEARCH & FILTER TOOLBAR ── */}
-      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs print-hide">
-        <div className="relative w-full md:w-72">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* ── 3. SEARCH & CATEGORY FILTER CONTROLS ── */}
+      <div className="bg-slate-850 border border-slate-700 rounded-3xl p-4 shadow-xl flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between print-hide">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search notes by keyword..."
+            placeholder="Search notes by keyword, title, or author..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-4 py-2 text-white placeholder:text-slate-500 text-xs focus:outline-none focus:border-emerald-500"
+            className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <select
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
             className="bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-white text-xs cursor-pointer focus:outline-none focus:border-emerald-500"
           >
             <option value="all">All Categories</option>
-            {CATEGORIES.map(c => (
+            {categories.map(c => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
           </select>
@@ -522,15 +698,17 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
             <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <span>Loading journal notes...</span>
+            <span>Loading notes...</span>
           </div>
         ) : filteredNotes.length === 0 ? (
           <div className="bg-slate-800/60 border border-slate-750 rounded-3xl p-12 text-center space-y-3">
             <BookOpen size={40} className="mx-auto text-slate-600" />
-            <h3 className="text-base font-bold text-white">No Journal Notes Found</h3>
+            <h3 className="text-base font-bold text-white">No Notes Found</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
               {notes.length === 0
-                ? 'Start recording campouts, halqas, merit badge work, and reflections in your personal scout journal.'
+                ? (isLeaderOrOwner
+                    ? 'Start recording meeting minutes, patrol observations, campout notes, and leadership action items in your leadership log.'
+                    : 'Start recording campouts, halqas, merit badge work, and reflections in your personal scout journal.')
                 : 'No notes match your current search or category filter.'}
             </p>
             {notes.length === 0 && (
@@ -547,7 +725,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
         ) : (
           filteredNotes.map((note) => {
             const isEditing = editingNoteId === note.id;
-            const categoryObj = CATEGORIES.find(c => c.id === note.category) || CATEGORIES[0];
+            const categoryObj = categories.find(c => c.id === note.category) || categories[0] || { label: note.category, color: 'bg-slate-700 text-slate-200' };
 
             if (isEditing) {
               return (
@@ -570,7 +748,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
                       onChange={(e) => setEditCategory(e.target.value)}
                       className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
                     >
-                      {CATEGORIES.map(c => (
+                      {categories.map(c => (
                         <option key={c.id} value={c.id}>{c.label}</option>
                       ))}
                     </select>
@@ -668,7 +846,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
 
                 {/* Note Footer Details */}
                 <div className="flex justify-between items-center text-[10px] text-slate-500 pt-2 border-t border-slate-750/60">
-                  <span>Author: <strong className="text-slate-400">{note.authorName || 'Scout'}</strong> ({note.authorRole || 'scout'})</span>
+                  <span>Author: <strong className="text-slate-400">{note.authorName || 'User'}</strong> ({note.authorRole || 'leader'})</span>
                   {note.updatedAt && (
                     <span className="italic">Updated on {new Date(note.updatedAt).toLocaleDateString()}</span>
                   )}
@@ -684,11 +862,13 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
         <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-black uppercase">Dhulfiqār Scouts BSA</h1>
-            <h2 className="text-sm font-bold text-slate-700">Official Scout Journal & Dated Notes Record</h2>
+            <h2 className="text-sm font-bold text-slate-700">
+              {isLeaderOrOwner ? 'Official Leader Journal & Meeting Notes Record' : 'Official Scout Journal & Dated Notes Record'}
+            </h2>
           </div>
           <div className="text-right text-xs font-mono">
-            <p><strong>Scout:</strong> {scoutName}</p>
-            <p><strong>Rank:</strong> {scoutRank} &bull; <strong>Patrol:</strong> {scoutPatrol}</p>
+            <p><strong>{isLeaderOrOwner ? 'Leader:' : 'Scout:'}</strong> {userName}</p>
+            <p><strong>Position/Rank:</strong> {userRank} &bull; <strong>Patrol:</strong> {userPatrol}</p>
             <p><strong>Date Printed:</strong> {new Date().toLocaleDateString()}</p>
           </div>
         </div>
@@ -706,7 +886,7 @@ export default function ScoutJournalNotes({ currentUser, customScoutId }) {
                 {note.text}
               </p>
               <div className="text-[10px] text-slate-500 text-right">
-                Logged by {note.authorName || 'Scout'}
+                Logged by {note.authorName || 'User'}
               </div>
             </div>
           ))}
