@@ -372,7 +372,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {/* ── Quick Scout Stats Grid ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           {/* Active Rank */}
           <div className="bg-slate-900/70 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">

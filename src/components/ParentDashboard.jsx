@@ -1163,32 +1163,32 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 w-full md:w-auto shrink-0">
           <button
             type="button"
             onClick={() => setShowAbsenceModal(true)}
-            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shrink-0"
           >
-            <AlertCircle size={14} />
-            <span>Notify Absence</span>
+            <AlertCircle size={14} className="shrink-0" />
+            <span className="truncate">Notify Absence</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowMeetingModal(true)}
-            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shrink-0"
           >
-            <Users size={14} />
-            <span>Request Conference</span>
+            <Users size={14} className="shrink-0" />
+            <span className="truncate">Request Conference</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('family')}
-            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
           >
-            <User size={14} />
-            <span>Household Profile</span>
+            <User size={14} className="shrink-0" />
+            <span className="truncate">Household Profile</span>
           </button>
         </div>
       </div>

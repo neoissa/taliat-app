@@ -404,15 +404,15 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2.5 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full lg:w-auto shrink-0">
             {(isOwner || isExecutive) && (
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('admin')}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
               >
-                <Crown size={15} />
-                <span>⚡ Executive Admin Hub</span>
+                <Crown size={14} className="shrink-0" />
+                <span className="truncate">Admin Hub</span>
               </button>
             )}
 
@@ -423,71 +423,71 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   setSelectedPendingScoutId(null);
                   setShowPendingModal(true);
                 }}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
               >
-                <Clock size={15} className="animate-pulse" />
-                <span>⏳ Review Submissions ({totalPendingApprovals})</span>
+                <Clock size={14} className="animate-pulse shrink-0" />
+                <span className="truncate">Review ({totalPendingApprovals})</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setShowScheduleMeetingModal(true)}
-              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-teal-950/40"
             >
-              <Users size={15} />
-              <span>🤝 Schedule Parent Meeting</span>
+              <Users size={14} className="shrink-0" />
+              <span className="truncate">Schedule Meeting</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('broadcasts')}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-950/40 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/40"
             >
-              <Megaphone size={15} />
-              <span>📢 Broadcast Update</span>
+              <Megaphone size={14} className="shrink-0" />
+              <span className="truncate">Broadcast</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <Calendar size={15} className="text-teal-400" />
-              <span>📅 Troop Calendar</span>
+              <Calendar size={14} className="text-teal-400 shrink-0" />
+              <span className="truncate">Calendar</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('attendance')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <CheckCircle2 size={15} className="text-emerald-400" />
-              <span>📋 Patrol Attendance</span>
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+              <span className="truncate">Attendance</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('reports')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
             >
-              <Printer size={15} />
-              <span>📈 Reports Center</span>
+              <Printer size={14} className="shrink-0" />
+              <span className="truncate">Reports</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('roster')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <Users size={15} />
-              <span>👥 Patrol Roster</span>
+              <Users size={14} className="text-sky-400 shrink-0" />
+              <span className="truncate">Roster</span>
             </button>
           </div>
         </div>
 
-        {/* ── Quick KPI Stat Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
+        {/* ── Quick Command Metrics Grid ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           <div 
             onClick={() => {
               if (totalPendingApprovals > 0) {

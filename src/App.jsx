@@ -483,6 +483,44 @@ export default function App() {
 
   const navItems = getNavItems();
 
+  // ── DEFINE MOBILE BOTTOM NAVIGATION ITEMS ──
+  const getMobileBottomNavItems = () => {
+    if (isParent) {
+      return [
+        { id: 'home', label: 'Overview', icon: '🏠' },
+        { id: 'events', label: 'Calendar', icon: '📅' },
+        { id: 'feed', label: 'Alerts', icon: '🔔', badge: unreadAlertsCount },
+        { id: 'road-to-eagle', label: 'Eagle', icon: '🦅' },
+        { id: '__more__', label: 'Menu', icon: '☰' }
+      ];
+    } else if (isScout) {
+      return [
+        { id: 'home', label: 'Home', icon: '🏠' },
+        { id: 'advancement', label: '7 Ranks', icon: '⚜️' },
+        { id: 'events', label: 'Calendar', icon: '📅' },
+        { id: 'chat', label: 'Chat', icon: '💬', badge: unreadChatCount },
+        { id: '__more__', label: 'Menu', icon: '☰' }
+      ];
+    } else {
+      // Leader / Owner
+      return [
+        { id: 'home', label: 'Home', icon: '🏠' },
+        { id: 'roster', label: 'Roster', icon: '👥' },
+        { id: 'attendance', label: 'Attendance', icon: '📋' },
+        { id: 'events', label: 'Calendar', icon: '📅' },
+        { id: '__more__', label: 'More', icon: '☰' }
+      ];
+    }
+  };
+
+  const handleBottomNavClick = (itemId) => {
+    if (itemId === '__more__') {
+      setMobileMenuOpen(true);
+    } else {
+      handleTabClick(itemId);
+    }
+  };
+
   const userPhoto = currentUser.photoURL || currentUser.avatar || currentUser.photo || currentUser.profilePic;
   const userInitials = (currentUser.fullName?.charAt(0) || currentUser.username?.charAt(0) || (isParent ? 'P' : isLeader ? 'L' : 'S')).toUpperCase();
 
@@ -502,15 +540,15 @@ export default function App() {
     <div className="h-screen w-screen max-h-screen max-w-screen overflow-hidden bg-slate-900 text-slate-100 flex flex-col md:flex-row font-sans">
       
       {/* ── MOBILE TOP BAR (VISIBLE ON SMALL SCREENS ONLY) ── */}
-      <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b p-3.5 sticky top-0 z-40 flex items-center justify-between print-hide ${
+      <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b px-3.5 py-2.5 sticky top-0 z-40 flex items-center justify-between gap-2.5 print-hide ${
         isOwner ? 'border-amber-500/50 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950' : 'border-slate-800'
       }`}>
         <div 
           onClick={() => handleTabClick('profile')}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="flex items-center gap-2.5 cursor-pointer group min-w-0 flex-1"
           title="Open My Profile"
         >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 group-hover:scale-105 transition ${
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 group-hover:scale-105 transition ${
             isOwner 
               ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300' 
               : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300'
@@ -526,30 +564,27 @@ export default function App() {
               <span>{isOwner ? '👑' : userInitials}</span>
             )}
           </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xs sm:text-sm font-black text-white leading-tight flex items-center gap-1.5 min-w-0">
               <span className="truncate group-hover:text-emerald-300 transition">Dhulfiqār Scouts</span>
               {isOwner ? (
-                <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
+                <span className="text-[8px] sm:text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
                   👑 OWNER
                 </span>
               ) : isLeader || isExecutive ? (
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
+                <span className="text-[8px] sm:text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
                   ⚜️ LEADER
                 </span>
               ) : null}
-              {userGroup?.photoURL && !isOwner && (
-                <img src={userGroup.photoURL} alt="Patrol" className="w-3.5 h-3.5 rounded object-cover border border-emerald-500/40 shrink-0 inline-block" />
-              )}
             </h1>
-            <span className={`text-[11px] font-semibold truncate block ${isOwner ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-[10px] sm:text-[11px] font-semibold truncate block ${isOwner ? 'text-amber-400' : 'text-emerald-400'}`}>
               {currentUser.fullName || currentUser.username} • {userGroupName ? `${userGroupName} Patrol` : roleLabel}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1 font-mono font-bold text-xs px-2 py-1 rounded-lg border ${
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className={`hidden sm:flex items-center gap-1 font-mono font-bold text-xs px-2 py-1 rounded-lg border shrink-0 ${
             isOwner 
               ? 'text-amber-300 bg-amber-950/50 border-amber-500/40' 
               : 'text-emerald-400 bg-slate-900 border-slate-800'
@@ -560,10 +595,10 @@ export default function App() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer shrink-0"
             aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </header>
@@ -990,7 +1025,7 @@ export default function App() {
       </aside>
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
-      <main className="flex-1 min-w-0 h-full max-h-screen bg-slate-900 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 min-w-0 h-full max-h-screen bg-slate-900 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8">
         {currentTab === 'road-to-eagle' && !isParent && (
           <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
         )}
@@ -1103,6 +1138,45 @@ export default function App() {
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
+
+      {/* ── MOBILE BOTTOM NAVIGATION BAR (THUMB-FRIENDLY & NATIVE APP EXPERIENCE) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl px-2 py-1 flex items-center justify-around select-none shadow-2xl print-hide">
+        {getMobileBottomNavItems().map(item => {
+          const isMore = item.id === '__more__';
+          const isActive = !isMore && (currentTab === item.id || (!currentTab && item.id === 'home'));
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleBottomNavClick(item.id)}
+              className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition cursor-pointer relative min-w-0 ${
+                isActive
+                  ? isOwner
+                    ? 'text-amber-300 font-black'
+                    : 'text-emerald-300 font-black'
+                  : 'text-slate-400 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="relative">
+                <span className={`text-lg block transition-transform ${isActive ? 'scale-110' : ''}`}>
+                  {item.icon}
+                </span>
+                {item.badge > 0 && (
+                  <span className="absolute -top-1 -right-2.5 bg-red-500 text-white text-[8px] font-black px-1 rounded-full animate-pulse">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] truncate leading-tight mt-0.5 ${isActive ? 'font-black' : 'font-semibold'}`}>
+                {item.label}
+              </span>
+              {isActive && (
+                <span className={`w-3 h-0.5 rounded-full mt-0.5 ${isOwner ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
