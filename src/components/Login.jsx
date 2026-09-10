@@ -138,9 +138,20 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-center text-white mb-2">Taliʿa Portal</h2>
-        <p className="text-sm text-slate-400 text-center mb-6">Log in to track requirements and chat</p>
+      <div className="bg-slate-800/90 backdrop-blur border border-slate-700 rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-xl shadow-amber-950/60 bg-black p-1 mb-3">
+            <img 
+              src="/app-logo.jpg" 
+              alt="Dhulfiqār Scouts" 
+              className="w-full h-full object-cover rounded-xl"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          </div>
+          <h2 className="text-2xl font-black text-center text-white tracking-tight">Dhulfiqār Scouts</h2>
+          <p className="text-xs text-amber-400/90 font-medium text-center mt-0.5">Taliʿat Abi Al-Fadl Al-Abbas Portal</p>
+          <p className="text-xs text-slate-400 text-center mt-1">Log in to track requirements, attendance & patrols</p>
+        </div>
         
         {error && (
           <div className="p-3 mb-4 bg-red-950 border border-red-800 rounded-xl text-red-300 text-xs break-words">

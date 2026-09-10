@@ -614,12 +614,13 @@ export default function App() {
             {/* Drawer Header */}
             <div className="p-5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg ${
-                  isOwner 
-                    ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/60' 
-                    : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/50'
-                }`}>
-                  {isOwner ? '👑' : '⚜️'}
+                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg shadow-amber-950/50 bg-black shrink-0 flex items-center justify-center p-0.5">
+                  <img 
+                    src="/app-logo.jpg" 
+                    alt="Dhulfiqār Scouts" 
+                    className="w-full h-full object-cover rounded-xl"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-white">Dhulfiqār Scouts</h2>
@@ -811,12 +812,13 @@ export default function App() {
         <div className={`p-5 border-b flex items-center gap-3 ${
           isOwner ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/20 to-transparent' : 'border-slate-800/90'
         }`}>
-          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 ${
-            isOwner 
-              ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/50' 
-              : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/40'
-          }`}>
-            {isOwner ? '👑' : '⚜️'}
+          <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg shadow-amber-950/50 bg-black shrink-0 flex items-center justify-center p-0.5">
+            <img 
+              src="/app-logo.jpg" 
+              alt="Dhulfiqār Scouts" 
+              className="w-full h-full object-cover rounded-xl"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
           </div>
           <div className="min-w-0">
             <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
