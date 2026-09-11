@@ -542,10 +542,14 @@ export default function App() {
           className="flex items-center gap-2.5 cursor-pointer group min-w-0 flex-1"
           title="Open My Profile"
         >
-          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 group-hover:scale-105 transition ${
+          <div className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md overflow-hidden shrink-0 group-hover:scale-105 transition border-2 ${
             isOwner 
-              ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300' 
-              : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300'
+              ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-amber-400 text-amber-300 shadow-amber-950/40' 
+              : isLeader || isExecutive
+              ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-emerald-400 text-emerald-300 shadow-emerald-950/40'
+              : isParent
+              ? 'bg-gradient-to-br from-indigo-600/30 to-purple-700/20 border-indigo-400 text-indigo-300 shadow-indigo-950/40'
+              : 'bg-gradient-to-br from-teal-600/30 to-emerald-700/20 border-teal-400 text-teal-300 shadow-teal-950/40'
           }`}>
             {userPhoto ? (
               <img
@@ -554,9 +558,19 @@ export default function App() {
                 className="w-full h-full object-cover"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
+            ) : isOwner ? (
+              <Crown size={18} className="text-amber-300" />
+            ) : isLeader || isExecutive ? (
+              <Shield size={18} className="text-emerald-300" />
+            ) : isParent ? (
+              <Users size={18} className="text-indigo-300" />
             ) : (
-              <span>{isOwner ? '👑' : userInitials}</span>
+              <Compass size={18} className="text-teal-300" />
             )}
+            {/* Small Role Badge in Corner */}
+            <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border border-slate-950 shadow-sm flex items-center justify-center ${
+              isOwner ? 'bg-amber-400' : isLeader || isExecutive ? 'bg-emerald-400' : isParent ? 'bg-indigo-400' : 'bg-teal-400'
+            }`} />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-xs sm:text-sm font-black text-white leading-tight flex items-center gap-1.5 min-w-0">
@@ -660,10 +674,14 @@ export default function App() {
                 className="flex items-center gap-3 p-1.5 -m-1.5 rounded-xl hover:bg-slate-800/80 cursor-pointer transition group"
                 title="Open My Profile"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover:scale-105 transition ${
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover:scale-105 transition border-2 ${
                   isOwner 
-                    ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50' 
-                    : 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40'
+                    ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-amber-400 text-amber-300 shadow-amber-950/50' 
+                    : isLeader || isExecutive
+                    ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-emerald-400 text-emerald-300 shadow-emerald-950/40'
+                    : isParent
+                    ? 'bg-gradient-to-br from-indigo-600/30 to-purple-700/20 border-indigo-400 text-indigo-300 shadow-indigo-950/40'
+                    : 'bg-gradient-to-br from-teal-600/30 to-emerald-700/20 border-teal-400 text-teal-300 shadow-teal-950/40'
                 }`}>
                   {userPhoto ? (
                     <img
@@ -672,12 +690,18 @@ export default function App() {
                       className="w-full h-full object-cover rounded-xl"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
+                  ) : isOwner ? (
+                    <Crown size={22} className="text-amber-300" />
+                  ) : isLeader || isExecutive ? (
+                    <Shield size={22} className="text-emerald-300" />
+                  ) : isParent ? (
+                    <Users size={22} className="text-indigo-300" />
                   ) : (
-                    <span>{isOwner ? '👑' : userInitials}</span>
+                    <Compass size={22} className="text-teal-300" />
                   )}
                   <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-slate-900 rounded-full shadow-sm ${
-                    isOwner ? 'bg-amber-400' : 'bg-emerald-400'
-                  }`}></span>
+                    isOwner ? 'bg-amber-400' : isLeader || isExecutive ? 'bg-emerald-400' : isParent ? 'bg-indigo-400' : 'bg-teal-400'
+                  }`} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
@@ -891,12 +915,14 @@ export default function App() {
             className="flex items-center gap-3 p-1.5 -m-1.5 rounded-xl hover:bg-slate-800/80 cursor-pointer transition group/user"
             title="Click to view & edit your profile"
           >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover/user:scale-105 transition ${
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-md overflow-hidden relative group-hover/user:scale-105 transition border-2 ${
               isOwner 
-                ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/50 ring-2 ring-amber-500/20' 
+                ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-amber-400 text-amber-300 shadow-amber-950/50 ring-2 ring-amber-500/20' 
                 : isLeader || isExecutive
-                ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/60 text-emerald-300 shadow-emerald-950/40 ring-2 ring-emerald-500/20'
-                : 'bg-gradient-to-br from-slate-700/30 to-slate-800/20 border-2 border-slate-600 text-slate-300'
+                ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-emerald-500/60 text-emerald-300 shadow-emerald-950/40 ring-2 ring-emerald-500/20'
+                : isParent
+                ? 'bg-gradient-to-br from-indigo-600/30 to-purple-700/20 border-indigo-400 text-indigo-300 shadow-indigo-950/40'
+                : 'bg-gradient-to-br from-teal-600/30 to-emerald-700/20 border-teal-400 text-teal-300 shadow-teal-950/40'
             }`}>
               {userPhoto ? (
                 <img
@@ -905,13 +931,19 @@ export default function App() {
                   className="w-full h-full object-cover rounded-xl"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
+              ) : isOwner ? (
+                <Crown size={22} className="text-amber-300" />
+              ) : isLeader || isExecutive ? (
+                <Shield size={22} className="text-emerald-300" />
+              ) : isParent ? (
+                <Users size={22} className="text-indigo-300" />
               ) : (
-                <span className="drop-shadow-sm">{isOwner ? '👑' : userInitials}</span>
+                <Compass size={22} className="text-teal-300" />
               )}
-              {/* Active Online Indicator */}
+              {/* Active Online / Role Indicator */}
               <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-slate-900 rounded-full shadow-sm ${
-                isOwner ? 'bg-amber-400 ring-1 ring-amber-300' : 'bg-emerald-400 ring-1 ring-emerald-300'
-              }`} title="Online"></span>
+                isOwner ? 'bg-amber-400 ring-1 ring-amber-300' : isLeader || isExecutive ? 'bg-emerald-400 ring-1 ring-emerald-300' : isParent ? 'bg-indigo-400' : 'bg-teal-400 ring-1 ring-teal-300'
+              }`} title="Active Role Indicator"></span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">

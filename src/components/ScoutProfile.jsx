@@ -45,7 +45,8 @@ import {
   X,
   Flame,
   Target,
-  CheckSquare
+  CheckSquare,
+  Compass
 } from 'lucide-react';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
@@ -846,16 +847,43 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
               <img
                 src={photoPreview}
                 alt="Profile Avatar"
-                className="w-24 h-24 rounded-full object-cover border-3 border-emerald-500 shadow-xl"
+                className={`w-24 h-24 rounded-2xl object-cover border-3 shadow-xl ${
+                  isOwner
+                    ? 'border-amber-400 shadow-amber-950/60'
+                    : isLeader || isExecutive
+                    ? 'border-emerald-400 shadow-emerald-950/60'
+                    : isParent
+                    ? 'border-indigo-400 shadow-indigo-950/60'
+                    : 'border-teal-400 shadow-teal-950/60'
+                }`}
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-slate-700 border-2 border-slate-650 flex items-center justify-center font-bold text-slate-350 text-3xl uppercase shadow-xl">
-                {fullName.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+              <div className={`w-24 h-24 rounded-2xl border-2 flex flex-col items-center justify-center shadow-xl relative ${
+                isOwner 
+                  ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-amber-400 text-amber-300 shadow-amber-950/50' 
+                  : isLeader || isExecutive
+                  ? 'bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-emerald-400 text-emerald-300 shadow-emerald-950/50'
+                  : isParent
+                  ? 'bg-gradient-to-br from-indigo-600/30 to-purple-700/20 border-indigo-400 text-indigo-300 shadow-indigo-950/50'
+                  : 'bg-gradient-to-br from-teal-600/30 to-emerald-700/20 border-teal-400 text-teal-300 shadow-teal-950/40'
+              }`}>
+                {isOwner ? (
+                  <Crown size={34} className="text-amber-300 drop-shadow" />
+                ) : isLeader || isExecutive ? (
+                  <ShieldCheck size={34} className="text-emerald-300 drop-shadow" />
+                ) : isParent ? (
+                  <Users size={34} className="text-indigo-300 drop-shadow" />
+                ) : (
+                  <Compass size={34} className="text-teal-300 drop-shadow" />
+                )}
+                <span className="text-[9px] font-black uppercase tracking-wider mt-1 opacity-90">
+                  {isOwner ? '👑 Owner' : isLeader || isExecutive ? '⚜️ Leader' : isParent ? '👨‍👩‍👧 Parent' : '⚜️ Scout'}
+                </span>
               </div>
             )}
 
             {uploadingPhoto && (
-              <div className="absolute inset-0 bg-black/70 rounded-full flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1">
+              <div className="absolute inset-0 bg-black/70 rounded-2xl flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1">
                 <Loader2 size={18} className="animate-spin text-emerald-400" />
                 <span>Saving...</span>
               </div>

@@ -8,10 +8,18 @@ export const MASTER_TABS_REGISTRY = [
     labelByRole: {
       owner: 'Owner Hub',
       leader: 'Leader Hub',
+      admin: 'Executive Hub',
       parent: 'Parent Hub',
       scout: 'Home Dashboard'
     },
     defaultIcon: 'Home',
+    iconByRole: {
+      owner: 'Crown',
+      admin: 'ShieldCheck',
+      leader: 'Shield',
+      parent: 'Users',
+      scout: 'Home'
+    },
     category: 'navigation',
     description: 'Central overview, urgent tasks, and quick actions',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -26,6 +34,10 @@ export const MASTER_TABS_REGISTRY = [
       admin: '👑 Executive Hub'
     },
     defaultIcon: 'Shield',
+    iconByRole: {
+      owner: 'Crown',
+      admin: 'ShieldCheck'
+    },
     category: 'leadership',
     description: 'System security, user management, and broadcast administration',
     allowedRoles: ['owner', 'admin'],
@@ -35,6 +47,11 @@ export const MASTER_TABS_REGISTRY = [
     id: 'roster',
     defaultLabel: 'Patrol Roster',
     defaultIcon: 'Users',
+    iconByRole: {
+      owner: 'Users',
+      admin: 'Users',
+      leader: 'Users'
+    },
     category: 'leadership',
     description: 'Manage scouts, patrols, phone contacts, and member profiles',
     allowedRoles: ['owner', 'admin', 'leader'],
@@ -44,6 +61,11 @@ export const MASTER_TABS_REGISTRY = [
     id: 'attendance',
     defaultLabel: 'Patrol Attendance',
     defaultIcon: 'CheckSquare',
+    iconByRole: {
+      owner: 'CheckSquare',
+      admin: 'CheckSquare',
+      leader: 'CheckSquare'
+    },
     category: 'leadership',
     description: 'Record weekly patrol roll call, tardiness, and participation points',
     allowedRoles: ['owner', 'admin', 'leader'],
@@ -53,6 +75,11 @@ export const MASTER_TABS_REGISTRY = [
     id: 'scouts',
     defaultLabel: 'Advancement Tracker',
     defaultIcon: 'Award',
+    iconByRole: {
+      owner: 'Award',
+      admin: 'Award',
+      leader: 'Award'
+    },
     category: 'leadership',
     description: 'Review and approve BSA rank requirements and badge milestones',
     allowedRoles: ['owner', 'admin', 'leader'],
@@ -62,6 +89,9 @@ export const MASTER_TABS_REGISTRY = [
     id: 'advancement',
     defaultLabel: 'My 7 Ranks',
     defaultIcon: 'Compass',
+    iconByRole: {
+      scout: 'Compass'
+    },
     category: 'outdoors',
     description: 'Track Scout through Eagle rank requirements and status',
     allowedRoles: ['scout'],
@@ -76,6 +106,12 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Merit Badges & Eagle'
     },
     defaultIcon: 'Star',
+    iconByRole: {
+      owner: 'Star',
+      admin: 'Star',
+      leader: 'Star',
+      scout: 'Star'
+    },
     category: 'academics',
     description: 'Track required Eagle and elective merit badge progress',
     allowedRoles: ['owner', 'admin', 'leader', 'scout'],
@@ -85,6 +121,13 @@ export const MASTER_TABS_REGISTRY = [
     id: 'road-to-eagle',
     defaultLabel: 'Road to Eagle',
     defaultIcon: 'Mountain',
+    iconByRole: {
+      owner: 'Mountain',
+      admin: 'Mountain',
+      leader: 'Mountain',
+      parent: 'Mountain',
+      scout: 'Mountain'
+    },
     category: 'outdoors',
     description: 'Eagle Scout service project milestones, timeline, and conference prep',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -94,6 +137,11 @@ export const MASTER_TABS_REGISTRY = [
     id: 'reports',
     defaultLabel: 'Reports Center',
     defaultIcon: 'FileText',
+    iconByRole: {
+      owner: 'FileText',
+      admin: 'FileText',
+      leader: 'FileText'
+    },
     category: 'leadership',
     description: 'Generate, sign, and export PDF / Excel progress and attendance audits',
     allowedRoles: ['owner', 'admin', 'leader'],
@@ -109,6 +157,13 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Homework & Tasks'
     },
     defaultIcon: 'BookOpen',
+    iconByRole: {
+      owner: 'BookOpen',
+      admin: 'BookOpen',
+      leader: 'BookOpen',
+      parent: 'BookOpen',
+      scout: 'BookOpen'
+    },
     category: 'academics',
     description: 'Weekly troop homework, skill challenges, and file submissions',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -124,6 +179,13 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Troop Calendar'
     },
     defaultIcon: 'Calendar',
+    iconByRole: {
+      owner: 'Calendar',
+      admin: 'Calendar',
+      leader: 'Calendar',
+      parent: 'Calendar',
+      scout: 'Calendar'
+    },
     category: 'outdoors',
     description: 'Upcoming meetings, hikes, campouts, service projects, and RSVPs',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -133,6 +195,11 @@ export const MASTER_TABS_REGISTRY = [
     id: 'lesson-plans',
     defaultLabel: 'Lesson Plans',
     defaultIcon: 'GraduationCap',
+    iconByRole: {
+      owner: 'GraduationCap',
+      admin: 'GraduationCap',
+      leader: 'GraduationCap'
+    },
     category: 'academics',
     description: 'Shared lesson curriculum, skills teaching guides, and patrol materials',
     allowedRoles: ['owner', 'admin', 'leader'],
@@ -147,6 +214,12 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Leader Journal & Notes'
     },
     defaultIcon: 'Bookmark',
+    iconByRole: {
+      owner: 'Bookmark',
+      admin: 'Bookmark',
+      leader: 'Bookmark',
+      scout: 'FileText'
+    },
     category: 'communication',
     description: 'Private personal reflections, patrol observations, and field notes',
     allowedRoles: ['owner', 'admin', 'leader', 'scout'],
@@ -156,6 +229,12 @@ export const MASTER_TABS_REGISTRY = [
     id: 'islamic',
     defaultLabel: 'Islamic Knowledge',
     defaultIcon: 'Sparkles',
+    iconByRole: {
+      owner: 'Sparkles',
+      admin: 'Sparkles',
+      leader: 'Sparkles',
+      scout: 'Sparkles'
+    },
     category: 'academics',
     description: 'Duas, Islamic manners, prayer times, and character teachings',
     allowedRoles: ['owner', 'admin', 'leader', 'scout'],
@@ -165,6 +244,10 @@ export const MASTER_TABS_REGISTRY = [
     id: 'feed',
     defaultLabel: 'Alerts & Feed',
     defaultIcon: 'Bell',
+    iconByRole: {
+      scout: 'Bell',
+      parent: 'Bell'
+    },
     category: 'communication',
     description: 'Urgent announcements, troop broadcasts, and parental alerts',
     allowedRoles: ['scout', 'parent'],
@@ -179,6 +262,12 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Patrol Messenger'
     },
     defaultIcon: 'MessageSquare',
+    iconByRole: {
+      owner: 'MessageSquare',
+      admin: 'MessageSquare',
+      leader: 'MessageSquare',
+      scout: 'MessageSquare'
+    },
     category: 'communication',
     description: 'Real-time encrypted patrol messaging and team discussions',
     allowedRoles: ['owner', 'admin', 'leader', 'scout'],
@@ -194,6 +283,13 @@ export const MASTER_TABS_REGISTRY = [
       owner: 'Resources & Guide'
     },
     defaultIcon: 'Book',
+    iconByRole: {
+      owner: 'Book',
+      admin: 'Book',
+      leader: 'Book',
+      parent: 'Book',
+      scout: 'Book'
+    },
     category: 'communication',
     description: 'Instructional videos, handbook references, and field materials',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -204,11 +300,18 @@ export const MASTER_TABS_REGISTRY = [
     defaultLabel: 'My Profile',
     labelByRole: {
       parent: 'Family Profile',
-      scout: 'My Profile',
-      leader: 'My Profile',
-      owner: 'My Profile'
+      scout: 'Scout Profile',
+      leader: 'Leader Profile',
+      owner: 'Owner Profile'
     },
     defaultIcon: 'User',
+    iconByRole: {
+      owner: 'Crown',
+      admin: 'ShieldCheck',
+      leader: 'ShieldCheck',
+      parent: 'Users',
+      scout: 'Compass'
+    },
     category: 'navigation',
     description: 'Account settings, emergency contacts, credentials, and service log',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
@@ -221,7 +324,7 @@ export const MASTER_TABS_REGISTRY = [
  * Returns role-permitted tabs in their default order for a given user context
  */
 export function getDefaultRoleTabs(userRoleContext) {
-  const { isOwner, isLeader, isExecutive, isParent, isScout } = userRoleContext;
+  const { isOwner, isLeader, isExecutive, isParent, isScout } = userRoleContext || {};
   
   const effectiveRole = isOwner ? 'owner' : isExecutive ? 'admin' : isLeader ? 'leader' : isParent ? 'parent' : 'scout';
 
@@ -235,24 +338,27 @@ export function getDefaultRoleTabs(userRoleContext) {
     return false;
   });
 
-  // Assign role-specific labels and icons
-  return availableTabs.map(tab => ({
-    id: tab.id,
-    label: tab.labelByRole?.[effectiveRole] || tab.defaultLabel,
-    icon: tab.defaultIcon,
-    category: tab.category,
-    description: tab.description,
-    visible: true,
-    badgeKey: tab.badgeKey,
-    isPermanent: !!tab.isPermanent
-  }));
+  // Assign role-specific labels and role-differentiated icons
+  return availableTabs.map(tab => {
+    const roleIcon = tab.iconByRole?.[effectiveRole] || tab.defaultIcon;
+    return {
+      id: tab.id,
+      label: tab.labelByRole?.[effectiveRole] || tab.defaultLabel,
+      icon: roleIcon,
+      category: tab.category,
+      description: tab.description,
+      visible: true,
+      badgeKey: tab.badgeKey,
+      isPermanent: !!tab.isPermanent
+    };
+  });
 }
 
 /**
  * Returns the default 4 pinned bottom quick bar tab IDs for a role
  */
 export function getDefaultBottomTabIds(userRoleContext) {
-  const { isOwner, isLeader, isParent } = userRoleContext;
+  const { isOwner, isLeader, isParent } = userRoleContext || {};
   
   if (isParent) {
     return ['home', 'events', 'feed', 'road-to-eagle'];

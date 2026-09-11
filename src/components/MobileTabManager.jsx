@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DynamicIcon from './DynamicIcon';
 import { 
   ICON_CATEGORIES, 
@@ -19,6 +19,8 @@ import {
   Search, 
   Sparkles, 
   Shield, 
+  Crown,
+  Compass,
   Smartphone,
   Layers,
   HelpCircle,
@@ -40,6 +42,24 @@ export default function MobileTabManager({
   const [customIcons, setCustomIcons] = useState(() => (navState?.customIcons ? { ...navState.customIcons } : {}));
   const [customLabels, setCustomLabels] = useState(() => (navState?.customLabels ? { ...navState.customLabels } : {}));
   
+  // Real-time synchronization whenever modal opens or navState updates
+  useEffect(() => {
+    if (isOpen && navState) {
+      if (Array.isArray(navState.tabs)) {
+        setTabs(JSON.parse(JSON.stringify(navState.tabs)));
+      }
+      if (Array.isArray(navState.bottomTabIds)) {
+        setBottomTabIds([...navState.bottomTabIds]);
+      }
+      if (navState.customIcons) {
+        setCustomIcons({ ...navState.customIcons });
+      }
+      if (navState.customLabels) {
+        setCustomLabels({ ...navState.customLabels });
+      }
+    }
+  }, [isOpen, navState]);
+
   // Icon Picker Modal State
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [editingTabId, setEditingTabId] = useState(null);
@@ -53,6 +73,8 @@ export default function MobileTabManager({
   if (!isOpen) return null;
 
   const isOwner = userRoleContext?.isOwner;
+  const isLeader = userRoleContext?.isLeader;
+  const isParent = userRoleContext?.isParent;
 
   // ── REORDERING LOGIC ──
   const moveTabUp = (index) => {
@@ -138,10 +160,17 @@ export default function MobileTabManager({
     setSaving(true);
     setSavedSuccess(false);
     try {
+      const mergedIcons = { ...customIcons };
+      tabs.forEach(t => {
+        if (t.icon) {
+          mergedIcons[t.id] = t.icon;
+        }
+      });
+
       await onSave({
         tabs,
         bottomTabIds,
-        customIcons,
+        customIcons: mergedIcons,
         customLabels
       });
       setSavedSuccess(true);

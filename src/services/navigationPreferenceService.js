@@ -148,6 +148,14 @@ export function subscribeToNavPreferences(userId, userRoleContext, onUpdate) {
 export async function saveNavPreferences(userId, navState) {
   const { tabs = [], bottomTabIds = [], customIcons = {}, customLabels = {} } = navState;
 
+  // Explicitly collect custom icons from all tab objects
+  const mergedIcons = { ...customIcons };
+  tabs.forEach(t => {
+    if (t.icon) {
+      mergedIcons[t.id] = t.icon;
+    }
+  });
+
   const tabOrder = tabs.map(t => t.id);
   const hiddenTabs = tabs.filter(t => !t.visible && !t.isPermanent).map(t => t.id);
 
@@ -155,7 +163,7 @@ export async function saveNavPreferences(userId, navState) {
     tabOrder,
     hiddenTabs,
     bottomNavTabIds: bottomTabIds.slice(0, 4),
-    customIcons,
+    customIcons: mergedIcons,
     customLabels,
     updatedAt: new Date().toISOString()
   };
