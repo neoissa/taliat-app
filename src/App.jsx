@@ -25,6 +25,7 @@ import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import DynamicIcon from './components/DynamicIcon';
 import MobileTabManager from './components/MobileTabManager';
+import MobileTabBar from './components/MobileTabBar';
 import { 
   subscribeToNavPreferences, 
   saveNavPreferences, 
@@ -58,7 +59,9 @@ import {
   Sparkles,
   ChevronRight,
   Crown,
-  Sliders
+  Sliders,
+  Inbox,
+  Megaphone
 } from 'lucide-react';
 
 export default function App() {
@@ -70,6 +73,7 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+  const [unreadRequestsCount, setUnreadRequestsCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
   const [navState, setNavState] = useState(null);
@@ -345,6 +349,11 @@ export default function App() {
           setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
         }
       }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+      // 3. Listen to pending parent signups & requests for Leaders/Owners
+      unsubs.push(onSnapshot(collection(db, 'parent_signups'), (snap) => {
+        const pending = snap.docs.filter(d => d.data().status === 'pending').length;
+        setUnreadRequestsCount(pending);
+      }, (err) => console.warn("Pending parent signups listener:", err)));
     }
 
     return () => unsubs.forEach(u => u());
@@ -378,6 +387,12 @@ export default function App() {
   const handleNavigate = (tab, extraData = null) => {
     if (tab === 'attendance' && extraData) {
       setAttendanceInitialData(extraData);
+    }
+    if (tab === 'counselors' || tab === 'counselor-directory') {
+      setCurrentTab('profile');
+      setProfileInitialTab('counselors');
+      setMobileMenuOpen(false);
+      return;
     }
     if (tab === 'profile' && extraData) {
       if (typeof extraData === 'string') {
@@ -416,7 +431,7 @@ export default function App() {
   };
 
   const handleTabClick = (tabId) => {
-    setCurrentTab(tabId);
+    handleNavigate(tabId);
     setMobileMenuOpen(false);
   };
 
@@ -1200,54 +1215,17 @@ export default function App() {
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
 
-      {/* ── MOBILE BOTTOM NAVIGATION BAR (THUMB-FRIENDLY & NATIVE APP EXPERIENCE) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl px-1 py-1 flex items-center justify-around select-none shadow-2xl print-hide">
-        {getMobileBottomNavItems().map(item => {
-          const isMore = item.id === '__more__';
-          const isActive = !isMore && (currentTab === item.id || (!currentTab && item.id === 'home'));
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleBottomNavClick(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition cursor-pointer relative min-w-0 min-h-[44px] ${
-                isActive
-                  ? isOwner
-                    ? 'text-amber-300 font-black'
-                    : 'text-emerald-300 font-black'
-                  : 'text-slate-400 hover:text-slate-200 font-medium'
-              }`}
-            >
-              <div className="relative flex items-center justify-center w-7 h-7">
-                {isMore ? (
-                  <span className="text-lg font-black leading-none">☰</span>
-                ) : (
-                  <DynamicIcon 
-                    name={item.icon} 
-                    size={18} 
-                    className={`transition-transform ${
-                      isActive 
-                        ? (isOwner ? 'scale-110 text-amber-400' : 'scale-110 text-emerald-400') 
-                        : 'text-slate-400'
-                    }`}
-                  />
-                )}
-                {item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black px-1 rounded-full animate-pulse">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[10px] truncate leading-tight mt-0.5 max-w-[64px] text-center ${isActive ? 'font-black' : 'font-semibold'}`}>
-                {item.label}
-              </span>
-              {isActive && (
-                <span className={`w-3 h-0.5 rounded-full mt-0.5 ${isOwner ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      {/* ── CONTEXT-AWARE ROLE-SPECIFIC MOBILE BOTTOM TAB BAR ── */}
+      <MobileTabBar
+        currentTab={currentTab}
+        onNavigate={handleNavigate}
+        onOpenMenu={() => setMobileMenuOpen(true)}
+        userRoleContext={userRoleContext}
+        customPreferences={navState}
+        unreadAlertsCount={unreadAlertsCount}
+        unreadRequestsCount={unreadRequestsCount}
+        unreadChatCount={unreadChatCount}
+      />
 
       {/* ── MOBILE & DESKTOP TAB CUSTOMIZATION DRAWER/MODAL ── */}
       <MobileTabManager

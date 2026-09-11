@@ -22,6 +22,7 @@ import {
   Crown,
   Target,
   ShieldCheck,
+  Inbox,
 
   // Communication & Alerts
   Bell,
@@ -97,6 +98,7 @@ export const ICON_MAP = {
   Crown,
   Target,
   ShieldCheck,
+  Inbox,
 
   // Communication & Alerts
   Bell,
@@ -147,6 +149,87 @@ export const ICON_MAP = {
 };
 
 /**
+ * Vibrant Theme Color Palettes for Role Navigation & UI Badges
+ */
+export const THEME_PALETTES = {
+  emerald: {
+    name: 'Emerald & Teal (Scouting & Outdoors)',
+    text: 'text-emerald-500 dark:text-emerald-400',
+    pillBg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/30',
+    activePill: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 shadow-md shadow-emerald-500/25',
+    activeText: 'text-emerald-600 dark:text-emerald-300 font-black',
+    glow: 'ring-2 ring-emerald-400/40'
+  },
+  teal: {
+    name: 'Teal & Cyan (Campcraft & Directory)',
+    text: 'text-teal-500 dark:text-teal-400',
+    pillBg: 'bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-500/30',
+    activePill: 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950 shadow-md shadow-teal-500/25',
+    activeText: 'text-teal-600 dark:text-teal-300 font-black',
+    glow: 'ring-2 ring-teal-400/40'
+  },
+  amber: {
+    name: 'Amber & Orange (Alerts, Tasks & Requests)',
+    text: 'text-amber-500 dark:text-amber-400',
+    pillBg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/30',
+    activePill: 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/25 font-black',
+    activeText: 'text-amber-600 dark:text-amber-300 font-black',
+    glow: 'ring-2 ring-amber-400/40'
+  },
+  indigo: {
+    name: 'Indigo & Violet (Leadership & Management)',
+    text: 'text-indigo-500 dark:text-indigo-400',
+    pillBg: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30',
+    activePill: 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 font-black',
+    activeText: 'text-indigo-600 dark:text-indigo-300 font-black',
+    glow: 'ring-2 ring-indigo-400/40'
+  },
+  violet: {
+    name: 'Violet & Purple (HQ & Administration)',
+    text: 'text-violet-500 dark:text-violet-400',
+    pillBg: 'bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-500/30',
+    activePill: 'bg-violet-600 text-white shadow-md shadow-violet-500/25 font-black',
+    activeText: 'text-violet-600 dark:text-violet-300 font-black',
+    glow: 'ring-2 ring-violet-400/40'
+  },
+  sky: {
+    name: 'Sky Blue (Schedule & Calendar)',
+    text: 'text-sky-500 dark:text-sky-400',
+    pillBg: 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-500/30',
+    activePill: 'bg-sky-500 text-slate-950 dark:text-slate-950 shadow-md shadow-sky-500/25 font-black',
+    activeText: 'text-sky-600 dark:text-sky-300 font-black',
+    glow: 'ring-2 ring-sky-400/40'
+  },
+  rose: {
+    name: 'Rose & Coral (Urgent Broadcasts)',
+    text: 'text-rose-500 dark:text-rose-400',
+    pillBg: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-500/30',
+    activePill: 'bg-rose-600 text-white shadow-md shadow-rose-500/25 font-black',
+    activeText: 'text-rose-600 dark:text-rose-300 font-black',
+    glow: 'ring-2 ring-rose-400/40'
+  }
+};
+
+/**
+ * Returns dynamic classes for an icon pill container based on theme and active state
+ */
+export function getIconTheme(themeKey = 'emerald', isActive = false) {
+  const palette = THEME_PALETTES[themeKey] || THEME_PALETTES.emerald;
+  if (isActive) {
+    return {
+      container: `${palette.activePill} ${palette.glow} scale-105 transition-all duration-200`,
+      icon: 'text-inherit drop-shadow-sm',
+      label: palette.activeText
+    };
+  }
+  return {
+    container: `${palette.pillBg} ${palette.text} hover:scale-105 transition-all duration-200`,
+    icon: palette.text,
+    label: 'text-slate-600 dark:text-slate-400 font-medium'
+  };
+}
+
+/**
  * Categorized Icon Registry for Icon Pickers and Visual Categorization
  */
 export const ICON_CATEGORIES = [
@@ -182,7 +265,8 @@ export const ICON_CATEGORIES = [
       { id: 'Users', label: 'Troop / Patrol Roster' },
       { id: 'Briefcase', label: 'Administration' },
       { id: 'History', label: 'Audit / History' },
-      { id: 'Target', label: 'Goals / Standards' }
+      { id: 'Target', label: 'Goals / Standards' },
+      { id: 'Inbox', label: 'Inbox / Parent Requests' }
     ]
   },
   {
@@ -282,7 +366,9 @@ export const EMOJI_TO_LUCIDE_MAP = {
   '🔥': 'Flame',
   '👑': 'Crown',
   '👨‍👩‍👧': 'Users',
-  '⚙️': 'Settings'
+  '⚙️': 'Settings',
+  '📥': 'Inbox',
+  '📢': 'Megaphone'
 };
 
 /**
