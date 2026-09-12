@@ -14,35 +14,97 @@ html, body, #root {
   box-sizing: border-box;
 }
 
-/* ── Unified Modern UI Surfaces & Typography ── */
+/* ── Single-Screen Viewport Shell Architecture ── */
+.app-viewport-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100vw;
+  max-width: 100vw;
+  overflow: hidden;
+  background-color: #0f172a; /* Richer, softer Slate-900 base */
+}
+
+@media (min-width: 768px) {
+  .app-viewport-container {
+    flex-direction: row;
+  }
+}
+
+.main-content-area {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #0f172a;
+}
+
+@media (min-width: 768px) {
+  .main-content-area {
+    max-height: 100vh;
+  }
+}
+
+/* ── Refined Surface Layers & Contrast Hierarchy ── */
 .surface-base {
-  background-color: var(--color-slate-950, #020617);
-  color: var(--color-slate-100, #f1f5f9);
+  background-color: #0f172a;
+  color: #f8fafc;
 }
 
 .surface-card {
-  background-color: #0f172a;
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
 }
 
 .surface-card-interactive {
-  background-color: #0f172a;
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .surface-card-interactive:hover {
   border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.15);
+  transform: translateY(-1px);
+}
+
+/* ── Purposeful Color Accent Classes ── */
+.accent-emerald {
+  color: #34d399;
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.accent-amber {
+  color: #fbbf24;
+  background-color: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.accent-sky {
+  color: #38bdf8;
+  background-color: rgba(14, 165, 233, 0.12);
+  border-color: rgba(14, 165, 233, 0.35);
+}
+
+.accent-indigo {
+  color: #818cf8;
+  background-color: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
 }
 
 .page-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.025em;
   color: #ffffff;
 }

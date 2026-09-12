@@ -952,16 +952,45 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
           <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-start border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-emerald-400 block">Leader Review & Sign-Off</span>
-                <h3 className="font-extrabold text-white text-base mt-0.5">
-                  {feedbackModalRecord.scout.fullName || feedbackModalRecord.scout.username}
-                </h3>
-                <p className="text-xs text-slate-400">{feedbackModalRecord.assignment.title}</p>
+              <div className="flex items-center gap-3 min-w-0">
+                {(() => {
+                  const s = feedbackModalRecord.scout;
+                  const photo = s.photoURL || s.avatar || s.photo || s.profilePic;
+                  const name = s.fullName || s.username || 'Scout';
+                  return (
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-sm shrink-0 overflow-hidden shadow-md">
+                      {photo ? (
+                        <img 
+                          src={photo} 
+                          alt={name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=047857&color=fff&bold=true`;
+                          }}
+                        />
+                      ) : (
+                        <img 
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=065f46&color=34d399&bold=true&size=128`} 
+                          alt={name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-emerald-400 block">Leader Review & Sign-Off</span>
+                  <h3 className="font-extrabold text-white text-base truncate">
+                    {feedbackModalRecord.scout.fullName || feedbackModalRecord.scout.username}
+                  </h3>
+                  <p className="text-xs text-slate-400 truncate">{feedbackModalRecord.assignment.title}</p>
+                </div>
               </div>
               <button
                 onClick={() => setFeedbackModalRecord(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition shrink-0"
               >
                 <X size={18} />
               </button>
@@ -1160,13 +1189,36 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                         <tr key={`${scout.uid}_${assign.id}`} className="hover:bg-slate-750/40 transition">
                           {/* Scout Column */}
                           <td className="p-4 sticky left-0 bg-slate-800/95 z-10 border-r border-slate-755">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-xs shrink-0">
-                                {scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}
-                              </div>
+                            <div className="flex items-center gap-3">
+                              {(() => {
+                                const photo = scout.photoURL || scout.avatar || scout.photo || scout.profilePic;
+                                const name = scout.fullName || scout.username || 'Scout';
+                                return (
+                                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-xs shrink-0 overflow-hidden shadow-md">
+                                    {photo ? (
+                                      <img 
+                                        src={photo} 
+                                        alt={name} 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => {
+                                          e.currentTarget.onerror = null;
+                                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=047857&color=fff&bold=true`;
+                                        }}
+                                      />
+                                    ) : (
+                                      <img 
+                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=065f46&color=34d399&bold=true&size=128`} 
+                                        alt={name} 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })()}
                               <div className="min-w-0">
-                                <strong className="text-white block truncate">{scout.fullName || scout.username}</strong>
-                                <span className="text-[10px] text-slate-400 block truncate">{scoutPatrol} &bull; {scout.rank || 'Scout'}</span>
+                                <strong className="text-white font-bold block truncate text-xs sm:text-sm">{scout.fullName || scout.username}</strong>
+                                <span className="text-[10px] text-slate-400 block truncate font-medium">{scoutPatrol} &bull; {scout.rank || 'Scout'}</span>
                               </div>
                             </div>
                           </td>

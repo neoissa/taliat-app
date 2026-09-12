@@ -74,94 +74,109 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
   const totalEaglePathPlannedOrEarned = Math.min(14, eagleRequiredEarned + eagleRequiredPlanned) + Math.min(7, electivesEarned + electivesPlanned);
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-5 print-hide">
+    <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4 print-hide">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-2xl shadow-lg shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-xl shadow-lg shrink-0">
             🏅
           </div>
           <div>
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Official BSA & USScouts Database
+            <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                Official BSA Database
               </span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
-                137 Official Badges
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                137 Badges
               </span>
             </div>
-            <h2 className="text-xl font-black text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
               <span>Merit Badge Dashboard & Eagle Fast-Track</span>
             </h2>
-            <p className="text-xs text-slate-350">
-              Download official worksheets, view requirements from Scouting America & USScouts, and plan your 21 Eagle Merit Badges.
+            <p className="text-xs text-slate-300">
+              Download official worksheets, view requirements, and plan your 21 Eagle Merit Badges.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           {totalPending > 0 && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1.5 animate-pulse">
-              <Clock size={13} /> {totalPending} Pending Approval
+            <span className="text-xs px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1.5 animate-pulse">
+              <Clock size={13} /> {totalPending} Pending
             </span>
           )}
           <button
             onClick={() => onSelectTab('planned')}
-            className={`text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md ${
+            className={`text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md ${
               activeTab === 'planned'
                 ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-400'
-                : 'bg-slate-700 hover:bg-slate-650 text-amber-300 border border-amber-500/30'
+                : 'bg-slate-800 hover:bg-slate-750 text-amber-300 border border-amber-500/30'
             }`}
           >
-            <Target size={14} />
-            <span>My Planned Badges ({planned.length + earned.length}/21)</span>
+            <Target size={13} />
+            <span>My Planned ({planned.length + earned.length}/21)</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Eagle Path Roadmap */}
-        <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400 shrink-0">
-            <Star size={22} />
+      {/* ── 4-Item Horizontal Pill Bar ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+        {/* 1. Eagle 21-Badge Path */}
+        <div className="bg-slate-950/80 border border-amber-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <Star size={18} />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase">Eagle 21-Badge Path</p>
-            <p className="text-base font-black text-white">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Eagle 21-Path</p>
+            <p className="text-xs sm:text-sm font-black text-white truncate">
               <span className="text-amber-400">{totalEaglePathPlannedOrEarned}</span>
-              <span className="text-slate-500 text-xs"> / 21 Planned/Earned</span>
+              <span className="text-slate-400 text-xs"> / 21 Badges</span>
             </p>
           </div>
         </div>
 
-        {/* 14 Eagle-Required */}
-        <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 shrink-0">
-            <Award size={22} />
+        {/* 2. 14 Eagle-Required */}
+        <div className="bg-slate-950/80 border border-emerald-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <Award size={18} />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase">14 Eagle Required</p>
-            <p className="text-base font-black text-white">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">14 Eagle Required</p>
+            <p className="text-xs sm:text-sm font-black text-white truncate">
               <span className="text-emerald-400">{eagleRequiredEarned}</span>
-              <span className="text-slate-500 text-xs"> earned • </span>
-              <span className="text-amber-400">{eagleRequiredPlanned}</span>
-              <span className="text-slate-500 text-xs"> planned</span>
+              <span className="text-slate-400 text-xs"> earned • </span>
+              <span className="text-amber-300">{eagleRequiredPlanned}</span>
+              <span className="text-slate-400 text-xs"> plan</span>
             </p>
           </div>
         </div>
 
-        {/* 7 Electives */}
-        <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2.5 bg-sky-500/10 rounded-xl text-sky-400 shrink-0">
-            <BookOpen size={22} />
+        {/* 3. 7 Electives */}
+        <div className="bg-slate-950/80 border border-sky-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+            <BookOpen size={18} />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase">7 Elective Badges</p>
-            <p className="text-base font-black text-white">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">7 Elective Badges</p>
+            <p className="text-xs sm:text-sm font-black text-white truncate">
               <span className="text-sky-400">{electivesEarned}</span>
-              <span className="text-slate-500 text-xs"> earned • </span>
-              <span className="text-amber-400">{electivesPlanned}</span>
-              <span className="text-slate-500 text-xs"> planned</span>
+              <span className="text-slate-400 text-xs"> earned • </span>
+              <span className="text-amber-300">{electivesPlanned}</span>
+              <span className="text-slate-400 text-xs"> plan</span>
+            </p>
+          </div>
+        </div>
+
+        {/* 4. Pending / Verified */}
+        <div className="bg-slate-950/80 border border-purple-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+            <Clock size={18} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Pending Sign-Offs</p>
+            <p className="text-xs sm:text-sm font-black text-white truncate">
+              <span className={totalPending > 0 ? "text-amber-400 font-black" : "text-slate-300"}>
+                {totalPending > 0 ? `${totalPending} Items` : 'All Clear'}
+              </span>
             </p>
           </div>
         </div>
@@ -169,11 +184,11 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
 
       {/* Eagle Roadmap Progress Bar */}
       <div>
-        <div className="flex justify-between text-xs text-slate-350 font-semibold mb-1">
+        <div className="flex justify-between text-xs text-slate-300 font-semibold mb-1">
           <span>Eagle Rank 21-Badge Path Progress</span>
           <span className="font-bold text-amber-400">{Math.round((totalEaglePathPlannedOrEarned / 21) * 100)}% ({totalEaglePathPlannedOrEarned}/21)</span>
         </div>
-        <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-700">
+        <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
           <div
             className="bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-400 h-full transition-all duration-500 rounded-full"
             style={{ width: `${Math.min(100, Math.round((totalEaglePathPlannedOrEarned / 21) * 100))}%` }}

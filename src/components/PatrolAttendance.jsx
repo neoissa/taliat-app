@@ -1165,18 +1165,41 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                           : 'hover:bg-slate-750/30'
                       }`}
                     >
-                      {/* Scout Name */}
+                      {/* Scout Name & Profile Picture */}
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                            agg.riskLevel === 'red'
-                              ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                              : agg.riskLevel === 'yellow'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                              : 'bg-slate-750 text-slate-300 border border-slate-700'
-                          }`}>
-                            <User size={14} />
-                          </div>
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const photo = scout.photoURL || scout.avatar || scout.photo || scout.profilePic;
+                            const name = scout.fullName || scout.username || 'Scout';
+                            return (
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border shadow-sm ${
+                                agg.riskLevel === 'red'
+                                  ? 'bg-red-500/20 border-red-500/40 text-red-300'
+                                  : agg.riskLevel === 'yellow'
+                                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                                  : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                              }`}>
+                                {photo ? (
+                                  <img
+                                    src={photo}
+                                    alt={name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=047857&color=fff&bold=true`;
+                                    }}
+                                  />
+                                ) : (
+                                  <img
+                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=065f46&color=34d399&bold=true&size=128`}
+                                    alt={name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div>
                             <strong className="text-white font-bold block">
                               {scout.fullName || scout.username}

@@ -296,22 +296,22 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const recommendedBadges = getRecommendedBadges(currentUser, meritBadgesProgress);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-8">
       {/* ── 1. WELCOME HERO CARD ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/60 border border-emerald-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/60 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
         {/* Background decorative watermark */}
         <div className="absolute right-4 top-2 opacity-5 pointer-events-none">
           <Trophy size={180} className="text-emerald-400" />
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2.5 shadow-xl shadow-emerald-950/50 shrink-0">
-              <RankIcon rankId={latestAchievedRank.id} className="w-12 h-12 sm:w-14 sm:h-14 text-emerald-400 drop-shadow-md" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative z-10">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2 shadow-xl shadow-emerald-950/50 shrink-0">
+              <RankIcon rankId={latestAchievedRank.id} className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-400 drop-shadow-md" />
             </div>
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
                 <StatusBadge type="success" size="xs" label={`${activeRank} Rank`} />
                 {nextTargetRank.id !== latestAchievedRank.id && (
                   <StatusBadge type="warning" size="xs" label={`Target: ${nextTargetRank.name} (${targetRankProgress.percentage}%)`} />
@@ -321,232 +321,201 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 )}
                 <StatusBadge type="purple" size="xs" label="Be Prepared • كُن مُسْتَعِدّاً" />
               </div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
                 <span>Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || 'Scout'}!</span>
                 <span className="text-amber-400">⚜️</span>
               </h2>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Welcome to your official Dhulfiqār scouting headquarters. Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle!
+              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
+                Welcome to your Dhulfiqār scouting headquarters. Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle!
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2.5 shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('feed')}
-              className="bg-emerald-600/30 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/60 font-black text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              className="bg-emerald-600/30 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/60 font-black text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
             >
-              <Bell size={15} className={unreadNotifsCount > 0 ? "animate-bounce text-amber-400" : ""} />
-              <span>🔔 Alerts & Feed {unreadNotifsCount > 0 ? `(${unreadNotifsCount})` : ''}</span>
+              <Bell size={14} className={unreadNotifsCount > 0 ? "animate-bounce text-amber-400" : ""} />
+              <span>Alerts {unreadNotifsCount > 0 ? `(${unreadNotifsCount})` : ''}</span>
             </button>
             <button
               type="button"
               onClick={() => setShowPendingModal(true)}
-              className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 border border-amber-500/60 font-black text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
+              className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 border border-amber-500/60 font-black text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
             >
-              <Clock size={15} className="animate-pulse" />
-              <span>⏳ Pending Items ({totalPendingPortalItems})</span>
+              <Clock size={14} className="animate-pulse" />
+              <span>Pending ({totalPendingPortalItems})</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
             >
-              <span>🦅 Road to Eagle Portal</span>
+              <span>🦅 Road to Eagle</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('advancement')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
             >
-              <Award size={15} />
-              <span>⚜️ My 7 Ranks</span>
+              <Award size={14} />
+              <span>⚜️ 7 Ranks</span>
             </button>
           </div>
         </div>
 
-        {/* ── Quick Scout Stats Grid ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
-          {/* Active Rank */}
-          <div className="bg-slate-900/80 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <ShieldCheck size={20} />
+        {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-700/60 relative z-10 text-xs">
+          {/* 1. Active Rank */}
+          <div 
+            onClick={() => onNavigate && onNavigate('advancement')}
+            className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <ShieldCheck size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Current Achieved</span>
-              <strong className="text-sm font-black text-emerald-400 capitalize block truncate">
+              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Current Rank</span>
+              <strong className="text-xs sm:text-sm font-black text-emerald-400 capitalize block truncate">
                 {activeRank}
               </strong>
             </div>
           </div>
 
-          {/* Attendance Standing Tile */}
+          {/* 2. Attendance Standing Tile */}
           <div 
-            onClick={() => onNavigate && onNavigate('profile')}
-            className={`p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
+            onClick={() => onNavigate && onNavigate('profile', 'attendance')}
+            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
               attendanceStats.riskLevel === 'red'
                 ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : 'bg-slate-900/80 border-teal-500/30 hover:border-teal-400'
+                : 'bg-slate-900/90 border-teal-500/30 hover:border-teal-400/60'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
               attendanceStats.riskLevel === 'red'
                 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
                 : 'bg-teal-500/15 text-teal-400 border border-teal-500/30'
             }`}>
-              <Calendar size={18} />
+              <Calendar size={17} />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] block uppercase font-bold tracking-wider ${
-                attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
-              }`}>Attendance</span>
-              <strong className="text-sm font-black text-white block truncate">
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[10px] block uppercase font-bold tracking-wider ${
+                  attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
+                }`}>Attendance</span>
+                {attendanceStats.riskLevel !== 'green' && (
+                  <span className={`text-[9px] px-1 rounded font-bold uppercase ${
+                    attendanceStats.riskLevel === 'red' ? 'bg-rose-500/30 text-rose-300' : 'bg-amber-500/30 text-amber-300'
+                  }`}>Alert</span>
+                )}
+              </div>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
                 {attendanceStats.attendanceRate}% ({attendanceStats.presentCount}/{attendanceStats.totalSessions})
               </strong>
             </div>
           </div>
 
-          {/* Merit Badges */}
-          <div className="bg-slate-900/80 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Star size={20} />
+          {/* 3. Merit Badges */}
+          <div 
+            onClick={() => onNavigate && onNavigate('merit-badges')}
+            className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Star size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Merit Badges</span>
-              <strong className="text-sm font-black text-amber-400 block">
+              <strong className="text-xs sm:text-sm font-black text-amber-400 block truncate">
                 {meritBadgesCount} / 21 Earned
               </strong>
             </div>
           </div>
 
-          {/* Service Hours */}
-          <div className="bg-slate-900/80 border border-sky-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Heart size={20} />
+          {/* 4. Service Hours */}
+          <div 
+            onClick={() => onNavigate && onNavigate('road-to-eagle')}
+            className="bg-slate-900/90 border border-sky-500/30 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Heart size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Service Hours</span>
-              <strong className="text-sm font-black text-sky-400 block">
+              <strong className="text-xs sm:text-sm font-black text-sky-400 block truncate">
                 {serviceHours} Hours
               </strong>
             </div>
           </div>
-
-          {/* Road to Eagle Quick Stat */}
-          <div 
-            onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-slate-900/80 border border-amber-500/40 p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-amber-400 transition shadow-xs"
-          >
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 text-xl">
-              🦅
-            </div>
-            <div>
-              <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Road to Eagle</span>
-              <strong className="text-xs font-bold text-slate-200 block truncate">
-                {projectDone ? '✓ Project Done' : 'Open Portal ➔'}
-              </strong>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* ── 1.5. SCOUT ATTENDANCE STANDING & WARNING BANNER ── */}
-      <div 
-        onClick={() => onNavigate && onNavigate('profile', 'attendance')}
-        className={`rounded-3xl p-5 sm:p-6 shadow-xl border transition cursor-pointer group ${
-          attendanceStats.riskLevel === 'red'
-            ? 'bg-gradient-to-r from-rose-950/80 via-slate-900 to-rose-950/60 border-rose-500/80 hover:border-rose-400'
-            : attendanceStats.riskLevel === 'yellow'
-            ? 'bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/60 border-amber-500/80 hover:border-amber-400'
-            : 'bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/40 border-teal-500/40 hover:border-teal-400'
-        }`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-              attendanceStats.riskLevel === 'red'
-                ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400 animate-bounce'
-                : attendanceStats.riskLevel === 'yellow'
-                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
-                : 'bg-teal-500/20 border border-teal-500/40 text-teal-400'
-            }`}>
-              {attendanceStats.riskLevel === 'red' ? (
-                <AlertCircle size={24} />
-              ) : attendanceStats.riskLevel === 'yellow' ? (
-                <AlertTriangle size={24} />
-              ) : (
-                <Calendar size={24} />
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <StatusBadge 
-                  type={attendanceStats.riskLevel === 'red' ? 'danger' : attendanceStats.riskLevel === 'yellow' ? 'warning' : 'info'} 
-                  size="xs"
-                  label={
-                    attendanceStats.riskLevel === 'red'
-                      ? 'Critical Attendance Alert'
-                      : attendanceStats.riskLevel === 'yellow'
-                      ? 'Attendance Advisory'
-                      : 'Troop Attendance & Standing'
-                  }
-                />
-                <span className="text-xs text-slate-300 font-bold font-mono">
-                  {attendanceStats.attendanceRate}% Attendance Rate &bull; {attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions
-                </span>
-                <span className="text-xs text-teal-300 font-bold font-mono bg-teal-950/60 border border-teal-500/40 px-2 py-0.5 rounded-full">
-                  ⏱️ {attendanceStats.totalHours || 0} Hours &bull; 🏕️ {attendanceStats.campingNights || 0} Nights
-                </span>
+      {/* ── 1.5. COMPACT ATTENDANCE RISK ADVISORY (Only when attention needed) ── */}
+      {attendanceStats.riskLevel !== 'green' && (
+        <div 
+          onClick={() => onNavigate && onNavigate('profile', 'attendance')}
+          className={`rounded-2xl p-3.5 sm:p-4 shadow-lg border transition cursor-pointer ${
+            attendanceStats.riskLevel === 'red'
+              ? 'bg-rose-950/60 border-rose-500/80 hover:border-rose-400'
+              : 'bg-amber-950/60 border-amber-500/80 hover:border-amber-400'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
+                attendanceStats.riskLevel === 'red'
+                  ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
+                  : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+              }`}>
+                {attendanceStats.riskLevel === 'red' ? <AlertCircle size={18} /> : <AlertTriangle size={18} />}
               </div>
 
-              <h3 className="text-base font-black text-white">
-                {attendanceStats.riskLevel === 'red'
-                  ? `Warning: ${attendanceStats.absentCount} Unexcused Absences Accumulated`
-                  : attendanceStats.riskLevel === 'yellow'
-                  ? `Notice: ${attendanceStats.absentCount} Absences Recorded`
-                  : `Active Troop Participation & Roll Call Status`
-                }
-              </h3>
-              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                {attendanceStats.riskLevel === 'red'
-                  ? 'Your unexcused absences exceed the recommended limit. Regular attendance is required for active rank advancement. Please talk to your leader to review makeup options.'
-                  : attendanceStats.riskLevel === 'yellow'
-                  ? 'You have 2 absences on file. Notify your patrol leader in advance when you cannot make it so absences can be excused.'
-                  : 'MāshāʾAllāh! You are in good standing with your weekly troop meetings, halqas, and outdoor activities.'
-                }
-              </p>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <StatusBadge 
+                    type={attendanceStats.riskLevel === 'red' ? 'danger' : 'warning'} 
+                    size="xs"
+                    label={attendanceStats.riskLevel === 'red' ? 'Critical Attendance Warning' : 'Attendance Notice'}
+                  />
+                  <span className="text-xs text-slate-200 font-bold">
+                    {attendanceStats.absentCount} Absences Recorded ({attendanceStats.attendanceRate}% attendance rate)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  {attendanceStats.riskLevel === 'red'
+                    ? 'Unexcused absences exceed standard guidelines. Speak with your patrol leader to discuss makeup options.'
+                    : 'Remember to notify your patrol leader ahead of time when absent so sessions can be excused.'}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate && onNavigate('profile', 'attendance');
-            }}
-            className={`font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center ${
-              attendanceStats.riskLevel === 'red'
-                ? 'bg-rose-600 hover:bg-rose-500 text-white'
-                : attendanceStats.riskLevel === 'yellow'
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                : 'bg-teal-600 hover:bg-teal-500 text-white'
-            }`}
-          >
-            <span>View Attendance Log</span>
-            <ChevronRight size={14} />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate && onNavigate('profile', 'attendance');
+              }}
+              className={`font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shrink-0 self-start sm:self-center ${
+                attendanceStats.riskLevel === 'red'
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+              }`}
+            >
+              <span>View Attendance Log</span>
+              <ChevronRight size={13} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── NOTIFICATION BANNER: OFFICIAL PROGRESS REPORT PUBLISHED ── */}
       {publishedReports.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border border-emerald-500/50 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-2xl shrink-0 shadow-lg">
+        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border border-emerald-500/50 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl shrink-0 shadow-lg">
               📜
             </div>
             <div>
@@ -558,7 +527,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                   <StatusBadge type="success" size="xs" label="✓ Candidate Signed" />
                 )}
               </div>
-              <h3 className="text-base font-black text-white mt-1">
+              <h3 className="text-sm sm:text-base font-black text-white mt-1">
                 Unit Leader {publishedReports[0].leaderName} certified your {publishedReports[0].reportSnapshot?.rank || activeRank} Rank Advancement Snapshot
               </h3>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -567,11 +536,11 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
               type="button"
               onClick={() => setViewingPublishedReport(publishedReports[0])}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
             >
               <FileText size={14} />
               <span>{!publishedReports[0].signatures?.scout?.signed ? 'Review & Sign Report' : 'Inspect Certified PDF'}</span>
@@ -579,7 +548,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('profile', { tab: 'reports' })}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-750 transition cursor-pointer"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3 py-2 rounded-xl border border-slate-750 transition cursor-pointer"
             >
               View in Profile
             </button>
@@ -588,20 +557,20 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       )}
 
       {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl shrink-0 shadow-md">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-xl shrink-0 shadow-md">
               🦅
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-0.5">
                 <StatusBadge type="warning" size="xs" label="Eagle Scout Portal" />
                 <span className="text-xs text-amber-300 font-bold">
                   BSA Milestone Journey
                 </span>
               </div>
-              <h3 className="text-base font-black text-white">
+              <h3 className="text-sm sm:text-base font-black text-white">
                 Road to Eagle Scout & Eagle Palms Portal
               </h3>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -612,7 +581,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
           <button
             onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shrink-0 self-start sm:self-center"
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center"
           >
             <span>Launch Eagle Portal</span>
             <ArrowRight size={14} />
@@ -622,18 +591,18 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── 2.5. SMART MERIT BADGE RECOMMENDATIONS & TROOP COUNSELORS ── */}
       {recommendedBadges.length > 0 && (
-        <div className="bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
-                <Sparkles size={22} />
+        <div className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+                <Sparkles size={20} />
               </div>
               <div>
-                <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                  <StatusBadge type="success" size="xs" label="Smart Badge Recommendation" />
-                  <StatusBadge type="warning" size="xs" label="⚜️ 28+ In-House Sign-Offs Ready" />
+                <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                  <StatusBadge type="success" size="xs" label="Smart Recommendations" />
+                  <StatusBadge type="warning" size="xs" label="⚜️ 28+ In-House Counselors" />
                 </div>
-                <h3 className="text-base font-black text-white">
+                <h3 className="text-sm sm:text-base font-black text-white">
                   Fast-Track Merit Badges (Authorized Troop Counselors)
                 </h3>
                 <p className="text-xs text-slate-300 mt-0.5">
@@ -646,15 +615,15 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('merit-badges')}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
               >
-                <span>Browse All 137 Badges</span>
+                <span>Browse All Badges</span>
                 <ChevronRight size={14} />
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {recommendedBadges.slice(0, 4).map((rec) => (
               <div
                 key={rec.id}

@@ -341,16 +341,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const scoutsWithPending = (scouts || []).filter(s => s?.uid && (pendingMap[s.uid]?.total || 0) > 0);
 
   return (
-    <div className="space-y-6 pb-12 font-sans">
+    <div className="space-y-4 pb-8 font-sans">
       {/* ── 1. LEADER / OWNER HERO COMMAND CARD ── */}
-      <div className={`rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden ${
+      <div className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden ${
         isOwner 
-          ? 'bg-gradient-to-br from-slate-950 via-amber-950/60 to-slate-900 border-2 border-amber-500/60 shadow-amber-950/50' 
-          : 'bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border-2 border-emerald-500/40 shadow-emerald-950/40'
+          ? 'bg-gradient-to-br from-slate-950 via-amber-950/60 to-slate-900 border border-amber-500/60 shadow-amber-950/50' 
+          : 'bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border border-emerald-500/40 shadow-emerald-950/40'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className={`w-18 h-18 rounded-2xl flex items-center justify-center p-2.5 shadow-xl shrink-0 text-3xl ${
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative z-10">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center p-2 shadow-xl shrink-0 text-2xl sm:text-3xl ${
               isOwner 
                 ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/60' 
                 : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50'
@@ -359,13 +359,13 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
                 {isOwner ? (
-                  <StatusBadge type="warning" size="xs" label="👑 Troop Owner & Superadmin" />
+                  <StatusBadge type="warning" size="xs" label="👑 Troop Owner" />
                 ) : (
                   <StatusBadge type="success" size="xs" label={`⚜️ ${roleLabel}`} />
                 )}
-                <StatusBadge type="indigo" size="xs" label={`${scouts.length} Registered Scouts`} />
+                <StatusBadge type="indigo" size="xs" label={`${scouts.length} Scouts`} />
                 <StatusBadge type="purple" size="xs" label="Be Prepared • كُن مُسْتَعِدّاً" />
                 <button
                   type="button"
@@ -379,31 +379,28 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                     label={`SPT: ${(currentUser?.spt || currentUser?.sptDate) ? `✓ ${currentUser?.spt || currentUser?.sptDate}` : ((currentUser?.sptFileUrl || currentUser?.yptCompleted) ? '✓ Certified' : 'Pending')}`} 
                   />
                 </button>
-                {isOwner && (
-                  <StatusBadge type="warning" size="xs" label="Full Superadmin Authority" />
-                )}
               </div>
 
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
                 Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}! {isOwner ? '👑' : '⚜️'}
               </h2>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
                 {isOwner 
-                  ? 'Welcome to the Supreme Troop Owner Command Center. You hold exclusive authority to modify usernames, supervise all patrol hierarchies, manage system-wide credentials, and oversee troop governance.'
-                  : 'Welcome to your Dhulfiqār Leadership Command Center. Monitor scout advancement, test submissions, schedule events, and generate customized troop reports.'
+                  ? 'Supreme Command Center: Oversee troop governance, patrol hierarchies, usernames, and system credentials.'
+                  : 'Leadership Command Center: Monitor scout advancement, verify submissions, take roll call, and schedule events.'
                 }
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full lg:w-auto shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full md:w-auto shrink-0">
             {(isOwner || isExecutive) && (
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('admin')}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
               >
-                <Crown size={14} className="shrink-0" />
+                <Crown size={13} className="shrink-0" />
                 <span className="truncate">Admin Hub</span>
               </button>
             )}
@@ -415,9 +412,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   setSelectedPendingScoutId(null);
                   setShowPendingModal(true);
                 }}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
               >
-                <Clock size={14} className="animate-pulse shrink-0" />
+                <Clock size={13} className="animate-pulse shrink-0" />
                 <span className="truncate">Review ({totalPendingApprovals})</span>
               </button>
             )}
@@ -425,61 +422,78 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => setShowScheduleMeetingModal(true)}
-              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-teal-950/40"
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-teal-950/40"
             >
-              <Users size={14} className="shrink-0" />
-              <span className="truncate">Schedule Meeting</span>
+              <Users size={13} className="shrink-0" />
+              <span className="truncate">Meeting</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('broadcasts')}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/40"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/40"
             >
-              <Megaphone size={14} className="shrink-0" />
+              <Megaphone size={13} className="shrink-0" />
               <span className="truncate">Broadcast</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onNavigate && onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              onClick={() => onNavigate && onNavigate('attendance')}
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
-              <Calendar size={14} className="text-teal-400 shrink-0" />
+              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+              <span className="truncate">Roll Call</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('events')}
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            >
+              <Calendar size={13} className="text-teal-400 shrink-0" />
               <span className="truncate">Calendar</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onNavigate && onNavigate('attendance')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-            >
-              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
-              <span className="truncate">Attendance</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => onNavigate && onNavigate('reports')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
             >
-              <Printer size={14} className="shrink-0" />
+              <Printer size={13} className="shrink-0" />
               <span className="truncate">Reports</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('roster')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
-              <Users size={14} className="text-sky-400 shrink-0" />
+              <Users size={13} className="text-sky-400 shrink-0" />
               <span className="truncate">Roster</span>
             </button>
           </div>
         </div>
 
-        {/* ── Quick Command Metrics Grid ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
+        {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-700/60 relative z-10 text-xs">
+          {/* 1. Active Scouts */}
+          <div 
+            onClick={() => onNavigate && onNavigate('roster')}
+            className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Users size={18} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] text-emerald-400 block uppercase font-bold tracking-wider">Troop Members</span>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {scouts.length} Registered Scouts
+              </strong>
+            </div>
+          </div>
+
+          {/* 2. Pending Reviews */}
           <div 
             onClick={() => {
               if (totalPendingApprovals > 0) {
@@ -487,67 +501,64 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 setShowPendingModal(true);
               }
             }}
-            className={`p-3.5 rounded-2xl border transition-all duration-200 shadow-xs ${
+            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 transition border shadow-xs ${
               totalPendingApprovals > 0 
                 ? 'bg-amber-950/40 border-amber-500/60 cursor-pointer hover:border-amber-400 hover:shadow-md' 
-                : 'bg-slate-900/80 border-slate-800'
+                : 'bg-slate-900/90 border-slate-800'
             }`}
           >
-            <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Pending Tasks</span>
-            <strong className="text-base font-black text-white block mt-0.5">
-              {totalPendingApprovals} Action Items
-            </strong>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Clock size={18} className={totalPendingApprovals > 0 ? "animate-pulse" : ""} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Pending Reviews</span>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {totalPendingApprovals} Action Items
+              </strong>
+            </div>
           </div>
 
+          {/* 3. Patrol Attendance */}
           <div 
             onClick={() => onNavigate && onNavigate('attendance')}
-            className="bg-slate-900/80 border border-teal-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-teal-400 transition-all duration-200 shadow-xs hover:shadow-md"
+            className="bg-slate-900/90 border border-teal-500/30 hover:border-teal-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Patrol Attendance</span>
-              {patrolRedRiskCount > 0 && (
-                <span className="bg-rose-500/30 border border-rose-500/50 text-rose-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
-                  {patrolRedRiskCount} Risk
-                </span>
-              )}
+            <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0">
+              <CheckCircle2 size={18} />
             </div>
-            <strong className="text-base font-black text-white block mt-0.5">
-              {attendanceSessions.length} Sessions Logged
-            </strong>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Attendance</span>
+                {patrolRedRiskCount > 0 && (
+                  <span className="bg-rose-500/30 border border-rose-500/50 text-rose-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                    {patrolRedRiskCount} Risk
+                  </span>
+                )}
+              </div>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {attendanceSessions.length} Sessions Logged
+              </strong>
+            </div>
           </div>
 
-          <div 
-            onClick={() => onNavigate && onNavigate('scouts')}
-            className="bg-slate-900/80 border border-emerald-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-emerald-400 transition-all duration-200 shadow-xs hover:shadow-md"
-          >
-            <span className="text-[10px] text-emerald-400 block uppercase font-bold tracking-wider">Active Scouts</span>
-            <strong className="text-base font-black text-white block mt-0.5">
-              {scouts.length} Troop Members
-            </strong>
-          </div>
-
+          {/* 4. Patrol Units */}
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/80 border border-sky-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-sky-400 transition-all duration-200 shadow-xs hover:shadow-md"
+            className="bg-slate-900/90 border border-sky-500/30 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
           >
-            <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">
-              {isTroopWideAuthority ? 'Taliʿat Patrols' : 'My Patrol Unit'}
-            </span>
-            <strong className="text-base font-black text-white block mt-0.5 truncate">
-              {isTroopWideAuthority 
-                ? `${groups.length} Active Patrols` 
-                : (myGroup ? `🛡️ ${myGroup.name}` : 'Assigned Unit')}
-            </strong>
-          </div>
-
-          <div 
-            onClick={() => onNavigate && onNavigate('events')}
-            className="bg-slate-900/80 border border-purple-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-purple-400 transition-all duration-200 shadow-xs hover:shadow-md"
-          >
-            <span className="text-[10px] text-purple-400 block uppercase font-bold tracking-wider">Planned Events</span>
-            <strong className="text-base font-black text-white block mt-0.5">
-              {allEvents.length} Scheduled
-            </strong>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Shield size={18} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">
+                {isTroopWideAuthority ? 'Patrol Units' : 'Assigned Unit'}
+              </span>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {isTroopWideAuthority 
+                  ? `${groups.length} Patrol Units` 
+                  : (myGroup ? `🛡️ ${myGroup.name}` : 'Assigned Unit')}
+              </strong>
+            </div>
           </div>
         </div>
       </div>
