@@ -9,8 +9,8 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
-  setDoc,
-  getDoc,
+  setDoc, 
+  getDoc, 
   updateDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
@@ -30,33 +30,98 @@ import {
   Circle, 
   Lock, 
   Unlock, 
-  Sparkles,
-  Vote,
-  Crown,
-  Shield,
-  SmilePlus,
-  Smile,
-  Heart,
-  Search,
-  Mic,
-  MicOff,
-  Play,
-  Pause,
-  Star,
-  Pin,
-  PinOff,
-  Reply,
-  CheckCheck,
-  MoreVertical,
-  Copy,
-  Edit2,
-  Bookmark,
-  Volume2,
-  VolumeX,
-  ChevronDown
+  Sparkles, 
+  Vote, 
+  Crown, 
+  Shield, 
+  SmilePlus, 
+  Smile, 
+  Heart, 
+  Search, 
+  Mic, 
+  MicOff, 
+  Play, 
+  Pause, 
+  Star, 
+  Pin, 
+  PinOff, 
+  Reply, 
+  CheckCheck, 
+  MoreVertical, 
+  Copy, 
+  Edit2, 
+  Bookmark, 
+  Volume2, 
+  VolumeX, 
+  ChevronDown 
 } from 'lucide-react';
 
-const QUICK_REACTION_EMOJIS = ['👍', '❤️', '⚜️', '🔥', '😂', '👏', '🎉', '💪', '🏕️', '✨'];
+// ── Curated Scouting, Islamic & Basic Emoticons System ──
+export const QUICK_REACTION_EMOJIS = [
+  '👍', // Roger / Good
+  '❤️', // Brotherhood
+  '⚜️', // Scout Fleur-de-lis
+  '🕌', // Islamic / Masjid / Salam
+  '🤲', // Dua / Ameen
+  '🔥', // Campfire / Hype
+  '🏕️', // Camping / Outdoor
+  '👏', // Takbeer / Great Job
+  '😂', // Laugh
+  '✨', // Barakah / Blessing
+  '✅', // Task Completed
+  '🫡'  // Scout Salute / Respect
+];
+
+export const ISLAMIC_EMOJIS = [
+  { emoji: '🕌', label: 'Masjid' },
+  { emoji: '🌙', label: 'Hilal Crescent' },
+  { emoji: '🤲', label: 'Dua / Ameen' },
+  { emoji: '📿', label: 'Tasbih' },
+  { emoji: '📖', label: 'Quran' },
+  { emoji: '🕋', label: 'Kaaba' },
+  { emoji: '🕊️', label: 'Salam Peace' },
+  { emoji: '🌴', label: 'Date Palm' },
+  { emoji: '🍵', label: 'Chai Hospitality' },
+  { emoji: '🌅', label: 'Fajr Dawn' },
+  { emoji: '⭐', label: 'Noor Star' },
+  { emoji: '✨', label: 'Barakah' }
+];
+
+export const SCOUTING_EMOJIS = [
+  { emoji: '⚜️', label: 'Fleur-de-lis' },
+  { emoji: '🏕️', label: 'Campout' },
+  { emoji: '⛺', label: 'Tent' },
+  { emoji: '🔥', label: 'Campfire' },
+  { emoji: '🌲', label: 'Pine Forest' },
+  { emoji: '🧭', label: 'Compass' },
+  { emoji: '🎒', label: 'Backpack' },
+  { emoji: '🧗', label: 'Pioneering' },
+  { emoji: '🛶', label: 'Canoe' },
+  { emoji: '🪵', label: 'Firewood' },
+  { emoji: '🪢', label: 'Knot' },
+  { emoji: '🔦', label: 'Flashlight' },
+  { emoji: '🏆', label: 'Eagle Trophy' },
+  { emoji: '🎖️', label: 'Merit Badge' },
+  { emoji: '🗺️', label: 'Trail Map' },
+  { emoji: '🏹', label: 'Archery' },
+  { emoji: '🏔️', label: 'Summit Peak' },
+  { emoji: '🦅', label: 'Eagle Scout' }
+];
+
+export const BASIC_EMOJIS = [
+  { emoji: '👍', label: 'Thumbs Up' },
+  { emoji: '👏', label: 'Takbeer Clap' },
+  { emoji: '❤️', label: 'Brotherhood' },
+  { emoji: '🤝', label: 'Salam Shake' },
+  { emoji: '😂', label: 'Joy Laugh' },
+  { emoji: '😊', label: 'Warm Smile' },
+  { emoji: '🫡', label: 'Scout Salute' },
+  { emoji: '😎', label: 'Cool Patrol' },
+  { emoji: '🎉', label: 'Celebration' },
+  { emoji: '💪', label: 'Scout Strong' },
+  { emoji: '✅', label: 'Task Done' },
+  { emoji: '🚨', label: 'Patrol Alert' }
+];
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
@@ -118,6 +183,7 @@ export default function PatrolChat({ currentUser }) {
   
   // ── Modals & Popovers ──
   const [showEmojis, setShowEmojis] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState('islamic'); // 'islamic' | 'scouting' | 'basic'
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [showStarredDrawer, setShowStarredDrawer] = useState(false);
@@ -908,6 +974,13 @@ export default function PatrolChat({ currentUser }) {
   }, [messages, currentUser?.uid]);
 
   const typingNames = Object.values(typingUsers);
+
+  // Active category emoji list
+  const currentCategoryEmojis = useMemo(() => {
+    if (emojiCategory === 'islamic') return ISLAMIC_EMOJIS;
+    if (emojiCategory === 'scouting') return SCOUTING_EMOJIS;
+    return BASIC_EMOJIS;
+  }, [emojiCategory]);
 
   return (
     <div className="bg-slate-900 border border-slate-750 rounded-2xl flex flex-col h-[calc(100vh-140px)] min-h-[540px] max-h-[760px] shadow-2xl overflow-hidden print-hide relative select-none">
@@ -1797,29 +1870,71 @@ export default function PatrolChat({ currentUser }) {
         </div>
       )}
 
-      {/* ── 9. EMOJI PICKER POPOVER ── */}
+      {/* ── 9. CURATED ISLAMIC, SCOUTING & BASIC EMOJI PICKER POPOVER ── */}
       {showEmojis && (
         <div 
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-16 left-12 bg-slate-900 border border-slate-700 p-3 rounded-2xl shadow-2xl z-40 animate-fadeIn"
+          className="absolute bottom-16 left-3 sm:left-8 bg-slate-900/95 border border-slate-700/90 p-3 rounded-2xl shadow-2xl z-40 animate-fadeIn w-72 backdrop-blur-md"
         >
-          <p className="text-[9px] uppercase font-bold text-slate-400 mb-2 tracking-wider text-center">Quick Emoji</p>
-          <div className="grid grid-cols-4 gap-2">
-            {['😀','😂','😍','👍','🎉','🔥','👏','❤️','🚨','⛺','🌲','⚜️','🙌','👀','✨','🎈'].map(e => (
+          {/* Category Tabs */}
+          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 mb-2.5">
+            <button
+              type="button"
+              onClick={() => setEmojiCategory('islamic')}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1 ${
+                emojiCategory === 'islamic'
+                  ? 'bg-purple-600/40 text-purple-300 border border-purple-500/50 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>🕌</span>
+              <span>Islamic</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEmojiCategory('scouting')}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1 ${
+                emojiCategory === 'scouting'
+                  ? 'bg-emerald-600/40 text-emerald-300 border border-emerald-500/50 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>⚜️</span>
+              <span>Scouting</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEmojiCategory('basic')}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1 ${
+                emojiCategory === 'basic'
+                  ? 'bg-amber-600/40 text-amber-300 border border-amber-500/50 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>😊</span>
+              <span>Basic</span>
+            </button>
+          </div>
+
+          {/* Emoji Grid */}
+          <div className="grid grid-cols-6 gap-1 max-h-44 overflow-y-auto p-1">
+            {currentCategoryEmojis.map(item => (
               <button
-                key={e}
+                key={item.emoji}
                 type="button"
                 onClick={() => {
                   if (editingMessage) {
-                    setEditingMessage(prev => ({ ...prev, text: prev.text + e }));
+                    setEditingMessage(prev => ({ ...prev, text: prev.text + item.emoji }));
                   } else {
-                    handleTyping(text + e);
+                    handleTyping(text + item.emoji);
                   }
-                  setShowEmojis(false);
                 }}
-                className="text-lg hover:scale-125 transition p-1 cursor-pointer bg-transparent border-0"
+                className="text-xl p-1.5 rounded-xl hover:bg-slate-800 hover:scale-125 transition-all cursor-pointer flex items-center justify-center"
+                title={item.label}
               >
-                {e}
+                {item.emoji}
               </button>
             ))}
           </div>
@@ -1878,15 +1993,19 @@ export default function PatrolChat({ currentUser }) {
               <Paperclip size={18} />
             </button>
 
-            {/* Emoji Button */}
+            {/* Curated Emojis Button */}
             <button
               type="button"
               onClick={() => setShowEmojis(!showEmojis)}
               disabled={!activeRoomId}
-              className="p-2.5 bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white rounded-xl transition cursor-pointer border border-slate-700 shrink-0"
-              title="Add emoji"
+              className={`p-2.5 rounded-xl transition cursor-pointer border shrink-0 ${
+                showEmojis
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-xs'
+                  : 'bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white border-slate-700'
+              }`}
+              title="Add Islamic, Scouting, or Basic Emoji"
             >
-              😊
+              <Smile size={18} />
             </button>
 
             {/* Input Box */}

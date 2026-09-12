@@ -24,7 +24,11 @@ import {
   Filter,
   CheckCircle2,
   CopyPlus,
-  UserCheck
+  UserCheck,
+  Lock,
+  Unlock,
+  Crown,
+  Info
 } from 'lucide-react';
 import { formatKashafLessonPlanWhatsApp, applyIslamicTransliteration } from '../utils/kashafVoice';
 
@@ -38,37 +42,67 @@ export default function LessonPlans({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [patrolFilter, setPatrolFilter] = useState('all'); // 'all' | 'my_patrol' | 'troop_wide' | specificGroupId
 
-  // Leader Patrol Resolution
-  const leaderPatrolId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-  const myGroup = useMemo(() => {
-    return groups.find(g => 
-      g.id === leaderPatrolId || 
-      g.name === leaderPatrolId || 
-      (currentUser?.assignedPatrol && (g.name === currentUser.assignedPatrol || g.id === currentUser.assignedPatrol)) ||
-      (currentUser?.patrol && (g.name === currentUser.patrol || g.id === currentUser.patrol))
-    );
-  }, [groups, leaderPatrolId, currentUser?.assignedPatrol, currentUser?.patrol]);
+  // ── 1. Resolve Accessible Patrols for Current User ──
+  // Troop Owner: Access all patrols
+  // Leader / Assistant Leader: Strictly patrols they are assigned to lead or assist
+  const accessibleGroups = useMemo(() => {
+    if (isOwner || isExecutive) return groups;
+    return groups.filter(g => {
+      const isDirectGroupId = g.id === currentUser?.groupId || g.id === currentUser?.patrolId;
+      const isLeaderId = g.leaderId === currentUser?.uid;
+      const isAssignedLeader = Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(currentUser?.uid);
+      const isAssistantLeader = Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(currentUser?.uid);
+      const isAssignedPatrolName = currentUser?.assignedPatrol && (g.name === currentUser.assignedPatrol || g.id === currentUser.assignedPatrol);
+      const isPatrolName = currentUser?.patrol && (g.name === currentUser.patrol || g.id === currentUser.patrol);
+      const isAssignedPatrolsArray = Array.isArray(currentUser?.assignedPatrols) && (currentUser.assignedPatrols.includes(g.id) || currentUser.assignedPatrols.includes(g.name));
 
-  // Fellow leaders of the same patrol
-  const fellowPatrolLeaders = useMemo(() => {
-    if (!myGroup) return [];
-    return users.filter(u => 
-      u.role === 'leader' && (
-        u.groupId === myGroup.id || 
-        u.patrolId === myGroup.id || 
-        u.assignedPatrol === myGroup.name ||
-        u.patrol === myGroup.name ||
-        (Array.isArray(u.assignedPatrols) && u.assignedPatrols.includes(myGroup.id))
-      )
-    );
-  }, [users, myGroup]);
+      return isDirectGroupId || isLeaderId || isAssignedLeader || isAssistantLeader || isAssignedPatrolName || isPatrolName || isAssignedPatrolsArray;
+    });
+  }, [groups, currentUser, isOwner, isExecutive]);
 
-  // Editor panel states
+  // Primary active patrol selection
+  const [selectedPatrolId, setSelectedPatrolId] = useState('');
+
+  useEffect(() => {
+    if (accessibleGroups.length > 0 && !selectedPatrolId) {
+      if (isOwner) {
+        setSelectedPatrolId('all');
+      } else {
+        setSelectedPatrolId(accessibleGroups[0].id);
+      }
+    }
+  }, [accessibleGroups, isOwner, selectedPatrolId]);
+
+  // Active Patrol Object
+  const activePatrol = useMemo(() => {
+    if (selectedPatrolId === 'all') return null;
+    return groups.find(g => g.id === selectedPatrolId) || accessibleGroups[0] || null;
+  }, [groups, accessibleGroups, selectedPatrolId]);
+
+  // Leaders and Assistant Leaders of the currently active patrol
+  const activePatrolLeadership = useMemo(() => {
+    if (!activePatrol) return [];
+    return users.filter(u => {
+      if (u.role !== 'leader' && u.role !== 'owner' && u.role !== 'admin') return false;
+      const isLeaderOfGroup = (
+        u.groupId === activePatrol.id ||
+        u.patrolId === activePatrol.id ||
+        u.assignedPatrol === activePatrol.name ||
+        u.patrol === activePatrol.name ||
+        u.uid === activePatrol.leaderId ||
+        (Array.isArray(activePatrol.assignedLeaderIds) && activePatrol.assignedLeaderIds.includes(u.uid)) ||
+        (Array.isArray(activePatrol.assistantLeaderIds) && activePatrol.assistantLeaderIds.includes(u.uid)) ||
+        (Array.isArray(u.assignedPatrols) && u.assignedPatrols.includes(activePatrol.id))
+      );
+      return isLeaderOfGroup;
+    });
+  }, [users, activePatrol]);
+
+  // Editor states
   const [isEditing, setIsEditing] = useState(false);
-  const [editingId, setEditingId] = useState(null); // null means new plan
-  const [targetGroupId, setTargetGroupId] = useState(myGroup?.id || 'all');
+  const [editingId, setEditingId] = useState(null);
+  const [targetGroupId, setTargetGroupId] = useState('');
   const [planDate, setPlanDate] = useState(new Date().toISOString().split('T')[0]);
   const [planTitle, setPlanTitle] = useState('');
   const [planContent, setPlanContent] = useState('');
@@ -80,7 +114,6 @@ export default function LessonPlans({ currentUser }) {
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [editorCopiedSuccess, setEditorCopiedSuccess] = useState(false);
 
-  // Status messages
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -97,11 +130,6 @@ export default function LessonPlans({ currentUser }) {
       // Sort plans by date descending
       list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
       setPlans(list);
-      
-      // Auto-select first plan if none selected
-      if (list.length > 0 && !selectedPlan && !isEditing) {
-        setSelectedPlan(list[0]);
-      }
       setLoading(false);
     }, (err) => {
       console.error("Failed to load lesson plans:", err);
@@ -119,7 +147,7 @@ export default function LessonPlans({ currentUser }) {
     return () => unsubGroups();
   }, []);
 
-  // 3. Subscribe to Users for Leader Roster Resolution
+  // 3. Subscribe to Users for Leader & Assistant Resolution
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
@@ -127,74 +155,81 @@ export default function LessonPlans({ currentUser }) {
     return () => unsubUsers();
   }, []);
 
-  // Scoped Plans: Shared among leaders of the same patrol + Troop-wide
+  // ── Scoped Plans: Strictly Patrol-Specific & Shared Only Among Leaders/Assistants of that Patrol ──
   const scopedPlans = useMemo(() => {
-    return plans.filter(p => {
-      // If Executive/Troop-wide authority: can see everything
-      if (isExecutive) return true;
+    const accessibleGroupIds = accessibleGroups.map(g => g.id);
+    const accessibleGroupNames = accessibleGroups.map(g => g.name);
 
-      // Check if plan belongs to leader's patrol
-      const isMyPatrol = myGroup && (
-        p.targetGroupId === myGroup.id || 
-        p.groupId === myGroup.id || 
-        p.patrolId === myGroup.id || 
-        p.patrolName === myGroup.name ||
-        p.authorPatrolId === myGroup.id
+    return plans.filter(p => {
+      // Owner/Executive with 'all' filter sees all plans
+      if (isOwner && selectedPatrolId === 'all') return true;
+
+      // Filter by selected patrol
+      if (selectedPatrolId && selectedPatrolId !== 'all') {
+        const matchesSelected = (
+          p.targetGroupId === selectedPatrolId ||
+          p.groupId === selectedPatrolId ||
+          p.patrolId === selectedPatrolId ||
+          (activePatrol && p.patrolName === `${activePatrol.name} Patrol`) ||
+          (activePatrol && p.patrolName === activePatrol.name)
+        );
+        return matchesSelected;
+      }
+
+      // If leader, only show plans belonging to their accessible patrols
+      const isAssignedPatrol = (
+        accessibleGroupIds.includes(p.targetGroupId) ||
+        accessibleGroupIds.includes(p.groupId) ||
+        accessibleGroupIds.includes(p.patrolId) ||
+        accessibleGroupNames.includes(p.patrolName?.replace(' Patrol', '')) ||
+        accessibleGroupIds.includes(p.authorPatrolId)
       );
 
-      // Check if troop-wide / all patrols
-      const isTroopWide = p.targetGroupId === 'all' || p.groupId === 'all' || p.patrolId === 'all' || p.scope === 'all' || (!p.targetGroupId && !p.groupId && !p.patrolId);
-
-      // Check if created or updated by this leader
-      const isAuthor = p.authorId === currentUser?.uid || p.updatedBy === currentUser?.uid;
-
-      return isMyPatrol || isTroopWide || isAuthor;
+      return isAssignedPatrol;
     });
-  }, [plans, isExecutive, myGroup, currentUser?.uid]);
+  }, [plans, isOwner, selectedPatrolId, accessibleGroups, activePatrol]);
 
-  // Filtered Plans by Search & Patrol Filter Tab
+  // Auto-select first plan when list changes or filter updates
+  useEffect(() => {
+    if (scopedPlans.length > 0) {
+      if (!selectedPlan || !scopedPlans.some(p => p.id === selectedPlan.id)) {
+        setSelectedPlan(scopedPlans[0]);
+      }
+    } else {
+      setSelectedPlan(null);
+    }
+  }, [scopedPlans]);
+
+  // Filtered plans by search query
   const filteredPlans = useMemo(() => {
+    if (!searchTerm.trim()) return scopedPlans;
+    const q = searchTerm.toLowerCase();
     return scopedPlans.filter(p => {
-      // 1. Patrol Filter Tab
-      if (patrolFilter === 'my_patrol' && myGroup) {
-        const isMyPatrol = (
-          p.targetGroupId === myGroup.id || 
-          p.groupId === myGroup.id || 
-          p.patrolId === myGroup.id || 
-          p.patrolName === myGroup.name ||
-          p.authorPatrolId === myGroup.id
-        );
-        if (!isMyPatrol) return false;
-      } else if (patrolFilter === 'troop_wide') {
-        const isTroopWide = p.targetGroupId === 'all' || p.groupId === 'all' || p.patrolId === 'all' || p.scope === 'all' || (!p.targetGroupId && !p.groupId && !p.patrolId);
-        if (!isTroopWide) return false;
-      } else if (patrolFilter !== 'all') {
-        if (p.targetGroupId !== patrolFilter && p.groupId !== patrolFilter && p.patrolId !== patrolFilter) return false;
-      }
-
-      // 2. Search Term
-      if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        const matchTitle = (p.title || '').toLowerCase().includes(q);
-        const matchDate = (p.date || '').includes(q);
-        const matchContent = (p.content || '').toLowerCase().includes(q);
-        const matchIslamic = (p.islamicPrep || '').toLowerCase().includes(q);
-        const matchAuthor = (p.authorName || p.updatedByName || '').toLowerCase().includes(q);
-        const matchPatrol = (p.patrolName || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchDate && !matchContent && !matchIslamic && !matchAuthor && !matchPatrol) return false;
-      }
-
-      return true;
+      const matchTitle = (p.title || '').toLowerCase().includes(q);
+      const matchDate = (p.date || '').includes(q);
+      const matchContent = (p.content || '').toLowerCase().includes(q);
+      const matchIslamic = (p.islamicPrep || '').toLowerCase().includes(q);
+      const matchAuthor = (p.authorName || p.updatedByName || '').toLowerCase().includes(q);
+      const matchPatrol = (p.patrolName || '').toLowerCase().includes(q);
+      return matchTitle || matchDate || matchContent || matchIslamic || matchAuthor || matchPatrol;
     });
-  }, [scopedPlans, patrolFilter, myGroup, searchTerm]);
+  }, [scopedPlans, searchTerm]);
+
+  // Check if current user can edit the currently selected plan
+  const canEditSelectedPlan = useMemo(() => {
+    if (!selectedPlan) return false;
+    if (isOwner || isExecutive) return true;
+    const planPatrolId = selectedPlan.targetGroupId || selectedPlan.groupId || selectedPlan.patrolId;
+    return accessibleGroups.some(g => g.id === planPatrolId || g.name === selectedPlan.patrolName?.replace(' Patrol', ''));
+  }, [selectedPlan, isOwner, isExecutive, accessibleGroups]);
 
   // Update customized WhatsApp message whenever selected plan changes
   useEffect(() => {
     if (selectedPlan) {
-      const pName = selectedPlan.patrolName || (selectedPlan.targetGroupId !== 'all' ? groups.find(g => g.id === selectedPlan.targetGroupId)?.name : '') || (myGroup?.name ? `${myGroup.name} Patrol` : '');
+      const pName = selectedPlan.patrolName || (activePatrol?.name ? `${activePatrol.name} Patrol` : '');
       setCustomWhatsAppMsg(formatKashafLessonPlanWhatsApp(selectedPlan, pName));
     }
-  }, [selectedPlan, groups, myGroup]);
+  }, [selectedPlan, activePatrol]);
 
   const handleAddResourceRow = () => {
     setResources([...resources, { name: '', url: '' }]);
@@ -211,8 +246,9 @@ export default function LessonPlans({ currentUser }) {
   };
 
   const handleOpenNewEditor = () => {
+    const defaultGroup = activePatrol?.id || accessibleGroups[0]?.id || '';
     setEditingId(null);
-    setTargetGroupId(myGroup?.id || 'all');
+    setTargetGroupId(defaultGroup);
     setPlanDate(new Date().toISOString().split('T')[0]);
     setPlanTitle('');
     setPlanContent('');
@@ -225,7 +261,7 @@ export default function LessonPlans({ currentUser }) {
 
   const handleOpenEditEditor = (plan) => {
     setEditingId(plan.id);
-    setTargetGroupId(plan.targetGroupId || plan.groupId || plan.patrolId || (myGroup?.id || 'all'));
+    setTargetGroupId(plan.targetGroupId || plan.groupId || plan.patrolId || (activePatrol?.id || accessibleGroups[0]?.id || ''));
     setPlanDate(plan.date || '');
     setPlanTitle(plan.title || '');
     setPlanContent(plan.content || '');
@@ -238,14 +274,14 @@ export default function LessonPlans({ currentUser }) {
 
   const handleDuplicatePlan = (plan) => {
     setEditingId(null);
-    setTargetGroupId(myGroup?.id || plan.targetGroupId || 'all');
+    setTargetGroupId(activePatrol?.id || accessibleGroups[0]?.id || plan.targetGroupId || '');
     setPlanDate(new Date().toISOString().split('T')[0]);
     setPlanTitle(`Copy of ${plan.title || 'Lesson Plan'}`);
     setPlanContent(plan.content || '');
     setIslamicPrep(plan.islamicPrep || '');
     setResources(plan.resources && plan.resources.length > 0 ? [...plan.resources] : [{ name: '', url: '' }]);
     setErrorMsg('');
-    setSuccessMsg('Cloned plan! You can now customize and save it for your patrol leaders.');
+    setSuccessMsg('Cloned plan! You can now customize and save it for your patrol leadership team.');
     setIsEditing(true);
   };
 
@@ -259,24 +295,27 @@ export default function LessonPlans({ currentUser }) {
       return;
     }
 
-    // Filter out incomplete resources
-    const cleanResources = resources.filter(r => r.name.trim() && r.url.trim());
+    if (!targetGroupId) {
+      setErrorMsg("Please select a patrol for this lesson plan.");
+      return;
+    }
 
-    const selectedGroup = groups.find(g => g.id === targetGroupId);
-    const resolvedPatrolName = targetGroupId === 'all' 
-      ? 'All Patrols (Troop-wide)' 
-      : (selectedGroup?.name ? `${selectedGroup.name} Patrol` : (myGroup?.name ? `${myGroup.name} Patrol` : 'Patrol'));
+    const cleanResources = resources.filter(r => r.name.trim() && r.url.trim());
+    const selectedGroup = groups.find(g => g.id === targetGroupId) || accessibleGroups.find(g => g.id === targetGroupId);
+    const resolvedPatrolName = selectedGroup?.name ? `${selectedGroup.name} Patrol` : 'Patrol Plan';
 
     const existingPlan = editingId ? plans.find(p => p.id === editingId) : null;
     const existingCollaborators = Array.isArray(existingPlan?.collaborators) ? existingPlan.collaborators : [];
 
-    // Append / update current leader in collaborators array
+    // Track leader/assistant collaborator details
+    const userRoleLabel = currentUser?.leaderPosition || (currentUser?.role === 'owner' ? 'Troop Headmaster' : 'Patrol Leader');
+
     const updatedCollaborators = [
       ...existingCollaborators.filter(c => c.uid !== currentUser?.uid),
       {
         uid: currentUser?.uid || 'leader',
-        name: currentUser?.fullName || currentUser?.username || 'Troop Leader',
-        role: currentUser?.leaderPosition || currentUser?.role || 'Leader',
+        name: currentUser?.fullName || currentUser?.username || 'Patrol Leader',
+        role: userRoleLabel,
         modifiedAt: new Date().toISOString()
       }
     ];
@@ -287,20 +326,20 @@ export default function LessonPlans({ currentUser }) {
       content: planContent.trim(),
       islamicPrep: islamicPrep.trim(),
       resources: cleanResources,
-      targetGroupId: targetGroupId || 'all',
-      groupId: targetGroupId || 'all',
-      patrolId: targetGroupId || 'all',
+      targetGroupId: targetGroupId,
+      groupId: targetGroupId,
+      patrolId: targetGroupId,
       patrolName: resolvedPatrolName,
-      scope: targetGroupId === 'all' ? 'all' : 'patrol',
+      scope: 'patrol',
       authorId: existingPlan?.authorId || currentUser?.uid || 'leader',
-      authorName: existingPlan?.authorName || currentUser?.fullName || currentUser?.username || 'Troop Leader',
-      authorRole: existingPlan?.authorRole || currentUser?.leaderPosition || currentUser?.role || 'Leader',
-      authorPatrolId: existingPlan?.authorPatrolId || myGroup?.id || null,
-      authorPatrolName: existingPlan?.authorPatrolName || myGroup?.name || 'Troop 1318',
+      authorName: existingPlan?.authorName || currentUser?.fullName || currentUser?.username || 'Patrol Leader',
+      authorRole: existingPlan?.authorRole || userRoleLabel,
+      authorPatrolId: targetGroupId,
+      authorPatrolName: resolvedPatrolName,
       createdAt: existingPlan?.createdAt || new Date().toISOString(),
       updatedBy: currentUser?.uid || 'leader',
-      updatedByName: currentUser?.fullName || currentUser?.username || 'Troop Leader',
-      updatedByRole: currentUser?.leaderPosition || currentUser?.role || 'Leader',
+      updatedByName: currentUser?.fullName || currentUser?.username || 'Patrol Leader',
+      updatedByRole: userRoleLabel,
       updatedAt: serverTimestamp(),
       sharedWithPatrol: true,
       collaborators: updatedCollaborators
@@ -310,12 +349,12 @@ export default function LessonPlans({ currentUser }) {
       const docId = editingId || `plan_${Date.now()}`;
       await setDoc(doc(db, 'lesson_plans', docId), planData, { merge: true });
       
-      setSuccessMsg(editingId ? "Lesson plan updated and shared with patrol leaders!" : "New lesson plan published and shared with patrol leaders!");
+      setSuccessMsg(editingId ? "Lesson plan updated and synced with patrol leaders!" : "New lesson plan published for your patrol leadership team!");
       setTimeout(() => {
         setIsEditing(false);
         setEditingId(null);
         setSelectedPlan({ id: docId, ...planData });
-      }, 1200);
+      }, 1000);
     } catch (err) {
       console.error(err);
       setErrorMsg("Failed to save plan: " + err.message);
@@ -323,7 +362,7 @@ export default function LessonPlans({ currentUser }) {
   };
 
   const handleDeletePlan = async (planId) => {
-    if (!window.confirm("Are you sure you want to delete this lesson plan? This will remove it for all leaders.")) return;
+    if (!window.confirm("Are you sure you want to delete this lesson plan? This will remove it for all leaders of this patrol.")) return;
     try {
       await deleteDoc(doc(db, 'lesson_plans', planId));
       setSelectedPlan(null);
@@ -340,8 +379,8 @@ export default function LessonPlans({ currentUser }) {
   };
 
   const handleCopyEditorWhatsAppMsg = () => {
-    const selectedGroup = groups.find(g => g.id === targetGroupId);
-    const pName = targetGroupId === 'all' ? '' : (selectedGroup?.name ? `${selectedGroup.name} Patrol` : '');
+    const selectedGroup = groups.find(g => g.id === targetGroupId) || accessibleGroups.find(g => g.id === targetGroupId);
+    const pName = selectedGroup?.name ? `${selectedGroup.name} Patrol` : '';
     const currentEditorPlan = {
       title: planTitle,
       date: planDate,
@@ -363,83 +402,126 @@ export default function LessonPlans({ currentUser }) {
     islamicPrep: islamicPrep,
     resources: resources.filter(r => r.name && r.url)
   };
-  const selectedGroupInEditor = groups.find(g => g.id === targetGroupId);
-  const previewPatrolName = targetGroupId === 'all' ? '' : (selectedGroupInEditor?.name ? `${selectedGroupInEditor.name} Patrol` : '');
+  const selectedGroupInEditor = groups.find(g => g.id === targetGroupId) || accessibleGroups.find(g => g.id === targetGroupId);
+  const previewPatrolName = selectedGroupInEditor?.name ? `${selectedGroupInEditor.name} Patrol` : '';
   const editorWhatsAppMsg = formatKashafLessonPlanWhatsApp(editorPreviewPlan, previewPatrolName);
 
   return (
-    <div className="space-y-6">
-      {/* Header Panel */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border border-slate-700 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+    <div className="space-y-5">
+      {/* ── HEADER PANEL WITH PATROL SELECTOR ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute right-4 top-4 opacity-5 pointer-events-none">
           <BookOpen size={140} className="text-emerald-400" />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-4 relative z-10">
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                <Sparkles size={12} /> KashafVoice v4.0 Enabled
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <Sparkles size={11} /> KashafVoice v4.0
               </span>
-              {myGroup && (
-                <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                  <Users size={12} /> {myGroup.name} Patrol
+
+              {activePatrol && (
+                <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                  <Users size={11} /> {activePatrol.name} Patrol
                 </span>
               )}
+
+              <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <Lock size={10} /> Leaders & Assistants Only
+              </span>
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-white flex items-center gap-2.5">
-              <BookOpen className="text-emerald-400 shrink-0" size={26} />
-              <span>Patrol Lesson Planning & Shared Curriculum</span>
+
+            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
+              <BookOpen className="text-emerald-400 shrink-0" size={24} />
+              <span>Patrol Lesson Plans & Weekly Agendas</span>
             </h2>
-            <p className="text-xs text-slate-350 mt-1.5 leading-relaxed max-w-2xl">
-              Collaboratively design weekly scouting agendas, align tarbiyah milestones, and share formatted WhatsApp briefings directly among all leaders of your patrol.
+            
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed max-w-2xl">
+              Each patrol maintains its own exclusive lesson plans, co-created and edited by the patrol leader and assistant leaders.
             </p>
           </div>
 
-          {isLeaderOrOwner && !isEditing && (
-            <button
-              onClick={handleOpenNewEditor}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/50"
-            >
-              <Plus size={16} />
-              <span>Create Lesson Plan</span>
-            </button>
-          )}
+          {/* Patrol Switcher & Create Plan Button */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Patrol Selector Dropdown */}
+            {(isOwner || accessibleGroups.length > 1) && (
+              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-700/80 p-1.5 rounded-2xl shadow-sm">
+                <span className="text-[11px] font-bold text-slate-400 pl-1.5 flex items-center gap-1">
+                  <Filter size={12} className="text-emerald-400" />
+                  <span>Patrol:</span>
+                </span>
+                <select
+                  value={selectedPatrolId}
+                  onChange={(e) => setSelectedPatrolId(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                >
+                  {isOwner && <option value="all">🌐 All Patrols (Troop Overview)</option>}
+                  {accessibleGroups.map(g => (
+                    <option key={g.id} value={g.id}>👥 {g.name} Patrol</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {isLeaderOrOwner && !isEditing && (
+              <button
+                onClick={handleOpenNewEditor}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-4 py-2.5 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/50"
+              >
+                <Plus size={15} />
+                <span>New Lesson Plan</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Patrol Co-Leadership Banner */}
-        {myGroup && fellowPatrolLeaders.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-3 text-xs text-slate-400 flex-wrap">
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <Users size={13} /> {myGroup.name} Patrol Leadership Team:
+        {/* ── PATROL CO-LEADERSHIP ROSTER BAR ── */}
+        {activePatrol && activePatrolLeadership.length > 0 && (
+          <div className="mt-4 pt-3.5 border-t border-slate-800 flex items-center gap-3 text-xs text-slate-300 flex-wrap">
+            <span className="text-emerald-400 font-bold flex items-center gap-1.5 shrink-0">
+              <Crown size={14} className="text-amber-400" />
+              <span>{activePatrol.name} Patrol Leadership:</span>
             </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {fellowPatrolLeaders.map(ldr => (
-                <span 
-                  key={ldr.uid} 
-                  className="bg-slate-900/90 border border-slate-700/80 text-slate-200 px-2.5 py-0.5 rounded-lg text-[11px] font-medium flex items-center gap-1"
-                >
-                  <UserCheck size={11} className="text-emerald-400" />
-                  <span>{ldr.fullName || ldr.username}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">({ldr.leaderPosition || 'Leader'})</span>
-                </span>
-              ))}
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {activePatrolLeadership.map(ldr => {
+                const isAssistant = ldr.leaderPosition?.toLowerCase().includes('assistant') || ldr.role === 'assistant_leader';
+                return (
+                  <span 
+                    key={ldr.uid} 
+                    className="bg-slate-900/90 border border-slate-700/80 text-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-medium flex items-center gap-1.5 shadow-xs"
+                  >
+                    {isAssistant ? (
+                      <UserCheck size={12} className="text-sky-400" />
+                    ) : (
+                      <Shield size={12} className="text-emerald-400" />
+                    )}
+                    <span className="font-bold text-white">{ldr.fullName || ldr.username}</span>
+                    <span className="text-[9px] text-slate-400 font-mono bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800">
+                      {ldr.leaderPosition || (isAssistant ? 'Assistant Leader' : 'Patrol Leader')}
+                    </span>
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
+      {/* ── MAIN CONTENT AREA ── */}
       {isEditing ? (
-        /* Edit or New Plan Creator UI */
-        <div className="bg-slate-900 border border-slate-750 rounded-3xl p-6 shadow-2xl space-y-6 animate-fadeIn">
+        /* ── EDIT OR CREATE LESSON PLAN UI ── */
+        <div className="bg-slate-900 border border-slate-750 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6 animate-fadeIn">
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📝</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">📝</span>
               <div>
                 <h3 className="font-extrabold text-white text-base">
-                  {editingId ? 'Edit & Collaborate on Lesson Plan' : 'Create New Patrol Lesson Plan'}
+                  {editingId ? 'Edit & Collaborate on Patrol Lesson Plan' : 'Create New Patrol Lesson Plan'}
                 </h3>
-                <p className="text-[11px] text-emerald-400">
-                  ✓ This lesson plan will automatically sync and be shared among all leaders of the selected patrol.
+                <p className="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                  <Lock size={11} /> Shared exclusively among the leaders and assistant leaders of this patrol.
                 </p>
               </div>
             </div>
@@ -455,28 +537,27 @@ export default function LessonPlans({ currentUser }) {
             {/* Form Column */}
             <form onSubmit={handleSavePlan} className="lg:col-span-7 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
                 {/* Patrol Target Selector */}
                 <div className="sm:col-span-3 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5">
                     <Users size={13} className="text-emerald-400" />
-                    <span>Shared Patrol Audience *</span>
+                    <span>Target Patrol (Exclusive Ownership) *</span>
                   </label>
                   <select
                     value={targetGroupId}
                     onChange={(e) => setTargetGroupId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                    required
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
                   >
-                    <option value="all">⚜️ Troop-Wide (Shared with All Troop Leaders)</option>
-                    {groups.map(g => (
+                    {accessibleGroups.map(g => (
                       <option key={g.id} value={g.id}>
-                        🏕️ {g.name} Patrol (Shared with all {g.name} Leaders)
+                        🏕️ {g.name} Patrol (Shared with {g.name} Leaders & Assistants)
                       </option>
                     ))}
                   </select>
                   <p className="text-[10px] text-slate-400">
-                    {targetGroupId === 'all' 
-                      ? 'Visible to and editable by all troop leaders.' 
-                      : `Shared with all leaders assigned to ${groups.find(g => g.id === targetGroupId)?.name || 'this'} Patrol.`}
+                    Only assigned leaders and assistant leaders of this patrol will be able to view and modify this plan.
                   </p>
                 </div>
 
@@ -535,7 +616,7 @@ export default function LessonPlans({ currentUser }) {
                 />
               </div>
 
-              {/* Weekly Resource Links */}
+              {/* Resource Links */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-1">
                   <label className="block text-xs font-bold text-slate-300 uppercase">
@@ -599,7 +680,7 @@ export default function LessonPlans({ currentUser }) {
                   className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
                 >
                   <Save size={15} />
-                  <span>{editingId ? 'Save & Sync with Patrol Leaders' : 'Publish & Share with Patrol Leaders'}</span>
+                  <span>{editingId ? 'Save & Sync with Patrol Leadership' : 'Publish to Patrol Leadership'}</span>
                 </button>
                 <button
                   type="button"
@@ -622,7 +703,7 @@ export default function LessonPlans({ currentUser }) {
                     <div>
                       <h4 className="text-xs font-black text-emerald-400">Live WhatsApp Summary</h4>
                       <p className="text-[10px] text-slate-400">
-                        {previewPatrolName ? `Scoped to ${previewPatrolName}` : 'KashafVoice v4.0 Standard'}
+                        {previewPatrolName ? `Scoped to ${previewPatrolName}` : 'KashafVoice v4.0'}
                       </p>
                     </div>
                   </div>
@@ -644,91 +725,60 @@ export default function LessonPlans({ currentUser }) {
 
               <div className="pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center justify-between">
                 <span>Auto-includes greetings, bullets & transliteration</span>
-                <span className="text-emerald-400 font-bold">⚜️ {previewPatrolName || 'Dhulfiqār Troop 313'}</span>
+                <span className="text-emerald-400 font-bold">⚜️ {previewPatrolName || 'Patrol Plan'}</span>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        /* Plan Listing & Detail Layout */
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Left panel: Plan list & Patrol Filter */}
+        /* ── PLAN LISTING & DETAIL SPLIT VIEW ── */
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6">
+          
+          {/* Left panel: Patrol Plan List */}
           <div className="bg-slate-900 border border-slate-750 rounded-3xl p-4 shadow-xl space-y-4 md:col-span-5 lg:col-span-4 flex flex-col justify-between">
             <div className="space-y-3">
+              
               {/* Search Box */}
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-slate-500 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search plans by title, date, topic, or leader..."
+                  placeholder="Search plans by title, date, topic, leader..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              {/* Patrol Scope Filter Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setPatrolFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer text-[11px] ${
-                    patrolFilter === 'all'
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  All Plans ({scopedPlans.length})
-                </button>
-
-                {myGroup && (
-                  <button
-                    type="button"
-                    onClick={() => setPatrolFilter('my_patrol')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer text-[11px] flex items-center gap-1 ${
-                      patrolFilter === 'my_patrol'
-                        ? 'bg-sky-600 text-white shadow-md'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    <Users size={11} />
-                    <span>My Patrol ({scopedPlans.filter(p => p.targetGroupId === myGroup.id || p.groupId === myGroup.id || p.patrolName === myGroup.name || p.authorPatrolId === myGroup.id).length})</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setPatrolFilter('troop_wide')}
-                  className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer text-[11px] ${
-                    patrolFilter === 'troop_wide'
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  Troop-Wide
-                </button>
+              {/* Patrol Scope Header */}
+              <div className="bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                  <Users size={12} className="text-emerald-400" />
+                  <span>{activePatrol ? `${activePatrol.name} Patrol Plans` : 'All Available Plans'}</span>
+                </span>
+                <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-bold">
+                  {filteredPlans.length} {filteredPlans.length === 1 ? 'plan' : 'plans'}
+                </span>
               </div>
 
               {/* Plans List */}
               {loading ? (
-                <div className="text-center py-10 text-slate-500 text-xs">Loading shared lesson plans...</div>
+                <div className="text-center py-10 text-slate-500 text-xs">Loading patrol lesson plans...</div>
               ) : filteredPlans.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-xs italic bg-slate-950/60 p-6 rounded-2xl border border-slate-800">
-                  <p>No lesson plans found matching this filter.</p>
+                <div className="text-center py-10 text-slate-400 text-xs italic bg-slate-950/60 p-6 rounded-2xl border border-slate-800 space-y-2">
+                  <p>No lesson plans created for this patrol yet.</p>
+                  <p className="text-[11px] text-slate-500">Patrol leaders and assistants can create and collaborate on plans here.</p>
                   <button
                     onClick={handleOpenNewEditor}
-                    className="mt-3 text-emerald-400 hover:underline font-bold text-xs inline-flex items-center gap-1"
+                    className="mt-2 text-emerald-400 hover:underline font-bold text-xs inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus size={13} /> Create the first plan
+                    <Plus size={13} /> Create First Patrol Plan
                   </button>
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[580px] overflow-y-auto pr-1">
                   {filteredPlans.map(p => {
                     const isSelected = selectedPlan?.id === p.id;
-                    const isTroopWide = p.targetGroupId === 'all' || p.groupId === 'all' || p.scope === 'all' || (!p.targetGroupId && !p.groupId);
-                    const pName = p.patrolName || (isTroopWide ? 'Troop-wide' : 'Patrol Plan');
-
                     return (
                       <button
                         key={p.id}
@@ -740,12 +790,8 @@ export default function LessonPlans({ currentUser }) {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1 flex-wrap">
-                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${
-                            isTroopWide
-                              ? 'bg-amber-950/70 text-amber-300 border-amber-500/40'
-                              : 'bg-sky-950/70 text-sky-300 border-sky-500/40'
-                          }`}>
-                            {pName}
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border bg-sky-950/80 text-sky-300 border-sky-500/40 flex items-center gap-1">
+                            <Users size={10} /> {p.patrolName || 'Patrol Plan'}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                             <Clock size={10} className="text-emerald-400" /> {p.date}
@@ -756,7 +802,7 @@ export default function LessonPlans({ currentUser }) {
 
                         <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
                           <span className="truncate">
-                            By: <strong>{p.authorName || p.updatedByName || 'Leader'}</strong>
+                            By: <strong>{p.authorName || 'Patrol Leader'}</strong>
                           </span>
                           {p.islamicPrep && (
                             <span className="text-emerald-400 font-semibold shrink-0">
@@ -773,24 +819,23 @@ export default function LessonPlans({ currentUser }) {
 
             <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
               <span>{filteredPlans.length} plans available</span>
-              <span className="text-emerald-400 font-bold">👥 Shared with Patrol Leaders</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <Lock size={11} /> Patrol Exclusive
+              </span>
             </div>
           </div>
 
-          {/* Right panel: Plan details + KashafVoice WhatsApp Messenger */}
-          <div className="bg-slate-900 border border-slate-750 rounded-3xl p-6 shadow-xl md:col-span-7 lg:col-span-8 min-h-[500px]">
+          {/* Right panel: Plan Details + KashafVoice WhatsApp Messenger */}
+          <div className="bg-slate-900 border border-slate-750 rounded-3xl p-5 sm:p-6 shadow-xl md:col-span-7 lg:col-span-8 min-h-[500px]">
             {selectedPlan ? (
               <div className="space-y-6">
+                
                 {/* Header of selected plan */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-800 pb-4">
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
-                        selectedPlan.targetGroupId === 'all' || selectedPlan.scope === 'all' || (!selectedPlan.targetGroupId && !selectedPlan.groupId)
-                          ? 'bg-amber-950 text-amber-300 border-amber-500/60'
-                          : 'bg-sky-950 text-sky-300 border-sky-500/60'
-                      }`}>
-                        {selectedPlan.patrolName || (selectedPlan.targetGroupId === 'all' ? '⚜️ Troop-Wide Plan' : '🏕️ Patrol Plan')}
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border bg-sky-950 text-sky-300 border-sky-500/60 flex items-center gap-1">
+                        <Users size={11} /> {selectedPlan.patrolName || 'Patrol Lesson Plan'}
                       </span>
                       <span className="text-xs text-emerald-400 font-mono font-bold flex items-center gap-1">
                         <Calendar size={13} /> {selectedPlan.date}
@@ -803,19 +848,20 @@ export default function LessonPlans({ currentUser }) {
 
                     {/* Attribution & Co-Leader Collaboration Details */}
                     <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap pt-0.5">
-                      <span>Created by: <strong className="text-slate-200">{selectedPlan.authorName || 'Troop Leader'}</strong> ({selectedPlan.authorRole || 'Leader'})</span>
+                      <span>Created by: <strong className="text-slate-200">{selectedPlan.authorName || 'Patrol Leader'}</strong> ({selectedPlan.authorRole || 'Leader'})</span>
                       {selectedPlan.updatedByName && selectedPlan.updatedByName !== selectedPlan.authorName && (
-                        <span>&bull; Last edited by: <strong className="text-slate-200">{selectedPlan.updatedByName}</strong></span>
+                        <span>&bull; Last edited by: <strong className="text-slate-200">{selectedPlan.updatedByName}</strong> ({selectedPlan.updatedByRole || 'Leader'})</span>
                       )}
                     </div>
                   </div>
 
-                  {isLeaderOrOwner && (
+                  {/* Action Buttons (Strictly if user has edit rights on this patrol) */}
+                  {canEditSelectedPlan && (
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <button
                         onClick={() => handleDuplicatePlan(selectedPlan)}
                         className="bg-slate-800 hover:bg-slate-750 text-sky-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer border border-sky-500/30 flex items-center gap-1.5 shadow-sm"
-                        title="Duplicate and branch this plan for your patrol"
+                        title="Duplicate plan for your patrol"
                       >
                         <CopyPlus size={14} />
                         <span>Duplicate</span>
@@ -846,10 +892,10 @@ export default function LessonPlans({ currentUser }) {
                   <Users size={16} className="text-sky-400 shrink-0 mt-0.5" />
                   <div>
                     <strong className="block text-white font-bold">
-                      👥 Shared Patrol Collaboration Enabled
+                      👥 Exclusive {selectedPlan.patrolName || 'Patrol'} Co-Leadership Access
                     </strong>
                     <p className="text-[11px] text-sky-300/90 mt-0.5 leading-relaxed">
-                      All leaders assigned to <strong>{selectedPlan.patrolName || (myGroup?.name ? `${myGroup.name} Patrol` : 'this patrol')}</strong> have collaborative access to view, update, and dispatch this lesson plan to parents.
+                      Only leaders and assistant leaders assigned to <strong>{selectedPlan.patrolName || 'this patrol'}</strong> share editing access to collaborate on and dispatch this lesson plan.
                     </p>
                   </div>
                 </div>
@@ -868,7 +914,7 @@ export default function LessonPlans({ currentUser }) {
                             KashafVoice v4.0
                           </span>
                         </h4>
-                        <p className="text-[11px] text-slate-400">Faith-rooted, warm WhatsApp message ready to send to patrol parents.</p>
+                        <p className="text-[11px] text-slate-400">Faith-rooted briefing ready to send to {selectedPlan.patrolName || 'patrol'} parents.</p>
                       </div>
                     </div>
 
@@ -899,7 +945,7 @@ export default function LessonPlans({ currentUser }) {
                       <span>Live Message Preview (Editable):</span>
                       <button
                         onClick={() => {
-                          const pName = selectedPlan.patrolName || (selectedPlan.targetGroupId !== 'all' ? groups.find(g => g.id === selectedPlan.targetGroupId)?.name : '') || (myGroup?.name ? `${myGroup.name} Patrol` : '');
+                          const pName = selectedPlan.patrolName || (activePatrol?.name ? `${activePatrol.name} Patrol` : '');
                           setCustomWhatsAppMsg(formatKashafLessonPlanWhatsApp(selectedPlan, pName));
                         }}
                         className="text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 font-semibold"
@@ -917,7 +963,7 @@ export default function LessonPlans({ currentUser }) {
                   </div>
                 </div>
 
-                {/* Scouting Content details */}
+                {/* Scouting Content Details */}
                 <div className="space-y-2">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">
                     Scouting Objectives & Activities
@@ -960,6 +1006,24 @@ export default function LessonPlans({ currentUser }) {
                           </span>
                           <LinkIcon size={12} className="text-slate-400 shrink-0 ml-1" />
                         </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Collaborators History Log */}
+                {Array.isArray(selectedPlan.collaborators) && selectedPlan.collaborators.length > 0 && (
+                  <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                    <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 uppercase">
+                      <UserCheck size={12} className="text-emerald-400" />
+                      <span>Patrol Leadership Contributors</span>
+                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {selectedPlan.collaborators.map((c, idx) => (
+                        <span key={idx} className="bg-slate-900 border border-slate-750 px-2.5 py-1 rounded-xl text-[11px] text-slate-300 flex items-center gap-1">
+                          <strong className="text-white">{c.name}</strong>
+                          <span className="text-[10px] text-slate-500 font-mono">({c.role || 'Leader'})</span>
+                        </span>
                       ))}
                     </div>
                   </div>
