@@ -576,10 +576,10 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   }
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 pb-8">
       {/* ── BATCH MODE ACTIVE NOTIFICATION BANNER ── */}
       {isBatchMode && (
-        <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border border-emerald-500/40 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-hide">
+        <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/60 border border-emerald-500/40 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-hide">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
               <Users size={20} />
@@ -587,14 +587,14 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-white text-sm">
-                  Patrol Batch Sign-off Active: {batchPatrolName}
+                  Patrol Batch Sign-off: {batchPatrolName}
                 </h3>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full">
-                  {targetBatchScouts.length} Scouts Selected
+                  {targetBatchScouts.length} Scouts
                 </span>
               </div>
               <p className="text-xs text-slate-350 mt-0.5">
-                Clicking any requirement below will complete and sign it off for all {targetBatchScouts.length} scouts simultaneously.
+                Signing off requirements applies to all {targetBatchScouts.length} scouts simultaneously.
               </p>
             </div>
           </div>
@@ -604,7 +604,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 shrink-0"
           >
             <CheckCheck size={14} />
-            <span>Complete All {selectedRankData.name} for Patrol</span>
+            <span>Complete All for Patrol</span>
           </button>
         </div>
       )}
@@ -615,11 +615,9 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
         </div>
       )}
 
-
-
       {/* Approvals Notification Banner for Leader */}
       {isLeaderOrOwner && totalPendingAcrossAllRanks > 0 && (
-        <div className="bg-amber-950/40 border border-amber-500/50 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-lg shadow-amber-950/20 print-hide">
+        <div className="bg-amber-950/40 border border-amber-500/50 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-lg shadow-amber-950/20 print-hide">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Clock size={16} className="animate-pulse" />
@@ -637,13 +635,13 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       )}
 
       {/* Top Toolbar / Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/80 border border-slate-700 p-3.5 rounded-2xl print-hide shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/90 border border-slate-800/80 p-3 sm:p-3.5 rounded-2xl print-hide shadow-lg">
         <div className="flex items-center gap-2.5 flex-wrap">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="px-3 py-1.5 bg-slate-750 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-650 cursor-pointer shadow-sm"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 cursor-pointer shadow-sm"
               title="Return to previous view"
             >
               <ArrowLeft size={13} />
@@ -666,7 +664,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
           <button
             type="button"
             onClick={() => setShowPrintReport(true)}
-            className="px-3 py-1.5 bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-600 cursor-pointer shadow-sm"
+            className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-750 cursor-pointer shadow-sm"
             title="Generate comprehensive progress report transcript"
           >
             <FileText size={13} className="text-emerald-400" />
@@ -678,7 +676,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer shadow-sm ${
               showEaglePortal
                 ? 'bg-amber-600 text-white border-amber-500'
-                : 'bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-600'
+                : 'bg-slate-850 hover:bg-slate-800 text-slate-200 hover:text-white border-slate-750'
             }`}
           >
             <Sparkles size={13} className="text-amber-400" />
@@ -688,7 +686,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
       </div>
 
       {/* Ranks Tabs Bar */}
-      <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-700/60 print-hide">
+      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-800/80 print-hide">
         {RANKS_DATA.map((rank) => {
           const isActive = selectedRankId === rank.id;
           const rankColor = RANK_COLORS[rank.color] || RANK_COLORS.emerald;
@@ -705,21 +703,21 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             <button
               key={rank.id}
               onClick={() => setSelectedRankId(rank.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                 isActive
                   ? rankColor.active
                   : rPending > 0
                   ? 'bg-amber-950/40 border border-amber-500/50 text-amber-300 hover:bg-amber-900/40'
-                  : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
               <RankIcon rankId={rank.id} size={14} />
               {rank.name}
-              <span className={`text-[10px] px-1 rounded font-mono ${isActive ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'}`}>
+              <span className={`text-[10px] px-1 rounded font-mono ${isActive ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-300'}`}>
                 {rPct}%
               </span>
               {rPending > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500 text-slate-950 flex items-center gap-0.5 animate-pulse" title={`${rPending} pending approval`}>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-500 text-slate-950 flex items-center gap-0.5 animate-pulse" title={`${rPending} pending approval`}>
                   <Clock size={9} /> {rPending}
                 </span>
               )}
@@ -728,93 +726,92 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
         })}
       </div>
 
-      
       {/* Eagle Advancement Workflow Portal */}
       {showEaglePortal ? (
         <RoadToEagleTracker currentUser={currentUser} scoutId={scoutId} readOnly={readOnly} />
       ) : (
         <>
-{/* Selected Rank Header */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute right-4 top-4 opacity-5 pointer-events-none">
-          <RankIcon rankId={selectedRankId} size={120} className={colorTheme.text} />
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${colorTheme.badge}`}>
-                Rank {selectedRankData.order} of 8
-              </span>
-              <h2 className="text-xl font-bold text-white">{selectedRankData.name}</h2>
+          {/* Selected Rank Consolidated Header & Status */}
+          <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden space-y-3.5">
+            <div className="absolute right-4 top-4 opacity-5 pointer-events-none">
+              <RankIcon rankId={selectedRankId} size={120} className={colorTheme.text} />
             </div>
-            <p className="text-xs text-slate-400 mt-1">{selectedRankData.description}</p>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full border font-bold uppercase tracking-wider ${colorTheme.badge}`}>
+                    Rank {selectedRankData.order} of 8
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">{selectedRankData.name}</h2>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">{selectedRankData.description}</p>
+              </div>
+              <div className="text-left sm:text-right">
+                <span className={`text-xl sm:text-2xl font-black ${colorTheme.text}`}>{percentage}%</span>
+                <p className="text-xs text-slate-400">{completedCount} of {totalRequirements} complete</p>
+              </div>
+            </div>
+
+            {/* Live Progress Bar */}
+            <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${colorTheme.bar}`}
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+
+            {/* 4-Chip Metrics & Batch Actions Bar */}
+            <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 print-hide">
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-400" /> {completedCount} Approved
+                </span>
+                {pendingCount > 0 && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center gap-1.5 animate-pulse">
+                    <Clock size={13} className="text-amber-400" /> {pendingCount} Pending
+                  </span>
+                )}
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-750 text-slate-300">
+                  {totalRequirements - completedCount - pendingCount} Incomplete
+                </span>
+              </div>
+
+              {!readOnly && (
+                <div className="flex items-center gap-2">
+                  {isScout && (totalRequirements - completedCount - pendingCount > 0) && (
+                    <button
+                      onClick={handleBatchSubmitScout}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md shadow-emerald-950/40 flex items-center gap-1.5"
+                    >
+                      <Send size={12} />
+                      Submit Incomplete for Approval
+                    </button>
+                  )}
+
+                  {isLeaderOrOwner && pendingCount > 0 && (
+                    <button
+                      onClick={handleBatchApproveLeader}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 animate-pulse"
+                    >
+                      <CheckCheck size={13} />
+                      1-Click Approve All Pending ({pendingCount})
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <span className={`text-2xl font-black ${colorTheme.text}`}>{percentage}%</span>
-            <p className="text-xs text-slate-400">{completedCount} of {totalRequirements} complete</p>
-          </div>
-        </div>
 
-        {/* Live Progress Bar */}
-        <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-700">
-          <div
-            className={`h-full transition-all duration-500 rounded-full ${colorTheme.bar}`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Rank Progress & Batch Submission Banner */}
-      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg print-hide">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Requirements Status:</span>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
-            <CheckCircle2 size={13} className="text-emerald-400" /> {completedCount} Approved
-          </span>
-          {pendingCount > 0 && (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center gap-1.5 animate-pulse">
-              <Clock size={13} className="text-amber-400" /> {pendingCount} Pending Approval
-            </span>
-          )}
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-700/60 text-slate-300">
-            {totalRequirements - completedCount - pendingCount} Incomplete
-          </span>
-        </div>
-
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            {isScout && (totalRequirements - completedCount - pendingCount > 0) && (
-              <button
-                onClick={handleBatchSubmitScout}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-md shadow-emerald-950/40 flex items-center gap-1.5"
-              >
-                <Send size={13} />
-                Submit Incomplete for Approval
-              </button>
-            )}
-
-            {isLeaderOrOwner && pendingCount > 0 && (
-              <button
-                onClick={handleBatchApproveLeader}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 animate-pulse"
-              >
-                <CheckCheck size={14} />
-                1-Click Approve All Pending ({pendingCount})
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Categories & Requirements Checklist */}
-      <div className="space-y-6">
-        {selectedRankData.categories.map((cat, catIdx) => (
-          <div key={catIdx} className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-black text-white uppercase tracking-wider border-b border-slate-700/50 pb-2.5 flex items-center gap-2">
-              <span className="text-base">{getCategoryThematicIcon(cat.name)}</span>
-              <span>{cat.name}</span>
-            </h3>
-            <div className="space-y-3">
+          {/* Categories & Requirements Checklist */}
+          <div className="space-y-3.5">
+            {selectedRankData.categories.map((cat, catIdx) => (
+              <div key={catIdx} className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 sm:p-5 space-y-3">
+                <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-2">
+                  <span className="text-base">{getCategoryThematicIcon(cat.name)}</span>
+                  <span>{cat.name}</span>
+                </h3>
+                <div className="space-y-2.5">
               {cat.requirements.map((req) => {
                 const reqProgress = completedRequirements[req.id] || {};
                 const isCompleted = !!reqProgress.completed;

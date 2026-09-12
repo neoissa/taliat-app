@@ -484,33 +484,33 @@ export default function RoadToEagleTracker({ currentUser, scoutId: propScoutId, 
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto font-sans">
+    <div className="space-y-4 max-w-6xl mx-auto font-sans pb-8">
       {/* ── HERO BANNER: ROAD TO EAGLE MASTER DASHBOARD ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/40 border border-amber-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute right-4 top-2 opacity-10 pointer-events-none">
-          <Award size={200} className="text-amber-400" />
+          <Award size={180} className="text-amber-400" />
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border-2 border-amber-400 flex items-center justify-center text-4xl shadow-xl shadow-amber-950/60 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative z-10">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-xl shadow-amber-950/60 shrink-0">
               🦅
             </div>
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <Star size={11} /> Official Scouting America Eagle Milestone Workflow
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <Star size={11} /> Eagle Milestone Workflow
                 </span>
-                <span className="bg-slate-800 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                <span className="bg-slate-800 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   Rank: {scoutProfile.rank || 'Life Scout'}
                 </span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 Road to Eagle Scout & Eagle Palms Portal
               </h2>
-              <p className="text-xs text-slate-350 mt-1 max-w-2xl leading-relaxed">
-                Automated 6-gate milestone validation, 21-merit badge roadmap planner, project approval checklist, 6 reference contacts, and Eagle Palms calculator for <strong>{scoutProfile.fullName || scoutProfile.username || 'Scout'}</strong>.
+              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
+                6-gate milestone validation, 21-merit badge roadmap planner, project checklist, reference contacts, and Eagle Palms calculator for <strong>{scoutProfile.fullName || scoutProfile.username || 'Scout'}</strong>.
               </p>
             </div>
           </div>
@@ -519,16 +519,16 @@ export default function RoadToEagleTracker({ currentUser, scoutId: propScoutId, 
             <button
               onClick={handleSaveEagleProgress}
               disabled={saving || readOnly}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02] disabled:opacity-50"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xl shadow-amber-950/60 hover:scale-[1.02] disabled:opacity-50"
             >
-              <Save size={15} />
-              <span>{saving ? 'Saving Records...' : 'Save Eagle Record'}</span>
+              <Save size={14} />
+              <span>{saving ? 'Saving...' : 'Save Eagle Record'}</span>
             </button>
           </div>
         </div>
 
         {/* ── 6 EAGLE MILESTONE PROGRESS GATES OVERVIEW ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 mt-4 sm:mt-5 pt-4 border-t border-slate-700/60 relative z-10 text-xs">
           {/* Gate 1: 21 Badges */}
           <button
             onClick={() => setActiveGateTab('audit')}
