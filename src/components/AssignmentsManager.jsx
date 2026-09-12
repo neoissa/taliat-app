@@ -50,7 +50,7 @@ export function getAssignmentStatus(assignment, record) {
       status: 'completed',
       isCompleted: true,
       label: 'Completed & Approved',
-      badgeClass: 'bg-emerald-950 text-emerald-300 border-emerald-600',
+      badgeClass: 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40',
       iconClass: 'text-emerald-400'
     };
   }
@@ -61,8 +61,8 @@ export function getAssignmentStatus(assignment, record) {
       status: 'submitted',
       isCompleted: false,
       label: 'Submitted (Awaiting Review)',
-      badgeClass: 'bg-blue-950 text-blue-300 border-blue-600',
-      iconClass: 'text-blue-400'
+      badgeClass: 'bg-sky-950/60 text-sky-300 border border-sky-500/40',
+      iconClass: 'text-sky-400'
     };
   }
 
@@ -87,8 +87,8 @@ export function getAssignmentStatus(assignment, record) {
       status: 'overdue',
       isCompleted: false,
       label: diffDays ? `Overdue / Incomplete (${Math.abs(diffDays)}d late)` : 'Overdue / Incomplete',
-      badgeClass: 'bg-red-950 text-red-300 border-red-500 font-bold',
-      iconClass: 'text-red-400'
+      badgeClass: 'bg-rose-950/60 text-rose-300 border border-rose-500/50 font-bold',
+      iconClass: 'text-rose-400'
     };
   }
 
@@ -96,7 +96,7 @@ export function getAssignmentStatus(assignment, record) {
     status: 'incomplete',
     isCompleted: false,
     label: diffDays === 0 ? 'Due Today (Incomplete)' : diffDays === 1 ? 'Due Tomorrow' : diffDays ? `Due in ${diffDays}d` : 'Incomplete',
-    badgeClass: 'bg-slate-900 text-slate-300 border-slate-700',
+    badgeClass: 'bg-slate-900 text-slate-300 border border-slate-800',
     iconClass: 'text-slate-400'
   };
 }

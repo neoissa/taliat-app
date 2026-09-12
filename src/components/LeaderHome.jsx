@@ -33,6 +33,7 @@ import LiveClockAndCalendar from './LiveClockAndCalendar';
 import ConferenceCountdown from './ConferenceCountdown';
 import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
+import StatusBadge from './StatusBadge';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -359,40 +360,31 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className={`text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider border ${
-                  isOwner 
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' 
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                }`}>
-                  {isOwner ? '👑 Troop Owner & Superadmin' : `⚜️ ${roleLabel}`}
-                </span>
-                <span className="bg-slate-700/70 text-slate-200 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <span>👥</span> {scouts.length} Registered Scouts
-                </span>
-                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span>✨</span> Be Prepared &bull; كُن مُسْتَعِدّاً
-                </span>
+                {isOwner ? (
+                  <StatusBadge type="warning" size="xs" label="👑 Troop Owner & Superadmin" />
+                ) : (
+                  <StatusBadge type="success" size="xs" label={`⚜️ ${roleLabel}`} />
+                )}
+                <StatusBadge type="indigo" size="xs" label={`${scouts.length} Registered Scouts`} />
+                <StatusBadge type="purple" size="xs" label="Be Prepared • كُن مُسْتَعِدّاً" />
                 <button
                   type="button"
                   onClick={() => onNavigate && onNavigate('profile')}
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border transition cursor-pointer ${
-                    (currentUser?.spt || currentUser?.sptDate || currentUser?.sptFileUrl || currentUser?.yptCompleted)
-                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 hover:border-emerald-500'
-                      : 'bg-amber-950/80 text-amber-300 border-amber-700/60 hover:border-amber-500'
-                  }`}
+                  className="cursor-pointer transition-transform hover:scale-105"
                   title="Click to view or update Safety/Protection Training (SPT) in your profile"
                 >
-                  <Shield size={11} />
-                  <span>SPT: {(currentUser?.spt || currentUser?.sptDate) ? `✓ ${currentUser?.spt || currentUser?.sptDate}` : ((currentUser?.sptFileUrl || currentUser?.yptCompleted) ? '✓ Certified' : 'Pending')}</span>
+                  <StatusBadge 
+                    type={(currentUser?.spt || currentUser?.sptDate || currentUser?.sptFileUrl || currentUser?.yptCompleted) ? 'success' : 'warning'} 
+                    size="xs" 
+                    label={`SPT: ${(currentUser?.spt || currentUser?.sptDate) ? `✓ ${currentUser?.spt || currentUser?.sptDate}` : ((currentUser?.sptFileUrl || currentUser?.yptCompleted) ? '✓ Certified' : 'Pending')}`} 
+                  />
                 </button>
                 {isOwner && (
-                  <span className="bg-yellow-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                    <Crown size={10} /> Full Superadmin Authority
-                  </span>
+                  <StatusBadge type="warning" size="xs" label="Full Superadmin Authority" />
                 )}
               </div>
 
-              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
                 Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}! {isOwner ? '👑' : '⚜️'}
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
@@ -451,7 +443,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <Calendar size={14} className="text-teal-400 shrink-0" />
               <span className="truncate">Calendar</span>
@@ -460,7 +452,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('attendance')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
               <span className="truncate">Attendance</span>
@@ -478,7 +470,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('roster')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <Users size={14} className="text-sky-400 shrink-0" />
               <span className="truncate">Roster</span>
@@ -495,10 +487,10 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 setShowPendingModal(true);
               }
             }}
-            className={`p-3.5 rounded-2xl border transition ${
+            className={`p-3.5 rounded-2xl border transition-all duration-200 shadow-xs ${
               totalPendingApprovals > 0 
-                ? 'bg-amber-950/40 border-amber-500/60 cursor-pointer hover:border-amber-400' 
-                : 'bg-slate-900/70 border-slate-750'
+                ? 'bg-amber-950/40 border-amber-500/60 cursor-pointer hover:border-amber-400 hover:shadow-md' 
+                : 'bg-slate-900/80 border-slate-800'
             }`}
           >
             <span className="text-[10px] text-amber-400 block uppercase font-bold tracking-wider">Pending Tasks</span>
@@ -509,12 +501,12 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
           <div 
             onClick={() => onNavigate && onNavigate('attendance')}
-            className="bg-slate-900/70 border border-teal-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-teal-400 transition"
+            className="bg-slate-900/80 border border-teal-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-teal-400 transition-all duration-200 shadow-xs hover:shadow-md"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Patrol Attendance</span>
               {patrolRedRiskCount > 0 && (
-                <span className="bg-red-500/30 border border-red-500/50 text-red-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                <span className="bg-rose-500/30 border border-rose-500/50 text-rose-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
                   {patrolRedRiskCount} Risk
                 </span>
               )}
@@ -526,7 +518,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
           <div 
             onClick={() => onNavigate && onNavigate('scouts')}
-            className="bg-slate-900/70 border border-emerald-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-emerald-400 transition"
+            className="bg-slate-900/80 border border-emerald-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-emerald-400 transition-all duration-200 shadow-xs hover:shadow-md"
           >
             <span className="text-[10px] text-emerald-400 block uppercase font-bold tracking-wider">Active Scouts</span>
             <strong className="text-base font-black text-white block mt-0.5">
@@ -536,7 +528,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/70 border border-sky-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-sky-400 transition"
+            className="bg-slate-900/80 border border-sky-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-sky-400 transition-all duration-200 shadow-xs hover:shadow-md"
           >
             <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">
               {isTroopWideAuthority ? 'Taliʿat Patrols' : 'My Patrol Unit'}
@@ -550,7 +542,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
           <div 
             onClick={() => onNavigate && onNavigate('events')}
-            className="bg-slate-900/70 border border-purple-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-purple-400 transition"
+            className="bg-slate-900/80 border border-purple-500/30 p-3.5 rounded-2xl cursor-pointer hover:border-purple-400 transition-all duration-200 shadow-xs hover:shadow-md"
           >
             <span className="text-[10px] text-purple-400 block uppercase font-bold tracking-wider">Planned Events</span>
             <strong className="text-base font-black text-white block mt-0.5">
@@ -572,7 +564,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           <div className="space-y-3.5 animate-fadeIn">
             {/* A. High-Priority Conference Requests Banner */}
             {pendingMeetingReqs.length > 0 && (
-              <div className="bg-gradient-to-r from-purple-950/95 via-slate-900 to-amber-950/40 border-2 border-purple-500/70 p-5 rounded-3xl shadow-2xl">
+              <div className="bg-gradient-to-r from-purple-950/95 via-slate-900 to-amber-950/40 border border-purple-500/70 p-5 rounded-3xl shadow-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/30 pb-3.5 mb-3.5">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-2xl bg-purple-500/25 border border-purple-400 flex items-center justify-center text-xl shrink-0 text-purple-300 shadow-inner">
@@ -580,9 +572,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-black uppercase bg-purple-500 text-slate-950 px-2.5 py-0.5 rounded-full tracking-wider">
-                          Conference Requested
-                        </span>
+                        <StatusBadge type="purple" size="xs" label="Conference Requested" />
                         <span className="text-xs text-purple-200 font-mono font-bold">
                           {pendingMeetingReqs.length} Awaiting Confirmation
                         </span>
@@ -615,7 +605,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   {pendingMeetingReqs.map(req => (
                     <div 
                       key={req.id || req.requestId} 
-                      className="bg-slate-900/90 border border-purple-500/40 hover:border-purple-400 p-4 rounded-2xl flex flex-col justify-between gap-3 transition shadow-md"
+                      className="bg-slate-900 border border-slate-800 hover:border-purple-500/50 p-4 rounded-2xl flex flex-col justify-between gap-3 transition-all duration-200 shadow-xs hover:shadow-md"
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
@@ -623,9 +613,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                             <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
                             {req.scoutName}
                           </span>
-                          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md font-mono">
-                            {req.patrolName || 'Dhulfiqar Patrol'}
-                          </span>
+                          <StatusBadge type="neutral" size="xs" label={req.patrolName || 'Dhulfiqar Patrol'} />
                         </div>
 
                         <div className="text-xs text-slate-200 font-medium">
@@ -641,7 +629,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                           )}
                         </div>
 
-                        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
+                        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
                           <div className="flex items-center gap-2 text-purple-200 font-mono text-[11px]">
                             <Calendar size={12} className="text-purple-400 shrink-0" />
                             <span>Requested: <strong>{req.proposedDate || 'Flexible Date'}</strong> @ <strong>{req.proposedTime || 'Evening'}</strong></span>
@@ -657,7 +645,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                       <button
                         type="button"
                         onClick={() => onNavigate && onNavigate('parent-requests', { requestId: req.id || req.requestId, confirmMeeting: true })}
-                        className="w-full bg-gradient-to-r from-purple-600 via-emerald-600 to-teal-600 hover:from-purple-500 hover:to-emerald-500 text-white font-black text-xs py-2.5 px-4 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-purple-950/40"
+                        className="w-full bg-gradient-to-r from-purple-600 via-emerald-600 to-teal-600 hover:from-purple-500 hover:to-emerald-500 text-white font-black text-xs py-2.5 px-4 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-purple-950/40"
                       >
                         <Calendar size={14} />
                         <span>📅 Confirm & Schedule Conference &rarr;</span>
@@ -670,16 +658,14 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             {/* B. General Parent Requests Banner (Absences, Reports, Forms) */}
             {pendingOtherReqs.length > 0 && (
-              <div className="bg-gradient-to-r from-sky-950/90 via-slate-900 to-slate-900 border-2 border-sky-500/60 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-sky-950/90 via-slate-900 to-slate-900 border border-sky-500/60 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-2xl shrink-0 text-sky-300">
                     <MessageSquare size={22} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase bg-sky-500 text-slate-950 px-2.5 py-0.5 rounded-full">
-                        Parent Submissions ({pendingOtherReqs.length})
-                      </span>
+                      <StatusBadge type="info" size="xs" label={`Parent Submissions (${pendingOtherReqs.length})`} />
                       <span className="text-xs text-sky-200 font-mono">
                         {pendingOtherReqs.filter(r => r.requestType === 'absence_notice').length > 0 
                           ? `${pendingOtherReqs.filter(r => r.requestType === 'absence_notice').length} Absence Notice(s)` 
@@ -707,16 +693,14 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             {/* C. Confirmed Conferences Reminder */}
             {confirmedConferences.length > 0 && (
-              <div className="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+              <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
                     <CheckCircle2 size={18} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-                      Scheduled Appointments ({confirmedConferences.length})
-                    </span>
-                    <p className="text-xs text-slate-200">
+                    <StatusBadge type="success" size="xs" label={`Scheduled Appointments (${confirmedConferences.length})`} />
+                    <p className="text-xs text-slate-200 mt-1">
                       Next: <strong>{confirmedConferences[0].parentName}</strong> ({confirmedConferences[0].scoutName}) on <strong className="text-emerald-300">{confirmedConferences[0].confirmedDate} at {confirmedConferences[0].confirmedTime}</strong> • {confirmedConferences[0].meetingLocation || 'Troop HQ'}
                     </p>
                   </div>
@@ -745,8 +729,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
       {/* ── 1.9 RECENT TROOP BROADCASTS & NOTIFICATIONS ── */}
       {recentBroadcasts.length > 0 && (
-        <div className="bg-slate-850/90 border border-slate-750 rounded-3xl p-5 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-sm">
                 <Megaphone size={18} />
@@ -754,11 +738,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-extrabold text-sm sm:text-base text-white">
-                    📢 Recent Troop Announcements & Broadcasts
+                    Recent Troop Announcements & Broadcasts
                   </h3>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
-                    Active Feed
-                  </span>
+                  <StatusBadge type="success" size="xs" label="Active Feed" />
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Published updates pushed directly to parents, scouts, and patrol messenger streams.
@@ -782,22 +764,17 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             {recentBroadcasts.map((b) => (
               <div
                 key={b.id || b.broadcastId}
-                className="bg-slate-900/90 border border-slate-750 hover:border-emerald-500/50 p-4 rounded-2xl space-y-2.5 transition flex flex-col justify-between"
+                className="bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[10px] bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded-md font-bold">
-                      {b.category || 'General Announcement'}
-                    </span>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                      b.priority === 'urgent' 
-                        ? 'bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse'
-                        : b.priority === 'high'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}>
-                      {b.priority || 'Normal'}
-                    </span>
+                    <StatusBadge type="neutral" size="xs" label={b.category || 'General'} />
+                    <StatusBadge 
+                      type={b.priority === 'urgent' ? 'danger' : b.priority === 'high' ? 'warning' : 'neutral'} 
+                      size="xs" 
+                      pulse={b.priority === 'urgent'}
+                      label={b.priority || 'Normal'} 
+                    />
                   </div>
 
                   <h4 className="text-xs font-black text-white line-clamp-1 leading-snug">
@@ -821,8 +798,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
       {/* ── 2. SLEEK ACTIONABLE NOTIFICATION & TESTING CENTER ── */}
       {totalPendingApprovals > 0 ? (
-        <div className="bg-slate-850/90 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750/80 pb-3">
+        <div className="bg-slate-900 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold shrink-0 shadow-sm">
                 <Clock size={18} />
@@ -832,9 +809,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   <h4 className="font-extrabold text-sm sm:text-base text-white">
                     Pending Submissions & Oral Testing ({totalPendingApprovals})
                   </h4>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold">
-                    Action Required
-                  </span>
+                  <StatusBadge type="warning" size="xs" pulse label="Action Required" />
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {scoutsWithPending.length} scout{scoutsWithPending.length !== 1 ? 's' : ''} awaiting leader verification and oral sign-off.
@@ -861,24 +836,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mr-0.5">Awaiting:</span>
               {totalRanksPending > 0 && (
-                <span className="bg-slate-900 border border-slate-750 text-emerald-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
-                  ⚜️ {totalRanksPending} Rank Reqs
-                </span>
+                <StatusBadge type="success" size="xs" label={`⚜️ ${totalRanksPending} Rank Reqs`} />
               )}
               {totalIslamicPending > 0 && (
-                <span className="bg-slate-900 border border-slate-750 text-teal-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
-                  🕌 {totalIslamicPending} Islamic Tests
-                </span>
+                <StatusBadge type="info" size="xs" label={`🕌 ${totalIslamicPending} Islamic Tests`} />
               )}
               {totalHwPending > 0 && (
-                <span className="bg-slate-900 border border-slate-750 text-sky-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
-                  🎒 {totalHwPending} Homework
-                </span>
+                <StatusBadge type="indigo" size="xs" label={`🎒 ${totalHwPending} Homework`} />
               )}
               {totalMeritPending > 0 && (
-                <span className="bg-slate-900 border border-slate-750 text-amber-300 px-2.5 py-1 rounded-lg font-mono font-semibold flex items-center gap-1">
-                  🏅 {totalMeritPending} Badges
-                </span>
+                <StatusBadge type="warning" size="xs" label={`🏅 ${totalMeritPending} Badges`} />
               )}
             </div>
 
@@ -893,7 +860,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                     setSelectedPendingScoutId(s.uid);
                     setShowPendingModal(true);
                   }}
-                  className="bg-slate-900 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
                   title="Click to review this scout's queue directly"
                 >
                   <span>{s.fullName?.split(' ')[0] || s.username}</span>
@@ -906,7 +873,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
       ) : (
-        <div className="bg-slate-850/60 border border-slate-750 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-center gap-2 text-slate-300">
             <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
             <span>All submissions up-to-date (0 pending sign-offs in your queue).</span>
@@ -925,11 +892,11 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       {/* ── 3. MAIN HUB: PATROL OVERVIEW & UPCOMING ACTIVITIES ── */}
       <div className="space-y-6">
         {/* Patrol Summary / Unit Focus */}
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
           {isTroopWideAuthority ? (
             <>
-              <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-                <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
                   <Users size={16} className="text-emerald-400" />
                   <span>Taliʿat Patrol Units ({groups.length})</span>
                 </h3>
@@ -954,7 +921,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                       <div
                         key={g.id}
                         onClick={() => onNavigate && onNavigate('roster')}
-                        className="bg-slate-900/80 border border-slate-750 hover:border-emerald-500/50 p-4 rounded-2xl transition cursor-pointer space-y-2 group"
+                        className="bg-slate-950 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl transition-all duration-200 cursor-pointer space-y-2 group shadow-xs hover:shadow-md"
                       >
                         <div className="flex items-center justify-between">
                           <strong className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
@@ -1097,8 +1064,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
 
         {/* ── UPCOMING TROOP EVENTS & ATTENDANCE ROLL CALL MONITOR ── */}
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
               <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
                 <Calendar size={18} className="text-teal-400" />
@@ -1120,7 +1087,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('events')}
-                className="bg-slate-750 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
               >
                 <span>All Events</span>
                 <ChevronRight size={13} />
@@ -1135,8 +1102,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               onClick={() => setEventAttendanceFilter('all')}
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
                 eventAttendanceFilter === 'all'
-                  ? 'bg-slate-700 text-white border-slate-500 shadow-sm'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-slate-800'
+                  ? 'bg-slate-700 text-white border-slate-500 shadow-xs'
+                  : 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800'
               }`}
             >
               All Events ({allEvents.length})
@@ -1146,8 +1113,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               onClick={() => setEventAttendanceFilter('pending')}
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
                 eventAttendanceFilter === 'pending'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-amber-300 border-slate-800'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-xs'
+                  : 'bg-slate-950 text-slate-400 hover:text-amber-300 border-slate-800'
               }`}
             >
               <span>⚠️ Roll Call Pending</span>
@@ -1160,8 +1127,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               onClick={() => setEventAttendanceFilter('recorded')}
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
                 eventAttendanceFilter === 'recorded'
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-emerald-300 border-slate-800'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-xs'
+                  : 'bg-slate-950 text-slate-400 hover:text-emerald-300 border-slate-800'
               }`}
             >
               <span>🟢 Logged Sessions</span>
@@ -1172,9 +1139,9 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
 
           {/* Event List */}
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredEvents.length === 0 ? (
-              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <div className="col-span-1 md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
                 <p className="text-xs text-slate-400 italic">
                   {eventAttendanceFilter === 'pending'
                     ? '🎉 Awesome! All scheduled events have attendance logs completed.'
@@ -1193,80 +1160,64 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             ) : (
               filteredEvents.slice(0, 8).map(ev => {
                 const info = getEventAttendanceInfo(ev);
+                const aud = getEventAudienceInfo(ev, currentUser, groups);
                 return (
                   <div
                     key={ev.id}
-                    className={`bg-slate-900/80 border rounded-2xl p-4 transition space-y-3 ${
+                    className={`bg-slate-950/70 border rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between gap-3 shadow-xs hover:shadow-md ${
                       info.recorded
                         ? 'border-emerald-500/30 hover:border-emerald-500/60'
-                        : 'border-slate-750 hover:border-amber-500/40'
+                        : 'border-slate-800 hover:border-amber-500/50'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] bg-slate-800 text-teal-300 border border-slate-700 font-mono font-bold px-2 py-0.5 rounded-md">
-                            📅 {ev.date || 'Upcoming'}
-                          </span>
-                          {ev.time && (
-                            <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-mono px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Clock size={10} className="text-amber-400" /> {ev.time}
-                            </span>
-                          )}
-                          <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 font-bold px-2 py-0.5 rounded-md">
-                            {ev.category || ev.type || 'Event'}
-                          </span>
-                          {(() => {
-                            const aud = getEventAudienceInfo(ev, currentUser, groups);
-                            return (
-                              <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
-                                <span>{aud.icon}</span>
-                                <span className="font-bold">{aud.badge}</span>
-                              </span>
-                            );
-                          })()}
-                          {info.recorded ? (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <span>🟢 Logged:</span> {info.presentCount}/{info.totalCount} Scouts ({info.turnoutPct}%)
-                            </span>
-                          ) : (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <span>⚠️ Roll Call Pending</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
-
-                        {ev.location && (
-                          <p className="text-[11px] text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
-                            <MapPin size={11} className="text-emerald-400 shrink-0" />
-                            <span className="truncate">{ev.location}</span>
-                          </p>
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <StatusBadge type="info" size="xs" label={ev.date || 'Upcoming'} />
+                        {ev.time && (
+                          <StatusBadge type="neutral" size="xs" label={ev.time} />
                         )}
-                      </div>
-
-                      {/* Action CTA Button */}
-                      <div className="shrink-0">
+                        <StatusBadge type="neutral" size="xs" label={ev.category || ev.type || 'Event'} />
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
+                          <span>{aud.icon}</span>
+                          <span className="font-bold">{aud.badge}</span>
+                        </span>
                         {info.recorded ? (
-                          <button
-                            type="button"
-                            onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/40 hover:border-teal-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                          >
-                            <span>✏️ Update Roll Call</span>
-                          </button>
+                          <StatusBadge type="success" size="xs" label={`Logged: ${info.presentCount}/${info.totalCount} (${info.turnoutPct}%)`} />
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                            className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-teal-950/40 hover:scale-[1.02]"
-                          >
-                            <Calendar size={13} />
-                            <span>📋 Take Attendance (Auto-Sync)</span>
-                          </button>
+                          <StatusBadge type="warning" size="xs" pulse label="Roll Call Pending" />
                         )}
                       </div>
+
+                      <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
+
+                      {ev.location && (
+                        <p className="text-[11px] text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
+                          <MapPin size={11} className="text-emerald-400 shrink-0" />
+                          <span className="truncate">{ev.location}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action CTA Button */}
+                    <div className="pt-2 border-t border-slate-850 flex justify-end">
+                      {info.recorded ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                          className="w-full sm:w-auto bg-slate-850 hover:bg-slate-800 text-teal-300 border border-teal-500/40 hover:border-teal-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <span>✏️ Update Roll Call</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
+                          className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-teal-950/40 hover:scale-[1.02]"
+                        >
+                          <Calendar size={13} />
+                          <span>📋 Take Attendance</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

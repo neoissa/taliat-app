@@ -22,6 +22,7 @@ import PublishedReportViewerModal from './PublishedReportViewerModal';
 import ParentAlertsFeed from './ParentAlertsFeed';
 import ParentEagleTracker from './ParentEagleTracker';
 import ParentPatrolResources from './ParentPatrolResources';
+import StatusBadge from './StatusBadge';
 import {
   Award,
   Star,
@@ -1143,7 +1144,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-16 text-slate-100">
       
       {/* ── 1. WARM WELCOME & ACTION BAR ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border border-slate-750 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-emerald-950/60 shrink-0">
             👨‍👩‍👧
@@ -1153,9 +1154,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               <h2 className="text-xl sm:text-2xl font-black text-white">
                 Assalāmu ʿAlaykum, {primaryName} <span className="text-emerald-400 font-bold text-sm">({primaryRelation})</span>
               </h2>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                ⭐ Primary Account Holder
-              </span>
+              <StatusBadge type="success" size="xs" label="⭐ Primary Account Holder" />
             </div>
             <p className="text-xs text-slate-300 mt-1">
               Here’s what your family has coming up this week across scouting, advancement & learning.
@@ -1357,8 +1356,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           )}
 
           {/* SECTION 1.5: DUAL-PARENT HOUSEHOLD SUMMARY WIDGET */}
-          <div className="bg-slate-850 border border-slate-755 rounded-3xl p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750 pb-3">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                   <Home size={18} />
@@ -1384,18 +1383,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* Parent 1 (Father / Primary) */}
-              <div className={`bg-slate-900/90 border p-4 rounded-2xl space-y-2 transition ${
-                !isParent2Primary ? 'border-emerald-500/70 shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/30' : 'border-slate-755'
+              <div className={`bg-slate-950 border p-4 rounded-2xl space-y-2 transition-all duration-200 shadow-xs hover:shadow-md ${
+                !isParent2Primary ? 'border-emerald-500/70 ring-1 ring-emerald-500/30' : 'border-slate-800'
               }`}>
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                      {parent1Relation || 'Father'}
-                    </span>
+                    <StatusBadge type="success" size="xs" label={parent1Relation || 'Father'} />
                     {!isParent2Primary && (
-                      <span className="text-[9px] font-black uppercase bg-amber-400/20 text-amber-300 border border-amber-500/40 px-2 py-0.2 rounded-full">
-                        ⭐ Primary Holder
-                      </span>
+                      <StatusBadge type="warning" size="xs" label="⭐ Primary Holder" />
                     )}
                   </div>
                   <User size={13} className="text-emerald-400 shrink-0" />
@@ -1430,18 +1425,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
 
               {/* Parent 2 (Mother / Secondary) */}
-              <div className={`bg-slate-900/90 border p-4 rounded-2xl space-y-2 transition ${
-                isParent2Primary ? 'border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30' : 'border-slate-755'
+              <div className={`bg-slate-950 border p-4 rounded-2xl space-y-2 transition-all duration-200 shadow-xs hover:shadow-md ${
+                isParent2Primary ? 'border-teal-500/70 ring-1 ring-teal-500/30' : 'border-slate-800'
               }`}>
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/60 border border-teal-500/30 px-2 py-0.5 rounded-full">
-                      {parent2Relation || 'Mother'}
-                    </span>
+                    <StatusBadge type="info" size="xs" label={parent2Relation || 'Mother'} />
                     {isParent2Primary && (
-                      <span className="text-[9px] font-black uppercase bg-amber-400/20 text-amber-300 border border-amber-500/40 px-2 py-0.2 rounded-full">
-                        ⭐ Primary Holder
-                      </span>
+                      <StatusBadge type="warning" size="xs" label="⭐ Primary Holder" />
                     )}
                   </div>
                   <User size={13} className="text-teal-400 shrink-0" />
@@ -1476,11 +1467,9 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
 
               {/* Address & Emergency Contact */}
-              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-2">
+              <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                    Residence & Emergency
-                  </span>
+                  <StatusBadge type="warning" size="xs" label="Residence & Emergency" />
                   <ShieldCheck size={13} className="text-amber-400" />
                 </div>
                 <div className="space-y-2 text-xs">

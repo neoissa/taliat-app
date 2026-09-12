@@ -73,6 +73,7 @@ import {
 import ConferenceCountdown from './ConferenceCountdown';
 import AdminCalendarSync from './AdminCalendarSync';
 import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
+import StatusBadge from './StatusBadge';
 import { 
   formatKashafEventWhatsApp, 
   generateEventReminderWhatsApp, 

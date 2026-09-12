@@ -44,6 +44,7 @@ import { getEventAudienceInfo } from '../utils/kashafVoice';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import { getRecommendedBadges } from '../utils/badgeRecommendations';
 import { MERIT_BADGE_COUNSELORS } from '../data/counselorsData';
+import StatusBadge from './StatusBadge';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
@@ -297,7 +298,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   return (
     <div className="space-y-6 pb-8">
       {/* ── 1. WELCOME HERO CARD ── */}
-      <div className="bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border border-emerald-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/60 border border-emerald-500/30 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
         {/* Background decorative watermark */}
         <div className="absolute right-4 top-2 opacity-5 pointer-events-none">
           <Trophy size={180} className="text-emerald-400" />
@@ -305,30 +306,22 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="w-18 h-18 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2.5 shadow-xl shadow-emerald-950/50 shrink-0">
-              <RankIcon rankId={latestAchievedRank.id} className="w-14 h-14 text-emerald-400 drop-shadow-md" />
+            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2.5 shadow-xl shadow-emerald-950/50 shrink-0">
+              <RankIcon rankId={latestAchievedRank.id} className="w-12 h-12 sm:w-14 sm:h-14 text-emerald-400 drop-shadow-md" />
             </div>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                  <span>⚜️</span> {activeRank} Rank
-                </span>
+                <StatusBadge type="success" size="xs" label={`${activeRank} Rank`} />
                 {nextTargetRank.id !== latestAchievedRank.id && (
-                  <span className="bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span>🎯</span> Target: {nextTargetRank.name} ({targetRankProgress.percentage}%)
-                  </span>
+                  <StatusBadge type="warning" size="xs" label={`Target: ${nextTargetRank.name} (${targetRankProgress.percentage}%)`} />
                 )}
                 {currentUser?.patrolName && (
-                  <span className="bg-slate-700/70 text-slate-200 border border-slate-600 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span>👥</span> {currentUser.patrolName} Patrol
-                  </span>
+                  <StatusBadge type="indigo" size="xs" label={`${currentUser.patrolName} Patrol`} />
                 )}
-                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span>✨</span> Be Prepared • كُن مُسْتَعِدّاً
-                </span>
+                <StatusBadge type="purple" size="xs" label="Be Prepared • كُن مُسْتَعِدّاً" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                 <span>Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || 'Scout'}!</span>
                 <span className="text-amber-400">⚜️</span>
               </h2>
@@ -342,7 +335,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('feed')}
-              className="bg-gradient-to-r from-emerald-600/30 to-teal-600/20 hover:bg-emerald-500/40 text-emerald-300 border-2 border-emerald-500/60 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              className="bg-emerald-600/30 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/60 font-black text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
             >
               <Bell size={15} className={unreadNotifsCount > 0 ? "animate-bounce text-amber-400" : ""} />
               <span>🔔 Alerts & Feed {unreadNotifsCount > 0 ? `(${unreadNotifsCount})` : ''}</span>
@@ -350,20 +343,20 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             <button
               type="button"
               onClick={() => setShowPendingModal(true)}
-              className="bg-gradient-to-r from-amber-500/30 to-amber-600/20 hover:bg-amber-500/40 text-amber-300 border-2 border-amber-500/60 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
+              className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 border border-amber-500/60 font-black text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
             >
               <Clock size={15} className="animate-pulse" />
               <span>⏳ Pending Items ({totalPendingPortalItems})</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
             >
               <span>🦅 Road to Eagle Portal</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('advancement')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-4 py-2.5 sm:py-3 rounded-2xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
             >
               <Award size={15} />
               <span>⚜️ My 7 Ranks</span>
@@ -374,7 +367,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         {/* ── Quick Scout Stats Grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           {/* Active Rank */}
-          <div className="bg-slate-900/70 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="bg-slate-900/80 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <ShieldCheck size={20} />
             </div>
@@ -389,17 +382,17 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* Attendance Standing Tile */}
           <div 
             onClick={() => onNavigate && onNavigate('profile')}
-            className={`p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer transition border ${
+            className={`p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
               attendanceStats.riskLevel === 'red'
-                ? 'bg-red-950/40 border-red-500/60 hover:border-red-400'
+                ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : 'bg-slate-900/70 border-teal-500/30 hover:border-teal-400'
+                : 'bg-slate-900/80 border-teal-500/30 hover:border-teal-400'
             }`}
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               attendanceStats.riskLevel === 'red'
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
                 : 'bg-teal-500/15 text-teal-400 border border-teal-500/30'
@@ -408,7 +401,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
             <div className="min-w-0 flex-1">
               <span className={`text-[10px] block uppercase font-bold tracking-wider ${
-                attendanceStats.riskLevel === 'red' ? 'text-red-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
+                attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
               }`}>Attendance</span>
               <strong className="text-sm font-black text-white block truncate">
                 {attendanceStats.attendanceRate}% ({attendanceStats.presentCount}/{attendanceStats.totalSessions})
@@ -417,7 +410,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
 
           {/* Merit Badges */}
-          <div className="bg-slate-900/70 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="bg-slate-900/80 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Star size={20} />
             </div>
@@ -430,7 +423,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
 
           {/* Service Hours */}
-          <div className="bg-slate-900/70 border border-sky-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="bg-slate-900/80 border border-sky-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-xs">
             <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Heart size={20} />
             </div>
@@ -445,7 +438,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* Road to Eagle Quick Stat */}
           <div 
             onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-slate-900/70 border border-amber-500/40 p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-amber-400 transition"
+            className="bg-slate-900/80 border border-amber-500/40 p-3.5 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-amber-400 transition shadow-xs"
           >
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 text-xl">
               🦅
@@ -463,9 +456,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       {/* ── 1.5. SCOUT ATTENDANCE STANDING & WARNING BANNER ── */}
       <div 
         onClick={() => onNavigate && onNavigate('profile', 'attendance')}
-        className={`rounded-3xl p-5 sm:p-6 shadow-xl border-2 transition cursor-pointer group ${
+        className={`rounded-3xl p-5 sm:p-6 shadow-xl border transition cursor-pointer group ${
           attendanceStats.riskLevel === 'red'
-            ? 'bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/60 border-red-500/80 hover:border-red-400'
+            ? 'bg-gradient-to-r from-rose-950/80 via-slate-900 to-rose-950/60 border-rose-500/80 hover:border-rose-400'
             : attendanceStats.riskLevel === 'yellow'
             ? 'bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/60 border-amber-500/80 hover:border-amber-400'
             : 'bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/40 border-teal-500/40 hover:border-teal-400'
@@ -475,7 +468,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           <div className="flex items-start gap-4">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
               attendanceStats.riskLevel === 'red'
-                ? 'bg-red-500/20 border border-red-500/40 text-red-400 animate-bounce'
+                ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400 animate-bounce'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
                 : 'bg-teal-500/20 border border-teal-500/40 text-teal-400'
@@ -491,20 +484,17 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                  attendanceStats.riskLevel === 'red'
-                    ? 'bg-red-500 text-slate-950'
-                    : attendanceStats.riskLevel === 'yellow'
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                }`}>
-                  {attendanceStats.riskLevel === 'red'
-                    ? '🚨 Critical Attendance Alert'
-                    : attendanceStats.riskLevel === 'yellow'
-                    ? '⚠️ Attendance Advisory'
-                    : '📋 Troop Attendance & Standing'
+                <StatusBadge 
+                  type={attendanceStats.riskLevel === 'red' ? 'danger' : attendanceStats.riskLevel === 'yellow' ? 'warning' : 'info'} 
+                  size="xs"
+                  label={
+                    attendanceStats.riskLevel === 'red'
+                      ? 'Critical Attendance Alert'
+                      : attendanceStats.riskLevel === 'yellow'
+                      ? 'Attendance Advisory'
+                      : 'Troop Attendance & Standing'
                   }
-                </span>
+                />
                 <span className="text-xs text-slate-300 font-bold font-mono">
                   {attendanceStats.attendanceRate}% Attendance Rate &bull; {attendanceStats.presentCount}/{attendanceStats.totalSessions} Sessions
                 </span>
@@ -540,7 +530,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             }}
             className={`font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center ${
               attendanceStats.riskLevel === 'red'
-                ? 'bg-red-600 hover:bg-red-500 text-white'
+                ? 'bg-rose-600 hover:bg-rose-500 text-white'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
                 : 'bg-teal-600 hover:bg-teal-500 text-white'
@@ -554,24 +544,18 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── NOTIFICATION BANNER: OFFICIAL PROGRESS REPORT PUBLISHED ── */}
       {publishedReports.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border-2 border-emerald-500/50 p-5 rounded-3xl shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border border-emerald-500/50 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-2xl shrink-0 shadow-lg">
               📜
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
-                  Official Progress Report Published
-                </span>
+                <StatusBadge type="success" size="xs" label="Official Progress Report Published" />
                 {!publishedReports[0].signatures?.scout?.signed ? (
-                  <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full animate-pulse">
-                    ✍️ Scout Signature Requested
-                  </span>
+                  <StatusBadge type="warning" size="xs" pulse label="✍️ Scout Signature Requested" />
                 ) : (
-                  <span className="text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
-                    ✓ Candidate Signed
-                  </span>
+                  <StatusBadge type="success" size="xs" label="✓ Candidate Signed" />
                 )}
               </div>
               <h3 className="text-base font-black text-white mt-1">
@@ -604,7 +588,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       )}
 
       {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl shrink-0 shadow-md">
@@ -612,9 +596,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Eagle Scout Portal
-                </span>
+                <StatusBadge type="warning" size="xs" label="Eagle Scout Portal" />
                 <span className="text-xs text-amber-300 font-bold">
                   BSA Milestone Journey
                 </span>
@@ -640,20 +622,16 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── 2.5. SMART MERIT BADGE RECOMMENDATIONS & TROOP COUNSELORS ── */}
       {recommendedBadges.length > 0 && (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3.5">
+        <div className="bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
                 <Sparkles size={22} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Smart Badge Recommendation
-                  </span>
-                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                    ⚜️ 28+ In-House Sign-Offs Ready
-                  </span>
+                  <StatusBadge type="success" size="xs" label="Smart Badge Recommendation" />
+                  <StatusBadge type="warning" size="xs" label="⚜️ 28+ In-House Sign-Offs Ready" />
                 </div>
                 <h3 className="text-base font-black text-white">
                   Fast-Track Merit Badges (Authorized Troop Counselors)
@@ -681,24 +659,18 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <div
                 key={rec.id}
                 onClick={() => onNavigate && onNavigate('merit-badges')}
-                className="bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl flex flex-col justify-between gap-3 cursor-pointer transition group shadow-sm hover:scale-[1.01]"
+                className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 group shadow-xs hover:shadow-md"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center justify-between gap-1 mb-2">
                     <div className="flex items-center gap-1 flex-wrap">
                       {rec.eagleRequired ? (
-                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase flex items-center gap-0.5">
-                          <Star size={9} /> Eagle
-                        </span>
+                        <StatusBadge type="warning" size="xs" label="Eagle" />
                       ) : (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold uppercase">
-                          Elective
-                        </span>
+                        <StatusBadge type="neutral" size="xs" label="Elective" />
                       )}
                       {rec.hasInHouseCounselor && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                          In-House
-                        </span>
+                        <StatusBadge type="success" size="xs" label="In-House" />
                       )}
                     </div>
                     <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
@@ -709,7 +681,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                   <h4 className="text-xs font-black text-white group-hover:text-emerald-300 transition">
                     {rec.name}
                   </h4>
-                  <p className="text-[11px] text-emerald-300/90 font-medium mt-0.5 line-clamp-2 leading-relaxed">
+                  <p className="text-[11px] text-emerald-300/90 font-medium mt-1 line-clamp-2 leading-relaxed">
                     👉 {rec.mainReason}
                   </p>
                 </div>
@@ -728,12 +700,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       <AssignmentsManager currentUser={currentUser} scoutId={currentUser?.uid} isEmbeddedInProfile={false} />
 
       {/* ── 4. UPCOMING PLANNED EVENTS ── */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-755 pb-3">
-          <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
             <Calendar className="text-emerald-400" size={18} />
-            <span>📅 Upcoming Troop Events & Campouts</span>
-          </h3>
+            <h3 className="font-extrabold text-white text-sm sm:text-base">
+              Upcoming Troop Events & Campouts
+            </h3>
+          </div>
           <button
             onClick={() => onNavigate && onNavigate('events')}
             className="text-xs text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer flex items-center gap-1"
@@ -744,44 +718,34 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {upcomingEvents.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-900/40 rounded-xl border border-slate-800">
+          <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-950/40 rounded-xl border border-slate-800">
             🏕️ No upcoming troop events scheduled right now. Check back soon!
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {upcomingEvents.map(ev => {
               const isToday = ev.date === new Date().toISOString().split('T')[0];
+              const aud = getEventAudienceInfo(ev, currentUser, groups);
               return (
                 <div
                   key={ev.id}
-                  className="bg-slate-900/60 border border-slate-755 hover:border-emerald-500/40 p-4 rounded-xl flex items-center justify-between gap-3 transition shadow-sm"
+                  className="bg-slate-950/60 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl flex items-center justify-between gap-3 transition-all duration-200 shadow-xs hover:shadow-md"
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
-                        <span>📅</span> {ev.date}
-                      </span>
+                      <StatusBadge type="info" size="xs" label={ev.date} />
                       {ev.time && (
-                        <span className="text-[10px] text-slate-300 font-semibold bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700 flex items-center gap-1">
-                          <span>⏰</span> {ev.time}
-                        </span>
+                        <StatusBadge type="neutral" size="xs" label={ev.time} />
                       )}
                       {isToday && (
-                        <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/40 font-black px-2 py-0.5 rounded-full uppercase animate-pulse">
-                          🔥 TODAY!
-                        </span>
+                        <StatusBadge type="danger" size="xs" pulse label="TODAY!" />
                       )}
-                      {(() => {
-                        const aud = getEventAudienceInfo(ev, currentUser, groups);
-                        return (
-                          <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
-                            <span>{aud.icon}</span>
-                            <span className="font-bold">{aud.badge}</span>
-                          </span>
-                        );
-                      })()}
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
+                        <span>{aud.icon}</span>
+                        <span className="font-bold">{aud.badge}</span>
+                      </span>
                     </div>
-                    <h4 className="font-extrabold text-sm text-white">{ev.title}</h4>
+                    <h4 className="font-extrabold text-sm text-white truncate">{ev.title}</h4>
                     {ev.location && (
                       <p className="text-xs text-emerald-300 flex items-center gap-1.5 font-medium bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full mt-1">
                         <MapPin size={11} className="text-emerald-400 shrink-0" />
@@ -792,9 +756,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
                   <button
                     onClick={() => onNavigate && onNavigate('events')}
-                    className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3.5 py-2 rounded-xl border border-slate-700 shrink-0 cursor-pointer shadow-sm"
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3.5 py-2 rounded-xl border border-slate-700 shrink-0 cursor-pointer shadow-xs transition"
                   >
-                    Details & Maps
+                    Details
                   </button>
                 </div>
               );
