@@ -3,7 +3,8 @@ import DynamicIcon from './DynamicIcon';
 import { 
   ICON_CATEGORIES, 
   ALL_AVAILABLE_ICONS, 
-  getIconComponent 
+  getIconComponent,
+  getNavItemColorTheme
 } from '../utils/IconRegistry';
 import { 
   X, 
@@ -286,10 +287,11 @@ export default function MobileTabManager({
               {bottomTabIds.map((tabId, idx) => {
                 const tabObj = tabs.find(t => t.id === tabId);
                 if (!tabObj) return null;
+                const tabTheme = getNavItemColorTheme(tabObj, false, isOwner);
                 return (
-                  <div key={tabId} className="flex flex-col items-center justify-center flex-1 py-1 px-1 text-emerald-300">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-1">
-                      <DynamicIcon name={tabObj.icon} size={15} className="text-emerald-400" />
+                  <div key={tabId} className="flex flex-col items-center justify-center flex-1 py-1 px-1">
+                    <div className={`w-8 h-8 rounded-lg border flex items-center justify-center mb-1 shadow-xs ${tabTheme.pillBg} ${tabTheme.border}`}>
+                      <DynamicIcon name={tabObj.icon} size={15} className={tabTheme.icon} />
                     </div>
                     <span className="text-[9px] font-bold truncate max-w-[64px] text-center text-slate-200">
                       {tabObj.label}
@@ -367,15 +369,20 @@ export default function MobileTabManager({
                       </div>
 
                       {/* Interactive Icon Button (Click to pick icon) */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenIconPicker(tab.id)}
-                        className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 hover:border-emerald-400 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm transition hover:scale-105 cursor-pointer relative group"
-                        title="Click to customize icon"
-                      >
-                        <DynamicIcon name={tab.icon} size={18} />
-                        <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-amber-500 border border-slate-900 group-hover:block hidden" />
-                      </button>
+                      {(() => {
+                        const tabTheme = getNavItemColorTheme(tab, false, isOwner);
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenIconPicker(tab.id)}
+                            className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-sm transition hover:scale-110 cursor-pointer relative group ${tabTheme.pillBg} ${tabTheme.border}`}
+                            title="Click to customize icon"
+                          >
+                            <DynamicIcon name={tab.icon} size={18} className={tabTheme.icon} />
+                            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-amber-500 border border-slate-900 group-hover:block hidden" />
+                          </button>
+                        );
+                      })()}
 
                       {/* Tab Text Info */}
                       <div className="min-w-0 flex-1">

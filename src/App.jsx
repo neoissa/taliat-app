@@ -26,6 +26,7 @@ import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import DynamicIcon from './components/DynamicIcon';
 import MobileTabManager from './components/MobileTabManager';
 import MobileTabBar from './components/MobileTabBar';
+import { getNavItemColorTheme } from './utils/IconRegistry';
 import { 
   subscribeToNavPreferences, 
   saveNavPreferences, 
@@ -796,30 +797,41 @@ export default function App() {
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
                 const isActive = currentTab === item.id;
+                const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleTabClick(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left min-h-[44px] ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left min-h-[44px] group ${
                       isActive
                         ? isOwner
-                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-amber-300 border-l-4 border-amber-500 font-extrabold shadow-sm'
-                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
+                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-white border-l-4 border-amber-500 font-extrabold shadow-sm'
+                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-white border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
+                        isActive
+                          ? `${itemTheme.activePill} ${itemTheme.glow}`
+                          : `${itemTheme.pillBg} ${itemTheme.border}`
+                      }`}>
                         <DynamicIcon 
                           name={item.icon} 
-                          size={18} 
-                          className={isActive ? (isOwner ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-400'} 
+                          size={17} 
+                          className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
                         />
                       </div>
-                      <span className="truncate">{item.label}</span>
+                      <span className={`truncate text-xs ${
+                        isActive 
+                          ? (isOwner ? 'text-amber-300 font-black' : 'text-emerald-300 font-black') 
+                          : 'font-semibold text-slate-300 group-hover:text-white'
+                      }`}>
+                        {item.label}
+                      </span>
                     </div>
                     {item.badge > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0">
+                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0 shadow-sm">
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}
@@ -1038,37 +1050,47 @@ export default function App() {
 
         {/* Navigation Tab Links */}
         <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
-          <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5">
-            Navigation Menu
+          <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
+            <span>Navigation Menu</span>
+            <span className="text-[9px] font-mono text-slate-500 font-bold lowercase">{navItems.length} modules</span>
           </div>
           {navItems.map((item) => {
             const isActive = currentTab === item.id;
+            const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
             return (
               <button
                 key={item.id}
                 onClick={() => handleTabClick(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-left group ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group ${
                   isActive
                     ? isOwner
-                      ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-amber-300 border-l-4 border-amber-500 font-extrabold shadow-sm'
-                      : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-emerald-300 border-l-4 border-emerald-500 font-extrabold shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900/70'
+                      ? 'bg-gradient-to-r from-amber-600/25 to-amber-700/15 text-white border-l-4 border-amber-500 shadow-sm font-extrabold'
+                      : 'bg-gradient-to-r from-emerald-600/25 to-teal-650/15 text-white border-l-4 border-emerald-500 shadow-sm font-extrabold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
+                    isActive
+                      ? `${itemTheme.activePill} ${itemTheme.glow}`
+                      : `${itemTheme.pillBg} ${itemTheme.border}`
+                  }`}>
                     <DynamicIcon 
                       name={item.icon} 
-                      size={18} 
-                      className={`transition-transform group-hover:scale-110 ${
-                        isActive ? (isOwner ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-400 group-hover:text-slate-200'
-                      }`} 
+                      size={15} 
+                      className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
                     />
                   </div>
-                  <span className="truncate">{item.label}</span>
+                  <span className={`truncate text-xs ${
+                    isActive 
+                      ? (isOwner ? 'text-amber-300 font-black' : 'text-emerald-300 font-black') 
+                      : 'font-semibold text-slate-300 group-hover:text-white'
+                  }`}>
+                    {item.label}
+                  </span>
                 </div>
                 {item.badge > 0 ? (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0">
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0 shadow-sm">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 ) : (
