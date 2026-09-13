@@ -23,6 +23,8 @@ import ParentAlertsFeed from './ParentAlertsFeed';
 import ParentEagleTracker from './ParentEagleTracker';
 import ParentPatrolResources from './ParentPatrolResources';
 import ParentAttendanceFeed from './ParentAttendanceFeed';
+import ParentMessagingHub from './ParentMessagingHub';
+import { subscribeToParentThreads } from '../services/directMessagingService';
 import StatusBadge from './StatusBadge';
 import {
   Award,
@@ -240,6 +242,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [allUsers, setAllUsers] = useState([]);
   const [allGroups, setAllGroups] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [directThreads, setDirectThreads] = useState([]);
+  const unreadDmsCount = directThreads.filter(t => t.unreadByParent).length;
 
   // Parent Action Center (Tasks & Forms)
   const [parentTasks, setParentTasks] = useState([]);
@@ -326,6 +330,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  // 0.5 Subscribe to Direct Messages
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = subscribeToParentThreads(currentUser.uid, (list) => {
+      setDirectThreads(list);
+    });
+    return () => unsub();
+  }, [currentUser?.uid]);
 
   // 1. Keep Parent Document updated
   useEffect(() => {
@@ -1255,6 +1268,13 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           },
           { id: 'events', label: 'Upcoming Schedule & RSVP', icon: Calendar },
           { id: 'attendance', label: 'Attendance & Compliance', icon: Clock },
+          { 
+            id: 'messages', 
+            label: 'Direct Inquiries & Chat', 
+            icon: MessageSquare,
+            badge: unreadDmsCount > 0 ? `💬 ${unreadDmsCount}` : null,
+            badgeColor: 'bg-emerald-500 text-white font-black animate-pulse'
+          },
           { 
             id: 'feed', 
             label: 'Alerts & Activity Feed', 
@@ -4377,6 +4397,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       {/* ── 11. TAB: ATTENDANCE & COMPLIANCE FEED ── */}
       {activeTab === 'attendance' && (
         <ParentAttendanceFeed 
+          currentUser={currentUser} 
+          linkedScouts={linkedScouts} 
+        />
+      )}
+
+      {/* ── 12. TAB: DIRECT MESSAGES & INQUIRIES ── */}
+      {activeTab === 'messages' && (
+        <ParentMessagingHub 
           currentUser={currentUser} 
           linkedScouts={linkedScouts} 
         />

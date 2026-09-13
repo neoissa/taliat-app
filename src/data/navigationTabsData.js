@@ -274,6 +274,27 @@ export const MASTER_TABS_REGISTRY = [
     badgeKey: 'unreadChatCount'
   },
   {
+    id: 'direct-messages',
+    defaultLabel: 'Direct Messages',
+    labelByRole: {
+      parent: 'Leader Inquiries & Chat',
+      leader: 'Parent Inquiries & DMs',
+      admin: 'Parent Inquiries & DMs',
+      owner: 'Parent Inquiries & DMs'
+    },
+    defaultIcon: 'MessageSquare',
+    iconByRole: {
+      owner: 'MessageSquare',
+      admin: 'MessageSquare',
+      leader: 'MessageSquare',
+      parent: 'MessageSquare'
+    },
+    category: 'communication',
+    description: 'Private 1-on-1 parent-leader conversations, confidential inquiries, and troop suggestions',
+    allowedRoles: ['owner', 'admin', 'leader', 'parent'],
+    badgeKey: 'unreadDirectMessagesCount'
+  },
+  {
     id: 'resources',
     defaultLabel: 'Resources & Guide',
     labelByRole: {

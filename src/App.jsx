@@ -19,6 +19,7 @@ import ServiceLogs from './components/ServiceLogs';
 import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
+import LeaderMessagingHub from './components/LeaderMessagingHub';
 import PatrolAttendance from './components/PatrolAttendance';
 import ScoutAttendance from './components/ScoutAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
@@ -76,6 +77,7 @@ export default function App() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [unreadRequestsCount, setUnreadRequestsCount] = useState(0);
+  const [unreadDirectMessagesCount, setUnreadDirectMessagesCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
   const [navState, setNavState] = useState(null);
@@ -361,6 +363,31 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, [currentUser?.uid, currentUser?.role, currentUser?.email, isLeader, isOwner, isExecutive]);
 
+  // Real-time unread direct messages listener (Parents & Leaders)
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setUnreadDirectMessagesCount(0);
+      return;
+    }
+
+    const unsub = onSnapshot(collection(db, 'direct_messages'), (snap) => {
+      let count = 0;
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (isParent && data.parentUid === currentUser.uid && data.unreadByParent) {
+          count++;
+        } else if ((isLeader || isOwner || isExecutive) && data.unreadByLeader) {
+          if (isOwner || isExecutive || data.leaderUid === currentUser.uid || data.leaderUid === 'leadership') {
+            count++;
+          }
+        }
+      });
+      setUnreadDirectMessagesCount(count);
+    }, (err) => console.warn("Unread direct messages listener fallback:", err));
+
+    return () => unsub();
+  }, [currentUser?.uid, currentUser?.role, isParent, isLeader, isOwner, isExecutive]);
+
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
     if (currentUser) {
@@ -487,6 +514,7 @@ export default function App() {
       let badge = 0;
       if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat') badge = unreadChatCount;
       if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
+      if (tab.badgeKey === 'unreadDirectMessagesCount' || tab.id === 'direct-messages') badge = unreadDirectMessagesCount;
       return {
         ...tab,
         badge
@@ -504,6 +532,7 @@ export default function App() {
         let badge = 0;
         if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat') badge = unreadChatCount;
         if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
+        if (foundTab.badgeKey === 'unreadDirectMessagesCount' || foundTab.id === 'direct-messages') badge = unreadDirectMessagesCount;
         items.push({
           id: foundTab.id,
           label: foundTab.label,
@@ -1250,6 +1279,19 @@ export default function App() {
           <ScoutAttendance currentUser={currentUser} />
         )}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
+        {currentTab === 'direct-messages' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="messages"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {currentTab === 'direct-messages' && isLeaderOrOwner && (
+          <LeaderMessagingHub 
+            currentUser={currentUser} 
+            onNavigate={handleNavigate} 
+          />
+        )}
       </main>
 
       {/* ── CONTEXT-AWARE ROLE-SPECIFIC MOBILE BOTTOM TAB BAR ── */}

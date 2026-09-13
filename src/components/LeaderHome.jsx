@@ -42,6 +42,7 @@ import {
   filterScoutsForUser 
 } from '../utils/patrolScoping';
 import { calculateScoutCompliance } from '../utils/attendanceCompliance';
+import { subscribeToLeaderThreads } from '../services/directMessagingService';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -154,6 +155,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
     }, (err) => console.warn('LeaderHome broadcasts fallback:', err));
     return () => unsub();
   }, []);
+
+  // 4.9 Fetch Direct Messages / Parent Inquiries
+  const [directThreads, setDirectThreads] = useState([]);
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = subscribeToLeaderThreads(currentUser, accessibleGroups, isTroopWideAuthority, (list) => {
+      setDirectThreads(list);
+    });
+    return () => unsub();
+  }, [currentUser, accessibleGroups, isTroopWideAuthority]);
 
   // 5. Aggregate Real-Time Pending Approvals
   useEffect(() => {
@@ -535,6 +546,47 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* ── 1.7 UNREAD DIRECT PARENT INQUIRIES BANNER ── */}
+      {(() => {
+        const unreadDms = directThreads.filter(t => t.unreadByLeader);
+        if (unreadDms.length === 0) return null;
+
+        return (
+          <div className="bg-gradient-to-r from-indigo-950/95 via-slate-900 to-sky-950/40 border border-indigo-500/70 p-4 sm:p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-500/25 border border-indigo-400 flex items-center justify-center text-xl shrink-0 text-indigo-300">
+                💬
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                    {unreadDms.length} Unread Message{unreadDms.length > 1 ? 's' : ''}
+                  </span>
+                  <span className="text-xs text-indigo-200 font-mono font-bold">
+                    Private Parent Inquiries
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
+                  Direct Messages Awaiting Leader Response
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {unreadDms[0]?.parentName} &bull; &ldquo;{unreadDms[0]?.lastMessage || unreadDms[0]?.subject}&rdquo;
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('direct-messages')}
+              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/50 shrink-0"
+            >
+              <MessageSquare size={14} />
+              <span>Open Messages Console &rarr;</span>
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ── 1.8 PENDING PARENT REQUESTS & CONFERENCE ALERTS ── */}
       {(() => {
