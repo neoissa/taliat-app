@@ -9,6 +9,13 @@ import SignaturePadModal from './SignaturePadModal';
 import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import RosterExportModal from './RosterExportModal';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 import {
   Printer,
   Sparkles,
@@ -1044,16 +1051,19 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
     }
   };
 
+  const accessiblePatrols = getAccessiblePatrols(currentUser, groupsList);
+  const scopedScouts = filterScoutsForUser(scoutsList, currentUser, groupsList, 'all');
+
   // Compile Target Scouts
   let targetScouts = [];
   if (targetType === 'single') {
-    const single = scoutsList.find(s => s.uid === selectedScoutId);
+    const single = scopedScouts.find(s => s.uid === selectedScoutId) || scopedScouts[0];
     if (single) targetScouts = [single];
   } else {
     if (selectedGroupId === 'all') {
-      targetScouts = scoutsList;
+      targetScouts = scopedScouts;
     } else {
-      targetScouts = scoutsList.filter(s => s.groupId === selectedGroupId || s.patrolId === selectedGroupId);
+      targetScouts = scoutsList.filter(s => isScoutInPatrol(s, selectedGroupId, groupsList));
     }
   }
 
@@ -1343,11 +1353,11 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
 
             {targetType === 'single' ? (
               <select
-                value={selectedScoutId}
+                value={selectedScoutId || (scopedScouts[0]?.uid || '')}
                 onChange={(e) => setSelectedScoutId(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold cursor-pointer"
               >
-                {scoutsList.map(s => (
+                {scopedScouts.map(s => (
                   <option key={s.uid} value={s.uid}>
                     {s.fullName || s.username} ({s.rank || 'Scout'} • @{s.username})
                   </option>
@@ -1359,12 +1369,14 @@ export default function LeaderReportsCenter({ currentUser, onNavigate }) {
                 onChange={(e) => setSelectedGroupId(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold cursor-pointer"
               >
-                <option value="all">All Troop Scouts ({scoutsList.length} Scouts)</option>
-                {groupsList.map(g => {
-                  const count = scoutsList.filter(s => s.groupId === g.id || s.patrolId === g.id).length;
+                <option value="all">
+                  {isSuperUser(currentUser) ? `⚜️ All Troop Scouts (${scoutsList.length} Scouts)` : `🛡️ All My Patrol Scouts (${scopedScouts.length} Scouts)`}
+                </option>
+                {accessiblePatrols.map(g => {
+                  const count = scoutsList.filter(s => isScoutInPatrol(s, g.id, groupsList)).length;
                   return (
                     <option key={g.id} value={g.id}>
-                      {g.name} Patrol ({count} Scouts)
+                      🛡️ {g.name} Patrol ({count} Scouts)
                     </option>
                   );
                 })}

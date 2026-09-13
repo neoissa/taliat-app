@@ -32,10 +32,15 @@ import {
   Shield,
   Layers,
   UserCheck,
-  UserX,
-  AlertTriangle
+  UserX
 } from 'lucide-react';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 export default function LeaderEventRsvps({ currentUser = {}, onNavigate }) {
   const isExecutive = currentUser?.role === 'executive_leader' || currentUser?.isExecutive || currentUser?.email === 'admin@taliat.org';
@@ -112,7 +117,7 @@ export default function LeaderEventRsvps({ currentUser = {}, onNavigate }) {
       // Determine target scouts
       let targetScouts = scoutsList;
       if (ev.targetGroupId && ev.targetGroupId !== 'all') {
-        targetScouts = scoutsList.filter(s => s.groupId === ev.targetGroupId || s.patrolId === ev.targetGroupId);
+        targetScouts = scoutsList.filter(s => isScoutInPatrol(s, ev.targetGroupId, groups));
       }
 
       // Map RSVPs for this event
@@ -563,11 +568,13 @@ export default function LeaderEventRsvps({ currentUser = {}, onNavigate }) {
           <select
             value={patrolFilter}
             onChange={(e) => setPatrolFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-755 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="bg-slate-900 border border-slate-755 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-medium"
           >
-            <option value="all">All Patrols / Troop-Wide</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
+            <option value="all">
+              {isSuperUser(currentUser) ? '⚜️ All Patrols / Troop-Wide' : '🛡️ All My Patrols'}
+            </option>
+            {getAccessiblePatrols(currentUser, groups).map(g => (
+              <option key={g.id} value={g.id}>🛡️ {g.name} Patrol</option>
             ))}
           </select>
 

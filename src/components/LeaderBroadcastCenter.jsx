@@ -34,10 +34,14 @@ import {
   ChevronRight,
   Eye,
   Edit3,
-  Paperclip,
-  CheckCheck
+  Paperclip
 } from 'lucide-react';
 import { publishTroopBroadcast, deleteTroopBroadcast } from '../services/broadcastService';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol 
+} from '../utils/patrolScoping';
 
 const BROADCAST_CATEGORIES = [
   { id: 'General Announcement', label: 'General Announcement', icon: '📢', color: 'bg-slate-800 text-slate-200 border-slate-700' },
@@ -142,6 +146,8 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
     return () => unsub();
   }, []);
 
+  const accessiblePatrols = useMemo(() => getAccessiblePatrols(currentUser, groups), [currentUser, groups]);
+
   // Real-time Estimated Audience Reach
   const estimatedReach = useMemo(() => {
     const totalParents = users.filter(u => u.role === 'parent').length;
@@ -153,14 +159,14 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
 
     if (targetScope === 'patrol_specific' && targetGroupId) {
       targetStreams = 1;
-      targetScouts = users.filter(u => u.role === 'scout' && (u.groupId === targetGroupId || u.patrolId === targetGroupId)).length;
+      targetScouts = users.filter(u => u.role === 'scout' && isScoutInPatrol(u, targetGroupId, groups)).length;
       targetParents = users.filter(u => {
         if (u.role !== 'parent') return false;
         const linkedIds = u.linkedScoutIds || [];
         return users.some(s => 
           s.role === 'scout' && 
-          (linkedIds.includes(s.uid) || s.parentEmail === u.email) && 
-          (s.groupId === targetGroupId || s.patrolId === targetGroupId)
+          (linkedIds.includes(s.uid) || s.parentEmail === u.email || (Array.isArray(s.parentUids) && s.parentUids.includes(u.uid))) && 
+          isScoutInPatrol(s, targetGroupId, groups)
         );
       }).length;
     }
@@ -544,8 +550,10 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     }}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
                   >
-                    <option value="troop_wide">⚡ Entire Troop (All Patrols)</option>
-                    {groups.map(g => (
+                    {isSuperUser(currentUser) && (
+                      <option value="troop_wide">⚡ Entire Troop (All Patrols)</option>
+                    )}
+                    {accessiblePatrols.map(g => (
                       <option key={g.id} value={g.id}>👥 {g.name} Patrol Only</option>
                     ))}
                   </select>

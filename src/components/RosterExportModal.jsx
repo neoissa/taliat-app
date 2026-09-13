@@ -26,6 +26,12 @@ import {
   Calendar
 } from 'lucide-react';
 import { aggregateRosterData, exportRosterToCSV, exportRosterToPrintablePDF } from '../utils/exportRoster';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 export default function RosterExportModal({ isOpen, onClose, currentUser }) {
   if (!isOpen) return null;
@@ -114,10 +120,19 @@ export default function RosterExportModal({ isOpen, onClose, currentUser }) {
   }, [scoutsList, groupsList, allUsersList, attendanceSessions, serviceLogs]);
 
   // 3. Filtered Roster for View & Export
+  const accessiblePatrols = useMemo(() => getAccessiblePatrols(currentUser, groupsList), [currentUser, groupsList]);
+  const isSuper = isSuperUser(currentUser);
+
   const filteredRoster = useMemo(() => {
     return aggregatedData.filter(item => {
+      // Permission check: regular leader only sees scouts in their accessible patrols
+      if (!isSuper) {
+        const hasAccess = accessiblePatrols.some(p => isScoutInPatrol(item.rawScout, p.id, groupsList));
+        if (!hasAccess) return false;
+      }
+
       if (selectedPatrolId !== 'all') {
-        if (item.patrolId !== selectedPatrolId && item.rawScout?.groupId !== selectedPatrolId && item.rawScout?.patrolId !== selectedPatrolId) {
+        if (!isScoutInPatrol(item.rawScout, selectedPatrolId, groupsList)) {
           return false;
         }
       }
@@ -130,7 +145,7 @@ export default function RosterExportModal({ isOpen, onClose, currentUser }) {
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchName = item.fullName.toLowerCase().includes(q);
+        const matchName = item.fullName?.toLowerCase().includes(q);
         const matchBsa = item.bsaId?.toLowerCase().includes(q);
         const matchPatrol = item.patrolName?.toLowerCase().includes(q);
         const matchParent1 = item.parent1Name?.toLowerCase().includes(q);
@@ -143,7 +158,7 @@ export default function RosterExportModal({ isOpen, onClose, currentUser }) {
 
       return true;
     });
-  }, [aggregatedData, selectedPatrolId, selectedRank, searchQuery]);
+  }, [aggregatedData, selectedPatrolId, selectedRank, searchQuery, isSuper, accessiblePatrols, groupsList]);
 
   // KPI calculations
   const totalScouts = filteredRoster.length;
@@ -278,12 +293,14 @@ export default function RosterExportModal({ isOpen, onClose, currentUser }) {
                   <select
                     value={selectedPatrolId}
                     onChange={(e) => setSelectedPatrolId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
                   >
-                    <option value="all">⚜️ All Patrols / Full Troop ({scoutsList.length} Scouts)</option>
-                    {groupsList.map(g => (
+                    <option value="all">
+                      {isSuper ? `⚜️ All Patrols / Full Troop (${scoutsList.length} Scouts)` : `🛡️ All My Patrols (${filterScoutsForUser(scoutsList, currentUser, groupsList, 'all').length} Scouts)`}
+                    </option>
+                    {accessiblePatrols.map(g => (
                       <option key={g.id} value={g.id}>
-                        🛡️ {g.name}
+                        🛡️ {g.name} Patrol ({scoutsList.filter(s => isScoutInPatrol(s, g.id, groupsList)).length} Scouts)
                       </option>
                     ))}
                   </select>

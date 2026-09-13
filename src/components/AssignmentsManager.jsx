@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -40,6 +40,13 @@ import {
   Dumbbell
 } from 'lucide-react';
 import { dispatchScoutNotification, dispatchBulkScoutNotifications } from '../utils/notificationPipeline';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 // Helper to determine strict status of an assignment for a given scout record
 export function getAssignmentStatus(assignment, record) {
@@ -123,7 +130,12 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
   // Groups and Scouts for Leader
   const [groups, setGroups] = useState([]);
-  const [scoutsList, setScoutsList] = useState([]);
+  const [rawScouts, setRawScouts] = useState([]);
+
+  // Scoped lists derived via universal patrol scoping
+  const accessiblePatrols = useMemo(() => getAccessiblePatrols(currentUser, groups), [currentUser, groups]);
+  const scoutsList = useMemo(() => filterScoutsForUser(rawScouts, currentUser, groups, selectedPatrolFilter), [rawScouts, currentUser, groups, selectedPatrolFilter]);
+  const accessibleScouts = useMemo(() => filterScoutsForUser(rawScouts, currentUser, groups, 'all'), [rawScouts, currentUser, groups]);
 
   // Leader Creation / Edit State
   const [showForm, setShowForm] = useState(false);
@@ -203,28 +215,15 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
         setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
       });
       const unsubScouts = onSnapshot(query(collection(db, 'users'), where('role', '==', 'scout')), (snap) => {
-        let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && 
-          (currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Leader');
-        const isExecutive = isOwner || currentUser?.role === 'admin' || isScoutmaster;
-        const leaderPatrolId = currentUser?.groupId || currentUser?.patrolId;
-
-        if (!isExecutive && leaderPatrolId) {
-          list = list.filter(s => 
-            s.groupId === leaderPatrolId || 
-            s.patrolId === leaderPatrolId || 
-            s.leaderId === currentUser.uid || 
-            (currentUser?.patrolName && (s.patrolName === currentUser.patrolName || s.patrol === currentUser.patrolName))
-          );
-        }
-        setScoutsList(list);
+        const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        setRawScouts(list);
       });
       return () => {
         unsubGroups();
         unsubScouts();
       };
     }
-  }, [isLeader, isOwner, currentUser]);
+  }, [isLeader]);
 
   // Helper to fetch the exact record for an assignment and scout
   const getRecord = (assignmentId, scoutUid) => {
@@ -425,11 +424,11 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
       if (!editingId) {
         let targetScouts = [];
         if (assignedTarget === 'all') {
-          targetScouts = scoutsList;
+          targetScouts = accessibleScouts;
         } else if (assignedTarget === 'patrol' && targetGroupId) {
-          targetScouts = scoutsList.filter(s => s.groupId === targetGroupId || s.patrolId === targetGroupId);
+          targetScouts = rawScouts.filter(s => isScoutInPatrol(s, targetGroupId, groups));
         } else if (assignedTarget === 'scout' && targetScoutUid) {
-          const found = scoutsList.find(s => s.uid === targetScoutUid);
+          const found = rawScouts.find(s => s.uid === targetScoutUid);
           if (found) targetScouts = [found];
         }
 
@@ -818,7 +817,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     >
                       <option value="">Select Patrol...</option>
-                      {groups.map(g => (
+                      {accessiblePatrols.map(g => (
                         <option key={g.id} value={g.id}>{g.name} Patrol</option>
                       ))}
                     </select>
@@ -833,7 +832,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     >
                       <option value="">Select Scout...</option>
-                      {scoutsList.map(s => (
+                      {accessibleScouts.map(s => (
                         <option key={s.uid} value={s.uid}>{s.fullName || s.username} ({s.rank || 'Scout'})</option>
                       ))}
                     </select>
@@ -1102,11 +1101,13 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
             <select
               value={selectedPatrolFilter}
               onChange={(e) => setSelectedPatrolFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
             >
-              <option value="all">All Patrols</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name} Patrol</option>
+              <option value="all">
+                {isSuperUser(currentUser) ? '⚜️ All Patrols (Full Troop)' : '🛡️ All My Patrols'}
+              </option>
+              {accessiblePatrols.map(g => (
+                <option key={g.id} value={g.id}>🛡️ {g.name} Patrol</option>
               ))}
             </select>
           )}
@@ -1179,7 +1180,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 </thead>
                 <tbody className="divide-y divide-slate-755">
                   {scoutsList.map(scout => {
-                    const scoutPatrol = groups.find(g => g.id === scout.groupId)?.name || 'Patrol';
+                    const scoutPatrol = getScoutPatrolName(scout, groups);
                     
                     return visibleAssignments.map((assign) => {
                       const rec = getRecord(assign.id, scout.uid);

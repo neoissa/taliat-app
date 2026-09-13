@@ -2,7 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage } from '../data/ranksData';
-import { Printer, CheckCircle2, Users, Circle, ChevronDown, ChevronUp, Calendar, MessageSquare, Award, Clock, User, Plus, Trash2, Tag, BookOpen, Sparkles, Send, CheckCheck, ArrowLeft, FileText, Shield } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  Clock, 
+  Award, 
+  FileText, 
+  Printer, 
+  ExternalLink, 
+  ChevronDown, 
+  ChevronUp, 
+  AlertTriangle, 
+  Sparkles, 
+  ArrowLeft, 
+  Users, 
+  CheckCheck, 
+  Send,
+  Calendar,
+  Layers,
+  Search,
+  BookOpen
+} from 'lucide-react';
+import { 
+  isSuperUser as checkIsSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 import RankIcon from './RankIcon';
 import ScoutProgressReport from './ScoutProgressReport';
 import RoadToEagleTracker from './RoadToEagleTracker';
@@ -97,9 +123,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [groups, setGroups] = useState([]);
   const [batchUpdatesMsg, setBatchUpdatesMsg] = useState('');
 
-  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
-  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster') && currentUser?.leaderPosition === 'Scoutmaster';
-  const isSuperUser = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster;
+  const isSuperUser = checkIsSuperUser(currentUser);
   const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isSuperUser);
   const isLeaderOrOwner = isOwner || isLeader || isSuperUser;
   const isScout = !isLeaderOrOwner && currentUser?.role === 'scout';
@@ -114,7 +138,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
   const [showEaglePortal, setShowEaglePortal] = useState(false);
   const [showUniversalPendingModal, setShowUniversalPendingModal] = useState(false);
   const [allUsersList, setAllUsersList] = useState([]);
-
 
   // Fetch groups for patrol batch completion
   useEffect(() => {
@@ -151,12 +174,6 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     return () => unsub();
   }, [scoutId]);
 
-
-
-
-
-
-
   // Fetch scouts list if leader or owner and customScoutId is not provided
   useEffect(() => {
     if (!isLeaderOrOwner || customScoutId) return;
@@ -164,14 +181,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       setAllUsersList(allUsers);
-      const scouts = allUsers.filter(u => {
-        if (u.role !== 'scout') return false;
-        if (isSuperUser) return true;
-        const leaderGroupId = currentUser?.groupId || currentUser?.patrolId;
-        const scoutGroupId = u.groupId || u.patrolId;
-        return u.leaderId === currentUser?.uid || 
-          (leaderGroupId && (scoutGroupId === leaderGroupId || u.patrolName === currentUser?.patrolName || u.patrol === currentUser?.patrolName));
-      });
+      const scouts = filterScoutsForUser(allUsers, currentUser, groups, 'all');
       setScoutsList(scouts);
       if (scouts.length > 0 && !selectedScoutId) {
         setSelectedScoutId(scouts[0].uid);
@@ -181,7 +191,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, customScoutId, currentUser?.role, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, isSuperUser]);
+  }, [isLeaderOrOwner, customScoutId, currentUser, groups]);
 
   // Listen to all rank progress documents in real-time
   useEffect(() => {
@@ -206,12 +216,11 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
     return () => unsubscribe();
   }, [scoutId]);
 
-
   const batchPatrolId = isBatchMode ? selectedScoutId.replace('patrol:', '') : null;
   const targetBatchScouts = isBatchMode
-    ? scoutsList.filter(s => batchPatrolId === 'all' || s.groupId === batchPatrolId || s.patrolId === batchPatrolId)
+    ? scoutsList.filter(s => batchPatrolId === 'all' || isScoutInPatrol(s, batchPatrolId, groups))
     : [];
-  const selectedPatrolGroup = groups.find(g => g.id === batchPatrolId);
+  const selectedPatrolGroup = groups.find(g => g.id === batchPatrolId || isScoutInPatrol({ groupId: batchPatrolId }, g, groups));
   const batchPatrolName = batchPatrolId === 'all' ? 'All Scouts in Troop' : (selectedPatrolGroup?.name ? `${selectedPatrolGroup.name} Patrol` : 'Patrol');
 
   const selectedRankData = RANKS_DATA.find((r) => r.id === selectedRankId) || RANKS_DATA[0];
@@ -658,6 +667,23 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
               )}
             </span>
           </div>
+
+          {!customScoutId && isLeaderOrOwner && scoutsList.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-slate-800">
+              <Users size={13} className="text-emerald-400 shrink-0" />
+              <select
+                value={selectedScoutId}
+                onChange={(e) => setSelectedScoutId(e.target.value)}
+                className="bg-transparent border-none text-slate-200 text-xs font-bold focus:outline-none cursor-pointer py-0.5"
+              >
+                {scoutsList.map((s) => (
+                  <option key={s.uid} value={s.uid} className="bg-slate-900 text-white">
+                    {s.fullName || s.username} ({s.rank || 'Scout'} • {getScoutPatrolName(s, groups)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

@@ -34,6 +34,13 @@ import ConferenceCountdown from './ConferenceCountdown';
 import ScheduleParentMeetingModal from './ScheduleParentMeetingModal';
 import { getEventAudienceInfo } from '../utils/kashafVoice';
 import StatusBadge from './StatusBadge';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -55,44 +62,29 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const [selectedPendingScoutId, setSelectedPendingScoutId] = useState(null);
   const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
 
-  // Resolved Patrol for Leader
-  const leaderGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-  const myGroup = groups.find(g => 
-    g.id === leaderGroupId || 
-    g.name === leaderGroupId || 
-    (currentUser?.assignedPatrol && (g.name === currentUser.assignedPatrol || g.id === currentUser.assignedPatrol)) ||
-    (currentUser?.patrol && (g.name === currentUser.patrol || g.id === currentUser.patrol))
-  );
+  // Resolved Patrols for Leader
+  const accessibleGroups = getAccessiblePatrols(currentUser, groups);
+  const myGroup = accessibleGroups[0] || null;
 
-  // 1. Fetch Scouts (Scoped for normal leaders to their assigned patrol)
-  useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
-    const unsub = onSnapshot(q, (snap) => {
-      let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      const targetGId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-      if (!isTroopWideAuthority && targetGId) {
-        list = list.filter(s => 
-          s.groupId === targetGId || 
-          s.patrolId === targetGId || 
-          s.leaderId === currentUser?.uid || 
-          s.patrol === targetGId ||
-          (myGroup && (s.groupId === myGroup.id || s.patrolId === myGroup.id || s.patrol === myGroup.name))
-        );
-      } else if (!isTroopWideAuthority) {
-        list = list.filter(s => s.leaderId === currentUser?.uid);
-      }
-      setScouts(list);
-    }, (err) => console.warn('LeaderHome scouts fallback:', err));
-    return () => unsub();
-  }, [isTroopWideAuthority, currentUser?.groupId, currentUser?.patrolId, currentUser?.assignedPatrol, currentUser?.uid, myGroup?.id, myGroup?.name]);
-
-  // 2. Fetch Groups / Patrols
+  // 1. Fetch Groups / Patrols
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
       setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
     }, (err) => console.warn('LeaderHome groups fallback:', err));
     return () => unsub();
   }, []);
+
+  // 2. Fetch Scouts (Scoped for normal leaders to their assigned patrol)
+  useEffect(() => {
+    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
+    const unsub = onSnapshot(q, (snap) => {
+      let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      list.sort((a, b) => (a.fullName || a.username || '').localeCompare(b.fullName || b.username || ''));
+      const scopedScouts = filterScoutsForUser(list, currentUser, groups, 'all');
+      setScouts(scopedScouts);
+    }, (err) => console.warn('LeaderHome scouts fallback:', err));
+    return () => unsub();
+  }, [currentUser, groups]);
 
   // 3. Fetch All Scheduled Events
   useEffect(() => {
@@ -109,22 +101,17 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const targetGId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-      if (!isTroopWideAuthority && targetGId) {
-        list = list.filter(s => 
-          s.groupId === targetGId || 
-          s.patrolId === targetGId || 
-          s.leaderId === currentUser?.uid ||
-          (myGroup && (s.groupId === myGroup.id || s.patrolId === myGroup.id))
-        );
-      } else if (!isTroopWideAuthority) {
-        list = list.filter(s => s.leaderId === currentUser?.uid);
+      if (!isTroopWideAuthority) {
+        list = list.filter(s => {
+          if (s.leaderId === currentUser?.uid) return true;
+          return accessibleGroups.some(g => isScoutInPatrol({ groupId: s.groupId || s.patrolId }, g, groups) || s.patrolName === `${g.name} Patrol`);
+        });
       }
       list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       setAttendanceSessions(list);
     }, (err) => console.warn('Attendance sessions fallback in LeaderHome:', err));
     return () => unsub();
-  }, [currentUser, isTroopWideAuthority, myGroup?.id]);
+  }, [currentUser, isTroopWideAuthority, groups]);
 
   // 4. Fetch Assignments
   useEffect(() => {
@@ -140,26 +127,17 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'parent_requests'), (snap) => {
       let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const targetGId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
-      if (!isTroopWideAuthority && targetGId) {
-        list = list.filter(r => 
-          r.patrolId === targetGId || 
-          r.patrolName === currentUser.assignedPatrol || 
-          !r.patrolId ||
-          r.targetLeaderUid === currentUser?.uid ||
-          r.assignedLeaderUid === currentUser?.uid
-        );
-      } else if (!isTroopWideAuthority) {
-        list = list.filter(r => 
-          !r.targetLeaderUid || 
-          r.targetLeaderUid === currentUser?.uid || 
-          r.assignedLeaderUid === currentUser?.uid
-        );
+      if (!isTroopWideAuthority) {
+        list = list.filter(r => {
+          if (!r.patrolId && !r.targetLeaderUid) return true;
+          if (r.targetLeaderUid === currentUser?.uid || r.assignedLeaderUid === currentUser?.uid) return true;
+          return accessibleGroups.some(g => isScoutInPatrol({ groupId: r.patrolId, patrolName: r.patrolName }, g, groups));
+        });
       }
       setParentRequests(list);
     }, (err) => console.warn('Parent requests fallback in LeaderHome:', err));
     return () => unsub();
-  }, [currentUser, isTroopWideAuthority]);
+  }, [currentUser, isTroopWideAuthority, groups]);
 
   // 4.8 Fetch Troop Broadcasts
   const [recentBroadcasts, setRecentBroadcasts] = useState([]);
@@ -926,7 +904,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   <p className="text-xs text-slate-400 italic p-3 col-span-3">No patrol groups registered yet.</p>
                 ) : (
                   groups.map((g) => {
-                    const pScouts = scouts.filter(s => s.groupId === g.id || s.patrolId === g.id);
+                    const pScouts = scouts.filter(s => isScoutInPatrol(s, g.id, groups));
                     const pPending = pScouts.reduce((sum, s) => sum + (pendingMap[s.uid]?.total || 0), 0);
                     return (
                       <div

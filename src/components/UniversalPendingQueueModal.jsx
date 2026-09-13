@@ -8,8 +8,14 @@ import {
   TAQIBAT_AND_DUAS_DATA, 
   INFALLIBLES_FULL_BIOGRAPHIES 
 } from '../data/islamicBasicsData';
-import { RANKS_DATA, getLatestAchievedRank, isRankCompleted } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 import {
   Clock,
   CheckCircle2,
@@ -91,25 +97,24 @@ export default function UniversalPendingQueueModal({
   useEffect(() => {
     if (!isLeaderOrOwner) return;
 
+    let currentGroups = [];
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
-      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      currentGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived);
+      setGroups(currentGroups);
     });
 
     const q = query(collection(db, 'users'), where('role', '==', 'scout'));
     const unsubScouts = onSnapshot(q, (snap) => {
-      let list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      if (!isExecutive && currentUser?.groupId) {
-        // Scoped to leader's assigned patrol
-        list = list.filter(s => s.groupId === currentUser.groupId || s.patrolId === currentUser.groupId || s.leaderId === currentUser.uid);
-      }
-      setAllScouts(list);
+      const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      const scoped = filterScoutsForUser(list, currentUser, currentGroups, 'all');
+      setAllScouts(scoped);
     });
 
     return () => {
       unsubGroups();
       unsubScouts();
     };
-  }, [isLeaderOrOwner, isExecutive, currentUser?.groupId, currentUser?.uid]);
+  }, [isLeaderOrOwner, currentUser]);
 
   // Sync prop changes
   useEffect(() => {
@@ -246,7 +251,7 @@ export default function UniversalPendingQueueModal({
 
     const scoutProf = sData.profile || allScouts.find(s => s.uid === sUid) || {};
     const scoutName = scoutProf.fullName || scoutProf.username || 'Scout';
-    const scoutPatrolName = groups.find(g => g.id === scoutProf.groupId || g.id === scoutProf.patrolId)?.name || 'Patrol';
+    const scoutPatrolName = getScoutPatrolName(scoutProf, groups);
 
     const islamicProgress = sData.islamic || {};
     const ranksProgress = sData.ranks || {};
@@ -1102,7 +1107,7 @@ export default function UniversalPendingQueueModal({
             {allScouts.map(s => {
               const sCount = scoutPendingCounts[s.uid] || 0;
               const isSelected = activeScoutId === s.uid;
-              const pName = groups.find(g => g.id === s.groupId || g.id === s.patrolId)?.name || s.assignedPatrol;
+              const pName = getScoutPatrolName(s, groups);
 
               return (
                 <button

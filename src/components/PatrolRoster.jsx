@@ -65,6 +65,13 @@ import {
   generateParentInviteMessage, 
   generateLeaderInviteMessage 
 } from '../utils/kashafVoice';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 const BSA_LEADER_POSITIONS = ADULT_LEADER_POSITIONS;
 
@@ -1274,12 +1281,13 @@ export default function PatrolRoster({ currentUser = {} }) {
       });
 
       if (!isExecutive) {
-        // Regular leaders see assigned scouts + unassigned scouts
+        // Regular leaders see scouts belonging to their accessible patrols + assigned scouts + unassigned scouts
+        const accessible = getAccessiblePatrols(currentUser, groups);
         scoutList = scoutList.filter(s => {
           const matchesLeader = s.leaderId === currentUser?.uid;
-          const matchesPatrol = currentUser?.groupId && (s.groupId === currentUser?.groupId || s.patrolId === currentUser?.groupId);
-          const isUnassigned = !s.groupId && !s.patrolId;
-          return matchesLeader || matchesPatrol || isUnassigned;
+          const matchesAccessible = accessible.some(g => isScoutInPatrol(s, g, groups));
+          const isUnassigned = !s.groupId && !s.patrolId && !s.assignedPatrol && !s.patrol && !s.patrolName;
+          return matchesLeader || matchesAccessible || isUnassigned;
         });
       }
 
@@ -2107,15 +2115,12 @@ Reminder to log your community service and volunteering hours into the portal.
     );
   }
 
-  const myPatrolId = currentUser?.groupId || currentUser?.patrolId;
-  const visibleGroups = isExecutive
-    ? groups
-    : groups.filter(g => g.id === myPatrolId || g.leaderId === currentUser.uid || (Array.isArray(g.assistantLeaderIds) && g.assistantLeaderIds.includes(currentUser.uid)) || (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(currentUser.uid)));
-
+  const visibleGroups = getAccessiblePatrols(currentUser, groups);
+  const myPatrolId = visibleGroups[0]?.id || currentUser?.groupId || currentUser?.patrolId;
 
   const filteredScouts = activeGroupTab === 'all'
     ? searchedScouts
-    : searchedScouts.filter(s => s.groupId === activeGroupTab);
+    : searchedScouts.filter(s => isScoutInPatrol(s, activeGroupTab, groups));
 
   return (
     <div className="space-y-6 print-hide">
@@ -2548,7 +2553,7 @@ Reminder to log your community service and volunteering hours into the portal.
               </span>
             </button>
             {visibleGroups.map((g) => {
-              const groupScouts = searchedScouts.filter(s => s.groupId === g.id);
+              const groupScouts = searchedScouts.filter(s => isScoutInPatrol(s, g, groups));
               const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
               return (
                 <button
@@ -2580,7 +2585,7 @@ Reminder to log your community service and volunteering hours into the portal.
             const patrolSections = [];
             if (activeGroupTab === 'all') {
               visibleGroups.forEach(g => {
-                const groupScouts = searchedScouts.filter(s => s.groupId === g.id);
+                const groupScouts = searchedScouts.filter(s => isScoutInPatrol(s, g, groups));
                 const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
                 patrolSections.push({
                   id: g.id,
@@ -2595,7 +2600,7 @@ Reminder to log your community service and volunteering hours into the portal.
                   approvals: groupApprovals
                 });
               });
-              const unassigned = searchedScouts.filter(s => !s.groupId || !visibleGroups.some(g => g.id === s.groupId));
+              const unassigned = searchedScouts.filter(s => !visibleGroups.some(g => isScoutInPatrol(s, g, groups)));
               if (unassigned.length > 0) {
                 const unassignedApprovals = unassigned.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
                 patrolSections.push({
@@ -2612,8 +2617,8 @@ Reminder to log your community service and volunteering hours into the portal.
                 });
               }
             } else {
-              const selectedGroup = visibleGroups.find(g => g.id === activeGroupTab);
-              const groupScouts = searchedScouts.filter(s => s.groupId === activeGroupTab);
+              const selectedGroup = visibleGroups.find(g => g.id === activeGroupTab) || groups.find(g => g.id === activeGroupTab);
+              const groupScouts = searchedScouts.filter(s => isScoutInPatrol(s, activeGroupTab, groups));
               const groupApprovals = groupScouts.reduce((sum, s) => sum + (pendingApprovalsMap[s.uid]?.total || 0), 0);
               patrolSections.push({
                 id: activeGroupTab,

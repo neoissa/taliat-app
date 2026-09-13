@@ -15,10 +15,15 @@ import {
   Phone, 
   Compass, 
   FileText,
-  Sparkles,
-  Shield
+  Sparkles
 } from 'lucide-react';
 import { createLeaderInitiatedMeeting } from '../services/parentRequestService';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 const TOPIC_PRESETS = [
   { id: 'scoutmaster_conf', label: 'Scoutmaster Conference', defaultDuration: '30 mins', desc: 'Advancement review and character check-in' },
@@ -140,6 +145,10 @@ export default function ScheduleParentMeetingModal({
     return users.filter(u => u.role === 'parent');
   }, [users]);
 
+  // Patrol scoping
+  const accessiblePatrols = useMemo(() => getAccessiblePatrols(currentUser, groups), [currentUser, groups]);
+  const accessibleScouts = useMemo(() => filterScoutsForUser(allScouts, currentUser, groups, 'all'), [allScouts, currentUser, groups]);
+
   // Selected Scout Details
   const currentScout = useMemo(() => {
     return allScouts.find(s => s.uid === selectedScoutId) || null;
@@ -185,9 +194,9 @@ export default function ScheduleParentMeetingModal({
     }
 
     // Patrol or Unit Scope
-    let scoutsInScope = allScouts;
+    let scoutsInScope = accessibleScouts;
     if (targetType === 'patrol_parents' && selectedPatrolId) {
-      scoutsInScope = allScouts.filter(s => s.groupId === selectedPatrolId || s.patrolId === selectedPatrolId);
+      scoutsInScope = allScouts.filter(s => isScoutInPatrol(s, selectedPatrolId, groups));
     }
 
     const uniqueParentsMap = new Map();
@@ -461,7 +470,7 @@ export default function ScheduleParentMeetingModal({
                   required
                 >
                   <option value="">-- Choose Scout from Roster --</option>
-                  {allScouts.map(scout => (
+                  {accessibleScouts.map(scout => (
                     <option key={scout.uid} value={scout.uid}>
                       {scout.fullName || scout.username} &bull; {scout.patrolName || 'Patrol Member'} ({scout.rank || 'Scout'})
                     </option>
@@ -509,9 +518,9 @@ export default function ScheduleParentMeetingModal({
                   required
                 >
                   <option value="">-- Choose Patrol --</option>
-                  {groups.map(group => (
+                  {accessiblePatrols.map(group => (
                     <option key={group.id} value={group.id}>
-                      {group.name} Patrol &bull; ({allScouts.filter(s => s.groupId === group.id || s.patrolId === group.id).length} Scouts)
+                      🛡️ {group.name} Patrol &bull; ({allScouts.filter(s => isScoutInPatrol(s, group.id, groups)).length} Scouts)
                     </option>
                   ))}
                 </select>

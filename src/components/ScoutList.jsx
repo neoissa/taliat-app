@@ -3,38 +3,31 @@ import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import ScoutProgressReport from './ScoutProgressReport';
 import AdvancementTracker from './AdvancementTracker';
-import { Users, ChevronRight, Search, Filter, Award, Shield, User, Sparkles, ArrowLeft, CheckSquare, FileText } from 'lucide-react';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
+import { Users, ChevronRight, Search, Filter, Award, Shield, User, Sparkles, ArrowLeft, CheckSquare, FileText, Crown } from 'lucide-react';
 
 export default function ScoutList({ currentUser }) {
   const [allScouts, setAllScouts] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [selectedPatrolFilter, setSelectedPatrolFilter] = useState('all');
+  const [selectedPatrolFilter, setSelectedPatrolFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScout, setSelectedScout] = useState(null);
   const [selectedScoutViewMode, setSelectedScoutViewMode] = useState('interactive'); // 'interactive' | 'report'
   const [loading, setLoading] = useState(true);
 
-  // Authority & Role Calculation
-  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
-  const isScoutmaster = (currentUser?.role === 'leader' || currentUser?.role === 'admin') && currentUser?.leaderPosition === 'Scoutmaster';
-  const isSuperUser = isOwner || currentUser?.role === 'admin' || currentUser?.isExecutive || isScoutmaster;
-  const userPatrolId = currentUser?.groupId || currentUser?.patrolId || null;
-
-  // Set default patrol filter
-  useEffect(() => {
-    if (isSuperUser) {
-      setSelectedPatrolFilter('all');
-    } else if (userPatrolId) {
-      setSelectedPatrolFilter(userPatrolId);
-    } else {
-      setSelectedPatrolFilter('all');
-    }
-  }, [isSuperUser, userPatrolId]);
+  const superUser = isSuperUser(currentUser);
 
   // 1. Fetch Patrols / Groups
   useEffect(() => {
     const unsubGroups = onSnapshot(collection(db, 'groups'), (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived);
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setGroups(list);
     }, (err) => console.warn('Failed to load groups in ScoutList:', err));
 
@@ -57,56 +50,55 @@ export default function ScoutList({ currentUser }) {
     return () => unsub();
   }, []);
 
-  // Assigned Patrol Name for regular leaders
-  const assignedPatrolObj = groups.find(g => g.id === userPatrolId);
-  const assignedPatrolName = assignedPatrolObj?.name || currentUser?.patrolName || currentUser?.patrol || 'Assigned Patrol';
+  // 3. Resolve accessible patrols for the current user
+  const accessibleGroups = useMemo(() => {
+    return getAccessiblePatrols(currentUser, groups);
+  }, [currentUser, groups]);
 
-  // 3. Filter Scouts based on Patrol and Search
+  // 4. Default patrol filter initialization
+  useEffect(() => {
+    if (selectedPatrolFilter) return;
+
+    if (superUser) {
+      setSelectedPatrolFilter('all');
+    } else if (accessibleGroups.length > 0) {
+      // Default to first assigned patrol ID or 'all' if leader has multiple
+      setSelectedPatrolFilter(accessibleGroups[0].id || 'all');
+    } else {
+      setSelectedPatrolFilter('all');
+    }
+  }, [superUser, accessibleGroups, selectedPatrolFilter]);
+
+  // Primary assigned patrol name label
+  const primaryPatrolName = useMemo(() => {
+    if (superUser) return 'All Troop Patrols';
+    if (accessibleGroups.length > 0) {
+      return `${accessibleGroups[0].name} Patrol`;
+    }
+    return currentUser?.assignedPatrol || currentUser?.patrol || 'Assigned Patrol';
+  }, [superUser, accessibleGroups, currentUser]);
+
+  // 5. Filter Scouts based on Patrol and Search Query
   const filteredScouts = useMemo(() => {
-    return allScouts.filter((scout) => {
-      // 1. Patrol Scoping
-      if (isSuperUser) {
-        // Super user can select any patrol or view all
-        if (selectedPatrolFilter !== 'all') {
-          const selectedGroupObj = groups.find(g => g.id === selectedPatrolFilter);
-          const matchesId = scout.groupId === selectedPatrolFilter || scout.patrolId === selectedPatrolFilter;
-          const matchesName = selectedGroupObj && (scout.patrol === selectedGroupObj.name || scout.patrolName === selectedGroupObj.name);
-          if (!matchesId && !matchesName) return false;
-        }
-      } else {
-        // Regular Leader: strictly scoped to assigned patrol only
-        if (userPatrolId) {
-          const inLeaderPatrol = scout.groupId === userPatrolId || 
-            scout.patrolId === userPatrolId || 
-            scout.leaderId === currentUser?.uid ||
-            (currentUser?.patrolName && (scout.patrolName === currentUser.patrolName || scout.patrol === currentUser.patrolName));
-          if (!inLeaderPatrol) return false;
-        } else if (currentUser?.patrolName) {
-          const inLeaderPatrolName = scout.patrolName === currentUser.patrolName || scout.patrol === currentUser.patrolName;
-          if (!inLeaderPatrolName) return false;
-        }
-      }
+    const scopedList = filterScoutsForUser(allScouts, currentUser, groups, selectedPatrolFilter);
 
-      // 2. Search Query filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const name = (scout.fullName || '').toLowerCase();
-        const username = (scout.username || '').toLowerCase();
-        const email = (scout.email || '').toLowerCase();
-        const rank = (scout.rank || '').toLowerCase();
-        const bsaId = (scout.bsaId || '').toLowerCase();
-        const patrol = (scout.patrol || scout.patrolName || '').toLowerCase();
+    if (!searchQuery.trim()) return scopedList;
 
-        return name.includes(q) || username.includes(q) || email.includes(q) || rank.includes(q) || bsaId.includes(q) || patrol.includes(q);
-      }
+    const q = searchQuery.toLowerCase().trim();
+    return scopedList.filter((scout) => {
+      const name = (scout.fullName || '').toLowerCase();
+      const username = (scout.username || '').toLowerCase();
+      const email = (scout.email || scout.personalEmail || scout.scoutEmail || '').toLowerCase();
+      const rank = (scout.rank || '').toLowerCase();
+      const bsaId = (scout.bsaId || '').toLowerCase();
+      const pName = getScoutPatrolName(scout, groups).toLowerCase();
 
-      return true;
+      return name.includes(q) || username.includes(q) || email.includes(q) || rank.includes(q) || bsaId.includes(q) || pName.includes(q);
     });
-  }, [allScouts, groups, selectedPatrolFilter, isSuperUser, userPatrolId, currentUser, searchQuery]);
+  }, [allScouts, currentUser, groups, selectedPatrolFilter, searchQuery]);
 
   if (selectedScout) {
-    const scoutPatrolObj = groups.find(g => g.id === (selectedScout.groupId || selectedScout.patrolId));
-    const pName = scoutPatrolObj?.name || selectedScout.patrolName || selectedScout.patrol || 'Assigned Patrol';
+    const pName = getScoutPatrolName(selectedScout, groups);
     const userPhoto = selectedScout.photoURL || selectedScout.avatar || selectedScout.photo || selectedScout.profilePic;
     const initials = (selectedScout.fullName?.charAt(0) || selectedScout.username?.charAt(0) || 'S').toUpperCase();
 
@@ -200,6 +192,9 @@ export default function ScoutList({ currentUser }) {
     );
   }
 
+  // Active selectable groups for this user (All for superuser, accessible for leader)
+  const selectableGroups = superUser ? groups : accessibleGroups;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
       {/* ── HEADER BANNER ── */}
@@ -213,20 +208,20 @@ export default function ScoutList({ currentUser }) {
               <h2 className="text-xl sm:text-2xl font-black text-white">
                 Advancement Tracker & Scout Reports
               </h2>
-              {isSuperUser ? (
-                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  👑 Super User (All Patrols Access)
+              {superUser ? (
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Crown size={11} /> Super User (All Patrols Access)
                 </span>
               ) : (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  🏕️ {assignedPatrolName}
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Shield size={11} /> {primaryPatrolName}
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              {isSuperUser 
-                ? 'Select any patrol to filter and inspect rank requirements, print progress reports, and review completions across the troop.'
-                : `Review rank requirements, print progress reports, and manage advancement for ${assignedPatrolName}.`}
+              {superUser 
+                ? 'Select any patrol to filter and inspect rank requirements, print progress reports, and review completions across the entire troop.'
+                : `Review rank requirements, print progress reports, and manage advancement for all scouts in ${primaryPatrolName}.`}
             </p>
           </div>
         </div>
@@ -247,57 +242,70 @@ export default function ScoutList({ currentUser }) {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
             <input
               type="text"
-              placeholder="Search scouts by name, rank, email, or BSA ID..."
+              placeholder="Search scouts by name, rank, email, BSA ID, or patrol..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-750 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
 
-          {/* Super User Patrol Selector OR Regular Leader Patrol Indicator */}
-          {isSuperUser ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <Filter size={14} className="text-emerald-400" />
-              <select
-                value={selectedPatrolFilter}
-                onChange={(e) => setSelectedPatrolFilter(e.target.value)}
-                className="bg-slate-900 border border-slate-750 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-              >
+          {/* Patrol Selector Dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Filter size={14} className="text-emerald-400" />
+            <select
+              value={selectedPatrolFilter}
+              onChange={(e) => setSelectedPatrolFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-750 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+            >
+              {superUser && (
                 <option value="all">⚜️ All Patrols ({allScouts.length} Scouts)</option>
-                {groups.map((g) => {
-                  const count = allScouts.filter(s => s.groupId === g.id || s.patrolId === g.id || s.patrolName === g.name || s.patrol === g.name).length;
-                  return (
-                    <option key={g.id} value={g.id}>
-                      🏕️ {g.name} ({count} Scouts)
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0">
-              <Shield size={14} className="text-emerald-400" />
-              <span>Assigned Patrol: <strong className="text-white">{assignedPatrolName}</strong></span>
-            </div>
-          )}
+              )}
+              {!superUser && selectableGroups.length > 1 && (
+                <option value="all">⚜️ All My Patrols ({filterScoutsForUser(allScouts, currentUser, groups, 'all').length} Scouts)</option>
+              )}
+              {selectableGroups.map((g) => {
+                const count = allScouts.filter(s => isScoutInPatrol(s, g, groups)).length;
+                return (
+                  <option key={g.id} value={g.id}>
+                    🏕️ {g.name} Patrol ({count} Scouts)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
 
-        {/* Super User Quick Patrol Filter Chips */}
-        {isSuperUser && groups.length > 0 && (
+        {/* Quick Patrol Filter Chips */}
+        {selectableGroups.length > 0 && (
           <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 scrollbar-thin">
-            <button
-              type="button"
-              onClick={() => setSelectedPatrolFilter('all')}
-              className={`px-3 py-1 rounded-xl text-[11px] font-bold transition cursor-pointer shrink-0 border ${
-                selectedPatrolFilter === 'all'
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-950/50'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border-slate-800'
-              }`}
-            >
-              All Patrols ({allScouts.length})
-            </button>
-            {groups.map((g) => {
-              const count = allScouts.filter(s => s.groupId === g.id || s.patrolId === g.id || s.patrolName === g.name || s.patrol === g.name).length;
+            {superUser && (
+              <button
+                type="button"
+                onClick={() => setSelectedPatrolFilter('all')}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold transition cursor-pointer shrink-0 border ${
+                  selectedPatrolFilter === 'all'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-950/50'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border-slate-800'
+                }`}
+              >
+                All Patrols ({allScouts.length})
+              </button>
+            )}
+            {!superUser && selectableGroups.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setSelectedPatrolFilter('all')}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold transition cursor-pointer shrink-0 border ${
+                  selectedPatrolFilter === 'all'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-950/50'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border-slate-800'
+                }`}
+              >
+                All My Patrols ({filterScoutsForUser(allScouts, currentUser, groups, 'all').length})
+              </button>
+            )}
+            {selectableGroups.map((g) => {
+              const count = allScouts.filter(s => isScoutInPatrol(s, g, groups)).length;
               const isSelected = selectedPatrolFilter === g.id;
               return (
                 <button
@@ -333,7 +341,7 @@ export default function ScoutList({ currentUser }) {
           <p className="max-w-md mx-auto text-slate-400">
             {searchQuery 
               ? `No scout matches the search query "${searchQuery}".`
-              : `No scouts found in the selected patrol filter. Try selecting "All Patrols" or assigning scouts to this patrol in the Admin Panel.`}
+              : `No scouts found in the selected patrol filter. Try selecting another patrol or verifying scout patrol assignments.`}
           </p>
           {searchQuery && (
             <button
@@ -348,8 +356,7 @@ export default function ScoutList({ currentUser }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredScouts.map((scout) => {
-            const scoutPatrolObj = groups.find(g => g.id === (scout.groupId || scout.patrolId));
-            const pName = scoutPatrolObj?.name || scout.patrolName || scout.patrol || 'Dhulfiqār Patrol';
+            const pName = getScoutPatrolName(scout, groups);
             const userPhoto = scout.photoURL || scout.avatar || scout.photo || scout.profilePic;
             const initials = (scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S').toUpperCase();
 

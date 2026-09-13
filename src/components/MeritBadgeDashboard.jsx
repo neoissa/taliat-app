@@ -10,6 +10,13 @@ import {
   Award, CheckCircle2, Circle, Clock, ChevronDown, ChevronUp,
   X, Trophy, Star, BookOpen, CalendarDays, User, StickyNote, FileText, Download, ExternalLink, Check, AlertCircle, Plus, Trash2, Target, Sparkles, CheckSquare, Compass, ShieldAlert, Zap, Globe, FileDown, AlertTriangle, Users, CheckCheck, Shield, ChevronRight
 } from 'lucide-react';
+import { 
+  isSuperUser, 
+  getAccessiblePatrols, 
+  isScoutInPatrol, 
+  getScoutPatrolName, 
+  filterScoutsForUser 
+} from '../utils/patrolScoping';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -774,17 +781,23 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   const [activeScoutProfile, setActiveScoutProfile] = useState(null);
   const [scoutSearchQuery, setScoutSearchQuery] = useState('');
 
+  const [groups, setGroups] = useState([]);
+
+  // Fetch groups for patrol scoping
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    });
+    return () => unsub();
+  }, []);
+
   // Fetch scouts list if leader or owner and customScoutId is not provided
   useEffect(() => {
     if (!isLeaderOrOwner || customScoutId) return;
 
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
       const allUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      const scouts = allUsers.filter(u => {
-        if (u.role !== 'scout') return false;
-        if (isOwner || isExecutive) return true;
-        return u.leaderId === currentUser?.uid || (currentUser?.groupId && u.groupId === currentUser?.groupId) || (currentUser?.assignedPatrol && (u.patrol === currentUser.assignedPatrol || u.patrolName === currentUser.assignedPatrol));
-      });
+      const scouts = filterScoutsForUser(allUsers, currentUser, groups, 'all');
       setScoutsList(scouts);
       if (scouts.length > 0 && !selectedLeaderScoutId) {
         setSelectedLeaderScoutId(scouts[0].uid);
@@ -794,7 +807,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
     });
 
     return () => unsub();
-  }, [isLeaderOrOwner, customScoutId, currentUser, isOwner, isExecutive]);
+  }, [isLeaderOrOwner, customScoutId, currentUser, groups]);
 
   const scoutId = customScoutId || (isLeaderOrOwner ? (selectedLeaderScoutId || scoutsList[0]?.uid || currentUser?.uid) : currentUser?.uid);
 
