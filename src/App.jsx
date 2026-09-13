@@ -20,6 +20,7 @@ import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
 import PatrolAttendance from './components/PatrolAttendance';
+import ScoutAttendance from './components/ScoutAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
@@ -1238,6 +1239,16 @@ export default function App() {
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
+        {currentTab === 'attendance' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="attendance"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {currentTab === 'attendance' && isScout && (
+          <ScoutAttendance currentUser={currentUser} />
+        )}
         {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
       </main>
 

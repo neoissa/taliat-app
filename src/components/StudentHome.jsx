@@ -45,6 +45,7 @@ import PublishedReportViewerModal from './PublishedReportViewerModal';
 import { getRecommendedBadges } from '../utils/badgeRecommendations';
 import { MERIT_BADGE_COUNSELORS } from '../data/counselorsData';
 import StatusBadge from './StatusBadge';
+import { calculateScoutCompliance } from '../utils/attendanceCompliance';
 
 export default function StudentHome({ currentUser, onNavigate, unreadChatCount = 0 }) {
   const [ranksProgress, setRanksProgress] = useState({});
@@ -207,66 +208,23 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   useEffect(() => {
     if (!scoutUid) return;
     const unsub = onSnapshot(collection(db, 'attendance_sessions'), (snap) => {
-      let present = 0;
-      let absent = 0;
-      let excused = 0;
-      let late = 0;
-      let total = 0;
-      let totalHours = 0;
-      let campingNights = 0;
-      let tuesdayHours = 0;
-      let fridayHours = 0;
-
-      snap.docs.forEach((d) => {
-        const data = d.data();
-        const record = data.records?.[scoutUid];
-        if (record) {
-          total++;
-          const status = record.status || 'present';
-          const isAttended = status === 'present' || status === 'late';
-          const sType = data.eventType || '';
-          const defaultH = sType.includes('Tuesday') ? 1.25 : sType.includes('Camp') ? 48.0 : sType.includes('Halqa') ? 1.5 : 3.0;
-          const defaultN = sType.includes('Camp') ? 2 : 0;
-          const sHours = record.hours !== undefined ? Number(record.hours) : (data.hours !== undefined ? Number(data.hours) : defaultH);
-          const sNights = record.nights !== undefined ? Number(record.nights) : (data.nights !== undefined ? Number(data.nights) : defaultN);
-
-          if (status === 'present') {
-            present++;
-          } else if (status === 'late') {
-            late++;
-            present++;
-          } else if (status === 'absent') {
-            absent++;
-          } else if (status === 'excused') {
-            excused++;
-          }
-
-          if (isAttended) {
-            totalHours += sHours;
-            campingNights += sNights;
-            if (sType.includes('Tuesday')) tuesdayHours += sHours;
-            else if (sType.includes('Weekly') || sType.includes('Friday')) fridayHours += sHours;
-          }
-        }
-      });
-
-      const rate = total > 0 ? Math.round((present / total) * 100) : 100;
-      let risk = 'green';
-      if (absent >= 3) risk = 'red';
-      else if (absent >= 2) risk = 'yellow';
+      const allSessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const compliance = calculateScoutCompliance(scoutUid, allSessions, { filterMode: 'tracked_only' });
 
       setAttendanceStats({
-        totalSessions: total,
-        presentCount: present,
-        absentCount: absent,
-        excusedCount: excused,
-        lateCount: late,
-        attendanceRate: rate,
-        riskLevel: risk,
-        totalHours: Math.round(totalHours * 10) / 10,
-        campingNights,
-        tuesdayHours: Math.round(tuesdayHours * 10) / 10,
-        fridayHours: Math.round(fridayHours * 10) / 10
+        totalSessions: compliance.totalSessions,
+        presentCount: compliance.presentCount,
+        absentCount: compliance.absentCount,
+        excusedCount: compliance.excusedCount,
+        lateCount: compliance.lateCount,
+        attendanceRate: compliance.attendanceRate,
+        riskLevel: compliance.riskLevel,
+        totalHours: compliance.totalTrackedHours,
+        campingNights: compliance.totalCampingNights,
+        fridayHours: compliance.totalFridayHours,
+        fridaySessions: compliance.fridaySessions,
+        mandatoryEvents: compliance.mandatoryEvents,
+        isEligibleForAdvancement: compliance.isEligibleForAdvancement
       });
     }, (err) => console.warn("Attendance stats fallback:", err));
 

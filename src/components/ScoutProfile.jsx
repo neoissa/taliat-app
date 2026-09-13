@@ -58,6 +58,12 @@ import ServiceLogs from './ServiceLogs';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import SignaturePadModal from './SignaturePadModal';
 import { signPublishedReportByScout } from '../services/publishedReportsService';
+import { 
+  calculateScoutCompliance, 
+  isFridayProgramEvent, 
+  isMandatoryEvent, 
+  isAttendanceTracked 
+} from '../utils/attendanceCompliance';
 
 // Helper function to compress images locally in the browser to small, high-quality Base64 strings (~30KB-80KB)
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
@@ -384,46 +390,29 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
       // Sort chronological descending
       mySessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-      const total = mySessions.length;
-      const rate = total > 0 ? Math.round((present / total) * 100) : 100;
-      
-      // Absence Risk & Criticality Thresholds:
-      // Level 0: 0 unexcused absences (Pristine Standing, 100%)
-      // Level 1: 1 unexcused absence (Good Standing, Low Risk)
-      // Level 2: 2 unexcused absences (Warning / Advisory Threshold)
-      // Level 3: >= 3 unexcused absences (Critical Escalation / Action Required)
-      let risk = 'green';
-      let critLevel = 0;
-      if (absent >= 3) {
-        risk = 'red';
-        critLevel = 3;
-      } else if (absent === 2) {
-        risk = 'yellow';
-        critLevel = 2;
-      } else if (absent === 1) {
-        risk = 'green';
-        critLevel = 1;
-      } else {
-        risk = 'green';
-        critLevel = 0;
-      }
+      // Calculate official Friday & Mandatory attendance compliance
+      const allSessionsSnap = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const compliance = calculateScoutCompliance(currentUser.uid, allSessionsSnap, { filterMode: 'tracked_only' });
 
       setAttendanceStats({
-        totalSessions: total,
-        presentCount: present,
-        absentCount: absent,
-        excusedCount: excused,
-        lateCount: late,
-        attendanceRate: rate,
-        riskLevel: risk,
-        criticalityLevel: critLevel,
-        totalHours: Math.round(totalAttendedHours * 10) / 10,
-        campingNights: totalCampingNights,
+        totalSessions: compliance.totalSessions,
+        presentCount: compliance.presentCount,
+        absentCount: compliance.absentCount,
+        excusedCount: compliance.excusedCount,
+        lateCount: compliance.lateCount,
+        attendanceRate: compliance.attendanceRate,
+        riskLevel: compliance.riskLevel,
+        criticalityLevel: compliance.absentCount >= 3 ? 3 : compliance.absentCount === 2 ? 2 : compliance.absentCount === 1 ? 1 : 0,
+        totalHours: compliance.totalTrackedHours,
+        campingNights: compliance.totalCampingNights,
         serviceHours: Math.round(totalServiceHours * 10) / 10,
         tuesdayHours: Math.round(totalTuesdayHours * 10) / 10,
-        fridayHours: Math.round(totalFridayHours * 10) / 10,
+        fridayHours: compliance.totalFridayHours,
         halqaHours: Math.round(totalHalqaHours * 10) / 10,
         campoutHours: Math.round(totalCampoutHours * 10) / 10,
+        fridaySessions: compliance.fridaySessions,
+        mandatoryEvents: compliance.mandatoryEvents,
+        isEligibleForAdvancement: compliance.isEligibleForAdvancement,
         categories: {
           meetings: { total: meetingCount, attended: meetingPresent },
           halqas: { total: halqaCount, attended: halqaPresent },

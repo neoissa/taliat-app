@@ -22,6 +22,7 @@ import PublishedReportViewerModal from './PublishedReportViewerModal';
 import ParentAlertsFeed from './ParentAlertsFeed';
 import ParentEagleTracker from './ParentEagleTracker';
 import ParentPatrolResources from './ParentPatrolResources';
+import ParentAttendanceFeed from './ParentAttendanceFeed';
 import StatusBadge from './StatusBadge';
 import {
   Award,
@@ -1253,6 +1254,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             badgeColor: 'bg-amber-500 text-slate-950 font-black'
           },
           { id: 'events', label: 'Upcoming Schedule & RSVP', icon: Calendar },
+          { id: 'attendance', label: 'Attendance & Compliance', icon: Clock },
           { 
             id: 'feed', 
             label: 'Alerts & Activity Feed', 
@@ -4370,6 +4372,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             )}
           </form>
         </div>
+      )}
+
+      {/* ── 11. TAB: ATTENDANCE & COMPLIANCE FEED ── */}
+      {activeTab === 'attendance' && (
+        <ParentAttendanceFeed 
+          currentUser={currentUser} 
+          linkedScouts={linkedScouts} 
+        />
       )}
 
       {/* ── MODAL: CANCEL CONFERENCE (PARENT) ── */}

@@ -47,6 +47,15 @@ import {
   getScoutPatrolName, 
   filterScoutsForUser 
 } from '../utils/patrolScoping';
+import { 
+  isFridayDate, 
+  isFridayProgramEvent, 
+  isMandatoryEvent, 
+  isAttendanceTracked, 
+  filterAttendanceTrackedEvents, 
+  filterAttendanceTrackedSessions, 
+  calculateScoutCompliance 
+} from '../utils/attendanceCompliance';
 
 export const EVENT_PROGRAM_CONFIG = {
   'Weekly Troop Meeting (Friday)': {
@@ -203,6 +212,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
   const [historicalSessions, setHistoricalSessions] = useState([]);
   const [historySearch, setHistorySearch] = useState('');
   const [historyProgramFilter, setHistoryProgramFilter] = useState('all');
+  const [complianceScope, setComplianceScope] = useState('tracked_only'); // 'tracked_only' | 'friday_only' | 'mandatory_only' | 'all'
 
   // Scheduled Events State
   const [scheduledEvents, setScheduledEvents] = useState([]);
@@ -441,95 +451,49 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     }
   };
 
-  // ── 4. AUTOMATED ABSENCE RISK & TOTAL HOURS ENGINE ──
+  // ── 4. AUTOMATED ABSENCE RISK & COMPLIANCE ENGINE ──
   const getScoutAggregates = (scoutUid) => {
-    let totalAttendedHours = 0;
-    let totalCampingNights = 0;
+    // 1. Calculate official compliance (Friday & Mandatory scope)
+    const compliance = calculateScoutCompliance(scoutUid, historicalSessions, {
+      filterMode: complianceScope
+    });
+
+    // 2. Also calculate granular program hours from historical sessions
     let totalServiceHours = 0;
     let totalHalqaHours = 0;
     let totalTuesdayHours = 0;
-    let totalFridayHours = 0;
-    let totalRecordedSessions = 0;
-    let attendedSessions = 0;
-    let unexcusedAbsenceCount = 0;
-    let consecutiveAbsences = 0;
-    let excusedCount = 0;
-    let lateCount = 0;
 
     historicalSessions.forEach(session => {
       const record = session.records?.[scoutUid];
-      if (record) {
-        totalRecordedSessions++;
-        const isAttended = record.status === 'present' || record.status === 'late';
+      if (record && (record.status === 'present' || record.status === 'late')) {
         const norm = normalizeEventType(session.eventType);
         const defaultH = EVENT_PROGRAM_CONFIG[norm]?.defaultHours || 0;
-        const defaultN = EVENT_PROGRAM_CONFIG[norm]?.defaultNights || 0;
         const sHours = session.hours !== undefined ? Number(session.hours) : defaultH;
-        const sNights = session.nights !== undefined ? Number(session.nights) : defaultN;
         const scoutH = record.hours !== undefined ? Number(record.hours) : sHours;
-        const scoutN = record.nights !== undefined ? Number(record.nights) : sNights;
 
-        if (isAttended) {
-          attendedSessions++;
-          totalAttendedHours += scoutH;
-          totalCampingNights += scoutN;
-          if (norm === 'Service Project / Volunteering') totalServiceHours += scoutH;
-          else if (norm === 'Halqa / Study Circle') totalHalqaHours += scoutH;
-          else if (norm === 'Tuesday Program') totalTuesdayHours += scoutH;
-          else if (norm === 'Weekly Troop Meeting (Friday)') totalFridayHours += scoutH;
-          if (record.status === 'late') lateCount++;
-        } else if (record.status === 'absent') {
-          unexcusedAbsenceCount++;
-        } else if (record.status === 'excused') {
-          excusedCount++;
-        }
+        if (norm === 'Service Project / Volunteering') totalServiceHours += scoutH;
+        else if (norm === 'Halqa / Study Circle') totalHalqaHours += scoutH;
+        else if (norm === 'Tuesday Program') totalTuesdayHours += scoutH;
       }
     });
 
-    for (let i = 0; i < historicalSessions.length; i++) {
-      const rec = historicalSessions[i].records?.[scoutUid];
-      if (rec && rec.status === 'absent') {
-        consecutiveAbsences++;
-      } else if (rec && (rec.status === 'present' || rec.status === 'late')) {
-        break;
-      }
-    }
-
-    const attendanceRate = totalRecordedSessions > 0 
-      ? Math.round((attendedSessions / totalRecordedSessions) * 100) 
-      : 100;
-
-    let riskLevel = 'green';
-    let riskLabel = 'Good Standing';
-    let riskTooltip = 'Regular attendance (Good Standing)';
-
-    if (unexcusedAbsenceCount >= 3 || consecutiveAbsences >= 3) {
-      riskLevel = 'red';
-      riskLabel = 'Critical Risk';
-      riskTooltip = `Critical: ${unexcusedAbsenceCount} unexcused absences. Parent outreach recommended.`;
-    } else if (unexcusedAbsenceCount >= 2 || consecutiveAbsences >= 2) {
-      riskLevel = 'yellow';
-      riskLabel = 'At Risk';
-      riskTooltip = `Needs follow-up: ${unexcusedAbsenceCount} absences.`;
-    }
-
     return {
-      totalAttendedHours: Math.round(totalAttendedHours * 10) / 10,
-      totalCampingNights,
+      ...compliance,
+      totalAttendedHours: compliance.totalTrackedHours,
+      totalCampingNights: compliance.totalCampingNights,
       totalServiceHours: Math.round(totalServiceHours * 10) / 10,
       totalHalqaHours: Math.round(totalHalqaHours * 10) / 10,
       totalTuesdayHours: Math.round(totalTuesdayHours * 10) / 10,
-      totalFridayHours: Math.round(totalFridayHours * 10) / 10,
-      unexcusedAbsenceCount,
-      consecutiveAbsences,
-      totalRecordedSessions,
-      attendedSessions,
-      excusedCount,
-      lateCount,
-      attendanceRate,
-      riskLevel,
-      riskLabel,
-      riskTooltip
+      totalFridayHours: compliance.totalFridayHours,
+      unexcusedAbsenceCount: compliance.absentCount,
+      totalRecordedSessions: compliance.totalSessions,
+      attendedSessions: compliance.presentCount,
+      consecutiveAbsences: compliance.consecutiveAbsences,
+      attendanceRate: compliance.attendanceRate,
+      riskLevel: compliance.riskLevel,
+      riskLabel: compliance.riskLabel,
+      riskTooltip: compliance.riskTooltip,
+      isEligibleForAdvancement: compliance.isEligibleForAdvancement
     };
   };
 
@@ -607,6 +571,9 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     const activePatrol = groups.find(g => g.id === selectedGroupId);
     const targetGroupId = selectedGroupId !== 'all' ? selectedGroupId : (currentUser?.groupId || '');
 
+    const isFri = isFridayDate(sessionDate) || isFridayProgramEvent({ eventType, date: sessionDate });
+    const isMandatory = isMandatoryEvent({ eventType, notes: sessionNotes });
+
     const payload = {
       sessionId,
       leaderId: currentUser?.uid || '',
@@ -614,6 +581,8 @@ export default function PatrolAttendance({ currentUser, initialData }) {
       patrolName: activePatrol ? activePatrol.name : (currentUser?.patrolName || ''),
       date: sessionDate,
       eventType,
+      isFridaySession: isFri,
+      mustAttend: isMandatory,
       hours: Number(sessionHours) || 0,
       nights: Number(sessionNights) || 0,
       notes: sessionNotes.trim(),
@@ -657,6 +626,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     else greenCount++;
   });
 
+  const userPatrolId = currentUser?.groupId || currentUser?.patrolId || '';
   const assignedPatrol = groups.find(g => g.id === userPatrolId || (currentUser?.patrolName && g.name.toLowerCase() === currentUser.patrolName.toLowerCase()));
 
   const filteredHistoricalSessions = historicalSessions.filter(s => {
@@ -666,6 +636,12 @@ export default function PatrolAttendance({ currentUser, initialData }) {
       const matchScout = scouts.some(scout => s.records && s.records[scout.uid]);
       if (!matchGroup && !matchScout) return false;
     }
+
+    // Compliance Scope filter
+    if (complianceScope === 'tracked_only' && !isAttendanceTracked(s)) return false;
+    if (complianceScope === 'friday_only' && !isFridayProgramEvent(s)) return false;
+    if (complianceScope === 'mandatory_only' && !isMandatoryEvent(s)) return false;
+
     const norm = normalizeEventType(s.eventType);
     if (historyProgramFilter !== 'all' && norm !== historyProgramFilter) return false;
     if (historySearch) {
@@ -824,6 +800,63 @@ export default function PatrolAttendance({ currentUser, initialData }) {
           </div>
         )}
 
+        {/* ── ATTENDANCE COMPLIANCE SCOPE FILTER TABS ── */}
+        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 relative z-10 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase font-black text-slate-400 px-1 flex items-center gap-1">
+              <TrendingUp size={12} className="text-emerald-400" /> Compliance Scope:
+            </span>
+            <button
+              type="button"
+              onClick={() => setComplianceScope('tracked_only')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                complianceScope === 'tracked_only'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <span>⭐ Friday & Mandatory (Active Compliance)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setComplianceScope('friday_only')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                complianceScope === 'friday_only'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <span>🏕️ Friday Programs</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setComplianceScope('mandatory_only')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                complianceScope === 'mandatory_only'
+                  ? 'bg-amber-600 text-white shadow-md'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <span>⭐ Mandatory Only</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setComplianceScope('all')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                complianceScope === 'all'
+                  ? 'bg-slate-700 text-white shadow-md'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <span>📋 All Sessions</span>
+            </button>
+          </div>
+          
+          <span className="text-[10px] text-slate-400 bg-slate-950/60 px-2.5 py-1 rounded-xl border border-slate-800">
+            {complianceScope === 'tracked_only' ? 'Active participation strictly evaluated on Fridays & mandatory troop milestones.' : 'Displaying selected scope.'}
+          </span>
+        </div>
+
         {/* ── 2. PATROL ATTENDANCE KPI METRICS HEADER ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60 relative z-10 text-xs">
           
@@ -910,9 +943,18 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                       : 'bg-slate-900/90 text-slate-300 hover:text-white border-slate-750 hover:border-teal-500/50 hover:bg-slate-850'
                   }`}
                 >
-                  <span className="text-base">📅</span>
+                  <span className="text-base">
+                    {isMandatoryEvent(ev) ? '⭐' : isFridayProgramEvent(ev) ? '🏕️' : '📅'}
+                  </span>
                   <div className="text-left">
-                    <div className="text-[10px] text-teal-300 font-mono font-bold">{ev.date || 'Upcoming'}</div>
+                    <div className="text-[10px] text-teal-300 font-mono font-bold flex items-center gap-1">
+                      <span>{ev.date || 'Upcoming'}</span>
+                      {isMandatoryEvent(ev) && (
+                        <span className="bg-amber-500/20 text-amber-300 text-[8px] px-1 py-0.2 rounded font-black border border-amber-500/40">
+                          MANDATORY
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs truncate max-w-[170px] text-white">{ev.title}</div>
                     {ev.location && <div className="text-[9px] text-slate-400 truncate max-w-[170px]">📍 {ev.location}</div>}
                   </div>

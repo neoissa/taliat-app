@@ -93,6 +93,7 @@ import {
   RECURRING_SCHEDULE_CONFIG 
 } from '../utils/calendarGenerator';
 import { cancelMeetingByLeader } from '../services/parentRequestService';
+import { isFridayDate, isFridayProgramEvent, isMandatoryEvent, isAttendanceTracked } from '../utils/attendanceCompliance';
 
 // ── ACTIVITY CLASSIFICATION ENGINE CONSTANTS ──
 export const EVENT_TYPES = [
@@ -511,6 +512,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [customSubtypeText, setCustomSubtypeText] = useState('');
   const [serviceHoursCredited, setServiceHoursCredited] = useState(0);
   const [requiresRsvp, setRequiresRsvp] = useState(true);
+  const [mustAttend, setMustAttend] = useState(false);
+  const [isFridaySession, setIsFridaySession] = useState(false);
   const [category, setCategory] = useState('meeting'); // 'campout' | 'meeting' | 'service' | 'faith' | 'ceremony'
   const [description, setDescription] = useState('');
   const [requiredItems, setRequiredItems] = useState('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -853,9 +856,11 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   };
 
   const handleOpenNew = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const isFri = isFridayDate(today);
     setEditingId(null);
     setTitle('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(today);
     setStartTime('18:30');
     setEndTime('21:30');
     setIsAllDay(false);
@@ -867,6 +872,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setCustomSubtypeText('');
     setServiceHoursCredited(0);
     setRequiresRsvp(true);
+    setMustAttend(isFri);
+    setIsFridaySession(isFri);
     setCategory('meeting');
     setDescription('');
     setRequiredItems('Complete Class A Field Uniform, Scout Handbook, Water Bottle, Pen & Notebook');
@@ -884,6 +891,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       return;
     }
     const cls = getActivityClassification(ev);
+    const isFri = ev.isFridaySession !== undefined ? ev.isFridaySession : isFridayDate(ev.date || '');
     setEditingId(ev.id);
     setTitle(ev.title || '');
     setDate(ev.date || '');
@@ -893,6 +901,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setCustomSubtypeText('');
     setServiceHoursCredited(ev.serviceHoursCredited !== undefined ? ev.serviceHoursCredited : (cls.isService ? 3 : 0));
     setRequiresRsvp(ev.requiresRsvp !== undefined ? ev.requiresRsvp : true);
+    setMustAttend(ev.mustAttend !== undefined ? ev.mustAttend : (isFri || isMandatoryEvent(ev)));
+    setIsFridaySession(isFri);
     setCategory(ev.category || (ev.eventType === 'camp' ? 'campout' : ev.eventType === 'volunteering' ? 'service' : ev.eventType) || 'meeting');
     setDescription(ev.description || '');
     setRequiredItems(ev.requiredItems || '');
@@ -1080,6 +1090,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       activitySubtype: finalSubtype,
       serviceHoursCredited: finalServiceHours,
       requiresRsvp: Boolean(requiresRsvp),
+      mustAttend: Boolean(mustAttend),
+      isFridaySession: Boolean(isFridaySession || isFridayDate(date)),
       targetScope: targetScopeVal,
       category: legacyCat,
       description: description.trim(),
@@ -2450,6 +2462,34 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                     {requiresRsvp ? '📝 RSVP Enabled' : '🔓 Open Attendance'}
                   </span>
                 </div>
+
+                {/* Mandatory Event Attendance Flag */}
+                <div className="pt-2 border-t border-slate-850 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-amber-300 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={mustAttend}
+                        onChange={(e) => setMustAttend(e.target.checked)}
+                        className="rounded border-amber-500/50 text-amber-500 focus:ring-amber-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                      />
+                      <span>⭐ Mandatory Event (Active Attendance & Rank Compliance)</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 ml-6 mt-0.5">
+                      {mustAttend
+                        ? 'Required event tracked for BSA active attendance compliance, absence warnings, and rank advancement.'
+                        : 'Optional session — absence will not negatively impact scout attendance rate or compliance.'}
+                    </p>
+                  </div>
+
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    mustAttend 
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}>
+                    {mustAttend ? '⭐ Mandatory Event' : '🌿 Optional Session'}
+                  </span>
+                </div>
               </div>
 
               {/* ── TIME RANGE SELECTOR ── */}
@@ -3186,6 +3226,18 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                               {isFriday ? 'Fri' : isTuesday ? 'Tue' : 'Weekly'}
                             </span>
                           )}
+                          {isMandatoryEvent(ev) && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-0.5">
+                              <span>⭐</span>
+                              <span>Mandatory</span>
+                            </span>
+                          )}
+                          {isFridayProgramEvent(ev) && !ev.isStandalone && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-0.5">
+                              <span>🏕️</span>
+                              <span>Friday</span>
+                            </span>
+                          )}
                           {ev.requiresRsvp === false && (
                             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">
                               🔓 Open
@@ -3328,6 +3380,16 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                         {selectedEvent.isStandalone && (
                           <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                             <Zap size={10} /> Standalone Session
+                          </span>
+                        )}
+                        {isMandatoryEvent(selectedEvent) && (
+                          <span className="text-[10px] font-black bg-amber-500/25 text-amber-300 border border-amber-500/50 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <span>⭐</span> Mandatory Attendance
+                          </span>
+                        )}
+                        {isFridayProgramEvent(selectedEvent) && (
+                          <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                            <span>🏕️</span> Friday Program
                           </span>
                         )}
                         {selectedEvent.requiresRsvp === false ? (

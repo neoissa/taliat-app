@@ -41,6 +41,7 @@ import {
   getScoutPatrolName, 
   filterScoutsForUser 
 } from '../utils/patrolScoping';
+import { calculateScoutCompliance } from '../utils/attendanceCompliance';
 
 export default function LeaderHome({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -279,22 +280,16 @@ export default function LeaderHome({ currentUser, onNavigate }) {
     };
   };
 
-  // Calculate Patrol Risk metrics
+  // Calculate Patrol Risk metrics using Friday & Mandatory Compliance engine
   let patrolYellowRiskCount = 0;
   let patrolRedRiskCount = 0;
 
   (scouts || []).forEach(scout => {
     if (!scout?.uid) return;
-    let unexcusedCount = 0;
-    (attendanceSessions || []).forEach(sess => {
-      const rec = sess?.records?.[scout.uid];
-      if (rec && rec.status === 'absent') {
-        unexcusedCount++;
-      }
-    });
-    if (unexcusedCount >= 3) {
+    const comp = calculateScoutCompliance(scout.uid, attendanceSessions, { scope: 'tracked_only' });
+    if (comp.riskLevel === 'red') {
       patrolRedRiskCount++;
-    } else if (unexcusedCount > 1) {
+    } else if (comp.riskLevel === 'yellow') {
       patrolYellowRiskCount++;
     }
   });
