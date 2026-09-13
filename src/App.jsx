@@ -550,8 +550,8 @@ export default function App() {
     <div className="app-viewport-container text-slate-100 font-sans">
       
       {/* ── MOBILE TOP BAR (VISIBLE ON SMALL SCREENS ONLY) ── */}
-      <header className={`md:hidden bg-slate-950/95 backdrop-blur border-b px-3.5 py-2.5 sticky top-0 z-40 flex items-center justify-between gap-2.5 print-hide ${
-        isOwner ? 'border-amber-500/50 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950' : 'border-slate-800'
+      <header className={`md:hidden bg-slate-900/90 backdrop-blur-md border-b px-3.5 py-2.5 sticky top-0 z-40 flex items-center justify-between gap-2.5 print-hide ${
+        isOwner ? 'border-amber-500/40 bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900' : 'border-slate-800/80'
       }`}>
         <div 
           onClick={() => handleTabClick('profile')}
@@ -634,11 +634,11 @@ export default function App() {
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative w-72 max-w-[85vw] bg-slate-950 border-r border-slate-800 flex flex-col h-full z-10 shadow-2xl overflow-y-auto">
+          <div className="relative w-72 max-w-[85vw] bg-slate-900/95 border-r border-slate-800/80 flex flex-col h-full z-10 shadow-2xl overflow-y-auto">
             {/* Drawer Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg shadow-amber-950/50 bg-black shrink-0 flex items-center justify-center p-0.5">
+                <div className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg shadow-amber-950/50 bg-slate-900 shrink-0 flex items-center justify-center p-0.5">
                   <img 
                     src="/app-logo.jpg" 
                     alt="Dhulfiqār Scouts" 
@@ -669,8 +669,8 @@ export default function App() {
             {/* User Profile Summary */}
             <div className={`p-4 border-b space-y-3 ${
               isOwner 
-                ? 'bg-gradient-to-b from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/40' 
-                : 'bg-slate-900/90 border-slate-800'
+                ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-900 border-amber-500/30' 
+                : 'bg-slate-900/90 border-slate-800/80'
             }`}>
               {/* Authority Badge */}
               {isOwner ? (
@@ -742,8 +742,8 @@ export default function App() {
                       ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' 
                       : 'bg-emerald-500 text-slate-950 border-emerald-400 font-black'
                     : isOwner
-                    ? 'bg-slate-950/80 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
-                    : 'bg-slate-950/80 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    ? 'bg-slate-900 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    : 'bg-slate-900 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                 }`}
               >
                 <User size={13} className={currentTab === 'profile' ? 'text-slate-950' : isOwner ? 'text-amber-400' : 'text-emerald-400'} />
@@ -794,7 +794,11 @@ export default function App() {
             </div>
 
             {/* Nav Items List */}
-            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 p-3 space-y-1">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
+                <span>Navigation Menu</span>
+                <span className="text-[9px] font-mono text-slate-500 font-bold lowercase">{navItems.length} modules</span>
+              </div>
               {navItems.map((item) => {
                 const isActive = currentTab === item.id;
                 const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
@@ -802,23 +806,23 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => handleTabClick(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left min-h-[44px] group ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group min-h-[44px] ${
                       isActive
                         ? isOwner
-                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-white border-l-4 border-amber-500 font-extrabold shadow-sm'
-                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-white border-l-4 border-emerald-500 font-extrabold shadow-sm'
+                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-white border-l-4 border-amber-400 font-extrabold shadow-sm'
+                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-white border-l-4 border-emerald-400 font-extrabold shadow-sm'
                         : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
+                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
                         isActive
                           ? `${itemTheme.activePill} ${itemTheme.glow}`
                           : `${itemTheme.pillBg} ${itemTheme.border}`
                       }`}>
                         <DynamicIcon 
                           name={item.icon} 
-                          size={17} 
+                          size={16} 
                           className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
                         />
                       </div>
@@ -841,7 +845,7 @@ export default function App() {
             </nav>
 
             {/* Customization & Logout Footer */}
-            <div className="p-3 border-t border-slate-800 bg-slate-950 space-y-2 shrink-0">
+            <div className="p-3 border-t border-slate-800/80 bg-slate-900/95 space-y-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -867,8 +871,8 @@ export default function App() {
       )}
 
       {/* ── DESKTOP PERMANENT SIDEBAR NAVIGATION ── */}
-      <aside className={`hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-950 border-r shrink-0 h-full max-h-screen select-none print-hide ${
-        isOwner ? 'border-amber-500/40' : 'border-slate-800'
+      <aside className={`hidden md:flex md:flex-col md:w-64 lg:w-72 bg-slate-900/95 border-r shrink-0 h-full max-h-screen select-none print-hide ${
+        isOwner ? 'border-amber-500/40' : 'border-slate-800/80'
       }`}>
         {/* Brand Header */}
         <div className={`p-5 border-b flex items-center gap-3 ${
@@ -905,13 +909,13 @@ export default function App() {
         <div className={`p-4 mx-3 my-3 rounded-2xl border shadow-lg space-y-3 transition ${
           currentTab === 'profile'
             ? isOwner 
-              ? 'bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 border-amber-400 shadow-amber-950/60 ring-1 ring-amber-400/50' 
-              : 'bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-950 border-emerald-400 shadow-emerald-950/50 ring-1 ring-emerald-400/50'
+              ? 'bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-900 border-amber-400/80 shadow-amber-950/40 ring-1 ring-amber-400/40' 
+              : 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-400/80 shadow-emerald-950/40 ring-1 ring-emerald-400/40'
             : isOwner 
-            ? 'bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-950 border-amber-500/60 shadow-amber-950/40' 
+            ? 'bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 border-amber-500/40 shadow-amber-950/30' 
             : isLeader || isExecutive 
-            ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border-emerald-500/50 shadow-emerald-950/30'
-            : 'bg-slate-900/90 border-slate-800'
+            ? 'bg-gradient-to-br from-emerald-950/30 via-slate-900 to-slate-900 border-emerald-500/40 shadow-emerald-950/20' 
+            : 'bg-slate-900/90 border-slate-800/80'
         }`}>
           {/* Distinctive Authority Banner for Owner vs Leader */}
           {isOwner ? (
@@ -1102,7 +1106,7 @@ export default function App() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-slate-800/90 bg-slate-950 space-y-1.5 shrink-0">
+        <div className="p-3 border-t border-slate-800/80 bg-slate-900/95 space-y-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setCustomizeNavOpen(true)}

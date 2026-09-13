@@ -128,7 +128,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
       {/* ── 4-Item Horizontal Pill Bar ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
         {/* 1. Eagle 21-Badge Path */}
-        <div className="bg-slate-950/80 border border-amber-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+        <div className="bg-slate-900/80 border border-amber-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
             <Star size={18} />
           </div>
@@ -142,7 +142,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
         </div>
 
         {/* 2. 14 Eagle-Required */}
-        <div className="bg-slate-950/80 border border-emerald-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+        <div className="bg-slate-900/80 border border-emerald-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
             <Award size={18} />
           </div>
@@ -158,7 +158,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
         </div>
 
         {/* 3. 7 Electives */}
-        <div className="bg-slate-950/80 border border-sky-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+        <div className="bg-slate-900/80 border border-sky-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
             <BookOpen size={18} />
           </div>
@@ -174,7 +174,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
         </div>
 
         {/* 4. Pending / Verified */}
-        <div className="bg-slate-950/80 border border-purple-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
+        <div className="bg-slate-900/80 border border-purple-500/30 p-3 sm:p-3.5 rounded-xl flex items-center gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
             <Clock size={18} />
           </div>
@@ -195,7 +195,7 @@ function KPIHeader({ progress, activeTab, onSelectTab }) {
           <span>Eagle Rank 21-Badge Path Progress</span>
           <span className="font-bold text-amber-400">{Math.round((totalEaglePathPlannedOrEarned / 21) * 100)}% ({totalEaglePathPlannedOrEarned}/21)</span>
         </div>
-        <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+        <div className="w-full bg-slate-950/80 h-2.5 rounded-full overflow-hidden border border-slate-800">
           <div
             className="bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-400 h-full transition-all duration-500 rounded-full"
             style={{ width: `${Math.min(100, Math.round((totalEaglePathPlannedOrEarned / 21) * 100))}%` }}
@@ -241,9 +241,9 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-2xl shadow-2xl my-8 overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl my-8 overflow-hidden">
         {/* Modal header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-700 bg-slate-850">
+        <div className="flex items-start justify-between p-6 border-b border-slate-800 bg-slate-850/90">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {badge.eagleRequired ? (
@@ -251,7 +251,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
                   <Star size={11} /> Eagle Required
                 </span>
               ) : (
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-bold uppercase">
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-750 font-bold uppercase">
                   Elective Badge
                 </span>
               )}
@@ -287,7 +287,7 @@ function BadgeModal({ badge, progressEntry, onClose, onToggleStep, onApproveStep
 
         <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {/* Quick Action Bar: Plan toggle + Official Downloads & Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-750">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/90 p-4 rounded-2xl border border-slate-800/80">
             {/* Left: Plan toggle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -653,12 +653,12 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
   const total = badge.requirements.length;
 
   return (
-    <div className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-3 shadow-md ${
+    <div className={`p-4 rounded-2xl border transition flex flex-col justify-between gap-3 shadow-xs hover:shadow-md ${
       isEarned
-        ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-400'
+        ? 'bg-slate-900/85 border-emerald-500/40 hover:border-emerald-400'
         : isPlanned
-        ? 'bg-amber-950/20 border-amber-500/40 hover:border-amber-400'
-        : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'
+        ? 'bg-slate-900/85 border-amber-500/40 hover:border-amber-400'
+        : 'bg-slate-900/85 border-slate-800/80 hover:border-slate-700'
     }`}>
       <div>
         <div className="flex items-center justify-between gap-1 mb-2">
@@ -668,7 +668,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
                 <Star size={10} /> Eagle
               </span>
             ) : (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 font-semibold uppercase">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60 font-semibold uppercase">
                 Elective
               </span>
             )}
@@ -706,7 +706,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
         )}
       </div>
 
-      <div className="space-y-2 pt-2 border-t border-slate-700/50">
+      <div className="space-y-2 pt-2 border-t border-slate-800">
         <div className="flex justify-between text-[11px] text-slate-400">
           <span>{approved}/{total} Steps Approved</span>
           <span className="font-bold text-white">{total > 0 ? Math.round((approved / total) * 100) : 0}%</span>
@@ -715,7 +715,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => onOpen(badge)}
-            className="flex-1 bg-slate-700 hover:bg-slate-650 text-white font-semibold text-xs py-1.5 rounded-xl transition cursor-pointer text-center"
+            className="flex-1 bg-slate-800 hover:bg-slate-750 text-white font-semibold text-xs py-1.5 rounded-xl border border-slate-750 transition cursor-pointer text-center"
           >
             Requirements
           </button>
@@ -725,7 +725,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
               href={badge.pamphletUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 bg-slate-900/80 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 hover:border-teal-400 rounded-xl transition cursor-pointer"
+              className="p-1.5 bg-slate-850 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 hover:border-teal-400 rounded-xl transition cursor-pointer"
               title={`View ${badge.name} Official Pamphlet & Guide (Rev. ${badge.pamphletRevYear || '2024'})`}
             >
               <BookOpen size={14} />
@@ -737,7 +737,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
               href={badge.packetPdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 bg-slate-900/60 hover:bg-emerald-600 text-slate-400 hover:text-white border border-slate-750 hover:border-emerald-500/40 rounded-xl transition cursor-pointer"
+              className="p-1.5 bg-slate-850 hover:bg-emerald-600 text-slate-400 hover:text-white border border-slate-750 hover:border-emerald-500/40 rounded-xl transition cursor-pointer"
               title="Download Printable PDF Workbook"
             >
               <FileDown size={14} />
@@ -749,7 +749,7 @@ function BadgeCard({ badge, progress, onOpen, onTogglePlanned }) {
             className={`p-1.5 rounded-xl transition cursor-pointer border ${
               isPlanned
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-red-950/40 hover:text-red-400 hover:border-red-800'
-                : 'bg-slate-900/60 text-slate-400 border-slate-750 hover:text-amber-300 hover:border-amber-500/40'
+                : 'bg-slate-850 text-slate-400 border-slate-750 hover:text-amber-300 hover:border-amber-500/40'
             }`}
             title={isPlanned ? "Remove from planned list" : "Add to My Planned Badges"}
           >
@@ -1087,14 +1087,14 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5">
       {/* Scout Selector Banner for Leaders / Executives */}
       {isLeaderOrOwner && !customScoutId && (
-        <div className="bg-slate-850 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+        <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 shadow-lg space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
-                <Users size={22} />
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+                <Users size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -1112,7 +1112,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
                     </span>
                   )}
                 </div>
-                <h3 className="text-lg font-black text-white">
+                <h3 className="text-base font-black text-white">
                   Active Scout: <span className="text-emerald-400">{activeScoutProfile?.fullName || activeScoutProfile?.username || 'Select a Scout'}</span>
                 </h3>
               </div>
@@ -1128,7 +1128,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
                 aria-label="Select Scout to inspect merit badges"
                 value={selectedLeaderScoutId || scoutId}
                 onChange={(e) => setSelectedLeaderScoutId(e.target.value)}
-                className="bg-slate-900 border-2 border-emerald-500/50 hover:border-emerald-400 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition cursor-pointer w-full sm:min-w-[220px]"
+                className="bg-slate-900 border border-emerald-500/50 hover:border-emerald-400 text-white text-xs font-bold px-3.5 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition cursor-pointer w-full sm:min-w-[220px]"
               >
                 {scoutsList.map(s => (
                   <option key={s.uid} value={s.uid}>
@@ -1144,7 +1144,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
       <KPIHeader progress={progress} activeTab={filter} onSelectTab={setFilter} />
 
       {/* Top Quick Resource Reference Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/40 border border-teal-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg print-hide">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950/30 border border-teal-500/30 rounded-2xl p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md print-hide">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 shrink-0">
             <BookOpen size={18} />
@@ -1190,8 +1190,8 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
         <>
           {/* Smart Recommendations & In-House Counselor Fast-Track Banner */}
           {recommendedBadges.length > 0 && (
-            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/40 rounded-2xl p-5 shadow-xl space-y-3.5 print-hide">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/30 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3.5 print-hide">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">
                     <Sparkles size={20} />
@@ -1228,7 +1228,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
                   return (
                     <div 
                       key={rec.id}
-                      className="bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition shadow-sm"
+                      className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition shadow-sm"
                     >
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1.5">
@@ -1302,8 +1302,8 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
                   onClick={() => setFilter(key)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     filter === key
-                      ? 'bg-emerald-600 text-white shadow-md font-bold'
-                      : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-emerald-600 text-white shadow-sm font-bold ring-1 ring-emerald-400/50'
+                      : 'bg-slate-900/80 border border-slate-800/80 text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   {label}
@@ -1316,7 +1316,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 cursor-pointer sm:w-60"
+                className="bg-slate-900/90 border border-slate-800/80 rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 cursor-pointer sm:w-60"
               >
                 {categoriesList.map(c => (
                   <option key={c.id} value={c.id}>{c.label}</option>
@@ -1329,14 +1329,14 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
                 placeholder="Search badges, skills or requirements..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-72"
+                className="bg-slate-900/90 border border-slate-800/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 sm:w-72"
               />
             </div>
           </div>
 
           {/* Fast-Track 90-Day Badges Alert Banner if on 'long-duration' tab */}
           {filter === 'long-duration' && (
-            <div className="bg-gradient-to-r from-amber-950/60 via-slate-800 to-amber-950/60 border border-amber-500/50 rounded-2xl p-5 shadow-xl space-y-2 print-hide">
+            <div className="bg-slate-900/90 border border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-lg space-y-2 print-hide">
               <div className="flex items-center gap-2 text-amber-300 font-black text-sm">
                 <Zap size={18} className="text-amber-400" />
                 <span>Eagle Scout Fast-Track: 90-Day & Multi-Week Tracking Badges</span>
@@ -1349,7 +1349,7 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
 
           {/* Planned Badges Roadmap Guide if on 'planned' tab */}
           {filter === 'planned' && (
-            <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-amber-950/30 border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-3 print-hide">
+            <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3 print-hide">
               <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
                 <Sparkles size={18} />
                 <span>How to Plan Your Eagle Rank (21 Merit Badges)</span>

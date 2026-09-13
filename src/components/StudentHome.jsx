@@ -296,9 +296,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const recommendedBadges = getRecommendedBadges(currentUser, meritBadgesProgress);
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-3.5 pb-6">
       {/* ── 1. WELCOME HERO CARD ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/60 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
         {/* Background decorative watermark */}
         <div className="absolute right-4 top-2 opacity-5 pointer-events-none">
           <Trophy size={180} className="text-emerald-400" />
@@ -365,11 +365,11 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-700/60 relative z-10 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-750 relative z-10 text-xs">
           {/* 1. Active Rank */}
           <div 
             onClick={() => onNavigate && onNavigate('advancement')}
-            className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition"
+            className="bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition"
           >
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <ShieldCheck size={18} />
@@ -390,7 +390,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : 'bg-slate-900/90 border-teal-500/30 hover:border-teal-400/60'
+                : 'bg-slate-900/90 border-slate-800/80 hover:border-teal-400/60'
             }`}
           >
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -422,7 +422,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 3. Merit Badges */}
           <div 
             onClick={() => onNavigate && onNavigate('merit-badges')}
-            className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/90 border border-slate-800/80 hover:border-amber-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
           >
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Star size={18} />
@@ -438,7 +438,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 4. Service Hours */}
           <div 
             onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-slate-900/90 border border-sky-500/30 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/90 border border-slate-800/80 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Heart size={18} />
@@ -513,9 +513,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── NOTIFICATION BANNER: OFFICIAL PROGRESS REPORT PUBLISHED ── */}
       {publishedReports.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-950/70 via-slate-850 to-sky-950/40 border border-emerald-500/50 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+        <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-sky-950/30 border border-emerald-500/40 p-4 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl shrink-0 shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-lg shrink-0 shadow-md">
               📜
             </div>
             <div>
@@ -557,10 +557,10 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       )}
 
       {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/30 border border-amber-500/30 rounded-2xl p-4 sm:p-4.5 shadow-lg relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-xl shrink-0 shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-lg shrink-0 shadow-md">
               🦅
             </div>
             <div>
@@ -591,11 +591,11 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
       {/* ── 2.5. SMART MERIT BADGE RECOMMENDATIONS & TROOP COUNSELORS ── */}
       {recommendedBadges.length > 0 && (
-        <div className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
-                <Sparkles size={20} />
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 shadow-md">
+                <Sparkles size={18} />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
@@ -628,10 +628,10 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <div
                 key={rec.id}
                 onClick={() => onNavigate && onNavigate('merit-badges')}
-                className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 group shadow-xs hover:shadow-md"
+                className="bg-slate-900/85 border border-slate-800/80 hover:border-emerald-500/50 p-3.5 rounded-xl flex flex-col justify-between gap-2.5 cursor-pointer transition-all duration-200 group shadow-xs hover:shadow-md"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-1 mb-2">
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
                     <div className="flex items-center gap-1 flex-wrap">
                       {rec.eagleRequired ? (
                         <StatusBadge type="warning" size="xs" label="Eagle" />
@@ -669,7 +669,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
       <AssignmentsManager currentUser={currentUser} scoutId={currentUser?.uid} isEmbeddedInProfile={false} />
 
       {/* ── 4. UPCOMING PLANNED EVENTS ── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+      <div className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3.5">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="text-emerald-400" size={18} />
@@ -687,7 +687,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {upcomingEvents.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-950/40 rounded-xl border border-slate-800">
+          <div className="text-center py-8 text-slate-500 text-xs italic bg-slate-900/50 rounded-xl border border-slate-800/80">
             🏕️ No upcoming troop events scheduled right now. Check back soon!
           </div>
         ) : (
@@ -698,7 +698,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               return (
                 <div
                   key={ev.id}
-                  className="bg-slate-950/60 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl flex items-center justify-between gap-3 transition-all duration-200 shadow-xs hover:shadow-md"
+                  className="bg-slate-900/80 border border-slate-800/80 hover:border-emerald-500/50 p-3.5 rounded-xl flex items-center justify-between gap-3 transition-all duration-200 shadow-xs hover:shadow-md"
                 >
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

@@ -319,19 +319,19 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const scoutsWithPending = (scouts || []).filter(s => s?.uid && (pendingMap[s.uid]?.total || 0) > 0);
 
   return (
-    <div className="space-y-4 pb-8 font-sans">
+    <div className="space-y-3.5 pb-6 font-sans">
       {/* ── 1. LEADER / OWNER HERO COMMAND CARD ── */}
-      <div className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden ${
+      <div className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden ${
         isOwner 
-          ? 'bg-gradient-to-br from-slate-950 via-amber-950/60 to-slate-900 border border-amber-500/60 shadow-amber-950/50' 
-          : 'bg-gradient-to-br from-slate-850 via-slate-800 to-emerald-950/60 border border-emerald-500/40 shadow-emerald-950/40'
+          ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-amber-950/30 border border-amber-500/40 shadow-amber-950/30' 
+          : 'bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/30 border border-emerald-500/30 shadow-emerald-950/30'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5 relative z-10">
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center p-2 shadow-xl shrink-0 text-2xl sm:text-3xl ${
+            <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center p-2 shadow-lg shrink-0 text-2xl sm:text-3xl ${
               isOwner 
-                ? 'bg-gradient-to-br from-amber-500/30 to-amber-700/20 border-2 border-amber-400 text-amber-300 shadow-amber-950/60' 
-                : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50'
+                ? 'bg-gradient-to-br from-amber-500/25 to-amber-700/15 border-2 border-amber-400 text-amber-300 shadow-amber-950/40' 
+                : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/40 text-emerald-300 shadow-emerald-950/40'
             }`}>
               {isOwner ? '👑' : '⚜️'}
             </div>
@@ -359,7 +359,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 </button>
               </div>
 
-              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
                 Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}! {isOwner ? '👑' : '⚜️'}
               </h2>
               <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
@@ -376,7 +376,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('admin')}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40"
               >
                 <Crown size={13} className="shrink-0" />
                 <span className="truncate">Admin Hub</span>
@@ -390,7 +390,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                   setSelectedPendingScoutId(null);
                   setShowPendingModal(true);
                 }}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/50"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40"
               >
                 <Clock size={13} className="animate-pulse shrink-0" />
                 <span className="truncate">Review ({totalPendingApprovals})</span>
@@ -400,7 +400,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => setShowScheduleMeetingModal(true)}
-              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-teal-950/40"
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Users size={13} className="shrink-0" />
               <span className="truncate">Meeting</span>
@@ -409,7 +409,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('broadcasts')}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/40"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Megaphone size={13} className="shrink-0" />
               <span className="truncate">Broadcast</span>
@@ -418,7 +418,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('attendance')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="bg-slate-850 hover:bg-slate-800 text-white border border-slate-700/80 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
               <span className="truncate">Roll Call</span>
@@ -427,7 +427,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="bg-slate-850 hover:bg-slate-800 text-white border border-slate-700/80 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <Calendar size={13} className="text-teal-400 shrink-0" />
               <span className="truncate">Calendar</span>
@@ -436,7 +436,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('reports')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Printer size={13} className="shrink-0" />
               <span className="truncate">Reports</span>
@@ -445,7 +445,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('roster')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="bg-slate-850 hover:bg-slate-800 text-white border border-slate-700/80 font-extrabold text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <Users size={13} className="text-sky-400 shrink-0" />
               <span className="truncate">Roster</span>
@@ -454,11 +454,11 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
 
         {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-700/60 relative z-10 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 pt-3.5 border-t border-slate-800/80 relative z-10 text-xs">
           {/* 1. Active Scouts */}
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
           >
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <Users size={18} />
@@ -481,8 +481,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             }}
             className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 transition border shadow-xs ${
               totalPendingApprovals > 0 
-                ? 'bg-amber-950/40 border-amber-500/60 cursor-pointer hover:border-amber-400 hover:shadow-md' 
-                : 'bg-slate-900/90 border-slate-800'
+                ? 'bg-amber-950/30 border-amber-500/50 cursor-pointer hover:border-amber-400 hover:shadow-md' 
+                : 'bg-slate-900/90 border-slate-800/80 hover:border-slate-700'
             }`}
           >
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
@@ -499,14 +499,14 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           {/* 3. Patrol Attendance */}
           <div 
             onClick={() => onNavigate && onNavigate('attendance')}
-            className="bg-slate-900/90 border border-teal-500/30 hover:border-teal-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/90 border border-sky-500/30 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
           >
-            <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <CheckCircle2 size={18} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] text-teal-400 block uppercase font-bold tracking-wider">Attendance</span>
+                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Attendance</span>
                 {patrolRedRiskCount > 0 && (
                   <span className="bg-rose-500/30 border border-rose-500/50 text-rose-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
                     {patrolRedRiskCount} Risk
@@ -522,13 +522,13 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           {/* 4. Patrol Units */}
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/90 border border-sky-500/30 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
           >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
               <Shield size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">
+              <span className="text-[10px] text-indigo-400 block uppercase font-bold tracking-wider">
                 {isTroopWideAuthority ? 'Patrol Units' : 'Assigned Unit'}
               </span>
               <strong className="text-xs sm:text-sm font-black text-white block truncate">
@@ -618,7 +618,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                           )}
                         </div>
 
-                        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
+                        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
                           <div className="flex items-center gap-2 text-purple-200 font-mono text-[11px]">
                             <Calendar size={12} className="text-purple-400 shrink-0" />
                             <span>Requested: <strong>{req.proposedDate || 'Flexible Date'}</strong> @ <strong>{req.proposedTime || 'Evening'}</strong></span>
@@ -753,7 +753,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             {recentBroadcasts.map((b) => (
               <div
                 key={b.id || b.broadcastId}
-                className="bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md"
+                className="bg-slate-900/80 border border-slate-800/80 hover:border-emerald-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -849,7 +849,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                     setSelectedPendingScoutId(s.uid);
                     setShowPendingModal(true);
                   }}
-                  className="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  className="bg-slate-900 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
                   title="Click to review this scout's queue directly"
                 >
                   <span>{s.fullName?.split(' ')[0] || s.username}</span>
@@ -879,7 +879,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       )}
 
       {/* ── 3. MAIN HUB: PATROL OVERVIEW & UPCOMING ACTIVITIES ── */}
-      <div className="space-y-6">
+      <div className="space-y-3.5">
         {/* Patrol Summary / Unit Focus */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
           {isTroopWideAuthority ? (
@@ -910,13 +910,13 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                       <div
                         key={g.id}
                         onClick={() => onNavigate && onNavigate('roster')}
-                        className="bg-slate-950 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl transition-all duration-200 cursor-pointer space-y-2 group shadow-xs hover:shadow-md"
+                        className="bg-slate-900/80 border border-slate-800/80 hover:border-emerald-500/50 p-4 rounded-2xl transition-all duration-200 cursor-pointer space-y-2 group shadow-xs hover:shadow-md"
                       >
                         <div className="flex items-center justify-between">
                           <strong className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
                             🛡️ {g.name} Patrol
                           </strong>
-                          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                          <span className="text-[10px] bg-slate-850 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold border border-slate-750">
                             {pScouts.length} Scouts
                           </span>
                         </div>
@@ -1091,8 +1091,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               onClick={() => setEventAttendanceFilter('all')}
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
                 eventAttendanceFilter === 'all'
-                  ? 'bg-slate-700 text-white border-slate-500 shadow-xs'
-                  : 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800'
+                  ? 'bg-slate-750 text-white border-slate-600 shadow-xs'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border-slate-800'
               }`}
             >
               All Events ({allEvents.length})
@@ -1103,7 +1103,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
                 eventAttendanceFilter === 'pending'
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-xs'
-                  : 'bg-slate-950 text-slate-400 hover:text-amber-300 border-slate-800'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-amber-300 border-slate-800'
               }`}
             >
               <span>⚠️ Roll Call Pending</span>
@@ -1117,7 +1117,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
                 eventAttendanceFilter === 'recorded'
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-xs'
-                  : 'bg-slate-950 text-slate-400 hover:text-emerald-300 border-slate-800'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-emerald-300 border-slate-800'
               }`}
             >
               <span>🟢 Logged Sessions</span>
@@ -1130,7 +1130,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           {/* Event List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredEvents.length === 0 ? (
-              <div className="col-span-1 md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <div className="col-span-1 md:col-span-2 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
                 <p className="text-xs text-slate-400 italic">
                   {eventAttendanceFilter === 'pending'
                     ? '🎉 Awesome! All scheduled events have attendance logs completed.'
@@ -1153,7 +1153,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 return (
                   <div
                     key={ev.id}
-                    className={`bg-slate-950/70 border rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between gap-3 shadow-xs hover:shadow-md ${
+                    className={`bg-slate-900/80 border rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between gap-3 shadow-xs hover:shadow-md ${
                       info.recorded
                         ? 'border-emerald-500/30 hover:border-emerald-500/60'
                         : 'border-slate-800 hover:border-amber-500/50'
