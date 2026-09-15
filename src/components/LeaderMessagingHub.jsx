@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import {
   MessageSquare,
   Send,
@@ -25,9 +25,11 @@ import {
   Mail,
   ArrowLeft,
   ExternalLink,
-  Award
+  Award,
+  Plus
 } from 'lucide-react';
 import {
+  createDirectThread,
   sendDirectMessage,
   markDirectThreadAsRead,
   updateThreadStatus,
@@ -47,7 +49,7 @@ const LEADER_PRESET_REPLIES = [
 
 const QUICK_EMOJIS = ['👍', '⚜️', '👏', '🕌', '🤲', '🏕️', '✅', '❤️', '✨', '🫡'];
 
-export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
+export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initialParentUid = null, initialScoutId = null }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.role === 'executive' || currentUser?.isExecutive || currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster';
   const isTroopWide = isOwner || isExecutive;
@@ -58,6 +60,19 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
   const [messages, setMessages] = useState([]);
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  // All parents & scouts for new message modal
+  const [allParents, setAllParents] = useState([]);
+  const [allScouts, setAllScouts] = useState([]);
+
+  // New Message to Parent Modal State
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newParentUid, setNewParentUid] = useState(initialParentUid || '');
+  const [newScoutId, setNewScoutId] = useState(initialScoutId || '');
+  const [newCategory, setNewCategory] = useState('inquiry');
+  const [newSubject, setNewSubject] = useState('');
+  const [newInitialMessage, setNewInitialMessage] = useState('');
+  const [isSubmittingNew, setIsSubmittingNew] = useState(false);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all' | 'inquiry' | 'request' | 'suggestion' | 'unread' | 'resolved'
@@ -83,6 +98,18 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
   const accessiblePatrols = useMemo(() => {
     return getAccessiblePatrols(currentUser, groups);
   }, [currentUser, groups]);
+
+  // 1.5 Fetch All Parents and Scouts
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      const all = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      const parents = all.filter(u => u.role === 'parent' || u.isParent);
+      const scouts = all.filter(u => u.role === 'scout');
+      setAllParents(parents);
+      setAllScouts(scouts);
+    }, (err) => console.warn('Failed to load users for leader messaging:', err));
+    return () => unsub();
+  }, []);
 
   // 2. Subscribe to Leader-Scoped Threads
   useEffect(() => {
@@ -194,6 +221,60 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
     }
   };
 
+  // Start New Conversation with Parent Handler
+  const handleCreateThreadAsLeader = async (e) => {
+    e.preventDefault();
+    if (!newParentUid || !newInitialMessage.trim() || isSubmittingNew) return;
+
+    setIsSubmittingNew(true);
+    try {
+      const parentObj = allParents.find(p => p.uid === newParentUid);
+      const scoutObj = allScouts.find(s => s.uid === newScoutId);
+
+      const threadId = await createDirectThread({
+        parentUid: newParentUid,
+        parentName: parentObj?.fullName || parentObj?.username || 'Parent / Guardian',
+        parentEmail: parentObj?.email || '',
+        parentPhone: parentObj?.phone || parentObj?.parentPhone || '',
+        leaderUid: currentUser.uid,
+        leaderName: currentUser.fullName || currentUser.username || 'Leader',
+        leaderRole: currentUser.leaderPosition || currentUser.role || 'Troop Leader',
+        scoutId: scoutObj?.uid || null,
+        scoutName: scoutObj?.fullName || scoutObj?.username || null,
+        patrolId: scoutObj?.groupId || scoutObj?.patrolId || null,
+        patrolName: scoutObj?.patrolName || null,
+        category: newCategory,
+        subject: newSubject.trim() || 'Leader Inquiry / Update',
+        initialMessage: newInitialMessage.trim(),
+        currentUser
+      });
+
+      setActiveThreadId(threadId);
+      setShowNewModal(false);
+      setNewSubject('');
+      setNewInitialMessage('');
+    } catch (err) {
+      console.error('Failed to create thread:', err);
+      alert('Failed to start conversation: ' + err.message);
+    } finally {
+      setIsSubmittingNew(false);
+    }
+  };
+
+  // Auto-fill parent when scout is selected in new modal
+  const handleScoutSelect = (scoutId) => {
+    setNewScoutId(scoutId);
+    if (!scoutId) return;
+
+    const scoutObj = allScouts.find(s => s.uid === scoutId);
+    if (scoutObj?.parentUid) {
+      setNewParentUid(scoutObj.parentUid);
+    } else if (scoutObj?.parentEmail) {
+      const matched = allParents.find(p => p.email === scoutObj.parentEmail);
+      if (matched) setNewParentUid(matched.uid);
+    }
+  };
+
   // Toggle Thread Status
   const handleToggleStatus = async () => {
     if (!activeThread) return;
@@ -242,14 +323,22 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
               Parent Inquiries & Feedback Console
             </h2>
             <p className="text-xs text-slate-300 mt-0.5">
-              Review and respond to private guardian inquiries, official requests, and troop suggestions.
+              Review incoming guardian messages or initiate a private 1-on-1 conversation with any parent.
             </p>
           </div>
         </div>
 
-        {/* Patrol Scoping Tag */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs bg-slate-900 border border-slate-750 text-slate-300 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowNewModal(true)}
+            className="bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/50 hover:scale-[1.02] shrink-0"
+          >
+            <Plus size={15} />
+            <span>Message a Parent</span>
+          </button>
+          
+          <span className="text-xs bg-slate-900 border border-slate-750 text-slate-300 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shrink-0">
             <Users size={14} className="text-indigo-400" />
             <span>{isTroopWide ? 'Troop-Wide Oversight' : accessiblePatrols[0]?.name ? `${accessiblePatrols[0].name} Patrol` : 'Assigned Patrol'}</span>
           </span>
@@ -315,7 +404,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
                 <div className="text-2xl">📭</div>
                 <p className="font-bold text-slate-300">No matching conversations</p>
                 <p className="text-[11px] text-slate-500">
-                  {searchQuery ? 'Try a different search term.' : 'Direct messages from parents will appear here in real time.'}
+                  {searchQuery ? 'Try a different search term.' : 'Click "+ Message a Parent" to start a 1-on-1 conversation.'}
                 </p>
               </div>
             ) : (
@@ -402,8 +491,16 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
               </div>
               <h3 className="text-base font-black text-white">Select a Parent Conversation</h3>
               <p className="text-xs text-slate-400 max-w-sm">
-                Choose a direct message thread from the left inbox to view confidential parent messages, inquiries, or troop feedback.
+                Choose a direct message thread from the left inbox to view confidential parent messages, or click &ldquo;Message a Parent&rdquo; to start a new thread.
               </p>
+              <button
+                type="button"
+                onClick={() => setShowNewModal(true)}
+                className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md"
+              >
+                <Plus size={15} />
+                <span>Message a Parent</span>
+              </button>
             </div>
           ) : (
             <>
@@ -615,6 +712,149 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate }) {
           )}
         </div>
       </div>
+
+      {/* ── MODAL: START NEW CONVERSATION WITH PARENT ── */}
+      {showNewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-900 p-5 border-b border-indigo-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400 flex items-center justify-center text-xl">
+                  💬
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Message a Parent Directly</h3>
+                  <p className="text-xs text-slate-300">Start a private 1-on-1 discussion with a parent/guardian</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateThreadAsLeader} className="p-5 space-y-4 text-xs">
+              {/* Category Selector */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                  Topic Category *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'inquiry', label: '🔒 Private Discussion', desc: 'Confidential scout review' },
+                    { id: 'request', label: '📋 Official Notice', desc: 'Forms / campout notice' },
+                    { id: 'suggestion', label: '💡 Feedback / Check-in', desc: 'Troop check-in' },
+                    { id: 'general', label: '💬 General Message', desc: 'Direct parent discussion' }
+                  ].map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setNewCategory(cat.id)}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        newCategory === cat.id
+                          ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-md'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <strong className="block text-xs font-bold text-indigo-300">{cat.label}</strong>
+                      <span className="text-[10px] text-slate-400">{cat.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Select Scout (Quick Helper) */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                  Select Scout (Optional helper to auto-select parent)
+                </label>
+                <select
+                  value={newScoutId}
+                  onChange={(e) => handleScoutSelect(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                >
+                  <option value="">-- Select Scout Member --</option>
+                  {allScouts.map(s => (
+                    <option key={s.uid} value={s.uid}>
+                      👦 {s.fullName || s.username} ({s.patrolName || 'Scout'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Parent Recipient */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                  Select Parent / Guardian *
+                </label>
+                <select
+                  required
+                  value={newParentUid}
+                  onChange={(e) => setNewParentUid(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                >
+                  <option value="">-- Choose Parent Guardian --</option>
+                  {allParents.map(p => (
+                    <option key={p.uid} value={p.uid}>
+                      👨‍👩‍👧 {p.fullName || p.username} ({p.email || p.phone || 'Guardian'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject Line */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                  Subject Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Update regarding advancement review / campout preparation..."
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                />
+              </div>
+
+              {/* Initial Message Text */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                  Message Body *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Type your message to the parent..."
+                  value={newInitialMessage}
+                  onChange={(e) => setNewInitialMessage(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="submit"
+                  disabled={!newParentUid || !newInitialMessage.trim() || isSubmittingNew}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Send size={14} />
+                  <span>{isSubmittingNew ? 'Sending...' : 'Send Message to Parent'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -434,6 +434,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const [linkedScouts, setLinkedScouts] = useState(propsLinkedScouts || []);
+  const [selectedRsvpScoutId, setSelectedRsvpScoutId] = useState('all');
 
   // Listen to linked scouts for parents if not passed as prop
   useEffect(() => {
@@ -444,12 +445,16 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     if (!isParent || !currentUser?.uid) return;
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-      const linkedIds = currentUser.linkedScoutIds || [];
+      const linkedIds = Array.isArray(currentUser.linkedScoutIds) ? currentUser.linkedScoutIds : [];
+      const parentEmail = (currentUser.email || '').toLowerCase().trim();
       const matching = allUsers.filter(u => {
         if (u.role !== 'scout') return false;
         if (linkedIds.includes(u.uid)) return true;
         if (Array.isArray(u.parentUids) && u.parentUids.includes(currentUser.uid)) return true;
-        if (currentUser.email && u.parentEmail && u.parentEmail.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+        if (parentEmail && u.parentEmail && u.parentEmail.toLowerCase().trim() === parentEmail) return true;
+        if (parentEmail && u.parent1Email && u.parent1Email.toLowerCase().trim() === parentEmail) return true;
+        if (parentEmail && u.parent2Email && u.parent2Email.toLowerCase().trim() === parentEmail) return true;
+        if (Array.isArray(currentUser.children) && currentUser.children.includes(u.uid)) return true;
         return false;
       });
       setLinkedScouts(matching);
@@ -674,12 +679,27 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     }
   };
 
-  // Sync existing RSVP if user already submitted
+  // Sync existing RSVP if user or linked child already submitted
   useEffect(() => {
     if (selectedEvent && currentUser?.uid) {
-      const currentRsvp = eventRsvps[selectedEvent.id]?.[currentUser.uid];
+      const targetScoutId = isParent && linkedScouts.length > 0
+        ? (selectedRsvpScoutId !== 'all' ? selectedRsvpScoutId : linkedScouts[0]?.uid)
+        : currentUser.uid;
+
+      const subcolRsvp = eventRsvps[selectedEvent.id]?.[targetScoutId] || (isParent ? null : eventRsvps[selectedEvent.id]?.[currentUser.uid]);
+      const globalRsvp = globalRsvps.find(r => r.eventId === selectedEvent.id && (r.scoutId === targetScoutId || r.userId === targetScoutId || (!isParent && r.userId === currentUser.uid)));
+      const currentRsvp = subcolRsvp || globalRsvp;
+
       if (currentRsvp) {
-        setRsvpStatus(currentRsvp.status || 'attending');
+        const rawStatus = (currentRsvp.status || '').toLowerCase();
+        const norm = (rawStatus === 'going' || rawStatus === 'attending' || rawStatus === 'yes') 
+          ? 'attending' 
+          : (rawStatus === 'cant_go' || rawStatus === 'not_attending' || rawStatus === 'no') 
+          ? 'not_attending' 
+          : (rawStatus === 'tentative' || rawStatus === 'maybe') 
+          ? 'tentative' 
+          : 'attending';
+        setRsvpStatus(norm);
         setRsvpDietary(currentRsvp.dietary || '');
         setRsvpDriverAvailable(!!currentRsvp.driverAvailable);
         setRsvpSeats(currentRsvp.seats || 0);
@@ -692,7 +712,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
         setRsvpNotes('');
       }
     }
-  }, [selectedEvent, currentUser?.uid, eventRsvps]);
+  }, [selectedEvent, currentUser?.uid, isParent, linkedScouts, selectedRsvpScoutId, eventRsvps, globalRsvps]);
 
 
 
@@ -831,14 +851,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     }
   }, [filteredEvents, timeHorizon]);
 
-  const mapCategoryToEventType = (cat) => {
+  const mapCategoryToEventType = (cat, title = '') => {
     const c = (cat || '').toLowerCase();
-    if (c.includes('camp') || c === 'campout') return 'Campout';
-    if (c.includes('faith') || c.includes('halqa') || c.includes('study')) return 'Halqa / Study Circle';
-    if (c.includes('service') || c.includes('volunteer')) return 'Service Project';
-    if (c.includes('hike') || c.includes('outdoor')) return 'Day Hike';
-    if (c.includes('ceremony') || c.includes('court')) return 'Special Workshop';
-    return 'Weekly Troop Meeting';
+    const t = (title || '').toLowerCase();
+    if (t.includes('tuesday') || c.includes('tuesday')) return 'Tuesday Program';
+    if (t.includes('friday') || (c.includes('meeting') && !t.includes('tuesday'))) return 'Weekly Troop Meeting (Friday)';
+    if (c.includes('camp') || t.includes('camp')) return 'Campout';
+    if (c.includes('faith') || c.includes('halqa') || t.includes('halqa') || t.includes('circle') || t.includes('study')) return 'Halqa / Study Circle';
+    if (c.includes('service') || c.includes('volunteer') || t.includes('service') || t.includes('volunteer')) return 'Service Project / Volunteering';
+    if (c.includes('hike') || t.includes('hike')) return 'Day Hike';
+    if (c.includes('workshop') || c.includes('skills') || t.includes('workshop') || c.includes('ceremony') || c.includes('court')) return 'Special Workshop';
+    return 'Weekly Troop Meeting (Friday)';
   };
 
   const canUserEditEvent = (ev) => {
@@ -1307,61 +1330,94 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setRsvpSaving(true);
     setRsvpSuccessMsg('');
 
-    const userPatrolObj = groups.find(g => g.id === (currentUser.groupId || currentUser.patrolId));
-
-    const rsvpData = {
-      userId: currentUser.uid,
-      userName: currentUser.fullName || currentUser.username || 'Family',
-      userRole: currentUser.role || 'scout',
-      userEmail: currentUser.email || '',
-      userPhone: currentUser.phone || currentUser.scoutPhone || currentUser.parentPhone || '',
-      groupId: currentUser.groupId || currentUser.patrolId || '',
-      patrolName: userPatrolObj?.name ? `${userPatrolObj.name} Patrol` : '',
-      scoutRank: currentUser.rank || '',
-      linkedScoutIds: Array.isArray(currentUser.linkedScoutIds) ? currentUser.linkedScoutIds : [],
-      status: rsvpStatus, // 'attending' | 'not_attending' | 'tentative'
-      dietary: rsvpDietary.trim(),
-      driverAvailable: rsvpDriverAvailable,
-      seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
-      notes: rsvpNotes.trim(),
-      submittedAt: new Date().toISOString()
-    };
-
     try {
-      // 1. Save to subcollection events/{eventId}/rsvps/{currentUser.uid}
-      await setDoc(doc(db, 'events', selectedEvent.id, 'rsvps', currentUser.uid), rsvpData, { merge: true });
-
-      // 2. Also save to global event_rsvps collection for unified fast lookup
-      const rsvpDocId = `rsvp_${selectedEvent.id}_${currentUser.uid}`;
-      await setDoc(doc(db, 'event_rsvps', rsvpDocId), {
-        ...rsvpData,
-        eventId: selectedEvent.id,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
-      // 3. If parent with linked scouts, also link each scout's record
-      if (currentUser.role === 'parent' && Array.isArray(currentUser.linkedScoutIds) && currentUser.linkedScoutIds.length > 0) {
-        for (const sId of currentUser.linkedScoutIds) {
-          const sRsvpId = `rsvp_${selectedEvent.id}_${sId}`;
-          const scoutObj = users.find(u => u.uid === sId);
-          await setDoc(doc(db, 'event_rsvps', sRsvpId), {
-            eventId: selectedEvent.id,
-            scoutId: sId,
-            scoutName: scoutObj?.fullName || scoutObj?.username || 'Scout',
-            parentUid: currentUser.uid,
-            parentName: currentUser.fullName || currentUser.username || 'Parent',
-            status: rsvpStatus === 'attending' ? 'going' : (rsvpStatus === 'not_attending' ? 'cant_go' : 'tentative'),
-            dietary: rsvpDietary.trim(),
-            driverAvailable: rsvpDriverAvailable,
-            seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
-            notes: rsvpNotes.trim(),
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
+      // Determine target scouts to confirm attendance for
+      let targetScoutList = [];
+      if (isParent) {
+        if (linkedScouts.length > 0) {
+          targetScoutList = selectedRsvpScoutId === 'all' 
+            ? linkedScouts 
+            : linkedScouts.filter(s => s.uid === selectedRsvpScoutId);
+        } else {
+          // Fallback if users array has scouts with matching parent info
+          const linkedIds = Array.isArray(currentUser.linkedScoutIds) ? currentUser.linkedScoutIds : [];
+          const parentEmail = (currentUser.email || '').toLowerCase().trim();
+          targetScoutList = users.filter(u => u.role === 'scout' && (
+            linkedIds.includes(u.uid) ||
+            (Array.isArray(u.parentUids) && u.parentUids.includes(currentUser.uid)) ||
+            (parentEmail && u.parentEmail?.toLowerCase() === parentEmail) ||
+            (parentEmail && u.parent1Email?.toLowerCase() === parentEmail) ||
+            (parentEmail && u.parent2Email?.toLowerCase() === parentEmail) ||
+            (Array.isArray(currentUser.children) && currentUser.children.includes(u.uid))
+          ));
         }
       }
 
-      setRsvpSuccessMsg('✓ RSVP Submitted Successfully!');
-      setTimeout(() => setRsvpSuccessMsg(''), 3000);
+      // If not a parent or no linked scouts found, target current user (Scout or Leader)
+      if (targetScoutList.length === 0) {
+        const userPatrolObj = groups.find(g => g.id === (currentUser.groupId || currentUser.patrolId));
+        targetScoutList = [{
+          uid: currentUser.uid,
+          fullName: currentUser.fullName || currentUser.username || (isParent ? 'Scout' : 'Member'),
+          rank: currentUser.rank || 'Scout',
+          groupId: currentUser.groupId || currentUser.patrolId || '',
+          patrolName: userPatrolObj?.name ? `${userPatrolObj.name} Patrol` : '',
+          role: currentUser.role || 'scout'
+        }];
+      }
+
+      for (const scoutObj of targetScoutList) {
+        const sId = scoutObj.uid;
+        const scoutPatrolObj = groups.find(g => g.id === (scoutObj.groupId || scoutObj.patrolId));
+        const scoutPatrolName = scoutPatrolObj?.name ? `${scoutPatrolObj.name} Patrol` : (scoutObj.patrolName || '');
+
+        const rsvpData = {
+          eventId: selectedEvent.id,
+          userId: sId,
+          scoutId: sId,
+          scoutName: scoutObj.fullName || scoutObj.username || 'Scout',
+          scoutRank: scoutObj.rank || 'Scout',
+          groupId: scoutObj.groupId || scoutObj.patrolId || '',
+          patrolName: scoutPatrolName,
+          parentUid: isParent ? currentUser.uid : (scoutObj.parentUid || ''),
+          parentName: isParent ? (currentUser.parent1Name || currentUser.fullName || currentUser.username || 'Parent') : (scoutObj.parent1Name || scoutObj.parentName || ''),
+          parentPhone: isParent ? (currentUser.parent1Phone || currentUser.phone || currentUser.scoutPhone || '') : (scoutObj.parentPhone || scoutObj.parent1Phone || ''),
+          parentEmail: isParent ? (currentUser.parent1Email || currentUser.email || '') : (scoutObj.parentEmail || scoutObj.parent1Email || ''),
+          userRole: isParent ? 'scout' : (currentUser.role || 'scout'),
+          status: rsvpStatus, // 'attending' | 'not_attending' | 'tentative'
+          dietary: rsvpDietary.trim(),
+          driverAvailable: rsvpDriverAvailable,
+          seats: rsvpDriverAvailable ? parseInt(rsvpSeats, 10) || 0 : 0,
+          notes: rsvpNotes.trim(),
+          submittedAt: new Date().toISOString()
+        };
+
+        // 1. Save to subcollection events/{eventId}/rsvps/{scoutId}
+        await setDoc(doc(db, 'events', selectedEvent.id, 'rsvps', sId), rsvpData, { merge: true });
+
+        // 2. Also save to global event_rsvps collection for unified fast lookup
+        const rsvpDocId = `rsvp_${selectedEvent.id}_${sId}`;
+        await setDoc(doc(db, 'event_rsvps', rsvpDocId), {
+          ...rsvpData,
+          eventId: selectedEvent.id,
+          status: rsvpStatus === 'attending' ? 'going' : (rsvpStatus === 'not_attending' ? 'cant_go' : 'tentative'),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+
+      // If parent, clean up any stray standalone parent document
+      if (isParent) {
+        try {
+          await deleteDoc(doc(db, 'events', selectedEvent.id, 'rsvps', currentUser.uid));
+          await deleteDoc(doc(db, 'event_rsvps', `rsvp_${selectedEvent.id}_${currentUser.uid}`));
+        } catch (cleanErr) {
+          // ignore if doc did not exist
+        }
+      }
+
+      const confirmedNames = targetScoutList.map(s => s.fullName?.split(' ')[0] || s.username || 'Scout').join(', ');
+      setRsvpSuccessMsg(`✓ Attendance Confirmed for ${confirmedNames}!`);
+      setTimeout(() => setRsvpSuccessMsg(''), 4000);
     } catch (err) {
       console.error("Failed to submit RSVP:", err);
       alert("Error saving RSVP: " + err.message);
@@ -1563,41 +1619,139 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     const combinedRsvpMap = {};
     
     globalEventRsvps.forEach(r => {
-      const key = r.userId || r.scoutId || r.id;
+      const key = r.scoutId || r.userId || r.id;
       if (key) combinedRsvpMap[key] = { ...r };
     });
 
     Object.entries(subcolMap).forEach(([uid, rData]) => {
-      combinedRsvpMap[uid] = { ...(combinedRsvpMap[uid] || {}), ...rData, userId: uid };
+      const key = rData.scoutId || rData.userId || uid;
+      combinedRsvpMap[key] = { ...(combinedRsvpMap[key] || {}), ...rData, userId: uid };
     });
 
     // Determine eligible scouts based on targetGroupId
     const targetPatrolId = selectedEvent.targetGroupId || selectedEvent.groupId || 'all';
     const eligibleScouts = users.filter(u => {
-      if (u.role !== 'scout') return false;
+      if (u.role !== 'scout' && (u.role || u.isLeader)) return false;
+      if (u.role !== 'scout' && !u.username) return false;
       if (targetPatrolId === 'all') return true;
       return u.groupId === targetPatrolId || u.patrolId === targetPatrolId;
     });
 
-    const attendeeList = [];
-    const processedUserIds = new Set();
+    // Map RSVPs to Scout IDs
+    const rsvpByScoutMap = new Map();
+    const explicitLeaderAttendees = [];
 
-    // 1. Process all explicit RSVPs
-    Object.entries(combinedRsvpMap).forEach(([uid, rData]) => {
-      processedUserIds.add(uid);
-      if (rData.scoutId) processedUserIds.add(rData.scoutId);
-
-      const userObj = users.find(u => u.uid === uid || u.uid === rData.scoutId || u.uid === rData.userId);
-      const parentObj = rData.parentUid ? users.find(u => u.uid === rData.parentUid) : null;
-      const isScout = userObj?.role === 'scout' || (!userObj && !rData.userRole?.includes('parent'));
+    Object.entries(combinedRsvpMap).forEach(([key, rData]) => {
+      const userObj = users.find(u => u.uid === key || u.uid === rData.scoutId || u.uid === rData.userId);
       const isParent = userObj?.role === 'parent' || rData.userRole === 'parent' || !!rData.parentUid;
       const isLeader = userObj?.role === 'leader' || userObj?.role === 'owner' || userObj?.role === 'admin' || rData.userRole === 'leader';
+      const isScout = userObj?.role === 'scout' || (!isParent && !isLeader);
 
-      const normalizedStatus = (rData.status === 'going' || rData.status === 'attending' || rData.status === 'yes') 
+      if (isScout) {
+        const sId = rData.scoutId || userObj?.uid || key;
+        if (!rsvpByScoutMap.has(sId)) {
+          rsvpByScoutMap.set(sId, rData);
+        }
+      } else if (isParent) {
+        // Associate parent's RSVP with their linked scout(s)
+        const parentUid = userObj?.uid || rData.parentUid || key;
+        const parentEmail = (userObj?.email || rData.parentEmail || rData.userEmail || '').toLowerCase().trim();
+        
+        const linkedScoutsForParent = users.filter(s => {
+          if (s.role !== 'scout') return false;
+          if (Array.isArray(userObj?.linkedScoutIds) && userObj.linkedScoutIds.includes(s.uid)) return true;
+          if (Array.isArray(s.parentUids) && s.parentUids.includes(parentUid)) return true;
+          if (parentEmail && s.parentEmail && s.parentEmail.toLowerCase().trim() === parentEmail) return true;
+          if (parentEmail && s.parent1Email && s.parent1Email.toLowerCase().trim() === parentEmail) return true;
+          if (parentEmail && s.parent2Email && s.parent2Email.toLowerCase().trim() === parentEmail) return true;
+          if (Array.isArray(userObj?.children) && userObj.children.includes(s.uid)) return true;
+          if (rData.scoutId && s.uid === rData.scoutId) return true;
+          return false;
+        });
+
+        linkedScoutsForParent.forEach(s => {
+          if (!rsvpByScoutMap.has(s.uid)) {
+            rsvpByScoutMap.set(s.uid, {
+              ...rData,
+              scoutId: s.uid,
+              scoutName: s.fullName || s.username,
+              parentName: rData.userName || userObj?.parent1Name || userObj?.fullName || userObj?.username || 'Parent',
+              parentPhone: userObj?.parent1Phone || userObj?.phone || rData.userPhone || ''
+            });
+          }
+        });
+      } else if (isLeader) {
+        explicitLeaderAttendees.push({
+          uid: key,
+          rData,
+          userObj
+        });
+      }
+    });
+
+    const attendeeList = [];
+
+    // 1. Process all eligible scouts
+    eligibleScouts.forEach(scout => {
+      const rData = rsvpByScoutMap.get(scout.uid);
+      const rawStatus = (rData?.status || '').toLowerCase();
+      const normalizedStatus = (rawStatus === 'going' || rawStatus === 'attending' || rawStatus === 'yes') 
         ? 'attending' 
-        : (rData.status === 'cant_go' || rData.status === 'not_attending' || rData.status === 'no') 
+        : (rawStatus === 'cant_go' || rawStatus === 'not_attending' || rawStatus === 'no') 
         ? 'not_attending' 
-        : (rData.status === 'tentative' || rData.status === 'maybe')
+        : (rawStatus === 'tentative' || rawStatus === 'maybe')
+        ? 'tentative'
+        : 'pending';
+
+      const pId = scout.groupId || scout.patrolId;
+      const patrolObj = groups.find(g => g.id === pId);
+
+      // Find parent contact
+      const parentUser = users.find(u => 
+        u.role === 'parent' && (
+          (Array.isArray(u.linkedScoutIds) && u.linkedScoutIds.includes(scout.uid)) ||
+          (Array.isArray(scout.parentUids) && scout.parentUids.includes(u.uid)) ||
+          (u.email && scout.parentEmail && scout.parentEmail.toLowerCase().trim() === u.email.toLowerCase().trim()) ||
+          (u.email && scout.parent1Email && scout.parent1Email.toLowerCase().trim() === u.email.toLowerCase().trim()) ||
+          (u.email && scout.parent2Email && scout.parent2Email.toLowerCase().trim() === u.email.toLowerCase().trim())
+        )
+      );
+
+      const parentName = rData?.parentName || parentUser?.parent1Name || parentUser?.fullName || parentUser?.username || scout.parent1Name || scout.parentName || '';
+      const parentPhone = rData?.parentPhone || parentUser?.parent1Phone || parentUser?.phone || scout.parentPhone || scout.parent1Phone || scout.emergencyContactPhone || '';
+
+      attendeeList.push({
+        id: scout.uid,
+        userId: scout.uid,
+        scoutId: scout.uid,
+        name: scout.fullName || scout.username || 'Scout',
+        role: 'scout',
+        roleLabel: '⚜️ Scout',
+        rank: scout.rank || 'Scout',
+        patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Member',
+        status: normalizedStatus,
+        rawStatus: rData?.status || 'no_response',
+        dietary: rData?.dietary || scout.dietaryRestrictions || scout.allergies || '',
+        driverAvailable: !!rData?.driverAvailable,
+        seats: rData?.seats || 0,
+        notes: rData?.notes || '',
+        submittedAt: rData?.submittedAt || rData?.updatedAt || '',
+        parentName,
+        parentPhone,
+        userPhone: scout.scoutPhone || scout.phone || '',
+        userEmail: scout.email || scout.personalEmail || '',
+        photoURL: scout.photoURL || ''
+      });
+    });
+
+    // 2. Include participating leaders
+    explicitLeaderAttendees.forEach(({ uid, rData, userObj }) => {
+      const rawStatus = (rData?.status || '').toLowerCase();
+      const normalizedStatus = (rawStatus === 'going' || rawStatus === 'attending' || rawStatus === 'yes') 
+        ? 'attending' 
+        : (rawStatus === 'cant_go' || rawStatus === 'not_attending' || rawStatus === 'no') 
+        ? 'not_attending' 
+        : (rawStatus === 'tentative' || rawStatus === 'maybe')
         ? 'tentative'
         : 'pending';
 
@@ -1607,56 +1761,33 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       attendeeList.push({
         id: uid,
         userId: uid,
-        scoutId: rData.scoutId || (isScout ? uid : null),
-        name: rData.userName || rData.scoutName || userObj?.fullName || userObj?.username || 'Attendee',
-        role: isScout ? 'scout' : isParent ? 'parent' : isLeader ? 'leader' : 'family',
-        roleLabel: isScout ? '⚜️ Scout' : isParent ? '👨‍👩‍👧 Parent' : isLeader ? '🛡️ Leader' : 'Guest',
-        rank: userObj?.rank || rData.scoutRank || 'Scout',
-        patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Member',
+        scoutId: null,
+        name: userObj?.fullName || userObj?.username || rData.userName || 'Leader',
+        role: 'leader',
+        roleLabel: userObj?.leaderPosition ? `🛡️ ${userObj.leaderPosition}` : '🛡️ Leader',
+        rank: 'Leader',
+        patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Leadership',
         status: normalizedStatus,
-        rawStatus: rData.status,
-        dietary: rData.dietary || userObj?.dietaryRestrictions || userObj?.allergies || '',
-        driverAvailable: !!rData.driverAvailable,
-        seats: rData.seats || 0,
-        notes: rData.notes || '',
-        submittedAt: rData.submittedAt || rData.updatedAt || '',
-        parentName: rData.parentName || parentObj?.fullName || parentObj?.username || userObj?.parent1Name || '',
-        parentPhone: parentObj?.phone || parentObj?.parent1Phone || userObj?.parentPhone || userObj?.emergencyContactPhone || '',
-        userPhone: userObj?.phone || userObj?.scoutPhone || userObj?.personalPhone || '',
-        userEmail: userObj?.email || userObj?.personalEmail || rData.userEmail || '',
+        rawStatus: rData?.status || 'no_response',
+        dietary: rData?.dietary || userObj?.dietaryRestrictions || '',
+        driverAvailable: !!rData?.driverAvailable,
+        seats: rData?.seats || 0,
+        notes: rData?.notes || '',
+        submittedAt: rData?.submittedAt || rData?.updatedAt || '',
+        parentName: '',
+        parentPhone: '',
+        userPhone: userObj?.phone || userObj?.personalPhone || '',
+        userEmail: userObj?.email || '',
         photoURL: userObj?.photoURL || ''
       });
     });
 
-    // 2. Add pending scouts who haven't responded yet
-    eligibleScouts.forEach(scout => {
-      if (!processedUserIds.has(scout.uid)) {
-        const pId = scout.groupId || scout.patrolId;
-        const patrolObj = groups.find(g => g.id === pId);
-
-        attendeeList.push({
-          id: scout.uid,
-          userId: scout.uid,
-          scoutId: scout.uid,
-          name: scout.fullName || scout.username || 'Scout',
-          role: 'scout',
-          roleLabel: '⚜️ Scout',
-          rank: scout.rank || 'Scout',
-          patrol: patrolObj?.name ? `${patrolObj.name} Patrol` : 'Troop Member',
-          status: 'pending',
-          rawStatus: 'no_response',
-          dietary: scout.dietaryRestrictions || scout.allergies || '',
-          driverAvailable: false,
-          seats: 0,
-          notes: '',
-          submittedAt: '',
-          parentName: scout.parent1Name || scout.parentName || '',
-          parentPhone: scout.parentPhone || scout.parent1Phone || scout.emergencyContactPhone || '',
-          userPhone: scout.scoutPhone || scout.phone || '',
-          userEmail: scout.email || scout.personalEmail || '',
-          photoURL: scout.photoURL || ''
-        });
-      }
+    // Sort: attending first, then tentative, then pending, then declined
+    const orderMap = { attending: 0, tentative: 1, pending: 2, not_attending: 3 };
+    attendeeList.sort((a, b) => {
+      const ordDiff = (orderMap[a.status] ?? 9) - (orderMap[b.status] ?? 9);
+      if (ordDiff !== 0) return ordDiff;
+      return a.name.localeCompare(b.name);
     });
 
     // Counts & aggregations
@@ -3459,11 +3590,22 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                         {/* Take Attendance (Enabled for all leaders on all events) */}
                         <button
                           type="button"
-                          onClick={() => onNavigate && onNavigate('attendance', { 
-                            date: selectedEvent.date, 
-                            eventType: mapCategoryToEventType(selectedEvent.category || selectedEvent.eventType), 
-                            notes: selectedEvent.title 
-                          })}
+                          onClick={() => {
+                            const ev = selectedEvent;
+                            setSelectedEvent(null);
+                            if (onNavigate && ev) {
+                              onNavigate('attendance', { 
+                                date: ev.date, 
+                                eventType: mapCategoryToEventType(ev.category || ev.eventType, ev.title), 
+                                notes: ev.title + (ev.location ? ` (📍 ${ev.location})` : ''),
+                                eventId: ev.id,
+                                eventTitle: ev.title,
+                                groupId: ev.targetGroupId || ev.groupId || ev.patrolId || null,
+                                isFridaySession: ev.isFridaySession || false,
+                                mustAttend: ev.mustAttend || false
+                              });
+                            }
+                          }}
                           className="px-3.5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-teal-950/40 hover:scale-[1.02]"
                           title="Take Roll Call / Attendance for this event"
                         >
@@ -3620,11 +3762,57 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
                     <CheckSquare size={16} className="text-emerald-400" />
                     <span>
-                      {(selectedEvent.date || '') < todayStr ? 'Your Family Event Attendance Record' : 'Your Family Event RSVP'}
+                      {isParent 
+                        ? ((selectedEvent.date || '') < todayStr ? 'Confirm Child Attendance Record' : 'Confirm Child Event RSVP')
+                        : ((selectedEvent.date || '') < todayStr ? 'Your Family Event Attendance Record' : 'Your Family Event RSVP')}
                     </span>
                   </h4>
                   {rsvpSuccessMsg && <span className="text-xs text-emerald-400 font-bold">{rsvpSuccessMsg}</span>}
                 </div>
+
+                {/* Linked Child Selection for Parents */}
+                {isParent && linkedScouts.length > 0 && (
+                  <div className="bg-slate-950/80 border border-emerald-500/30 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-xl shrink-0">👦</span>
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">
+                          Confirming Scout Attendance:
+                        </span>
+                        <strong className="text-white text-xs truncate block">
+                          {selectedRsvpScoutId === 'all'
+                            ? linkedScouts.map(s => s.fullName || s.username).join(', ')
+                            : (linkedScouts.find(s => s.uid === selectedRsvpScoutId)?.fullName || 'Linked Scout')}
+                        </strong>
+                      </div>
+                    </div>
+                    {linkedScouts.length > 1 && (
+                      <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRsvpScoutId('all')}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition border cursor-pointer ${
+                            selectedRsvpScoutId === 'all' ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-750 hover:text-white'
+                          }`}
+                        >
+                          All Children ({linkedScouts.length})
+                        </button>
+                        {linkedScouts.map(s => (
+                          <button
+                            key={s.uid}
+                            type="button"
+                            onClick={() => setSelectedRsvpScoutId(s.uid)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition border cursor-pointer ${
+                              selectedRsvpScoutId === s.uid ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-750 hover:text-white'
+                            }`}
+                          >
+                            {s.fullName?.split(' ')[0] || s.username}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {selectedEvent.requiresRsvp === false && (
                   <div className="bg-sky-950/40 border border-sky-500/30 rounded-xl p-3 text-xs text-sky-300 flex items-center gap-2.5">

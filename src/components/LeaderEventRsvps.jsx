@@ -126,7 +126,26 @@ export default function LeaderEventRsvps({ currentUser = {}, onNavigate }) {
       evRsvps.forEach(r => {
         const sId = r.scoutId || r.userId;
         if (sId) {
-          rsvpByScout.set(sId, r);
+          const userObj = users.find(u => u.uid === sId);
+          if (userObj?.role === 'parent' || r.userRole === 'parent' || r.parentUid) {
+            // Map to linked scouts
+            const parentUid = userObj?.uid || r.parentUid || sId;
+            const parentEmail = (userObj?.email || r.parentEmail || r.userEmail || '').toLowerCase().trim();
+            const pScouts = scoutsList.filter(s => 
+              (Array.isArray(userObj?.linkedScoutIds) && userObj.linkedScoutIds.includes(s.uid)) ||
+              (Array.isArray(s.parentUids) && s.parentUids.includes(parentUid)) ||
+              (parentEmail && s.parentEmail?.toLowerCase() === parentEmail) ||
+              (parentEmail && s.parent1Email?.toLowerCase() === parentEmail) ||
+              (r.scoutId && s.uid === r.scoutId)
+            );
+            pScouts.forEach(s => {
+              if (!rsvpByScout.has(s.uid)) {
+                rsvpByScout.set(s.uid, { ...r, scoutId: s.uid, scoutName: s.fullName || s.username });
+              }
+            });
+          } else {
+            rsvpByScout.set(sId, r);
+          }
         }
       });
 

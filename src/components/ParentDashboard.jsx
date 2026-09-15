@@ -837,21 +837,13 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         await setDoc(doc(db, 'events', eventId, 'rsvps', targetId), rsvpPayload, { merge: true });
       }
 
-      // Also mark parent record in event subcollection
-      const parentRsvpId = `rsvp_${eventId}_${currentUser.uid}`;
-      const parentPayload = {
-        eventId,
-        userId: currentUser.uid,
-        userName: parent1Name || currentUser.fullName || currentUser.username || 'Parent',
-        userRole: 'parent',
-        userPhone: parent1Phone || currentUser.phoneNumber || '',
-        userEmail: parent1Email || currentUser.email || '',
-        status: status === 'going' ? 'attending' : 'not_attending',
-        linkedScoutIds: linkedScouts.map(s => s.uid),
-        updatedAt: new Date().toISOString()
-      };
-      await setDoc(doc(db, 'events', eventId, 'rsvps', currentUser.uid), parentPayload, { merge: true });
-      await setDoc(doc(db, 'event_rsvps', parentRsvpId), parentPayload, { merge: true });
+      // Clean up legacy standalone parent record if it existed
+      try {
+        await deleteDoc(doc(db, 'events', eventId, 'rsvps', currentUser.uid));
+        await deleteDoc(doc(db, 'event_rsvps', `rsvp_${eventId}_${currentUser.uid}`));
+      } catch (cleanErr) {
+        // ignore if not exists
+      }
 
     } catch (err) {
       console.error("RSVP update failed:", err);

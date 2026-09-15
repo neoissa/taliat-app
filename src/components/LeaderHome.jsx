@@ -253,20 +253,23 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   }, [scouts]);
 
   // 6. Category to EventType Mapper
-  const mapCategoryToEventType = (cat) => {
+  const mapCategoryToEventType = (cat, title = '') => {
     const c = (cat || '').toLowerCase();
-    if (c.includes('camp') || c === 'campout') return 'Campout';
-    if (c.includes('faith') || c.includes('halqa') || c.includes('study')) return 'Halqa / Study Circle';
-    if (c.includes('service') || c.includes('volunteer')) return 'Service Project';
-    if (c.includes('hike') || c.includes('outdoor')) return 'Day Hike';
-    if (c.includes('workshop') || c.includes('ceremony')) return 'Special Workshop';
-    return 'Weekly Troop Meeting';
+    const t = (title || '').toLowerCase();
+    if (t.includes('tuesday') || c.includes('tuesday')) return 'Tuesday Program';
+    if (t.includes('friday') || (c.includes('meeting') && !t.includes('tuesday'))) return 'Weekly Troop Meeting (Friday)';
+    if (c.includes('camp') || t.includes('camp')) return 'Campout';
+    if (c.includes('faith') || c.includes('halqa') || t.includes('halqa') || t.includes('circle') || t.includes('study')) return 'Halqa / Study Circle';
+    if (c.includes('service') || c.includes('volunteer') || t.includes('service') || t.includes('volunteer')) return 'Service Project / Volunteering';
+    if (c.includes('hike') || t.includes('hike')) return 'Day Hike';
+    if (c.includes('workshop') || c.includes('skills') || t.includes('workshop') || c.includes('ceremony') || c.includes('court')) return 'Special Workshop';
+    return 'Weekly Troop Meeting (Friday)';
   };
 
   // 7. Helper to cross-reference event with recorded attendance sessions
   const getEventAttendanceInfo = (ev) => {
-    if (!ev) return { recorded: false, presentCount: 0, totalCount: 0, turnoutPct: 0, session: null, mappedType: 'Weekly Troop Meeting' };
-    const mappedType = mapCategoryToEventType(ev.category || ev.type);
+    if (!ev) return { recorded: false, presentCount: 0, totalCount: 0, turnoutPct: 0, session: null, mappedType: 'Weekly Troop Meeting (Friday)' };
+    const mappedType = mapCategoryToEventType(ev.category || ev.type, ev.title);
     const session = (attendanceSessions || []).find(s => 
       s && s.date === ev.date && 
       (s.eventType === mappedType || (typeof s.notes === 'string' && typeof ev.title === 'string' && s.notes.includes(ev.title)))

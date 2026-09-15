@@ -169,6 +169,7 @@ export const mapCategoryToEventType = (cat, title = '') => {
 
 export default function PatrolAttendance({ currentUser, initialData }) {
   const superUser = isSuperUser(currentUser);
+  const userPatrolId = currentUser?.groupId || currentUser?.patrolId || '';
   const isLeaderOrOwner = superUser || currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   // Patrol Scouts State
@@ -294,7 +295,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     });
 
     return () => unsub();
-  }, [currentUser, isSuperUser, userPatrolId, scouts]);
+  }, [currentUser?.uid, superUser, userPatrolId, scouts, accessibleGroups, groups]);
 
   // 5. Fetch Scheduled Events
   useEffect(() => {
@@ -319,6 +320,9 @@ export default function PatrolAttendance({ currentUser, initialData }) {
         setSessionNights(cfg.defaultNights);
       }
       if (initialData.notes) setSessionNotes(initialData.notes);
+      if (initialData.groupId && initialData.groupId !== 'all') {
+        setSelectedGroupId(initialData.groupId);
+      }
     }
   }, [initialData]);
 
@@ -626,11 +630,10 @@ export default function PatrolAttendance({ currentUser, initialData }) {
     else greenCount++;
   });
 
-  const userPatrolId = currentUser?.groupId || currentUser?.patrolId || '';
   const assignedPatrol = groups.find(g => g.id === userPatrolId || (currentUser?.patrolName && g.name.toLowerCase() === currentUser.patrolName.toLowerCase()));
 
   const filteredHistoricalSessions = historicalSessions.filter(s => {
-    if (isSuperUser && selectedGroupId !== 'all') {
+    if (superUser && selectedGroupId !== 'all') {
       const grp = groups.find(g => g.id === selectedGroupId);
       const matchGroup = s.groupId === selectedGroupId || s.patrolId === selectedGroupId || (grp && s.patrolName && s.patrolName.toLowerCase() === grp.name.toLowerCase());
       const matchScout = scouts.some(scout => s.records && s.records[scout.uid]);
@@ -681,7 +684,7 @@ export default function PatrolAttendance({ currentUser, initialData }) {
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">
                   Patrol Attendance & Retention Engine
                 </span>
-                {isSuperUser ? (
+                {superUser ? (
                   <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     👑 Full Troop Access (Super User)
                   </span>
