@@ -4438,10 +4438,14 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { id: 'general', label: '📢 Standard Reminder', desc: 'Full event details, date, time, venue, and gear' },
+                  { id: 'general', label: '📢 Template A: Weekly Session', desc: 'Standard reminder with When, Where, Gear, Note, RSVP & Carpool' },
+                  { id: 'campout', label: '⛺ Template B: Overnight Campout', desc: 'Overnight schedule, packing checklist & permission slip' },
+                  { id: 'cancel', label: '🚫 Template C: Cancellation', desc: 'Inclement weather / postponement with next session note' },
+                  { id: 'recap', label: '🙏 Template D: Event Recap', desc: 'Post-event thank you, accomplishments & driver appreciation' },
+                  { id: 'nudge', label: '⚡ Template E: Day-of Nudge', desc: 'Ultra-concise fold-free reminder for tonight' },
                   { id: 'urgent', label: '🚨 Urgent / Tomorrow', desc: 'High-priority alert for tomorrow or tonight' },
                   { id: 'rsvp', label: '📝 RSVP Confirmation', desc: 'Focus on attendance confirmation & carpool rides' },
-                  { id: 'packing', label: '🎒 Gear & Uniform', desc: 'Emphasize Class A uniform & packing list' }
+                  { id: 'packing', label: '🎒 Gear & Uniform', desc: 'Emphasize Class A/B uniform & packing checklist' }
                 ].map(tmpl => (
                   <button
                     key={tmpl.id}

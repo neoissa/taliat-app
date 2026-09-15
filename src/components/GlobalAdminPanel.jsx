@@ -1263,10 +1263,22 @@ export default function GlobalAdminPanel({ currentUser }) {
                   label: "📅 Meeting Reminder",
                   text: `${greeting}
 
-Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
+📢 *Weekly Scouting Session — Reminder*
+A regular troop session focused on character building, scout skills, and youth development.
 
-🔗 *Portal Link:* ${appUrl}
-📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.${closing}`
+📅 *When:* Friday · 6:30–9:30 PM
+📍 *Where:* 6514 Kinloch St., Dearborn Heights, MI 48127
+
+🎒 *Required Gear:* Complete Class A Field Uniform, Scout Handbook, and water bottle
+
+🔗 *RSVP by 5:00 PM today:*
+${appUrl}
+
+🚗 _Side note: reply in this group if you can drive scouts tonight._
+
+📞 *Questions:* message any of the scout leaders directly.
+
+${closing}`
                 });
 
                 tmpls.push({

@@ -1073,10 +1073,22 @@ function ScoutDetail({ scout, currentUser, onBack, onScheduleMeeting }) {
                     label: "📅 Meeting Reminder", 
                     text: `${greeting}
 
-Just a quick note to remind you about our upcoming Dhulfiqār Scouting Session.
+📢 *Weekly Scouting Session — Reminder*
+A regular troop session focused on character building, scout skills, and youth development.
 
-🔗 *Portal Link:* ${appUrl}
-📍 *Preparation:* Please arrive on time in full uniform with your Scout Handbook and notebook ready.${closing}` 
+📅 *When:* Friday · 6:30–9:30 PM
+📍 *Where:* 6514 Kinloch St., Dearborn Heights, MI 48127
+
+🎒 *Required Gear:* Complete Class A Field Uniform, Scout Handbook, and water bottle
+
+🔗 *RSVP by 5:00 PM today:*
+${appUrl}
+
+🚗 _Side note: reply in this group if you can drive scouts tonight._
+
+📞 *Questions:* message any of the scout leaders directly.
+
+${closing}` 
                   },
                   { 
                     label: "🛡️ Safeguarding Video Reminder", 
@@ -1640,10 +1652,22 @@ export default function PatrolRoster({ currentUser = {} }) {
     if (whatsappTemplate === 'meeting') {
       return `${greeting}
 
-Attendance reminder for our upcoming Dhulfiqār Scouting Session.
+📢 *Weekly Scouting Session — Reminder*
+A regular troop session focused on character building, scout skills, and youth development.
 
-🔗 *Leadership Portal:* ${appUrl}
-📍 *Protocol:* Arrive punctually in full uniform with your Scout Handbook and notebook prepared.${lockedClosing}`;
+📅 *When:* Friday · 6:30–9:30 PM
+📍 *Where:* 6514 Kinloch St., Dearborn Heights, MI 48127
+
+🎒 *Required Gear:* Complete Class A Field Uniform, Scout Handbook, and water bottle
+
+🔗 *RSVP by 5:00 PM today:*
+${appUrl}
+
+🚗 _Side note: reply in this group if you can drive scouts tonight._
+
+📞 *Questions:* message any of the scout leaders directly.
+
+${lockedClosing}`;
     }
 
     if (whatsappTemplate === 'video') {

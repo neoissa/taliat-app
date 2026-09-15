@@ -1,38 +1,26 @@
 /**
- * KashafVoice v4.0 — The Kashaf Parent Messenger (Shia Islamic Edition)
+ * KashafVoice v4.0 — WhatsApp Announcement & Communication Engine
+ * Based on: WhatsApp Announcement Rules — Dhulfiqār Scouts (Version 2.1)
  * 
- * Role: Lead Community Communicator for the Kashaf parents.
- * Objective: Refine and reformat any raw text into a warm, Twelver Shia faith-rooted, and highly readable WhatsApp message.
- * 
- * 1️⃣ TONE & BEHAVIOR:
- * - Voice: Warm, community-centered, and respectful. Root all encouragement in the ethics (akhlāq) and values (tarbiyah) of the Ahl al-Bayt (ʿa). Never robotic or corporate.
- * - WhatsApp Native: Output strictly in WhatsApp format. Use asterisks for bolding (*text*), underscores for italics (_text_), and completely avoid Markdown headers (###).
- * - Logic: Do NOT ask for event details (date/time/location) unless they are already in the raw text. If they are missing, simply format the message based on the content provided.
- * - Transliteration: Use academic diacritics (ā, ī, ū, ʿ, ʾ) for all Islamic terms. Always affix appropriate honorifics for the Prophet Muḥammad (ṣ), the Ahl al-Bayt (ʿa), and Imam al-Mahdī (ʿaj).
- * 
- * 2️⃣ GREETING (LOCKED):
- * 🌿 Assalāmu ʿAlaykum dear parents,🌿
- * Hope you are all doing well 😊 ✨
- * (Exactly two lines. One blank line follows.)
- * 
- * 3️⃣ MESSAGE BODY STRUCTURE:
- * - Purpose Line: 1–2 lines max to set the context.
- * - Content Refinement: Break long paragraphs into short, 1–3 line "WhatsApp-style" blocks for easy reading on mobile.
- * - Structured Bullets (Optional): If the message contains list items, use one emoji per bullet and one bullet per line.
- * 
- * 4️⃣ QURʾĀN & HADITH BLOCK (OPTIONAL):
- * بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
- * [Arabic Text with full tashkīl]
- * [English translation ONLY if requested]
- * صَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ
- * 
- * 5️⃣ CLOSING (LOCKED):
- * *Jazākum Allāhu khayran for your continued support 🙏*
- * *✨ [Assigned Patrol Name (optional)] .✨*
- * *⚜️ Dhulfiqār Scouts Team⚜️*
+ * Rules:
+ * 1. The one-pass rule (say each fact exactly once)
+ * 2. Fixed block order: Greeting -> Header -> Purpose -> Details (When/Where) -> Gear -> Note -> RSVP -> Carpool -> Questions -> Du'a -> Signature
+ * 3. Length & fold discipline: Routine messages under ~700 chars, When & Where in first 6 lines
+ * 4. WhatsApp formatting: Single asterisks *bold*, _italics_, bare URL on its own line, one link per message
+ * 5. Emoji discipline: 🌿 greeting, 📢 header, 📅 date, 📍 location, 🎒 gear, 📝 note, 🔗 link, 🚗 carpool, 📞 contact, 🙏 du'a, ⚜️ signature
+ * 6. Bare RSVP URL on its own line for Open Graph preview card
+ * 7. One channel per action: RSVP in portal, Carpool in group reply, Questions to leader directly
+ * 8. Date, time, and address formatting: "Weekday, Month D, YYYY · H:MM–H:MM AM/PM" & "6514 Kinloch St., Dearborn Heights, MI 48127"
+ * 9. Gear label matches item count: 1 item -> *Required Gear:*, 2+ items -> *Packing Checklist:* with "• "
+ * 10. Templates A (Weekly), B (Overnight), C (Cancellation), D (Recap), E (Day-of nudge)
  */
 
-// Helper to apply academic transliteration (ā, ī, ū, ʿ, ʾ) and Twelver Shia honorifics
+export const APP_PORTAL_URL = 'https://taliat-app.vercel.app/';
+export const DEFAULT_HQ_ADDRESS = '6514 Kinloch St., Dearborn Heights, MI 48127';
+export const DEFAULT_PATROL_SIGNATURE = 'Patrol 2 — Ṭalīʿat Abū al-Faḍl al-ʿAbbās';
+export const TEAM_SIGNATURE = '⚜️ Dhulfiqār Scouts Team ⚜️';
+
+// Academic transliteration (ā, ī, ū, ʿ, ʾ) and Shia honorifics
 export function applyIslamicTransliteration(text) {
   if (!text) return '';
   const map = [
@@ -96,64 +84,466 @@ export function applyIslamicTransliteration(text) {
 }
 
 /**
- * 2️⃣ ROLE-AWARE GREETING BUILDER
- * - Parent: "🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨"
- * - Leader: "🌿 Assalāmu ʿAlaykum dear Leader ${name},🌿\nHope you are doing well 😊 ✨"
- * - Scout: "🌿 Assalāmu ʿAlaykum dear Scout ${name},🌿\nHope you are doing well 😊 ✨"
+ * Standard Patrol Signature Formatter
+ * Formats according to Rule 14:
+ * "Patrol 2 — Ṭalīʿat Abū al-Faḍl al-ʿAbbās"
+ */
+export function formatPatrolSignature(patrolName = '') {
+  if (!patrolName || typeof patrolName !== 'string') {
+    return DEFAULT_PATROL_SIGNATURE;
+  }
+  const clean = patrolName.trim();
+  if (!clean || clean.toLowerCase() === 'all' || clean.toLowerCase() === 'troop') {
+    return DEFAULT_PATROL_SIGNATURE;
+  }
+  if (clean.toLowerCase().startsWith('patrol ')) {
+    return clean;
+  }
+  if (clean.toLowerCase().includes('ṭalīʿat') || clean.toLowerCase().includes('talia')) {
+    return `Patrol — ${clean}`;
+  }
+  return `Patrol 2 — Ṭalīʿat ${clean}`;
+}
+
+/**
+ * Role-Aware Greeting Builder (Rule 2 & Rule 5)
+ * Exactly one line, framed with 🌿
  */
 export function getKashafGreeting(roleOrType = 'parent', name = '') {
   const cleanName = name ? name.trim() : '';
   const type = (roleOrType || '').toLowerCase();
-  
+
   if (type === 'parent' || type === 'parents') {
-    return '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
+    return '🌿 Assalāmu ʿAlaykum dear parents 🌿';
   }
-  
   if (type === 'leader' || type === 'owner') {
     const leaderTitle = cleanName ? `dear Leader ${cleanName}` : 'dear Leader';
-    return `🌿 Assalāmu ʿAlaykum ${leaderTitle},🌿\nHope you are doing well 😊 ✨`;
+    return `🌿 Assalāmu ʿAlaykum ${leaderTitle} 🌿`;
   }
-  
   if (type === 'scout') {
     const scoutTitle = cleanName ? `dear Scout ${cleanName}` : 'dear Scout';
-    return `🌿 Assalāmu ʿAlaykum ${scoutTitle},🌿\nHope you are doing well 😊 ✨`;
+    return `🌿 Assalāmu ʿAlaykum ${scoutTitle} 🌿`;
   }
-  
   if (cleanName) {
-    return `🌿 Assalāmu ʿAlaykum dear ${cleanName},🌿\nHope you are doing well 😊 ✨`;
+    return `🌿 Assalāmu ʿAlaykum dear ${cleanName} 🌿`;
   }
-  
-  return '🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨';
+  return '🌿 Assalāmu ʿAlaykum dear parents 🌿';
 }
 
-export const LOCKED_GREETING = `🌿 Assalāmu ʿAlaykum dear parents,🌿\nHope you are all doing well 😊 ✨`;
+export const LOCKED_GREETING = '🌿 Assalāmu ʿAlaykum dear parents 🌿';
 
 /**
- * 4️⃣ QURʾĀN & HADITH BLOCK (OPTIONAL)
- * Formats strictly with Bismillah, Tashkīl Arabic, optional English translation, and Sadaqallāh.
+ * Standard Closing Block (Rule 2 & Rule 5)
+ * Closing duʿāʾ line + Patrol signature + Team signature
+ */
+export function getLockedClosing(patrolName = '', variant = 'default') {
+  const patrolSig = formatPatrolSignature(patrolName);
+  const duaLine = (variant === 'cancel' || variant === 'cancellation')
+    ? 'Jazākum Allāhu khayran for your understanding 🙏'
+    : 'Jazākum Allāhu khayran for your continued support 🙏';
+
+  return `${duaLine}\n${patrolSig}\n${TEAM_SIGNATURE}`;
+}
+
+/**
+ * Format Date & Time according to Rule 8:
+ * "Tuesday, September 15, 2026 · 7:15–8:30 PM"
+ * Overnight: "Fri, October 9 5:00 PM → Sun, October 11 11:00 AM"
+ */
+export function formatEventWhen(dateStr = '', timeStr = '', endDateStr = '', endTimeStr = '') {
+  if (!dateStr) return '';
+
+  let datePart = dateStr;
+
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      if (!isNaN(dObj.getTime())) {
+        datePart = dObj.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+    }
+  } catch {
+    datePart = dateStr;
+  }
+
+  // Handle multi-day / overnight
+  if (endDateStr && endDateStr !== dateStr) {
+    try {
+      const p1 = dateStr.split('-');
+      const p2 = endDateStr.split('-');
+      const d1 = new Date(parseInt(p1[0], 10), parseInt(p1[1], 10) - 1, parseInt(p1[2], 10));
+      const d2 = new Date(parseInt(p2[0], 10), parseInt(p2[1], 10) - 1, parseInt(p2[2], 10));
+      const s1 = d1.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+      const s2 = d2.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+      const t1 = timeStr ? ` ${timeStr.replace(/\s*at\s*/i, '').trim()}` : '';
+      const t2 = endTimeStr ? ` ${endTimeStr.replace(/\s*at\s*/i, '').trim()}` : '';
+      return `${s1}${t1} → ${s2}${t2}`;
+    } catch {
+      // fallback
+    }
+  }
+
+  // Standard single-day time formatting
+  let cleanTime = (timeStr || '').trim();
+  if (cleanTime) {
+    // Replace " - " or " to " with en-dash "–"
+    cleanTime = cleanTime.replace(/\s*(?:-|to)\s*/gi, '–').replace(/\s*at\s*/i, '').trim();
+    return `${datePart} · ${cleanTime}`;
+  }
+
+  return datePart;
+}
+
+/**
+ * Format Location Address according to Rule 8:
+ * "6514 Kinloch St., Dearborn Heights, MI 48127"
+ * Bare unwrapped text, comma after street, state and ZIP.
+ */
+export function formatEventWhere(locationStr = '') {
+  if (!locationStr || !locationStr.trim()) {
+    return DEFAULT_HQ_ADDRESS;
+  }
+  let loc = locationStr.trim();
+  // Strip enclosing parentheses or quotes
+  loc = loc.replace(/^\((.*)\)$/, '$1').replace(/^"(.*)"$/, '$1').trim();
+  return loc;
+}
+
+/**
+ * Format Gear block according to Rule 9:
+ * 1 item: 🎒 *Required Gear:* {item}
+ * 2+ items: 🎒 *Packing Checklist:*\n• item 1\n• item 2
+ */
+export function formatGearBlock(requiredItems = '') {
+  if (!requiredItems || !requiredItems.trim()) return '';
+
+  const rawItems = requiredItems
+    .split(/[\n;]+/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(l => l.replace(/^[-*•\d+.)]\s*/, '').trim())
+    .filter(Boolean);
+
+  if (rawItems.length === 0) return '';
+
+  if (rawItems.length === 1) {
+    return `🎒 *Required Gear:* ${rawItems[0]}`;
+  }
+
+  const checklistLines = rawItems.map(item => `• ${item}`);
+  return `🎒 *Packing Checklist:*\n${checklistLines.join('\n')}`;
+}
+
+/**
+ * Format Note block according to Rule 2 & Rule 9
+ */
+export function formatNoteBlock(notes = '') {
+  if (!notes || !notes.trim()) return '';
+
+  const rawLines = notes
+    .split(/[\n]+/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(l => l.replace(/^[-*•\d+.)]\s*/, '').trim())
+    .filter(Boolean);
+
+  if (rawLines.length === 0) return '';
+
+  if (rawLines.length === 1) {
+    return `📝 *Note:* ${rawLines[0]}`;
+  }
+
+  const noteLines = rawLines.map(line => `• ${line}`);
+  return `📝 *Note:*\n${noteLines.join('\n')}`;
+}
+
+/**
+ * Scriptural Block Formatter (Optional)
  */
 export function formatIsolatedQuranBlock(arabic, translation = '') {
+  if (!arabic || !arabic.trim()) return '';
   let block = '\n\nبِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n';
-  if (arabic) block += `${arabic.trim()}\n`;
-  if (translation) block += `"${translation.trim()}"\n`;
+  block += `${arabic.trim()}\n`;
+  if (translation && translation.trim()) block += `"${translation.trim()}"\n`;
   block += 'صَدَقَ اللَّهُ الْعَلِيُّ الْعَظِيمُ';
   return block;
 }
 
 /**
- * 5️⃣ LOCKED CLOSING
- * Uses asterisks for WhatsApp bold on each line, no extra lines.
- * Only outputs the patrol line if a patrolName is explicitly provided.
+ * ── MASTER WHATSAPP ANNOUNCEMENT GENERATOR ──
+ * Implements Templates A, B, C, D, E and custom types strictly following Rules 1-15.
  */
-export function getLockedClosing(patrolName = '') {
-  const patrolClean = patrolName && typeof patrolName === 'string' ? patrolName.trim() : '';
-  const patrolLine = patrolClean ? `\n*✨ ${patrolClean} .✨*` : '';
+export function generateEventReminderWhatsApp(event, options = {}) {
+  if (!event) return '';
+
+  const opts = typeof options === 'string' ? { patrolName: options } : (options || {});
+  const {
+    patrolName = DEFAULT_PATROL_SIGNATURE,
+    reminderType = 'general', // 'general' (Template A) | 'campout' (Template B) | 'cancel' (Template C) | 'recap' (Template D) | 'nudge' (Template E) | 'urgent' | 'rsvp' | 'packing'
+    templateType = '',
+    customPurpose = '',
+    customNote = '',
+    rsvpDeadline = '',
+    carpoolNote = '',
+    nextSessionStr = '',
+    cancellationReason = '',
+    includeRsvpLink = true,
+    appUrl = APP_PORTAL_URL
+  } = opts;
+
+  const mode = templateType || reminderType || 'general';
+  const eventTitle = applyIslamicTransliteration(event.title || 'Youth Scouting Program').trim();
+
+  // ─────────────────────────────────────────────────────────
+  // TEMPLATE E — Day-of Nudge (Rule 2 & Template E)
+  // Drops greeting and signature frame. Under 200 chars.
+  // ─────────────────────────────────────────────────────────
+  if (mode === 'nudge' || mode === 'template_e' || mode === 'day_of') {
+    const timeClean = (event.time || '7:15–8:30 PM').replace(/\s*(?:-|to)\s*/gi, '–').replace(/\s*at\s*/i, '').trim();
+    const whereStr = formatEventWhere(event.location);
+    const linkLine = includeRsvpLink ? `\n\n🔗 *Last-minute RSVP:*\n${appUrl}` : '';
+
+    return `📢 *Tonight:* ${eventTitle}, ${timeClean}\n📍 ${whereStr}${linkLine}`;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // TEMPLATE C — Cancellation or Postponement (Template C)
+  // ─────────────────────────────────────────────────────────
+  if (mode === 'cancel' || mode === 'template_c' || mode === 'cancellation') {
+    const greeting = LOCKED_GREETING;
+    const whenFormatted = formatEventWhen(event.date, event.time);
+    const header = `📢 *Cancelled: ${eventTitle}, ${whenFormatted}*`;
+    const reasonLine = cancellationReason || customPurpose || 'Due to inclement weather / scheduling conflict.';
     
-  return `\n\n*Jazākum Allāhu khayran for your continued support 🙏*${patrolLine}\n*⚜️ Dhulfiqār Scouts Team⚜️*`;
+    let nextBlock = '';
+    if (nextSessionStr) {
+      nextBlock = `\n\n📅 *Next session:* ${nextSessionStr}`;
+    }
+
+    const noteBlock = `\n\n📝 *Note:*\n• Nothing to drop off and no RSVP needed tonight\n• Any RSVP already submitted carries over`;
+    const questionsBlock = `\n\n📞 *Questions:* message any of the scout leaders directly.`;
+    const closing = `\n\n${getLockedClosing(patrolName, 'cancel')}`;
+
+    return `${greeting}\n\n${header}\n${reasonLine}${nextBlock}${noteBlock}${questionsBlock}${closing}`;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // TEMPLATE D — Post-Event Recap / Thank You (Template D)
+  // ─────────────────────────────────────────────────────────
+  if (mode === 'recap' || mode === 'template_d' || mode === 'thank_you') {
+    const greeting = LOCKED_GREETING;
+    const header = `📢 *${eventTitle} — Thank You*`;
+    const accomplishments = customPurpose || event.description || 'An inspiring session focused on scout skills, brotherhood, and leadership.';
+    
+    let nextBlock = '';
+    if (nextSessionStr) {
+      nextBlock = `\n\n📅 *Next session:* ${nextSessionStr}`;
+    }
+
+    const carpoolSideNote = `\n\n🚗 _Side note: shukran to the parents who drove this week._`;
+    const closing = `\n\n${getLockedClosing(patrolName)}`;
+
+    return `${greeting}\n\n${header}\n${accomplishments}${nextBlock}${carpoolSideNote}${closing}`;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // TEMPLATE B — Overnight Campout (Template B)
+  // ─────────────────────────────────────────────────────────
+  if (mode === 'campout' || mode === 'template_b' || mode === 'overnight') {
+    const greeting = LOCKED_GREETING;
+    const header = `📢 *${eventTitle} — Overnight*`;
+    const purpose = customPurpose || event.description || 'A full weekend of outdoor skills, campfire tarbiyah, and advancement.';
+    const whenStr = formatEventWhen(event.date, event.time, event.endDate || event.date, event.endTime || '11:00 AM');
+    const whereStr = formatEventWhere(event.location);
+
+    const detailsBlock = `📅 *When:* ${whenStr}\n📍 *Where:* ${whereStr}`;
+
+    const defaultCampoutGear = 'Field Uniform (Class A) for travel\nActivity Uniform (Class B)\nSleeping bag and sleeping mat\nMess kit and water bottle\nRain jacket and warm layer\nToiletries and towel';
+    const gearBlock = formatGearBlock(event.requiredItems || defaultCampoutGear);
+
+    const defaultCampoutNotes = customNote || 'Meals provided from Friday dinner through Sunday breakfast\nDrop-off and pickup at 6514 Kinloch St.\nRain or shine unless a cancellation is posted in this group\nPermission slip must be submitted before departure';
+    const noteBlock = formatNoteBlock(defaultCampoutNotes);
+
+    const deadline = rsvpDeadline || event.registrationDeadline || 'Wednesday, 8:00 PM';
+    const rsvpBlock = includeRsvpLink
+      ? `🔗 *RSVP and permission slip by ${deadline}:*\n${appUrl}`
+      : '';
+
+    const carpoolSideNote = carpoolNote || '🚗 _Side note: reply in this group if you can drive scouts._';
+    const questionsBlock = '📞 *Questions:* message any of the scout leaders directly.';
+    const closing = getLockedClosing(patrolName);
+
+    const blocks = [
+      greeting,
+      `${header}\n${purpose}`,
+      detailsBlock,
+      gearBlock,
+      noteBlock,
+      rsvpBlock,
+      carpoolSideNote,
+      questionsBlock,
+      closing
+    ].filter(Boolean);
+
+    return blocks.join('\n\n');
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // TEMPLATE A — Standard Weekly Session / Reminder (Default)
+  // ─────────────────────────────────────────────────────────
+  const greeting = LOCKED_GREETING;
+  
+  let header = `📢 *${eventTitle} — Reminder*`;
+  if (mode === 'urgent') {
+    header = `📢 *${eventTitle} — Urgent Reminder*`;
+  } else if (mode === 'rsvp') {
+    header = `📢 *${eventTitle} — Attendance RSVP*`;
+  } else if (mode === 'packing') {
+    header = `📢 *${eventTitle} — Gear & Uniform Reminder*`;
+  }
+
+  // Single-sentence purpose
+  let purpose = customPurpose;
+  if (!purpose) {
+    if (event.description && event.description.trim()) {
+      purpose = applyIslamicTransliteration(event.description.trim().split('\n')[0]);
+    } else {
+      purpose = 'An evening focused on character building, scout skills, and youth development.';
+    }
+  }
+
+  const whenStr = formatEventWhen(event.date, event.time);
+  const whereStr = formatEventWhere(event.location);
+  const detailsBlock = `📅 *When:* ${whenStr}\n📍 *Where:* ${whereStr}`;
+
+  // Gear
+  const defaultGear = event.requiredItems || 'Activity Uniform (Class B)';
+  const gearBlock = formatGearBlock(defaultGear);
+
+  // Optional Note
+  const noteBlock = customNote ? formatNoteBlock(customNote) : (event.notes ? formatNoteBlock(event.notes) : '');
+
+  // RSVP with deadline in label
+  let deadline = rsvpDeadline || event.registrationDeadline || event.deadline;
+  if (!deadline) {
+    deadline = '5:00 PM today';
+  }
+  const rsvpBlock = includeRsvpLink
+    ? (event.requiresRsvp === false
+        ? `🔗 *Portal Link:*\n${appUrl}`
+        : `🔗 *RSVP by ${deadline}:*\n${appUrl}`)
+    : '';
+
+  // Carpool side note
+  const carpoolSideNote = carpoolNote || '🚗 _Side note: reply in this group if you can drive scouts tonight._';
+
+  // Questions
+  const questionsBlock = '📞 *Questions:* message any of the scout leaders directly.';
+
+  // Closing
+  const closing = getLockedClosing(patrolName);
+
+  const blocks = [
+    greeting,
+    `${header}\n${purpose}`,
+    detailsBlock,
+    gearBlock,
+    noteBlock,
+    rsvpBlock,
+    carpoolSideNote,
+    questionsBlock,
+    closing
+  ].filter(Boolean);
+
+  return blocks.join('\n\n');
 }
 
 /**
- * 6️⃣ DEDICATED LEADER ONBOARDING & SETUP MESSAGE GENERATOR
+ * Backward-compatible wrapper
+ */
+export function formatKashafEventWhatsApp(event, optionsOrPatrol = '') {
+  return generateEventReminderWhatsApp(event, optionsOrPatrol);
+}
+
+/**
+ * Lesson Plan WhatsApp Briefing Generator (Rules 1-15)
+ */
+export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
+  if (!plan) return '';
+
+  const titleFormatted = applyIslamicTransliteration(plan.title || 'Weekly Scouting Session').trim();
+  const greeting = LOCKED_GREETING;
+  const header = `📢 *${titleFormatted} — Lesson Plan Briefing*`;
+  const purpose = 'Our weekly scouting session plan, skill objectives, and tarbiyah milestones.';
+
+  const blocks = [greeting, `${header}\n${purpose}`];
+
+  // Date block if present
+  if (plan.date) {
+    const whenStr = formatEventWhen(plan.date);
+    if (whenStr) {
+      blocks.push(`📅 *When:* ${whenStr}`);
+    }
+  }
+
+  // Milestones & Activities
+  if (plan.content && plan.content.trim()) {
+    const rawLines = plan.content.split('\n').map(l => l.trim()).filter(Boolean);
+    const bullets = rawLines.map(line => {
+      const clean = line.replace(/^[-*•\d+.)]\s*/, '').trim();
+      return `• ${applyIslamicTransliteration(clean)}`;
+    });
+    if (bullets.length > 0) {
+      blocks.push(`🎯 *Session Milestones:*\n${bullets.join('\n')}`);
+    }
+  }
+
+  // Faith & Akhlaq Focus
+  if (plan.islamicPrep && plan.islamicPrep.trim()) {
+    const prepClean = applyIslamicTransliteration(plan.islamicPrep.trim());
+    blocks.push(`🕌 *Faith & Akhlāq Focus:*\n${prepClean}`);
+  }
+
+  // Curriculum Link (Bare link on own line)
+  blocks.push(`🔗 *Portal Link:*\n${APP_PORTAL_URL}`);
+
+  // Questions
+  blocks.push('📞 *Questions:* message any of the scout leaders directly.');
+
+  // Closing
+  blocks.push(getLockedClosing(patrolName));
+
+  return blocks.join('\n\n');
+}
+
+/**
+ * Generic Raw Text Formatter strictly applying WhatsApp rules
+ */
+export function formatKashafMessage(rawText, patrolName = '', customPurpose = '', recipient = { type: 'parent', name: '' }) {
+  const greeting = getKashafGreeting(recipient?.type || 'parent', recipient?.name || '');
+  const cleanContent = applyIslamicTransliteration(rawText || '').trim();
+  const closing = getLockedClosing(patrolName);
+
+  const blocks = [greeting];
+  if (customPurpose && customPurpose.trim()) {
+    blocks.push(customPurpose.trim());
+  }
+  if (cleanContent) {
+    blocks.push(cleanContent);
+  }
+  blocks.push(closing);
+
+  return blocks.join('\n\n');
+}
+
+/**
+ * Leader Onboarding & Credentials Message (Rule 4, 5, 14)
  */
 export function generateLeaderInviteMessage({
   name = 'Leader',
@@ -162,35 +552,40 @@ export function generateLeaderInviteMessage({
   password = '',
   leaderPosition = 'Scout Leader',
   patrolName = '',
-  appUrl = 'https://taliat-app.vercel.app/'
+  appUrl = APP_PORTAL_URL
 }) {
   const greeting = getKashafGreeting('leader', name);
-  const patrolClosing = getLockedClosing(patrolName);
-  const unitLine = patrolName && patrolName.trim() ? patrolName.trim() : 'Dhulfiqār Leadership HQ';
+  const patrolSig = formatPatrolSignature(patrolName);
   const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
-  
+
   return `${greeting}
 
-We are pleased to provide your leadership access credentials and onboarding details for the *Dhulfiqār Scouts Portal*:
+We are pleased to provide your leadership access credentials for the *Dhulfiqār Scouts Portal*:
 
 📌 *Leadership Role:* ${leaderPosition || 'Scout Leader'}
-🛡️ *Assigned Unit / Patrol:* ${unitLine}
+🛡️ *Assigned Unit:* ${patrolSig}
 
-🔗 *Portal Link:* ${appUrl}
+🔗 *Portal Link:*
+${appUrl}
+
 👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
-📌 *Required Leader Setup & Action Checklist:*
-1. 📱 Log into the leadership portal using the link above.
-2. 👤 Go to *"My Profile"* (👤) to set your secure personal password and update personal contact details.
-3. 📜 Upload your profile photo and current *Youth Protection Training (YPT) / Safety Protection Training (SPT)* certificate.
-4. 📋 Review and manage your assigned patrol roster, scout attendance records, and advancement verifications.
+📝 *Required Setup Checklist:*
+• Log into the leadership portal using the link above.
+• Go to *My Profile* to set your personal password and update contact details.
+• Upload your current Youth Protection Training (YPT/SPT) certificate.
+• Review your assigned patrol roster and attendance records.
 
-Jazākum Allāhu khayran for your leadership, dedication, and service to the youth!${patrolClosing}`;
+📞 *Questions:* reach out to Troop Administration directly.
+
+Jazākum Allāhu khayran for your leadership and dedication!
+${patrolSig}
+${TEAM_SIGNATURE}`;
 }
 
 /**
- * 7️⃣ DEDICATED SCOUT LOGIN & ONBOARDING MESSAGE GENERATOR
+ * Scout Login & Onboarding Message (Rule 4, 5, 14)
  */
 export function generateScoutInviteMessage({
   name = 'Scout',
@@ -198,33 +593,37 @@ export function generateScoutInviteMessage({
   email = '',
   password = '',
   patrolName = '',
-  appUrl = 'https://taliat-app.vercel.app/'
+  appUrl = APP_PORTAL_URL
 }) {
   const greeting = getKashafGreeting('scout', name);
-  const closing = getLockedClosing(patrolName);
+  const patrolSig = formatPatrolSignature(patrolName);
   const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
 
   return `${greeting}
 
-We wanted to share the official login credentials and onboarding access for *${name}* to the *Dhulfiqār Scouts Portal*:
+We are pleased to share the official portal login credentials for *${name}*:
 
-🔗 *Portal Link:* ${appUrl}
+🔗 *Portal Link:*
+${appUrl}
+
 👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
-📌 *Required Profile Setup Instructions:*
-1. 📱 Open the app link above and log in with your credentials.
-2. 👤 Go to *"My Profile"* (👤) from the navigation menu.
-3. ⚙️ Please complete the following profile updates:
-   • Change your temporary password to your own secure personal password.
-   • Upload your clear scout profile picture / photo.
-   • Fill in all required details (personal email, scout phone, parent contact, BSA Member ID, and emergency contact).
+📝 *Profile Setup Instructions:*
+• Open the portal link above and log in with your credentials.
+• Go to *My Profile* to change your temporary password to a secure personal password.
+• Upload a clear scout profile photo.
+• Review your rank requirements, merit badges, and attendance standing.
 
-If you have any questions or need help logging in, reach out to your patrol leadership.${closing}`;
+📞 *Questions:* message your patrol leadership directly.
+
+Jazākum Allāhu khayran for your enthusiasm!
+${patrolSig}
+${TEAM_SIGNATURE}`;
 }
 
 /**
- * 8️⃣ DEDICATED PARENT PORTAL INVITE MESSAGE GENERATOR
+ * Parent Portal Invite Message (Rule 4, 5, 14)
  */
 export function generateParentInviteMessage({
   name = 'Parents',
@@ -232,248 +631,37 @@ export function generateParentInviteMessage({
   username = '',
   password = '',
   patrolName = '',
-  appUrl = 'https://taliat-app.vercel.app/'
+  appUrl = APP_PORTAL_URL
 }) {
   const greeting = getKashafGreeting('parent', name);
-  const closing = getLockedClosing(patrolName);
+  const patrolSig = formatPatrolSignature(patrolName);
   const cleanLogin = username || (email && !email.endsWith('@talia.app') ? email : (email ? email.split('@')[0] : 'username'));
 
   return `${greeting}
 
 We are pleased to provide your parent access credentials for the *Dhulfiqār Scouts Family Portal*:
 
-🔗 *Portal Link:* ${appUrl}
+🔗 *Portal Link:*
+${appUrl}
+
 👤 *Username:* ${cleanLogin}
 🔑 *Temporary Password:* ${password}
 
-📌 *Parent Portal Features & Instructions:*
-1. 📱 Log into the portal using the link above.
-2. 📊 Monitor real-time progress across all 7 BSA Ranks, Merit Badges, and Islamic Modules.
-3. 📋 Track attendance records, camping nights, and service hours.
-4. 📝 Access digital medical forms, waivers, and event RSVPs.
-5. 👨‍👩‍👧 Manage family profile details and emergency contacts.${closing}`;
-}
+📝 *Parent Portal Features:*
+• Monitor real-time progress across BSA Ranks, Merit Badges, and Islamic Modules.
+• Track attendance records, camping nights, and service hours.
+• Submit event RSVPs and digital absence notices.
+• Update family emergency contacts.
 
-/**
- * Generates a warm, structured WhatsApp reminder or announcement message for Planned Events (KashafVoice v4.0).
- */
-export function generateEventReminderWhatsApp(event, options = {}) {
-  if (!event) return '';
+📞 *Questions:* message any of the scout leaders directly.
 
-  const opts = typeof options === 'string' ? { patrolName: options } : (options || {});
-  const {
-    patrolName = '',
-    reminderType = 'general', // 'general' | 'urgent' | 'rsvp' | 'packing' | 'meeting'
-    recipientType = 'parent', // 'parent' | 'leader' | 'scout'
-    recipientName = '',
-    customNote = '',
-    includeRsvpLink = true,
-    appUrl = 'https://taliat-app.vercel.app/'
-  } = opts;
-
-  const titleFormatted = applyIslamicTransliteration(event.title || 'Scouting Event');
-  const greeting = getKashafGreeting(recipientType, recipientName);
-
-  // Format date nicely (e.g. "Friday, Sep 18, 2026")
-  let dateDisplay = event.date || '';
-  if (event.date) {
-    try {
-      const dParts = event.date.split('-');
-      if (dParts.length === 3) {
-        const dObj = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
-        dateDisplay = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-      }
-    } catch {
-      dateDisplay = event.date;
-    }
-  }
-
-  // Purpose line based on reminderType
-  let purposeLine = '';
-  if (reminderType === 'urgent') {
-    purposeLine = `🚨 *Urgent Reminder: Upcoming Event Tomorrow / Tonight!*
-We would like to remind all families about our upcoming *${titleFormatted}*.`;
-  } else if (reminderType === 'rsvp') {
-    purposeLine = `📝 *Action Needed: Attendance & RSVP Confirmation!*
-Please confirm your scout's attendance and carpool seats for our upcoming *${titleFormatted}*.`;
-  } else if (reminderType === 'packing') {
-    purposeLine = `🎒 *Gear & Preparation Reminder: ${titleFormatted}*
-Please review the required uniform and packing checklist for our upcoming session.`;
-  } else {
-    purposeLine = `📢 *Upcoming Scouting Session Reminder:*
-We wanted to share a friendly reminder regarding our upcoming *${titleFormatted}*.`;
-  }
-
-  const blocks = [greeting, purposeLine];
-
-  // Warm description in 1–3 line blocks
-  if (event.description && event.description.trim()) {
-    const descClean = applyIslamicTransliteration(event.description.trim());
-    blocks.push(descClean);
-  }
-
-  // Islamic Occasion Note (if present)
-  if (event.islamicOccasions && Array.isArray(event.islamicOccasions) && event.islamicOccasions.length > 0) {
-    const occStr = event.islamicOccasions.join(', ');
-    blocks.push(`🕌 *Islamic Milestone / Occasion:* ${applyIslamicTransliteration(occStr)}`);
-  } else if (event.islamicOccasion && typeof event.islamicOccasion === 'string' && event.islamicOccasion.trim()) {
-    blocks.push(`🕌 *Islamic Milestone / Occasion:* ${applyIslamicTransliteration(event.islamicOccasion.trim())}`);
-  }
-
-  // Structured event details (only if present in raw event)
-  const details = [];
-  if (dateDisplay) {
-    const timeStr = event.time || (event.startTime && event.endTime ? `${event.startTime} – ${event.endTime}` : '');
-    details.push(`📅 *Date:* ${dateDisplay}${timeStr ? ` at ${timeStr}` : ''}`);
-  }
-
-  // Activity Subtype bullet if defined
-  if (event.activitySubtype) {
-    const cleanSubtype = event.activitySubtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    details.push(`🎯 *Activity Category:* ${cleanSubtype}`);
-  }
-
-  // Service Hours Credited bullet if > 0
-  const serviceHoursNum = Number(event.serviceHoursCredited || 0);
-  if (serviceHoursNum > 0) {
-    details.push(`⏳ *Service Hours Credited:* ${serviceHoursNum} hrs (Rank Advancement Service Credit)`);
-  }
-
-  if (event.location) details.push(`📍 *Location / Venue:* ${event.location}`);
-  if (event.meetingPoint) details.push(`🚩 *Assembly / Meeting Point:* ${event.meetingPoint}`);
-  if (event.registrationDeadline || event.deadline) {
-    details.push(`⏳ *Registration / RSVP Deadline:* ${event.registrationDeadline || event.deadline}`);
-  }
-
-  if (details.length > 0) {
-    blocks.push(details.join('\n'));
-  }
-
-  // Equipment Checklist (one emoji per bullet, one bullet per line)
-  if (event.requiredItems && event.requiredItems.trim()) {
-    const rawItems = event.requiredItems.split(/[\n;]+/).map(l => l.trim()).filter(Boolean);
-    const itemBullets = rawItems.map(item => {
-      const clean = item.replace(/^[-*•\d+.)]\s*/, '').trim();
-      return `🎒 ${clean}`;
-    });
-    if (itemBullets.length > 0) {
-      blocks.push(`*Required Gear & Packing Checklist:*\n${itemBullets.join('\n')}`);
-    }
-  }
-
-  // Leader custom note
-  if (customNote && customNote.trim()) {
-    blocks.push(`📌 *Leader Note:*\n${applyIslamicTransliteration(customNote.trim())}`);
-  }
-
-  // RSVP Call to Action
-  if (includeRsvpLink) {
-    if (event.requiresRsvp === false) {
-      blocks.push(`🔗 *Portal Link:* ${appUrl}
-_Note: This is an open attendance event. No pre-RSVP required — all scouts and families are welcome!_`);
-    } else {
-      blocks.push(`🔗 *Portal Link & RSVPs:* ${appUrl}
-_Please submit your RSVP and indicate if you can drive scouts in the carpool._`);
-    }
-  }
-
-  // Scriptural Block (Optional)
-  let quranBlock = '';
-  if (event.quranVerse && event.quranVerse.trim()) {
-    quranBlock = formatIsolatedQuranBlock(event.quranVerse.trim(), event.quranTranslation || '');
-  }
-
-  let fullMsg = blocks.join('\n\n');
-  if (quranBlock) {
-    fullMsg += quranBlock;
-  }
-
-  return fullMsg + getLockedClosing(patrolName);
-}
-
-/**
- * Backward-compatible wrapper for formatKashafEventWhatsApp
- */
-export function formatKashafEventWhatsApp(event, optionsOrPatrol = '') {
-  return generateEventReminderWhatsApp(event, optionsOrPatrol);
-}
-
-/**
- * Generates a warm, structured WhatsApp message for Lesson Plans (KashafVoice v4.0).
- */
-export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
-  if (!plan) return '';
-
-  const titleFormatted = applyIslamicTransliteration(plan.title || 'Weekly Scouting Session');
-  const greeting = LOCKED_GREETING;
-  
-  const dateStr = plan.date ? ` for *${plan.date}*` : '';
-  const purposeLine = `Just a quick note to share our scouting lesson plan and tarbiyah milestones${dateStr}: *${titleFormatted}*.`;
-  const blocks = [greeting, purposeLine];
-
-  // Qur'an / Hadith Block
-  let quranBlock = '';
-  if (plan.quranVerse && plan.quranVerse.trim()) {
-    quranBlock = formatIsolatedQuranBlock(plan.quranVerse.trim(), plan.quranTranslation || '');
-  }
-
-  // Milestones & Activities
-  if (plan.content && plan.content.trim()) {
-    const rawLines = plan.content.split('\n').map(l => l.trim()).filter(Boolean);
-    const bullets = rawLines.map(line => {
-      const clean = line.replace(/^[-*•\d+.)]\s*/, '').trim();
-      return `🎯 ${applyIslamicTransliteration(clean)}`;
-    });
-    if (bullets.length > 0) {
-      blocks.push(`*Session Milestones:*\n${bullets.join('\n')}`);
-    }
-  }
-
-  // Faith & Akhlaq Focus
-  if (plan.islamicPrep && plan.islamicPrep.trim() && !quranBlock) {
-    const prepClean = applyIslamicTransliteration(plan.islamicPrep.trim());
-    blocks.push(`🕌 *Faith & Akhlāq Focus:*\n${prepClean}`);
-  }
-
-  // Curriculum Materials
-  if (plan.resources && plan.resources.length > 0) {
-    const cleanResources = plan.resources.filter(r => r.name && r.url);
-    if (cleanResources.length > 0) {
-      const resBullets = cleanResources.map(r => `📚 *${r.name}:* ${r.url}`).join('\n');
-      blocks.push(`*Curriculum Materials:*\n${resBullets}`);
-    }
-  }
-
-  let fullMsg = blocks.join('\n\n');
-  if (quranBlock) {
-    fullMsg += quranBlock;
-  }
-
-  return fullMsg + getLockedClosing(patrolName);
-}
-
-/**
- * Refines any raw text into KashafVoice v4.0 WhatsApp format.
- */
-export function formatKashafMessage(rawText, patrolName = '', customPurpose = '', recipient = { type: 'parent', name: '' }) {
-  const greeting = getKashafGreeting(recipient?.type || 'parent', recipient?.name || '');
-  const cleanContent = applyIslamicTransliteration(rawText || '').trim();
-  const closing = getLockedClosing(patrolName);
-  
-  const blocks = [greeting];
-  if (customPurpose && customPurpose.trim()) {
-    blocks.push(customPurpose.trim());
-  }
-  if (cleanContent) {
-    blocks.push(cleanContent);
-  }
-  
-  return blocks.join('\n\n') + closing;
+Jazākum Allāhu khayran for your continued support 🙏
+${patrolSig}
+${TEAM_SIGNATURE}`;
 }
 
 /**
  * Resolves high-visibility audience and targeting badge for any event
- * across Scout, Leader, Parent, and Admin roles.
  */
 export function getEventAudienceInfo(event, currentUser = {}, groups = [], linkedScouts = []) {
   if (!event) {
@@ -491,7 +679,6 @@ export function getEventAudienceInfo(event, currentUser = {}, groups = [], linke
   const notes = (event.notes || event.description || '').toLowerCase();
   const targetGroupId = event.targetGroupId || event.groupId || 'all';
 
-  // 1. Family Event (Court of Honor / Potluck / Parent invited)
   if (
     category.includes('court of honor') || 
     category.includes('family') || 
@@ -511,7 +698,6 @@ export function getEventAudienceInfo(event, currentUser = {}, groups = [], linke
     };
   }
 
-  // 2. Troop-Wide / All Patrols Event
   if (!targetGroupId || targetGroupId === 'all' || targetGroupId === 'troop' || event.pushToAllPatrols || event.isGlobalScope) {
     return {
       type: 'troop',
@@ -522,11 +708,9 @@ export function getEventAudienceInfo(event, currentUser = {}, groups = [], linke
     };
   }
 
-  // 3. Patrol-Specific Event
   const group = (groups || []).find(g => g.id === targetGroupId);
   const groupName = group?.name || 'Patrol Unit';
 
-  // Check if current user or any linked child belongs to this patrol
   const userGroupId = currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol;
   const isUserPatrol = userGroupId === targetGroupId;
   const matchingLinkedScout = (linkedScouts || []).find(s => s.groupId === targetGroupId || s.patrolId === targetGroupId);
