@@ -153,15 +153,21 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
   const [sptFileUrl, setSptFileUrl] = useState('');
   const [sptFileName, setSptFileName] = useState('');
   const [uploadingSpt, setUploadingSpt] = useState(false);
-  const [savingSpt, setSavingSpt] = useState(false);
-  const [leaderData, setLeaderData] = useState(null);
-  const [activeProfileTab, setActiveProfileTab] = useState(initialTab || 'personal'); // 'personal' | 'roles-guide' | 'service' | 'attendance' | 'spt' | 'security'
+  const [activeProfileTab, setActiveProfileTab] = useState(
+    (!initialTab || initialTab === 'profile') ? 'personal' : (initialTab === 'counselors' ? 'credentials' : initialTab)
+  ); // 'personal' | 'roles-guide' | 'service' | 'attendance' | 'spt' | 'credentials' | 'security' | 'reports'
 
   useEffect(() => {
     if (initialTab) {
-      setActiveProfileTab(initialTab);
+      if (initialTab === 'profile') {
+        setActiveProfileTab('personal');
+      } else if (initialTab === 'counselors') {
+        setActiveProfileTab(isScout ? 'personal' : 'credentials');
+      } else {
+        setActiveProfileTab(initialTab);
+      }
     }
-  }, [initialTab]);
+  }, [initialTab, isScout]);
   
   // Official Published Reports State for Scout
   const [publishedReports, setPublishedReports] = useState([]);
@@ -731,14 +737,15 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         scoutPhone: (scoutPhone || '').trim(),
         phone: (scoutPhone || '').trim(),
         photoURL: photoUrl || null,
-        bsaId: (bsaId || '').trim() || null
+        bsaId: (bsaId || '').trim() || null,
+        birthDate: (birthDate || '').trim() || null
       };
 
       if (isOwner && username && username.trim()) {
         updates.username = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
       }
 
-      // Only non-scouts (parents, leaders, admins, owners) can edit emergency and address fields directly here
+      // Non-scouts (parents, leaders, admins, owners) can edit emergency and address fields directly
       if (!isScout) {
         updates.emergencyContactName = (emergencyContactName || '').trim() || null;
         updates.emergencyContactPhone = (emergencyContactPhone || '').trim() || null;
@@ -760,17 +767,19 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
 
       if (isScout) {
         updates.schoolGrade = (schoolGrade || '').trim() || null;
-        updates.birthDate = (birthDate || '').trim() || null;
         updates.scoutPosition = scoutPosition || 'General Scout / Member';
         updates.position = scoutPosition || 'General Scout / Member';
         updates.previousPositions = Array.isArray(previousPositions) ? previousPositions : [];
+        updates.pastPositions = Array.isArray(previousPositions) ? previousPositions : [];
       }
 
       if (isLeader || isExecutive || isOwner) {
         if (leaderPosition) {
           updates.leaderPosition = leaderPosition;
+          updates.position = leaderPosition;
         }
         updates.previousPositions = Array.isArray(previousPositions) ? previousPositions : [];
+        updates.pastPositions = Array.isArray(previousPositions) ? previousPositions : [];
       }
 
       // Sanitize payload: strip any undefined values so Firestore never rejects
@@ -1143,7 +1152,7 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           type="button"
           onClick={() => setActiveProfileTab('personal')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'personal'
+            activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports'].includes(activeProfileTab)
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
               : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
           }`}
@@ -1959,8 +1968,8 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         <ServiceLogs currentUser={currentUser} scoutId={currentUser.uid} />
       )}
 
-      {/* ── TAB 3: PERSONAL INFORMATION ── */}
-      {activeProfileTab === 'personal' && (
+      {/* ── TAB 3: PERSONAL INFORMATION (OR DEFAULT) ── */}
+      {(activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports'].includes(activeProfileTab)) && (
         <div className="space-y-6">
           {/* If Scout has attendance warnings, show advisory banner on Personal Tab */}
           {currentUser.role === 'scout' && attendanceStats.totalSessions > 0 && attendanceStats.riskLevel !== 'green' && (
@@ -2008,15 +2017,10 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                     <Users size={16} className="text-indigo-400" />
                     <span>Family Guardian Information</span>
                   </>
-                ) : isLeader ? (
+                ) : (isLeader || isExecutive) ? (
                   <>
                     <Shield size={16} className="text-emerald-400" />
-                    <span>Leader Credentials & Profile</span>
-                  </>
-                ) : isExecutive ? (
-                  <>
-                    <Crown size={16} className="text-amber-400" />
-                    <span>Executive Profile & Administration</span>
+                    <span>{isOwner ? '👑 Troop Owner & Leader Profile' : isExecutive ? '⚜️ Executive & Leader Profile' : '⚜️ Leader Credentials & Profile'}</span>
                   </>
                 ) : (
                   <>
@@ -2089,7 +2093,6 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                       </div>
                       <input
                         type="text"
-                        required
                         disabled={!isOwner}
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
@@ -2940,17 +2943,25 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                   </>
                 )}
 
-                {/* Leader Standing */}
-                {isLeader && (
+                {/* Leader & Executive Standing */}
+                {(isLeader || isExecutive) && (
                   <>
+                    {isExecutive && (
+                      <div className="bg-gradient-to-r from-amber-950/40 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 space-y-1">
+                        <span className="text-amber-400 block text-[10px] uppercase font-black tracking-wider">Supreme Authority</span>
+                        <strong className="text-white text-xs block">{isOwner ? '👑 Troop Owner & Superadmin' : '⚜️ Executive Troop Admin'}</strong>
+                        <span className="text-[10px] text-slate-400">Full system override privileges enabled</span>
+                      </div>
+                    )}
+
                     <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Leadership Role</span>
-                      <strong className="text-white text-sm">{leaderPosition || 'Troop Leader'}</strong>
+                      <strong className="text-white text-sm">{leaderPosition || (isOwner ? 'Scoutmaster / Owner' : 'Troop Leader')}</strong>
                     </div>
 
                     <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Patrol Assignment</span>
-                      <strong className="text-emerald-400 text-sm">{patrolName ? `${patrolName} Patrol` : 'General Leadership'}</strong>
+                      <strong className="text-emerald-400 text-sm">{patrolName ? `${patrolName} Patrol` : 'General Leadership & Troop HQ'}</strong>
                     </div>
 
                     {previousPositions.length > 0 && (
@@ -3042,52 +3053,6 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                         {spt ? `✓ Chaperone Verified: ${spt}` : '🛡️ Optional for Campouts'}
                       </strong>
                       <span className="text-[10px] text-slate-400 block">Click to upload volunteer certificate</span>
-                    </div>
-                  </>
-                )}
-
-                {/* Executive / Owner Standing */}
-                {isExecutive && (
-                  <>
-                    <div className="bg-gradient-to-r from-amber-950/40 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 space-y-1">
-                      <span className="text-amber-400 block text-[10px] uppercase font-black tracking-wider">Supreme Authority</span>
-                      <strong className="text-white text-xs block">{isOwner ? '👑 Troop Owner & Superadmin' : '⚜️ Executive Troop Admin'}</strong>
-                      <span className="text-[10px] text-slate-400">Full system override privileges enabled</span>
-                    </div>
-
-                    <div 
-                      onClick={() => setActiveProfileTab('credentials')}
-                      className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 p-3.5 rounded-xl border border-amber-500/40 hover:border-amber-400 transition cursor-pointer group space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-amber-400 block text-[10px] uppercase font-bold flex items-center gap-1">
-                          <Award size={12} /> Scouting Leadership & Counselor (27 Subjects)
-                        </span>
-                        <ChevronRight size={13} className="text-amber-400 group-hover:translate-x-0.5 transition" />
-                      </div>
-                      <strong className="text-white text-xs block">Committee Chair • Troop 1318 • Pack 1318 • SIRA</strong>
-                      <div className="flex items-center justify-between text-[10px] text-slate-300 pt-1 border-t border-slate-800">
-                        <span className="text-emerald-400 font-semibold">✓ Valid Thru May 31, 2027</span>
-                        <span className="text-amber-300 font-bold">27 Badges Assigned</span>
-                      </div>
-                    </div>
-
-                    <div 
-                      onClick={() => setActiveProfileTab('spt')}
-                      className={`p-3.5 rounded-xl border transition cursor-pointer group space-y-1.5 ${
-                        spt 
-                          ? 'bg-emerald-950/20 border-emerald-500/40 hover:border-emerald-500' 
-                          : 'bg-amber-950/20 border-amber-500/40 hover:border-amber-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Safety Compliance (SPT)</span>
-                        <ChevronRight size={13} className="text-slate-500 group-hover:text-white transition" />
-                      </div>
-                      <strong className={`text-xs font-bold block ${spt ? 'text-emerald-300' : 'text-amber-300'}`}>
-                        {spt ? `✓ Verified: ${spt}` : '⚠️ SPT Status: Action Required'}
-                      </strong>
-                      <span className="text-[10px] text-slate-400 block">Click to manage certificate</span>
                     </div>
                   </>
                 )}

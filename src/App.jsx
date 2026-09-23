@@ -662,6 +662,8 @@ export default function App() {
         } else if (extraData.tab) {
           setProfileInitialTab(extraData.tab);
         }
+      } else {
+        setProfileInitialTab('personal');
       }
       setCurrentTab('profile');
       setMobileMenuOpen(false);
@@ -1490,7 +1492,7 @@ export default function App() {
             {adminHubSubTab === 'profile' && (
               <ScoutProfile 
                 currentUser={currentUser} 
-                initialTab={profileInitialTab} 
+                initialTab={profileInitialTab || 'personal'} 
                 onNavigate={handleNavigate} 
               />
             )}
