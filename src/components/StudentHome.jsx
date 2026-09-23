@@ -291,20 +291,11 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
           <div className="flex flex-wrap gap-2 shrink-0">
             <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('feed')}
-              className="bg-emerald-600/30 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/60 font-black text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              onClick={() => onNavigate && onNavigate('advancement')}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
             >
-              <Bell size={14} className={unreadNotifsCount > 0 ? "animate-bounce text-amber-400" : ""} />
-              <span>Alerts {unreadNotifsCount > 0 ? `(${unreadNotifsCount})` : ''}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPendingModal(true)}
-              className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 border border-amber-500/60 font-black text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-950/40 hover:scale-[1.02]"
-            >
-              <Clock size={14} className="animate-pulse" />
-              <span>Pending ({totalPendingPortalItems})</span>
+              <Award size={14} />
+              <span>⚜️ My Advancement</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
@@ -313,11 +304,15 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <span>🦅 Road to Eagle</span>
             </button>
             <button
-              onClick={() => onNavigate && onNavigate('advancement')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
+              type="button"
+              onClick={() => setShowPendingModal(true)}
+              className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
             >
-              <Award size={14} />
-              <span>⚜️ 7 Ranks</span>
+              <Clock size={14} className={totalPendingPortalItems > 0 ? "text-amber-400 animate-pulse" : "text-slate-400"} />
+              <span>Pending Tasks ({totalPendingPortalItems})</span>
+              {unreadNotifsCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              )}
             </button>
           </div>
         </div>
@@ -514,38 +509,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
       )}
 
-      {/* ── 2. DEDICATED ROAD TO EAGLE HOME SHOWCASE BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/30 border border-amber-500/30 rounded-2xl p-4 sm:p-4.5 shadow-lg relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-lg shrink-0 shadow-md">
-              🦅
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <StatusBadge type="warning" size="xs" label="Eagle Scout Portal" />
-                <span className="text-xs text-amber-300 font-bold">
-                  BSA Milestone Journey
-                </span>
-              </div>
-              <h3 className="text-sm sm:text-base font-black text-white">
-                Road to Eagle Scout & Eagle Palms Portal
-              </h3>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Track your 6-month Life tenure, qualifying leadership, 21 merit badges, Eagle project, 6 references, and Eagle Palms.
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shrink-0 self-start sm:self-center"
-          >
-            <span>Launch Eagle Portal</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
 
       {/* ── 2.5. SMART MERIT BADGE RECOMMENDATIONS & TROOP COUNSELORS ── */}
       {recommendedBadges.length > 0 && (

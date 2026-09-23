@@ -51,6 +51,7 @@ import {
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
 import AssignmentsManager from './AssignmentsManager';
+import AdvancementTracker from './AdvancementTracker';
 import RoadToEagleTracker from './RoadToEagleTracker';
 import RoleAndLeadershipGuide from './RoleAndLeadershipGuide';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
@@ -959,9 +960,17 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           {/* Scout-Specific Status in Header */}
           {isScout && (
             <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap pt-1 text-xs">
-              <span className="text-slate-400">
-                Active Rank: <strong className="text-white">{rankName}</strong> &bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId || '—'}</strong>
-              </span>
+              <button
+                type="button"
+                onClick={() => setActiveProfileTab('advancement')}
+                className="bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-slate-300 hover:text-white px-2.5 py-0.5 rounded-full transition cursor-pointer flex items-center gap-1.5"
+                title="Click to view 7 Ranks Advancement Tracker"
+              >
+                <span>Active Rank:</span>
+                <strong className="text-emerald-400">{rankName}</strong>
+                <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded-full">View &rarr;</span>
+              </button>
+              <span className="text-slate-400">&bull; BSA ID: <strong className="text-slate-300 font-mono">{bsaId || '—'}</strong></span>
               {scoutPosition && scoutPosition !== 'General Scout / Member' && (
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Crown size={10} />
@@ -1127,6 +1136,21 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         {isScout && (
           <button
             type="button"
+            onClick={() => setActiveProfileTab('advancement')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'advancement'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Compass size={15} />
+            <span>⚜️ 7 Ranks Advancement</span>
+          </button>
+        )}
+
+        {isScout && (
+          <button
+            type="button"
             onClick={() => setActiveProfileTab('reports')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
               activeProfileTab === 'reports'
@@ -1245,6 +1269,15 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           <span>Security & Password</span>
         </button>
       </div>
+
+      {/* ── TAB: ADVANCEMENT TRACKER (7 RANKS) ── */}
+      {activeProfileTab === 'advancement' && (
+        <AdvancementTracker 
+          currentUser={currentUser} 
+          scoutId={currentUser?.uid} 
+          onNavigate={onNavigate} 
+        />
+      )}
       
       {/* ── TAB: ROLE & LEADERSHIP GUIDE ── */}
       {activeProfileTab === 'roles-guide' && (

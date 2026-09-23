@@ -457,15 +457,12 @@ export default function App() {
     }
 
     // 2. Advancement Sub-tools
-    if (tab === 'advancement') {
-      if (isScout) {
-        setCurrentTab('advancement-hub');
-        setAdvancementHubSubTab('advancement');
-      } else if (isParent) {
+    if (tab === 'advancement' || tab === 'advancement-hub') {
+      if (isParent) {
         setCurrentTab('advancement');
       } else {
-        setCurrentTab('scouts-hub');
-        setScoutsHubSubTab('advancement');
+        setCurrentTab('advancement-hub');
+        setAdvancementHubSubTab('advancement');
       }
       setMobileMenuOpen(false);
       return;
@@ -1465,8 +1462,8 @@ export default function App() {
           </div>
         )}
 
-        {/* ── 6. ADVANCEMENT HUB (SCOUT) ── */}
-        {currentTab === 'advancement-hub' && isScout && (
+        {/* ── 6. ADVANCEMENT HUB ── */}
+        {currentTab === 'advancement-hub' && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="My Scouting Advancement"
@@ -1480,14 +1477,14 @@ export default function App() {
                 { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain' }
               ]}
             />
-            {advancementHubSubTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
+            {advancementHubSubTab === 'advancement' && <AdvancementTracker currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'road-to-eagle' && <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />}
           </div>
         )}
 
-        {/* ── 7. SCHEDULE & TASKS HUB (SCOUT) ── */}
-        {currentTab === 'events-hub' && isScout && (
+        {/* ── 7. SCHEDULE & TASKS HUB ── */}
+        {currentTab === 'events-hub' && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="Schedule & Weekly Tasks"
@@ -1505,8 +1502,8 @@ export default function App() {
           </div>
         )}
 
-        {/* ── 8. PATROL & TARBIYAH HUB (SCOUT) ── */}
-        {currentTab === 'tarbiyah-hub' && isScout && (
+        {/* ── 8. PATROL & TARBIYAH HUB ── */}
+        {currentTab === 'tarbiyah-hub' && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="Patrol & Tarbiyah Hub"
@@ -1539,7 +1536,7 @@ export default function App() {
         {currentTab === 'group-manager' && isOwner && <GroupManager currentUser={currentUser} />}
         {currentTab === 'roster' && isLeaderOrOwner && <PatrolRoster currentUser={currentUser} />}
         {currentTab === 'scouts' && isLeaderOrOwner && <ScoutList currentUser={currentUser} />}
-        {currentTab === 'advancement' && !isParent && <AdvancementTracker currentUser={currentUser} />}
+        {currentTab === 'advancement' && !isParent && <AdvancementTracker currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'advancement' && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
