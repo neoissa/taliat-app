@@ -592,16 +592,16 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
   return (
     <div className="space-y-6">
       {/* ── TOP BANNER & METRICS ── */}
-      <div className={`bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+      <div className={`bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 ${
         isEmbeddedInProfile ? 'border-emerald-500/40 bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/20' : ''
       }`}>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-emerald-950/50 shrink-0">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-xl shrink-0 shadow-sm">
             🎒
           </div>
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg font-black text-white">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-black text-white">
                 {isScout ? 'My Homework & Assignments' : 'Assignment & Homework Management'}
               </h2>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase">

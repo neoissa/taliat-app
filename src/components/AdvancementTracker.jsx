@@ -4,6 +4,7 @@ import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { RANKS_DATA, getLatestAchievedRank, getNextIncompleteRank, isRankCompleted, getRankCompletionPercentage } from '../data/ranksData';
 import { 
   CheckCircle2, 
+  Circle,
   Clock, 
   Award, 
   FileText, 
@@ -20,7 +21,8 @@ import {
   Calendar,
   Layers,
   Search,
-  BookOpen
+  BookOpen,
+  MessageSquare
 } from 'lucide-react';
 import { 
   isSuperUser as checkIsSuperUser, 

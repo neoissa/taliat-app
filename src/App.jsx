@@ -193,10 +193,13 @@ export default function App() {
         credentialsValidFormatted: HASSAN_LEADERSHIP_PROFILE.validityFormatted,
         bsaCouncil: HASSAN_LEADERSHIP_PROFILE.bsaCouncil,
         certifyingOrg: HASSAN_LEADERSHIP_PROFILE.certifyingOrg,
-        spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-        sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
         yptCompleted: true
       };
+
+      if (!currentUser.spt) {
+        updates.spt = HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough;
+        updates.sptDate = HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough;
+      }
 
       if (isNeo) {
         updates.role = 'owner';

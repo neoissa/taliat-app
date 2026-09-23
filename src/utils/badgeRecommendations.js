@@ -77,6 +77,10 @@ export function getRecommendedBadges(scoutProfile = {}, userBadgesProgress = {})
     }
 
     if (score >= 40) {
+      const cappedScore = Math.min(100, Math.round(score));
+      // Pick the most informative reason for the card body (advancement/skills rather than repeating counselor name)
+      const contextualReason = reasons.find(r => !r.startsWith("In-house sign-off ready with")) || reasons[0] || "Recommended for your scout pathway";
+
       recommendations.push({
         id: badge.id,
         name: badge.name,
@@ -85,13 +89,13 @@ export function getRecommendedBadges(scoutProfile = {}, userBadgesProgress = {})
         description: badge.description || "",
         pageUrl: badge.pageUrl || "",
         packetPdfUrl: badge.packetPdfUrl || "",
-        score,
+        score: cappedScore,
         hasInHouseCounselor,
         counselorName: primaryCounselor ? primaryCounselor.leaderName : "Troop Counselor",
         counselorId: primaryCounselor ? primaryCounselor.id : null,
         counselorEmail: primaryCounselor ? primaryCounselor.email : null,
         reasons,
-        mainReason: reasons[0] || "Recommended for your scout pathway"
+        mainReason: contextualReason
       });
     }
   });

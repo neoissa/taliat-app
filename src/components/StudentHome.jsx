@@ -269,22 +269,29 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
 
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
-                <StatusBadge type="success" size="xs" label={`${activeRank} Rank`} />
-                {nextTargetRank.id !== latestAchievedRank.id && (
-                  <StatusBadge type="warning" size="xs" label={`Target: ${nextTargetRank.name} (${targetRankProgress.percentage}%)`} />
-                )}
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  <span>⚜️</span>
+                  <span>{activeRank} Rank</span>
+                </span>
                 {currentUser?.patrolName && (
-                  <StatusBadge type="indigo" size="xs" label={`${currentUser.patrolName} Patrol`} />
+                  <span className="inline-flex items-center gap-1 bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                    <span>🏕️</span>
+                    <span>{currentUser.patrolName} Patrol</span>
+                  </span>
                 )}
-                <StatusBadge type="purple" size="xs" label="Be Prepared • كُن مُسْتَعِدّاً" />
+                {nextTargetRank.id !== latestAchievedRank.id && (
+                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                    <span>Target: {nextTargetRank.name}</span>
+                    <span className="font-mono text-[11px] opacity-80">({targetRankProgress.percentage}%)</span>
+                  </span>
+                )}
               </div>
               <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
                 <span>Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || 'Scout'}!</span>
-                <span className="text-amber-400">⚜️</span>
               </h2>
-              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
-                Welcome to your Dhulfiqār scouting headquarters. Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle!
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Dhulfiqār Scouting Hub &bull; Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle.
               </p>
             </div>
           </div>
@@ -317,12 +324,12 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
         </div>
 
-        {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-750 relative z-10 text-xs">
+        {/* ── Streamlined 4-Item Horizontal Summary Bar ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-750/70 relative z-10 text-xs">
           {/* 1. Active Rank */}
           <div 
             onClick={() => onNavigate && onNavigate('advancement')}
-            className="bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition"
+            className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition hover:bg-slate-900"
           >
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <ShieldCheck size={18} />
@@ -343,7 +350,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : 'bg-slate-900/90 border-slate-800/80 hover:border-teal-400/60'
+                : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900'
             }`}
           >
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -351,14 +358,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                 : attendanceStats.riskLevel === 'yellow'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                : 'bg-teal-500/15 text-teal-400 border border-teal-500/30'
+                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
             }`}>
               <Calendar size={17} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
                 <span className={`text-[10px] block uppercase font-bold tracking-wider ${
-                  attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-teal-400'
+                  attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-slate-400'
                 }`}>Attendance</span>
                 {attendanceStats.riskLevel !== 'green' && (
                   <span className={`text-[9px] px-1 rounded font-bold uppercase ${
@@ -375,7 +382,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 3. Merit Badges */}
           <div 
             onClick={() => onNavigate && onNavigate('merit-badges')}
-            className="bg-slate-900/90 border border-slate-800/80 hover:border-amber-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/80 border border-slate-800 hover:border-amber-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
           >
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Star size={18} />
@@ -391,7 +398,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 4. Service Hours */}
           <div 
             onClick={() => onNavigate && onNavigate('road-to-eagle')}
-            className="bg-slate-900/90 border border-slate-800/80 hover:border-sky-400/60 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs"
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Heart size={18} />
@@ -520,16 +527,17 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <Sparkles size={18} />
               </div>
               <div>
-                <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                  <StatusBadge type="success" size="xs" label="Smart Recommendations" />
-                  <StatusBadge type="warning" size="xs" label="⚜️ 28+ In-House Counselors" />
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="inline-flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                    <span>⚜️ Fast-Track Merit Badges</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    27+ Subjects With Certified Counselors
+                  </span>
                 </div>
                 <h3 className="text-sm sm:text-base font-black text-white">
-                  Fast-Track Merit Badges (Authorized Troop Counselors)
+                  Recommended For Your Next Rank & Eagle Pathway
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Leader <strong>Hassan A. Issa</strong> is certified to counsel and sign off on <strong>27 official subjects</strong>.
-                </p>
               </div>
             </div>
 
@@ -553,31 +561,37 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 className="bg-slate-900/85 border border-slate-800/80 hover:border-emerald-500/50 p-3.5 rounded-xl flex flex-col justify-between gap-2.5 cursor-pointer transition-all duration-200 group shadow-xs hover:shadow-md"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <div className="flex items-center gap-1 flex-wrap">
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <div className="flex items-center gap-1.5">
                       {rec.eagleRequired ? (
-                        <StatusBadge type="warning" size="xs" label="Eagle" />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                          Eagle Req.
+                        </span>
                       ) : (
-                        <StatusBadge type="neutral" size="xs" label="Elective" />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
+                          Elective
+                        </span>
                       )}
                       {rec.hasInHouseCounselor && (
-                        <StatusBadge type="success" size="xs" label="In-House" />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                          In-House
+                        </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                      Match {rec.score}%
+                    <span className="text-[10px] font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                      {rec.score}% Match
                     </span>
                   </div>
 
-                  <h4 className="text-xs font-black text-white group-hover:text-emerald-300 transition">
+                  <h4 className="text-xs sm:text-sm font-black text-white group-hover:text-emerald-300 transition">
                     {rec.name}
                   </h4>
-                  <p className="text-[11px] text-emerald-300/90 font-medium mt-1 line-clamp-2 leading-relaxed">
-                    👉 {rec.mainReason}
+                  <p className="text-[11px] text-slate-300 font-medium mt-1.5 line-clamp-2 leading-relaxed">
+                    {rec.mainReason}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
                   <span className="truncate">Counselor: <strong className="text-white">{rec.counselorName}</strong></span>
                   <ChevronRight size={13} className="text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition" />
                 </div>

@@ -711,62 +711,81 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
 
   // ── 3. SAVE PROFILE INFORMATION FORM ──
   const handleSaveProfile = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setUpdating(true);
     setProfileSuccess('');
     setProfileError('');
 
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
+      const uid = currentUser?.uid || auth.currentUser?.uid;
+      if (!uid) {
+        throw new Error("No active user ID found. Please refresh and try again.");
+      }
+
+      const userRef = doc(db, 'users', uid);
       const updates = {
-        fullName: fullName.trim(),
-        ...(isOwner && username.trim() ? { username: username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') } : {}),
-        bio: bio.trim(),
-        scoutEmail: scoutEmail.trim(),
-        personalEmail: scoutEmail.trim(),
-        scoutPhone: scoutPhone.trim(),
-        phone: scoutPhone.trim(),
+        fullName: (fullName || '').trim(),
+        bio: (bio || '').trim(),
+        scoutEmail: (scoutEmail || '').trim(),
+        personalEmail: (scoutEmail || '').trim(),
+        scoutPhone: (scoutPhone || '').trim(),
+        phone: (scoutPhone || '').trim(),
         photoURL: photoUrl || null,
-        bsaId: bsaId.trim() || null
+        bsaId: (bsaId || '').trim() || null
       };
+
+      if (isOwner && username && username.trim()) {
+        updates.username = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      }
 
       // Only non-scouts (parents, leaders, admins, owners) can edit emergency and address fields directly here
       if (!isScout) {
-        updates.emergencyContactName = emergencyContactName.trim() || null;
-        updates.emergencyContactPhone = emergencyContactPhone.trim() || null;
-        updates.emergencyContactRelation = emergencyContactRelation.trim() || null;
-        updates.homeAddress = homeAddress.trim() || null;
-        updates.cityStateZip = cityStateZip.trim() || null;
-        updates.allergies = allergies.trim() || null;
-        updates.medicalNotes = medicalNotes.trim() || null;
-        updates.dietaryRestrictions = dietaryRestrictions.trim() || null;
-        updates.spt = spt.trim() || null;
-        updates.sptDate = spt.trim() || null;
-        updates.sptFileUrl = sptFileUrl || null;
-        updates.sptFileName = sptFileName || null;
+        updates.emergencyContactName = (emergencyContactName || '').trim() || null;
+        updates.emergencyContactPhone = (emergencyContactPhone || '').trim() || null;
+        updates.emergencyContactRelation = (emergencyContactRelation || '').trim() || null;
+        updates.homeAddress = (homeAddress || '').trim() || null;
+        updates.cityStateZip = (cityStateZip || '').trim() || null;
+        updates.allergies = (allergies || '').trim() || null;
+        updates.medicalNotes = (medicalNotes || '').trim() || null;
+        updates.dietaryRestrictions = (dietaryRestrictions || '').trim() || null;
+        if (spt) {
+          updates.spt = (spt || '').trim() || null;
+          updates.sptDate = (spt || '').trim() || null;
+        }
+        if (sptFileUrl) {
+          updates.sptFileUrl = sptFileUrl || null;
+          updates.sptFileName = sptFileName || null;
+        }
       }
 
       if (isScout) {
-        updates.schoolGrade = schoolGrade.trim() || null;
-        updates.birthDate = birthDate.trim() || null;
+        updates.schoolGrade = (schoolGrade || '').trim() || null;
+        updates.birthDate = (birthDate || '').trim() || null;
         updates.scoutPosition = scoutPosition || 'General Scout / Member';
         updates.position = scoutPosition || 'General Scout / Member';
-        updates.previousPositions = previousPositions;
+        updates.previousPositions = Array.isArray(previousPositions) ? previousPositions : [];
       }
 
-      if (isLeader || isExecutive) {
+      if (isLeader || isExecutive || isOwner) {
         if (leaderPosition) {
           updates.leaderPosition = leaderPosition;
         }
-        updates.previousPositions = previousPositions;
+        updates.previousPositions = Array.isArray(previousPositions) ? previousPositions : [];
       }
+
+      // Sanitize payload: strip any undefined values so Firestore never rejects
+      Object.keys(updates).forEach(key => {
+        if (updates[key] === undefined) {
+          delete updates[key];
+        }
+      });
 
       await setDoc(userRef, updates, { merge: true });
       setProfileSuccess("✓ Profile updated and saved successfully!");
-      setTimeout(() => setProfileSuccess(''), 3500);
+      setTimeout(() => setProfileSuccess(''), 4500);
     } catch (err) {
       console.error("Profile save error:", err);
-      setProfileError("Failed to update profile: " + err.message);
+      setProfileError("Failed to update profile: " + (err.message || 'Unknown error'));
     } finally {
       setUpdating(false);
     }
@@ -2008,6 +2027,38 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
               </h3>
 
               <form onSubmit={handleSaveProfile} className="space-y-4">
+                {profileSuccess && (
+                  <div className="bg-emerald-950/80 border border-emerald-500/80 text-emerald-200 px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                      <span>{profileSuccess}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProfileSuccess('')}
+                      className="text-emerald-400 hover:text-emerald-200 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {profileError && (
+                  <div className="bg-rose-950/80 border border-rose-500/80 text-rose-200 px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={16} className="text-rose-400 shrink-0" />
+                      <span>{profileError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProfileError('')}
+                      className="text-rose-400 hover:text-rose-200 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -2777,13 +2828,28 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
                   </div>
                 </div>
 
-                <div className="flex justify-end border-t border-slate-700/60 pt-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-700/60 pt-3">
+                  <div className="text-xs">
+                    {profileSuccess && (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1.5 animate-fadeIn">
+                        <CheckCircle2 size={15} />
+                        <span>Profile updated and saved successfully!</span>
+                      </span>
+                    )}
+                    {profileError && (
+                      <span className="text-rose-400 font-bold flex items-center gap-1.5 animate-fadeIn">
+                        <AlertCircle size={15} />
+                        <span>{profileError}</span>
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="submit"
                     disabled={updating}
-                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40"
+                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 self-end sm:self-auto shrink-0"
                   >
-                    {updating ? 'Saving Changes...' : 'Save Profile Changes'}
+                    {updating && <Loader2 size={14} className="animate-spin" />}
+                    <span>{updating ? 'Saving Changes...' : 'Save Profile Changes'}</span>
                   </button>
                 </div>
               </form>
