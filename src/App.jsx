@@ -25,6 +25,7 @@ import ScoutAttendance from './components/ScoutAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
+import RoleAndLeadershipGuide from './components/RoleAndLeadershipGuide';
 import DynamicIcon from './components/DynamicIcon';
 import MobileTabManager from './components/MobileTabManager';
 import MobileTabBar from './components/MobileTabBar';
@@ -417,11 +418,12 @@ export default function App() {
   const [adminInitialTab, setAdminInitialTab] = useState('users');
   const [adminExtraData, setAdminExtraData] = useState(null);
 
-  // Sub-tab states for 5-Hub navigation
+  // Sub-tab states for Hub navigation
   const [scoutsHubSubTab, setScoutsHubSubTab] = useState('roster');
   const [commHubSubTab, setCommHubSubTab] = useState('direct-messages');
   const [advancementHubSubTab, setAdvancementHubSubTab] = useState('advancement');
   const [eventsHubSubTab, setEventsHubSubTab] = useState('events');
+  const [knowledgeHubSubTab, setKnowledgeHubSubTab] = useState('islamic');
   const [tarbiyahHubSubTab, setTarbiyahHubSubTab] = useState('chat');
   const [adminHubSubTab, setAdminHubSubTab] = useState('admin');
 
@@ -433,7 +435,91 @@ export default function App() {
       return;
     }
 
-    // 1. Scouts & Patrols Sub-tools
+    // 1. Knowledge Hub Sub-tools (All Roles)
+    if (tab === 'knowledge-hub' || tab === 'knowledge') {
+      if (extraData?.subTab) {
+        setKnowledgeHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('knowledge-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'islamic' || tab === 'islamic-basics' || tab === 'duas') {
+      setCurrentTab('knowledge-hub');
+      setKnowledgeHubSubTab('islamic');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'handbooks' || tab === 'field-manuals' || tab === 'scouting-handbook') {
+      setCurrentTab('knowledge-hub');
+      setKnowledgeHubSubTab('handbooks');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'videos' || tab === 'video-tutorials' || tab === 'spt-videos') {
+      setCurrentTab('knowledge-hub');
+      setKnowledgeHubSubTab('videos');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'leadership' || tab === 'leadership-guide' || tab === 'roles' || tab === 'role-guide') {
+      setCurrentTab('knowledge-hub');
+      setKnowledgeHubSubTab('leadership');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'resources') {
+      if (isParent) {
+        setCurrentTab('resources');
+      } else {
+        setCurrentTab('knowledge-hub');
+        setKnowledgeHubSubTab('handbooks');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 2. Standalone Homework & Field Notes
+    if (tab === 'assignments' || tab === 'homework') {
+      if (isParent) {
+        setCurrentTab('assignments');
+      } else {
+        setCurrentTab('assignments');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'journal' || tab === 'notes' || tab === 'field-notes') {
+      setCurrentTab('journal');
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 3. Pure Troop Schedule & Tasks
+    if (tab === 'events' || tab === 'calendar' || tab === 'schedule') {
+      if (isParent) {
+        setCurrentTab('events');
+      } else {
+        setCurrentTab('events');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'tasks' || tab === 'forms') {
+      if (isParent) {
+        setCurrentTab('tasks');
+      } else if (isScout) {
+        setCurrentTab('assignments');
+      } else {
+        setCurrentTab('admin-hub');
+        setAdminHubSubTab('admin');
+        setAdminInitialTab('forms');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 4. Scouts & Patrols Sub-tools (Leaders/Owners)
     if (tab === 'roster') {
       setCurrentTab('scouts-hub');
       setScoutsHubSubTab('roster');
@@ -473,7 +559,7 @@ export default function App() {
       return;
     }
 
-    // 2. Advancement Sub-tools
+    // 5. Advancement Sub-tools
     if (tab === 'advancement' || tab === 'advancement-hub') {
       if (isParent) {
         setCurrentTab('advancement');
@@ -509,47 +595,7 @@ export default function App() {
       return;
     }
 
-    // 3. Calendar & Events Sub-tools
-    if (tab === 'events' || tab === 'calendar') {
-      if (isScout) {
-        setCurrentTab('events-hub');
-        setEventsHubSubTab('events');
-      } else if (isParent) {
-        setCurrentTab('events');
-      } else {
-        setCurrentTab('events');
-      }
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'assignments' || tab === 'homework') {
-      if (isScout) {
-        setCurrentTab('events-hub');
-        setEventsHubSubTab('assignments');
-      } else if (isParent) {
-        setCurrentTab('assignments');
-      } else {
-        setCurrentTab('assignments');
-      }
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'tasks' || tab === 'forms') {
-      if (isParent) {
-        setCurrentTab('tasks');
-      } else if (isScout) {
-        setCurrentTab('events-hub');
-        setEventsHubSubTab('assignments');
-      } else {
-        setCurrentTab('admin-hub');
-        setAdminHubSubTab('admin');
-        setAdminInitialTab('forms');
-      }
-      setMobileMenuOpen(false);
-      return;
-    }
-
-    // 4. Communications Sub-tools
+    // 6. Communications & Patrol Hub Sub-tools
     if (tab === 'direct-messages') {
       if (isParent) {
         setCurrentTab('direct-messages');
@@ -569,8 +615,7 @@ export default function App() {
       } else if (isParent) {
         setCurrentTab('feed');
       } else {
-        setCurrentTab('tarbiyah-hub');
-        setTarbiyahHubSubTab('resources');
+        setCurrentTab('feed');
       }
       setMobileMenuOpen(false);
       return;
@@ -587,7 +632,15 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'chat') {
+    if (tab === 'tarbiyah-hub' || tab === 'patrol-hub') {
+      if (extraData?.subTab) {
+        setTarbiyahHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('tarbiyah-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'chat' || tab === 'patrol-chat') {
       if (isScout) {
         setCurrentTab('tarbiyah-hub');
         setTarbiyahHubSubTab('chat');
@@ -600,37 +653,9 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-
-    // 5. Tarbiyah & Resources Sub-tools
-    if (tab === 'islamic') {
-      if (isScout) {
-        setCurrentTab('tarbiyah-hub');
-        setTarbiyahHubSubTab('islamic');
-      } else {
-        setCurrentTab('islamic');
-      }
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'resources') {
-      if (isScout) {
-        setCurrentTab('tarbiyah-hub');
-        setTarbiyahHubSubTab('resources');
-      } else if (isParent) {
-        setCurrentTab('resources');
-      } else {
-        setCurrentTab('resources');
-      }
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'journal') {
-      if (isScout) {
-        setCurrentTab('tarbiyah-hub');
-        setTarbiyahHubSubTab('journal');
-      } else {
-        setCurrentTab('journal');
-      }
+    if (tab === 'meetings' || tab === 'patrol-meetings' || tab === 'halqa') {
+      setCurrentTab('tarbiyah-hub');
+      setTarbiyahHubSubTab('meetings');
       setMobileMenuOpen(false);
       return;
     }
@@ -1574,7 +1599,56 @@ export default function App() {
           />
         )}
 
-        {/* ── 7. SCHEDULE & TASKS HUB ── */}
+        {/* ── 7. KNOWLEDGE HUB (ALL ROLES) ── */}
+        {(currentTab === 'knowledge-hub' || currentTab === 'knowledge') && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Knowledge Hub"
+              hubSubtitle="Comprehensive scouting handbooks, Islamic tarbiyah & duas, skill demonstration videos, and leadership role guides."
+              colorTheme="emerald"
+              activeTab={knowledgeHubSubTab}
+              onChange={(tabId) => setKnowledgeHubSubTab(tabId)}
+              tabs={[
+                { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles' },
+                { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book' },
+                { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video' },
+                { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown' }
+              ]}
+            />
+            {knowledgeHubSubTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
+            {knowledgeHubSubTab === 'handbooks' && <VideoResources currentUser={currentUser} initialTab="handbooks" />}
+            {knowledgeHubSubTab === 'videos' && <VideoResources currentUser={currentUser} initialTab="videos" />}
+            {knowledgeHubSubTab === 'leadership' && <RoleAndLeadershipGuide currentUser={currentUser} />}
+          </div>
+        )}
+
+        {/* ── 8. PATROL HUB (SCOUTS & LEADERS) ── */}
+        {(currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && !isParent && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Patrol Hub"
+              hubSubtitle="Real-time encrypted patrol messenger, team coordination, meeting huddles, and halqas."
+              colorTheme="indigo"
+              activeTab={tarbiyahHubSubTab}
+              onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
+              tabs={[
+                { id: 'chat', label: 'Patrol Live Messenger', icon: 'MessageSquare', badge: unreadChatCount },
+                { id: 'meetings', label: 'Patrol Meetings & Halqas', icon: 'Users' }
+              ]}
+            />
+            {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'meetings' && <PatrolChat currentUser={currentUser} />}
+          </div>
+        )}
+        {(currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="resources"
+            onNavigate={handleNavigate} 
+          />
+        )}
+
+        {/* ── 9. SCHEDULE & TASKS HUB (LEGACY COMPATIBILITY) ── */}
         {currentTab === 'events-hub' && !isParent && (
           <div className="space-y-4">
             <HubSubNav
@@ -1596,36 +1670,6 @@ export default function App() {
           <ParentDashboard 
             currentUser={currentUser} 
             initialTab="events"
-            onNavigate={handleNavigate} 
-          />
-        )}
-
-        {/* ── 8. PATROL & TARBIYAH HUB ── */}
-        {currentTab === 'tarbiyah-hub' && !isParent && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Patrol & Tarbiyah Hub"
-              hubSubtitle="Encrypted patrol messenger, Islamic knowledge & duas, handbook guides, and personal reflections."
-              colorTheme="amber"
-              activeTab={tarbiyahHubSubTab}
-              onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
-              tabs={[
-                { id: 'chat', label: 'Patrol Chat', icon: 'MessageSquare', badge: unreadChatCount },
-                { id: 'islamic', label: 'Islamic Knowledge', icon: 'Sparkles' },
-                { id: 'resources', label: 'Handbook & Videos', icon: 'Book' },
-                { id: 'journal', label: 'My Journal & Notes', icon: 'FileText' }
-              ]}
-            />
-            {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-            {tarbiyahHubSubTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
-            {tarbiyahHubSubTab === 'resources' && <VideoResources currentUser={currentUser} />}
-            {tarbiyahHubSubTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
-          </div>
-        )}
-        {currentTab === 'tarbiyah-hub' && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="resources"
             onNavigate={handleNavigate} 
           />
         )}
@@ -1667,8 +1711,8 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'assignments' && !isParent && <AssignmentsManager currentUser={currentUser} />}
-        {currentTab === 'assignments' && isParent && (
+        {(currentTab === 'assignments' || currentTab === 'homework') && !isParent && <AssignmentsManager currentUser={currentUser} />}
+        {(currentTab === 'assignments' || currentTab === 'homework') && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
             initialTab="homework"
@@ -1690,8 +1734,8 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'events' && !isParent && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
-        {currentTab === 'events' && isParent && (
+        {(currentTab === 'events' || currentTab === 'schedule' || currentTab === 'calendar') && !isParent && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
+        {(currentTab === 'events' || currentTab === 'schedule' || currentTab === 'calendar') && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
             initialTab="events"
@@ -1740,7 +1784,7 @@ export default function App() {
         {currentTab === 'attendance' && isScout && (
           <ScoutAttendance currentUser={currentUser} />
         )}
-        {currentTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
+        {(currentTab === 'journal' || currentTab === 'notes' || currentTab === 'field-notes') && <ScoutJournalNotes currentUser={currentUser} />}
         {currentTab === 'direct-messages' && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 

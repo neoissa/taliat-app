@@ -29,25 +29,6 @@ export const MASTER_TABS_REGISTRY = [
     isPermanent: true
   },
   {
-    id: 'scouts-hub',
-    defaultLabel: 'Scouts & Patrols',
-    labelByRole: {
-      owner: 'Scouts & Patrols',
-      admin: 'Scouts & Patrols',
-      leader: 'Scouts & Patrols'
-    },
-    defaultIcon: 'Users',
-    iconByRole: {
-      owner: 'Users',
-      admin: 'Users',
-      leader: 'Users'
-    },
-    category: 'leadership',
-    description: 'Patrol Roster, Attendance, Advancement Sign-Offs & Reports',
-    allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
     id: 'advancement-hub',
     defaultLabel: 'My Advancement',
     labelByRole: {
@@ -65,13 +46,13 @@ export const MASTER_TABS_REGISTRY = [
     badgeKey: null
   },
   {
-    id: 'events-hub',
-    defaultLabel: 'Schedule & Tasks',
+    id: 'events',
+    defaultLabel: 'Troop Schedule',
     labelByRole: {
-      scout: 'Schedule & Tasks',
-      parent: 'Schedule & Tasks',
-      leader: 'Calendar & Events',
-      owner: 'Calendar & Events'
+      parent: 'Troop Schedule',
+      scout: 'Troop Schedule',
+      leader: 'Troop Schedule',
+      owner: 'Troop Schedule'
     },
     defaultIcon: 'Calendar',
     iconByRole: {
@@ -82,30 +63,111 @@ export const MASTER_TABS_REGISTRY = [
       scout: 'Calendar'
     },
     category: 'outdoors',
-    description: 'Troop Calendar, RSVPs & Homework Challenges',
-    allowedRoles: ['scout', 'parent'],
+    description: 'Upcoming meetings, campouts, roll call sync & master calendar',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
     badgeKey: null
   },
   {
-    id: 'events',
-    defaultLabel: 'Calendar & Events',
+    id: 'assignments',
+    defaultLabel: 'Weekly Homework',
     labelByRole: {
-      parent: 'Troop Schedule',
-      scout: 'Troop Calendar',
-      leader: 'Calendar & Events',
-      owner: 'Calendar & Events'
+      scout: 'Weekly Homework',
+      parent: 'Scout Homework',
+      leader: 'Homework Tasks',
+      owner: 'Homework Tasks'
     },
-    defaultIcon: 'Calendar',
+    defaultIcon: 'BookOpen',
     iconByRole: {
-      owner: 'Calendar',
-      admin: 'Calendar',
-      leader: 'Calendar',
-      parent: 'Calendar',
-      scout: 'Calendar'
+      owner: 'BookOpen',
+      admin: 'BookOpen',
+      leader: 'BookOpen',
+      parent: 'BookOpen',
+      scout: 'BookOpen'
     },
-    category: 'outdoors',
-    description: 'Upcoming meetings, campouts, RSVPs & Excel Ingestion',
+    category: 'academics',
+    description: 'Weekly troop homework, skill challenges, worksheets, and file submissions',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
+    badgeKey: null
+  },
+  {
+    id: 'knowledge-hub',
+    defaultLabel: 'Knowledge Hub',
+    labelByRole: {
+      scout: '📚 Knowledge Hub',
+      parent: '📚 Knowledge Hub',
+      leader: '📚 Knowledge Hub',
+      owner: '📚 Knowledge Hub'
+    },
+    defaultIcon: 'GraduationCap',
+    iconByRole: {
+      owner: 'GraduationCap',
+      admin: 'GraduationCap',
+      leader: 'GraduationCap',
+      parent: 'GraduationCap',
+      scout: 'GraduationCap'
+    },
+    category: 'academics',
+    description: 'Islamic Knowledge, Scouting Handbooks, Video Tutorials & Leadership Guide',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
+    badgeKey: null
+  },
+  {
+    id: 'tarbiyah-hub',
+    defaultLabel: 'Patrol Hub',
+    labelByRole: {
+      scout: '🛡️ Patrol Hub',
+      leader: 'Patrol Messenger',
+      owner: 'Patrol Messenger'
+    },
+    defaultIcon: 'Radio',
+    iconByRole: {
+      owner: 'Radio',
+      admin: 'Radio',
+      leader: 'Radio',
+      scout: 'Radio'
+    },
+    category: 'communication',
+    description: 'Real-time encrypted patrol chat, meetings, teamwork, and patrol spirit',
+    allowedRoles: ['scout', 'leader', 'admin', 'owner'],
+    badgeKey: 'unreadChatCount'
+  },
+  {
+    id: 'journal',
+    defaultLabel: 'Field Notes & Journal',
+    labelByRole: {
+      scout: '📝 Field Notes',
+      leader: 'Leader Journal',
+      owner: 'Troop Journal'
+    },
+    defaultIcon: 'FileText',
+    iconByRole: {
+      owner: 'FileText',
+      admin: 'FileText',
+      leader: 'FileText',
+      scout: 'FileText'
+    },
+    category: 'communication',
+    description: 'Private personal reflections, patrol observations, and field notes',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
+    badgeKey: null
+  },
+  {
+    id: 'scouts-hub',
+    defaultLabel: 'Scouts & Patrols',
+    labelByRole: {
+      owner: 'Scouts & Patrols',
+      admin: 'Scouts & Patrols',
+      leader: 'Scouts & Patrols'
+    },
+    defaultIcon: 'Users',
+    iconByRole: {
+      owner: 'Users',
+      admin: 'Users',
+      leader: 'Users'
+    },
+    category: 'leadership',
+    description: 'Patrol Roster, Attendance, Advancement Sign-Offs & Reports',
+    allowedRoles: ['owner', 'admin', 'leader'],
     badgeKey: null
   },
   {
@@ -128,21 +190,6 @@ export const MASTER_TABS_REGISTRY = [
     description: 'Direct Parent Inquiries, Troop Broadcasts & Patrol Messenger',
     allowedRoles: ['owner', 'admin', 'leader', 'parent'],
     badgeKey: 'unreadDirectMessagesCount'
-  },
-  {
-    id: 'tarbiyah-hub',
-    defaultLabel: 'Patrol & Tarbiyah',
-    labelByRole: {
-      scout: 'Patrol & Tarbiyah'
-    },
-    defaultIcon: 'Sparkles',
-    iconByRole: {
-      scout: 'Sparkles'
-    },
-    category: 'academics',
-    description: 'Patrol Chat, Islamic Knowledge, Handbook Guides & Field Notes',
-    allowedRoles: ['scout'],
-    badgeKey: 'unreadChatCount'
   },
   {
     id: 'admin-hub',
@@ -202,6 +249,15 @@ export const MASTER_TABS_REGISTRY = [
 
   // ── 2. INDIVIDUAL SUB-MODULES (Kept for routing compatibility) ──
   {
+    id: 'events-hub',
+    defaultLabel: 'Schedule & Calendar',
+    defaultIcon: 'Calendar',
+    category: 'outdoors',
+    description: 'Troop Calendar & Events',
+    allowedRoles: ['scout', 'parent', 'leader', 'owner'],
+    badgeKey: null
+  },
+  {
     id: 'roster',
     defaultLabel: 'Patrol Roster',
     defaultIcon: 'Users',
@@ -256,30 +312,12 @@ export const MASTER_TABS_REGISTRY = [
     badgeKey: null
   },
   {
-    id: 'assignments',
-    defaultLabel: 'Homework & Tasks',
-    defaultIcon: 'BookOpen',
-    category: 'academics',
-    description: 'Weekly troop homework, skill challenges, and file submissions',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
-    badgeKey: null
-  },
-  {
     id: 'lesson-plans',
     defaultLabel: 'Lesson Plans',
     defaultIcon: 'GraduationCap',
     category: 'academics',
     description: 'Shared lesson curriculum, skills teaching guides, and patrol materials',
     allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
-    id: 'journal',
-    defaultLabel: 'Journal & Notes',
-    defaultIcon: 'Bookmark',
-    category: 'communication',
-    description: 'Private personal reflections, patrol observations, and field notes',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
     badgeKey: null
   },
   {
@@ -339,7 +377,7 @@ export const MASTER_TABS_REGISTRY = [
 ];
 
 /**
- * Returns clean 5-hub navigation items for a given user context
+ * Returns clean navigation items for a given user context
  */
 export function getDefaultRoleTabs(userRoleContext) {
   const { isOwner, isLeader, isExecutive, isParent, isScout } = userRoleContext || {};
@@ -348,12 +386,12 @@ export function getDefaultRoleTabs(userRoleContext) {
   let primaryHubIds = [];
 
   if (isOwner || isExecutive || isLeader) {
-    primaryHubIds = ['home', 'scouts-hub', 'events', 'communication-hub', 'admin-hub'];
+    primaryHubIds = ['home', 'scouts-hub', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub'];
   } else if (isParent) {
-    primaryHubIds = ['home', 'events', 'communication-hub', 'road-to-eagle', 'profile'];
+    primaryHubIds = ['home', 'events', 'assignments', 'communication-hub', 'road-to-eagle', 'knowledge-hub', 'profile'];
   } else {
-    // Scout
-    primaryHubIds = ['home', 'advancement-hub', 'events-hub', 'tarbiyah-hub', 'profile'];
+    // Scout: Dashboard, Advancement, Schedule, Homework, Knowledge Hub, Patrol Hub, Field Notes, Profile
+    primaryHubIds = ['home', 'advancement-hub', 'events', 'assignments', 'knowledge-hub', 'tarbiyah-hub', 'journal', 'profile'];
   }
 
   const tabMap = new Map(MASTER_TABS_REGISTRY.map(t => [t.id, t]));
@@ -377,7 +415,7 @@ export function getDefaultRoleTabs(userRoleContext) {
 }
 
 /**
- * Returns the default 4 pinned bottom quick bar tab IDs for a role
+ * Returns the default pinned bottom quick bar tab IDs for a role
  */
 export function getDefaultBottomTabIds(userRoleContext) {
   const { isOwner, isLeader, isExecutive, isParent } = userRoleContext || {};
@@ -386,8 +424,8 @@ export function getDefaultBottomTabIds(userRoleContext) {
     return ['home', 'scouts-hub', 'events', 'communication-hub'];
   }
   if (isParent) {
-    return ['home', 'events', 'communication-hub', 'road-to-eagle'];
+    return ['home', 'events', 'assignments', 'communication-hub'];
   }
   // Scout
-  return ['home', 'advancement-hub', 'events-hub', 'tarbiyah-hub'];
+  return ['home', 'advancement-hub', 'events', 'assignments', 'knowledge-hub'];
 }

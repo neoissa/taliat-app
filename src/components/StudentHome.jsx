@@ -35,7 +35,9 @@ import {
   Bell,
   Send,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  GraduationCap,
+  Radio
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
@@ -413,6 +415,113 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 {serviceHours} Hours
               </strong>
             </div>
+          </div>
+        </div>
+
+        {/* ── SCOUT MODULES QUICK LAUNCHPAD ── */}
+        <div className="mt-4 pt-4 border-t border-slate-750/70">
+          <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+            <span>⚜️ Scout Command Modules</span>
+            <span className="text-[10px] text-emerald-400 font-mono font-bold lowercase">7 interactive tools</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
+            <button
+              onClick={() => onNavigate && onNavigate('advancement-hub')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+                  <Award size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-emerald-300 transition">My Advancement</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">7 Ranks & Eagle Progress</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('events')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-sky-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-110 transition">
+                  <Calendar size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-sky-300 transition">Troop Schedule</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Events, Meetings & RSVPs</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('assignments')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-orange-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 group-hover:scale-110 transition">
+                  <BookOpen size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-orange-300 transition">Weekly Homework</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Challenges & Submissions</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('knowledge-hub')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+                  <GraduationCap size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-emerald-300 transition">Knowledge Hub</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Handbooks, Videos & Duas</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('tarbiyah-hub')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition">
+                  <MessageSquare size={15} />
+                </div>
+                <div className="flex items-center justify-between gap-1 flex-1 min-w-0">
+                  <span className="text-xs font-black text-white group-hover:text-indigo-300 transition">Patrol Chat</span>
+                  {unreadChatCount > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0">
+                      {unreadChatCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Encrypted Messenger & Halqas</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('journal')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
+                  <FileText size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-amber-300 transition">Field Notes</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Reflections & Logs</p>
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('profile')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-purple-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs col-span-2 sm:col-span-1"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-110 transition">
+                  <User size={15} />
+                </div>
+                <span className="text-xs font-black text-white group-hover:text-purple-300 transition">My Profile</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Scout Record & Settings</p>
+            </button>
           </div>
         </div>
       </div>

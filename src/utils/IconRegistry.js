@@ -369,7 +369,10 @@ const TAB_ID_THEME_MAP = {
   'events-hub': 'sky',
   'comm-hub': 'rose',
   'communication-hub': 'indigo',
-  'tarbiyah-hub': 'purple',
+  'knowledge-hub': 'emerald',
+  'patrol-hub': 'indigo',
+  'homework': 'orange',
+  'notes': 'yellow',
   'admin-hub': (isOwner) => (isOwner ? 'amber' : 'purple'),
   'counselors': 'teal',
   'parent-requests': 'orange'

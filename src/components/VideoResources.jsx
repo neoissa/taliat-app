@@ -233,14 +233,28 @@ const DOCUMENT_RESOURCES = [
   }
 ];
 
-export default function VideoResources({ currentUser, scoutId, scout }) {
+export default function VideoResources({ currentUser, scoutId, scout, initialTab = 'videos' }) {
   const targetScoutId = scoutId || currentUser.uid;
   const isLeaderOrOwner = currentUser.role === 'leader' || currentUser.role === 'owner';
   const isViewingScout = !!scoutId && scoutId !== currentUser.uid;
 
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState('videos'); // 'videos' | 'documents' | 'group'
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    if (initialTab === 'handbooks' || initialTab === 'documents') return 'documents';
+    if (initialTab === 'group') return 'group';
+    return 'videos';
+  });
+
+  useEffect(() => {
+    if (initialTab === 'handbooks' || initialTab === 'documents') {
+      setActiveSubTab('documents');
+    } else if (initialTab === 'group') {
+      setActiveSubTab('group');
+    } else if (initialTab === 'videos') {
+      setActiveSubTab('videos');
+    }
+  }, [initialTab]);
 
   // Input states for scouts completing videos
   const [tempCompletedDate, setTempCompletedDate] = useState({});
