@@ -364,7 +364,13 @@ const TAB_ID_THEME_MAP = {
   'reports': 'sky',
   'lesson-plans': 'lime',
   'feed': 'rose',
-  'broadcasts': 'rose',
+  'scouts-hub': 'blue',
+  'advancement-hub': 'teal',
+  'events-hub': 'sky',
+  'comm-hub': 'rose',
+  'communication-hub': 'indigo',
+  'tarbiyah-hub': 'purple',
+  'admin-hub': (isOwner) => (isOwner ? 'amber' : 'purple'),
   'counselors': 'teal',
   'parent-requests': 'orange'
 };

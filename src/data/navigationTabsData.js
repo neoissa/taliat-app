@@ -1,51 +1,41 @@
 /**
- * Comprehensive System Navigation Tabs Registry
+ * Comprehensive System Navigation Tabs Registry (5-Hub Architecture)
  */
+
 export const MASTER_TABS_REGISTRY = [
+  // ── 1. PRIMARY HUBS ──
   {
     id: 'home',
-    defaultLabel: 'Home Dashboard',
+    defaultLabel: 'Command Center',
     labelByRole: {
-      owner: 'Owner Hub',
-      leader: 'Leader Hub',
-      admin: 'Executive Hub',
-      parent: 'Parent Hub',
-      scout: 'Home Dashboard'
+      owner: '👑 Command Center',
+      admin: '👑 Command Center',
+      leader: '⚜️ Command Center',
+      parent: 'Family Hub',
+      scout: 'My Dashboard'
     },
     defaultIcon: 'Home',
     iconByRole: {
       owner: 'Crown',
       admin: 'ShieldCheck',
       leader: 'Shield',
-      parent: 'Users',
+      parent: 'Home',
       scout: 'Home'
     },
     category: 'navigation',
-    description: 'Central overview, urgent tasks, and quick actions',
+    description: 'Central overview, urgent action items, and quick shortcuts',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
     badgeKey: null,
-    isPermanent: true // Cannot be fully disabled
+    isPermanent: true
   },
   {
-    id: 'admin',
-    defaultLabel: 'Owner Admin Hub',
+    id: 'scouts-hub',
+    defaultLabel: 'Scouts & Patrols',
     labelByRole: {
-      owner: '👑 Owner Admin Hub',
-      admin: '👑 Executive Hub'
+      owner: 'Scouts & Patrols',
+      admin: 'Scouts & Patrols',
+      leader: 'Scouts & Patrols'
     },
-    defaultIcon: 'Shield',
-    iconByRole: {
-      owner: 'Crown',
-      admin: 'ShieldCheck'
-    },
-    category: 'leadership',
-    description: 'System security, user management, and broadcast administration',
-    allowedRoles: ['owner', 'admin'],
-    badgeKey: null
-  },
-  {
-    id: 'roster',
-    defaultLabel: 'Patrol Roster',
     defaultIcon: 'Users',
     iconByRole: {
       owner: 'Users',
@@ -53,130 +43,35 @@ export const MASTER_TABS_REGISTRY = [
       leader: 'Users'
     },
     category: 'leadership',
-    description: 'Manage scouts, patrols, phone contacts, and member profiles',
+    description: 'Patrol Roster, Attendance, Advancement Sign-Offs & Reports',
     allowedRoles: ['owner', 'admin', 'leader'],
     badgeKey: null
   },
   {
-    id: 'attendance',
-    defaultLabel: 'Patrol Attendance',
-    defaultIcon: 'CheckSquare',
-    iconByRole: {
-      owner: 'CheckSquare',
-      admin: 'CheckSquare',
-      leader: 'CheckSquare'
+    id: 'advancement-hub',
+    defaultLabel: 'My Advancement',
+    labelByRole: {
+      scout: 'My Advancement',
+      parent: 'Eagle & Advancement'
     },
-    category: 'leadership',
-    description: 'Record weekly patrol roll call, tardiness, and participation points',
-    allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
-    id: 'scouts',
-    defaultLabel: 'Advancement Tracker',
     defaultIcon: 'Award',
     iconByRole: {
-      owner: 'Award',
-      admin: 'Award',
-      leader: 'Award'
-    },
-    category: 'leadership',
-    description: 'Review and approve BSA rank requirements and badge milestones',
-    allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
-    id: 'advancement',
-    defaultLabel: 'My 7 Ranks',
-    defaultIcon: 'Compass',
-    iconByRole: {
-      scout: 'Compass'
+      scout: 'Award',
+      parent: 'Mountain'
     },
     category: 'outdoors',
-    description: 'Track Scout through Eagle rank requirements and status',
-    allowedRoles: ['scout'],
+    description: '7 Ranks Progress, Merit Badges & Road to Eagle',
+    allowedRoles: ['scout', 'parent'],
     badgeKey: null
   },
   {
-    id: 'merit-badges',
-    defaultLabel: 'Merit Badges & Eagle',
+    id: 'events-hub',
+    defaultLabel: 'Schedule & Tasks',
     labelByRole: {
-      scout: 'My Merit Badges',
-      leader: 'Merit Badges & Eagle',
-      owner: 'Merit Badges & Eagle'
-    },
-    defaultIcon: 'Star',
-    iconByRole: {
-      owner: 'Star',
-      admin: 'Star',
-      leader: 'Star',
-      scout: 'Star'
-    },
-    category: 'academics',
-    description: 'Track required Eagle and elective merit badge progress',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
-    badgeKey: null
-  },
-  {
-    id: 'road-to-eagle',
-    defaultLabel: 'Road to Eagle',
-    defaultIcon: 'Mountain',
-    iconByRole: {
-      owner: 'Mountain',
-      admin: 'Mountain',
-      leader: 'Mountain',
-      parent: 'Mountain',
-      scout: 'Mountain'
-    },
-    category: 'outdoors',
-    description: 'Eagle Scout service project milestones, timeline, and conference prep',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
-    badgeKey: null
-  },
-  {
-    id: 'reports',
-    defaultLabel: 'Reports Center',
-    defaultIcon: 'FileText',
-    iconByRole: {
-      owner: 'FileText',
-      admin: 'FileText',
-      leader: 'FileText'
-    },
-    category: 'leadership',
-    description: 'Generate, sign, and export PDF / Excel progress and attendance audits',
-    allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
-    id: 'assignments',
-    defaultLabel: 'Homework & Tasks',
-    labelByRole: {
-      scout: 'My Homework',
-      parent: 'Homework & Tasks',
-      leader: 'Homework & Tasks',
-      owner: 'Homework & Tasks'
-    },
-    defaultIcon: 'BookOpen',
-    iconByRole: {
-      owner: 'BookOpen',
-      admin: 'BookOpen',
-      leader: 'BookOpen',
-      parent: 'BookOpen',
-      scout: 'BookOpen'
-    },
-    category: 'academics',
-    description: 'Weekly troop homework, skill challenges, and file submissions',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
-    badgeKey: null
-  },
-  {
-    id: 'events',
-    defaultLabel: 'Troop Calendar',
-    labelByRole: {
-      parent: 'Troop Schedule',
-      scout: 'Troop Calendar',
-      leader: 'Troop Calendar',
-      owner: 'Troop Calendar'
+      scout: 'Schedule & Tasks',
+      parent: 'Schedule & Tasks',
+      leader: 'Calendar & Events',
+      owner: 'Calendar & Events'
     },
     defaultIcon: 'Calendar',
     iconByRole: {
@@ -187,100 +82,40 @@ export const MASTER_TABS_REGISTRY = [
       scout: 'Calendar'
     },
     category: 'outdoors',
-    description: 'Upcoming meetings, hikes, campouts, service projects, and RSVPs',
+    description: 'Troop Calendar, RSVPs & Homework Challenges',
+    allowedRoles: ['scout', 'parent'],
+    badgeKey: null
+  },
+  {
+    id: 'events',
+    defaultLabel: 'Calendar & Events',
+    labelByRole: {
+      parent: 'Troop Schedule',
+      scout: 'Troop Calendar',
+      leader: 'Calendar & Events',
+      owner: 'Calendar & Events'
+    },
+    defaultIcon: 'Calendar',
+    iconByRole: {
+      owner: 'Calendar',
+      admin: 'Calendar',
+      leader: 'Calendar',
+      parent: 'Calendar',
+      scout: 'Calendar'
+    },
+    category: 'outdoors',
+    description: 'Upcoming meetings, campouts, RSVPs & Excel Ingestion',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
     badgeKey: null
   },
   {
-    id: 'lesson-plans',
-    defaultLabel: 'Lesson Plans',
-    defaultIcon: 'GraduationCap',
-    iconByRole: {
-      owner: 'GraduationCap',
-      admin: 'GraduationCap',
-      leader: 'GraduationCap'
-    },
-    category: 'academics',
-    description: 'Shared lesson curriculum, skills teaching guides, and patrol materials',
-    allowedRoles: ['owner', 'admin', 'leader'],
-    badgeKey: null
-  },
-  {
-    id: 'journal',
-    defaultLabel: 'Journal & Notes',
+    id: 'communication-hub',
+    defaultLabel: 'Communications',
     labelByRole: {
-      scout: 'My Journal & Notes',
-      leader: 'Leader Journal & Notes',
-      owner: 'Leader Journal & Notes'
-    },
-    defaultIcon: 'Bookmark',
-    iconByRole: {
-      owner: 'Bookmark',
-      admin: 'Bookmark',
-      leader: 'Bookmark',
-      scout: 'FileText'
-    },
-    category: 'communication',
-    description: 'Private personal reflections, patrol observations, and field notes',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
-    badgeKey: null
-  },
-  {
-    id: 'islamic',
-    defaultLabel: 'Islamic Knowledge',
-    defaultIcon: 'Sparkles',
-    iconByRole: {
-      owner: 'Sparkles',
-      admin: 'Sparkles',
-      leader: 'Sparkles',
-      scout: 'Sparkles'
-    },
-    category: 'academics',
-    description: 'Duas, Islamic manners, prayer times, and character teachings',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
-    badgeKey: null
-  },
-  {
-    id: 'feed',
-    defaultLabel: 'Alerts & Feed',
-    defaultIcon: 'Bell',
-    iconByRole: {
-      scout: 'Bell',
-      parent: 'Bell'
-    },
-    category: 'communication',
-    description: 'Urgent announcements, troop broadcasts, and parental alerts',
-    allowedRoles: ['scout', 'parent'],
-    badgeKey: 'unreadAlertsCount'
-  },
-  {
-    id: 'chat',
-    defaultLabel: 'Patrol Messenger',
-    labelByRole: {
-      scout: 'Patrol Chat',
-      leader: 'Patrol Messenger',
-      owner: 'Patrol Messenger'
-    },
-    defaultIcon: 'MessageSquare',
-    iconByRole: {
-      owner: 'MessageSquare',
-      admin: 'MessageSquare',
-      leader: 'MessageSquare',
-      scout: 'MessageSquare'
-    },
-    category: 'communication',
-    description: 'Real-time encrypted patrol messaging and team discussions',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
-    badgeKey: 'unreadChatCount'
-  },
-  {
-    id: 'direct-messages',
-    defaultLabel: 'Direct Messages',
-    labelByRole: {
-      parent: 'Leader Inquiries & Chat',
-      leader: 'Parent Inquiries & DMs',
-      admin: 'Parent Inquiries & DMs',
-      owner: 'Parent Inquiries & DMs'
+      owner: 'Communications',
+      admin: 'Communications',
+      leader: 'Communications',
+      parent: 'Messages & Alerts'
     },
     defaultIcon: 'MessageSquare',
     iconByRole: {
@@ -290,30 +125,55 @@ export const MASTER_TABS_REGISTRY = [
       parent: 'MessageSquare'
     },
     category: 'communication',
-    description: 'Private 1-on-1 parent-leader conversations, confidential inquiries, and troop suggestions',
+    description: 'Direct Parent Inquiries, Troop Broadcasts & Patrol Messenger',
     allowedRoles: ['owner', 'admin', 'leader', 'parent'],
     badgeKey: 'unreadDirectMessagesCount'
   },
   {
-    id: 'resources',
-    defaultLabel: 'Resources & Guide',
+    id: 'tarbiyah-hub',
+    defaultLabel: 'Patrol & Tarbiyah',
     labelByRole: {
-      parent: 'Safety & Guides',
-      scout: 'Resources & Guide',
-      leader: 'Resources & Guide',
-      owner: 'Resources & Guide'
+      scout: 'Patrol & Tarbiyah'
     },
-    defaultIcon: 'Book',
+    defaultIcon: 'Sparkles',
     iconByRole: {
-      owner: 'Book',
-      admin: 'Book',
-      leader: 'Book',
-      parent: 'Book',
-      scout: 'Book'
+      scout: 'Sparkles'
     },
-    category: 'communication',
-    description: 'Instructional videos, handbook references, and field materials',
-    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
+    category: 'academics',
+    description: 'Patrol Chat, Islamic Knowledge, Handbook Guides & Field Notes',
+    allowedRoles: ['scout'],
+    badgeKey: 'unreadChatCount'
+  },
+  {
+    id: 'admin-hub',
+    defaultLabel: 'Admin & Settings',
+    labelByRole: {
+      owner: '👑 Admin & Settings',
+      admin: '👑 Executive & Settings',
+      leader: '⚜️ Admin & Settings'
+    },
+    defaultIcon: 'Sliders',
+    iconByRole: {
+      owner: 'Crown',
+      admin: 'ShieldCheck',
+      leader: 'Sliders'
+    },
+    category: 'leadership',
+    description: 'User Management, Security, Excel Ingestion & Profile',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'road-to-eagle',
+    defaultLabel: 'Road to Eagle',
+    defaultIcon: 'Mountain',
+    iconByRole: {
+      parent: 'Mountain',
+      scout: 'Mountain'
+    },
+    category: 'outdoors',
+    description: 'Eagle Scout service project milestones, timeline, and conference prep',
+    allowedRoles: ['parent', 'scout'],
     badgeKey: null
   },
   {
@@ -321,7 +181,7 @@ export const MASTER_TABS_REGISTRY = [
     defaultLabel: 'My Profile',
     labelByRole: {
       parent: 'Family Profile',
-      scout: 'Scout Profile',
+      scout: 'My Profile',
       leader: 'Leader Profile',
       owner: 'Owner Profile'
     },
@@ -331,62 +191,203 @@ export const MASTER_TABS_REGISTRY = [
       admin: 'ShieldCheck',
       leader: 'ShieldCheck',
       parent: 'Users',
-      scout: 'Compass'
+      scout: 'User'
     },
     category: 'navigation',
     description: 'Account settings, emergency contacts, credentials, and service log',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
     badgeKey: null,
     isPermanent: true
+  },
+
+  // ── 2. INDIVIDUAL SUB-MODULES (Kept for routing compatibility) ──
+  {
+    id: 'roster',
+    defaultLabel: 'Patrol Roster',
+    defaultIcon: 'Users',
+    category: 'leadership',
+    description: 'Manage scouts, patrols, phone contacts, and member profiles',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'attendance',
+    defaultLabel: 'Patrol Attendance',
+    defaultIcon: 'CheckSquare',
+    category: 'leadership',
+    description: 'Record weekly patrol roll call, tardiness, and participation points',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'scouts',
+    defaultLabel: 'Advancement Tracker',
+    defaultIcon: 'Award',
+    category: 'leadership',
+    description: 'Review and approve BSA rank requirements and badge milestones',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'advancement',
+    defaultLabel: '7 Ranks Progress',
+    defaultIcon: 'Compass',
+    category: 'outdoors',
+    description: 'Track Scout through Eagle rank requirements and status',
+    allowedRoles: ['scout'],
+    badgeKey: null
+  },
+  {
+    id: 'merit-badges',
+    defaultLabel: 'Merit Badges & Eagle',
+    defaultIcon: 'Star',
+    category: 'academics',
+    description: 'Track required Eagle and elective merit badge progress',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
+    badgeKey: null
+  },
+  {
+    id: 'reports',
+    defaultLabel: 'Reports Center',
+    defaultIcon: 'FileText',
+    category: 'leadership',
+    description: 'Generate, sign, and export PDF / Excel progress and attendance audits',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'assignments',
+    defaultLabel: 'Homework & Tasks',
+    defaultIcon: 'BookOpen',
+    category: 'academics',
+    description: 'Weekly troop homework, skill challenges, and file submissions',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
+    badgeKey: null
+  },
+  {
+    id: 'lesson-plans',
+    defaultLabel: 'Lesson Plans',
+    defaultIcon: 'GraduationCap',
+    category: 'academics',
+    description: 'Shared lesson curriculum, skills teaching guides, and patrol materials',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'journal',
+    defaultLabel: 'Journal & Notes',
+    defaultIcon: 'Bookmark',
+    category: 'communication',
+    description: 'Private personal reflections, patrol observations, and field notes',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
+    badgeKey: null
+  },
+  {
+    id: 'islamic',
+    defaultLabel: 'Islamic Knowledge',
+    defaultIcon: 'Sparkles',
+    category: 'academics',
+    description: 'Duas, Islamic manners, prayer times, and character teachings',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
+    badgeKey: null
+  },
+  {
+    id: 'feed',
+    defaultLabel: 'Alerts & Feed',
+    defaultIcon: 'Bell',
+    category: 'communication',
+    description: 'Urgent announcements, troop broadcasts, and parental alerts',
+    allowedRoles: ['scout', 'parent'],
+    badgeKey: 'unreadAlertsCount'
+  },
+  {
+    id: 'chat',
+    defaultLabel: 'Patrol Messenger',
+    defaultIcon: 'MessageSquare',
+    category: 'communication',
+    description: 'Real-time encrypted patrol messaging and team discussions',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout'],
+    badgeKey: 'unreadChatCount'
+  },
+  {
+    id: 'direct-messages',
+    defaultLabel: 'Direct Messages',
+    defaultIcon: 'MessageSquare',
+    category: 'communication',
+    description: 'Private 1-on-1 parent-leader conversations and troop suggestions',
+    allowedRoles: ['owner', 'admin', 'leader', 'parent'],
+    badgeKey: 'unreadDirectMessagesCount'
+  },
+  {
+    id: 'resources',
+    defaultLabel: 'Resources & Guide',
+    defaultIcon: 'Book',
+    category: 'communication',
+    description: 'Instructional videos, handbook references, and field materials',
+    allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
+    badgeKey: null
+  },
+  {
+    id: 'admin',
+    defaultLabel: 'Admin Console',
+    defaultIcon: 'Shield',
+    category: 'leadership',
+    description: 'System security, user management, and broadcast administration',
+    allowedRoles: ['owner', 'admin'],
+    badgeKey: null
   }
 ];
 
 /**
- * Returns role-permitted tabs in their default order for a given user context
+ * Returns clean 5-hub navigation items for a given user context
  */
 export function getDefaultRoleTabs(userRoleContext) {
   const { isOwner, isLeader, isExecutive, isParent, isScout } = userRoleContext || {};
-  
   const effectiveRole = isOwner ? 'owner' : isExecutive ? 'admin' : isLeader ? 'leader' : isParent ? 'parent' : 'scout';
 
-  // Filter master tabs based on user permissions
-  const availableTabs = MASTER_TABS_REGISTRY.filter(tab => {
-    if (tab.allowedRoles.includes('owner') && isOwner) return true;
-    if (tab.allowedRoles.includes('admin') && isExecutive) return true;
-    if (tab.allowedRoles.includes('leader') && isLeader) return true;
-    if (tab.allowedRoles.includes('parent') && isParent) return true;
-    if (tab.allowedRoles.includes('scout') && isScout) return true;
-    return false;
-  });
+  let primaryHubIds = [];
 
-  // Assign role-specific labels and role-differentiated icons
-  return availableTabs.map(tab => {
-    const roleIcon = tab.iconByRole?.[effectiveRole] || tab.defaultIcon;
-    return {
-      id: tab.id,
-      label: tab.labelByRole?.[effectiveRole] || tab.defaultLabel,
-      icon: roleIcon,
-      category: tab.category,
-      description: tab.description,
-      visible: true,
-      badgeKey: tab.badgeKey,
-      isPermanent: !!tab.isPermanent
-    };
-  });
+  if (isOwner || isExecutive || isLeader) {
+    primaryHubIds = ['home', 'scouts-hub', 'events', 'communication-hub', 'admin-hub'];
+  } else if (isParent) {
+    primaryHubIds = ['home', 'events', 'communication-hub', 'road-to-eagle', 'profile'];
+  } else {
+    // Scout
+    primaryHubIds = ['home', 'advancement-hub', 'events-hub', 'tarbiyah-hub', 'profile'];
+  }
+
+  const tabMap = new Map(MASTER_TABS_REGISTRY.map(t => [t.id, t]));
+
+  return primaryHubIds
+    .map(id => tabMap.get(id))
+    .filter(Boolean)
+    .map(tab => {
+      const roleIcon = tab.iconByRole?.[effectiveRole] || tab.defaultIcon;
+      return {
+        id: tab.id,
+        label: tab.labelByRole?.[effectiveRole] || tab.defaultLabel,
+        icon: roleIcon,
+        category: tab.category,
+        description: tab.description,
+        visible: true,
+        badgeKey: tab.badgeKey,
+        isPermanent: !!tab.isPermanent
+      };
+    });
 }
 
 /**
  * Returns the default 4 pinned bottom quick bar tab IDs for a role
  */
 export function getDefaultBottomTabIds(userRoleContext) {
-  const { isOwner, isLeader, isParent } = userRoleContext || {};
+  const { isOwner, isLeader, isExecutive, isParent } = userRoleContext || {};
   
-  if (isParent) {
-    return ['home', 'events', 'feed', 'road-to-eagle'];
+  if (isOwner || isExecutive || isLeader) {
+    return ['home', 'scouts-hub', 'events', 'communication-hub'];
   }
-  if (isOwner || isLeader) {
-    return ['home', 'roster', 'attendance', 'events'];
+  if (isParent) {
+    return ['home', 'events', 'communication-hub', 'road-to-eagle'];
   }
   // Scout
-  return ['home', 'advancement', 'events', 'chat'];
+  return ['home', 'advancement-hub', 'events-hub', 'tarbiyah-hub'];
 }

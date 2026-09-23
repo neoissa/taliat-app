@@ -28,6 +28,7 @@ import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import DynamicIcon from './components/DynamicIcon';
 import MobileTabManager from './components/MobileTabManager';
 import MobileTabBar from './components/MobileTabBar';
+import HubSubNav from './components/HubSubNav';
 import { getNavItemColorTheme } from './utils/IconRegistry';
 import { 
   subscribeToNavPreferences, 
@@ -413,40 +414,194 @@ export default function App() {
   const [adminInitialTab, setAdminInitialTab] = useState('users');
   const [adminExtraData, setAdminExtraData] = useState(null);
 
+  // Sub-tab states for 5-Hub navigation
+  const [scoutsHubSubTab, setScoutsHubSubTab] = useState('roster');
+  const [commHubSubTab, setCommHubSubTab] = useState('direct-messages');
+  const [advancementHubSubTab, setAdvancementHubSubTab] = useState('advancement');
+  const [eventsHubSubTab, setEventsHubSubTab] = useState('events');
+  const [tarbiyahHubSubTab, setTarbiyahHubSubTab] = useState('chat');
+  const [adminHubSubTab, setAdminHubSubTab] = useState('admin');
+
   const handleNavigate = (tab, extraData = null) => {
-    if (tab === 'attendance' && extraData) {
-      setAttendanceInitialData(extraData);
-    }
-    if (tab === 'counselors' || tab === 'counselor-directory') {
-      setCurrentTab('profile');
-      setProfileInitialTab('counselors');
+    // 1. Scouts & Patrols Sub-tools
+    if (tab === 'roster') {
+      setCurrentTab('scouts-hub');
+      setScoutsHubSubTab('roster');
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'profile' && extraData) {
-      if (typeof extraData === 'string') {
-        setProfileInitialTab(extraData);
-      } else if (extraData.tab) {
-        setProfileInitialTab(extraData.tab);
+    if (tab === 'attendance') {
+      if (extraData) setAttendanceInitialData(extraData);
+      if (isParent) {
+        setCurrentTab('attendance');
+      } else if (isScout) {
+        setCurrentTab('attendance');
+      } else {
+        setCurrentTab('scouts-hub');
+        setScoutsHubSubTab('attendance');
       }
-    } else if (tab === 'service-log') {
-      setCurrentTab('profile');
-      setProfileInitialTab('service');
       setMobileMenuOpen(false);
       return;
-    } else if (tab === 'parent-requests' || tab === 'admin-requests') {
-      setCurrentTab('admin');
-      setAdminInitialTab('requests');
-      setAdminExtraData(extraData);
+    }
+    if (tab === 'scouts') {
+      setCurrentTab('scouts-hub');
+      setScoutsHubSubTab('advancement');
       setMobileMenuOpen(false);
       return;
-    } else if (tab === 'broadcasts' || tab === 'troop-broadcasts' || tab === 'broadcast') {
-      setCurrentTab('admin');
-      setAdminInitialTab('broadcasts');
-      setAdminExtraData(extraData);
+    }
+    if (tab === 'reports') {
+      setCurrentTab('scouts-hub');
+      setScoutsHubSubTab('reports');
       setMobileMenuOpen(false);
       return;
-    } else if (tab === 'admin') {
+    }
+
+    // 2. Advancement Sub-tools
+    if (tab === 'advancement') {
+      if (isScout) {
+        setCurrentTab('advancement-hub');
+        setAdvancementHubSubTab('advancement');
+      } else if (isParent) {
+        setCurrentTab('advancement');
+      } else {
+        setCurrentTab('scouts-hub');
+        setScoutsHubSubTab('advancement');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'merit-badges') {
+      if (isScout) {
+        setCurrentTab('advancement-hub');
+        setAdvancementHubSubTab('merit-badges');
+      } else if (isParent) {
+        setCurrentTab('road-to-eagle');
+      } else {
+        setCurrentTab('merit-badges');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'road-to-eagle') {
+      if (isScout) {
+        setCurrentTab('advancement-hub');
+        setAdvancementHubSubTab('road-to-eagle');
+      } else {
+        setCurrentTab('road-to-eagle');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 3. Calendar & Events Sub-tools
+    if (tab === 'events' || tab === 'calendar') {
+      if (isScout) {
+        setCurrentTab('events-hub');
+        setEventsHubSubTab('events');
+      } else {
+        setCurrentTab('events');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'assignments' || tab === 'tasks' || tab === 'homework') {
+      if (isScout) {
+        setCurrentTab('events-hub');
+        setEventsHubSubTab('assignments');
+      } else if (isParent) {
+        setCurrentTab('assignments');
+      } else {
+        setCurrentTab('assignments');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 4. Communications Sub-tools
+    if (tab === 'direct-messages') {
+      if (isParent) {
+        setCurrentTab('direct-messages');
+      } else {
+        setCurrentTab('communication-hub');
+        setCommHubSubTab('direct-messages');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'broadcasts' || tab === 'troop-broadcasts' || tab === 'broadcast') {
+      if (isLeaderOrOwner || isExecutive) {
+        setCurrentTab('communication-hub');
+        setCommHubSubTab('broadcasts');
+        setAdminInitialTab('broadcasts');
+        setAdminExtraData(extraData);
+      } else {
+        setCurrentTab('feed');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'parent-requests' || tab === 'admin-requests') {
+      if (isLeaderOrOwner || isExecutive) {
+        setCurrentTab('communication-hub');
+        setCommHubSubTab('parent-requests');
+        setAdminInitialTab('requests');
+        setAdminExtraData(extraData);
+      } else {
+        setCurrentTab('direct-messages');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'chat') {
+      if (isScout) {
+        setCurrentTab('tarbiyah-hub');
+        setTarbiyahHubSubTab('chat');
+      } else if (isLeaderOrOwner || isExecutive) {
+        setCurrentTab('communication-hub');
+        setCommHubSubTab('chat');
+      } else {
+        setCurrentTab('chat');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 5. Tarbiyah & Resources Sub-tools
+    if (tab === 'islamic') {
+      if (isScout) {
+        setCurrentTab('tarbiyah-hub');
+        setTarbiyahHubSubTab('islamic');
+      } else {
+        setCurrentTab('islamic');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'resources') {
+      if (isScout) {
+        setCurrentTab('tarbiyah-hub');
+        setTarbiyahHubSubTab('resources');
+      } else if (isParent) {
+        setCurrentTab('resources');
+      } else {
+        setCurrentTab('resources');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'journal') {
+      if (isScout) {
+        setCurrentTab('tarbiyah-hub');
+        setTarbiyahHubSubTab('journal');
+      } else {
+        setCurrentTab('journal');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // 6. Admin & Profile Sub-tools
+    if (tab === 'admin' || tab === 'global-admin') {
       if (extraData?.tab) {
         setAdminInitialTab(extraData.tab);
         setAdminExtraData(extraData);
@@ -454,7 +609,42 @@ export default function App() {
         setAdminInitialTab('users');
         setAdminExtraData(null);
       }
+      setCurrentTab('admin-hub');
+      setAdminHubSubTab('admin');
+      setMobileMenuOpen(false);
+      return;
     }
+    if (tab === 'lesson-plans') {
+      setCurrentTab('admin-hub');
+      setAdminHubSubTab('lesson-plans');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'profile') {
+      if (extraData) {
+        if (typeof extraData === 'string') {
+          setProfileInitialTab(extraData);
+        } else if (extraData.tab) {
+          setProfileInitialTab(extraData.tab);
+        }
+      }
+      setCurrentTab('profile');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'counselors' || tab === 'counselor-directory') {
+      setCurrentTab('profile');
+      setProfileInitialTab('counselors');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'service-log') {
+      setCurrentTab('profile');
+      setProfileInitialTab('service');
+      setMobileMenuOpen(false);
+      return;
+    }
+
     setCurrentTab(tab);
     setMobileMenuOpen(false);
   };
@@ -512,9 +702,10 @@ export default function App() {
     .filter(tab => tab.visible)
     .map(tab => {
       let badge = 0;
-      if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat') badge = unreadChatCount;
+      if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat' || tab.id === 'tarbiyah-hub') badge = unreadChatCount;
       if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
       if (tab.badgeKey === 'unreadDirectMessagesCount' || tab.id === 'direct-messages') badge = unreadDirectMessagesCount;
+      if (tab.id === 'communication-hub' || tab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
       return {
         ...tab,
         badge
@@ -530,9 +721,10 @@ export default function App() {
       const foundTab = (navState?.tabs || []).find(t => t.id === tabId);
       if (foundTab && foundTab.visible !== false) {
         let badge = 0;
-        if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat') badge = unreadChatCount;
+        if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat' || foundTab.id === 'tarbiyah-hub') badge = unreadChatCount;
         if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
         if (foundTab.badgeKey === 'unreadDirectMessagesCount' || foundTab.id === 'direct-messages') badge = unreadDirectMessagesCount;
+        if (foundTab.id === 'communication-hub' || foundTab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
         items.push({
           id: foundTab.id,
           label: foundTab.label,
@@ -1158,17 +1350,7 @@ export default function App() {
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
       <main className="main-content-area p-3.5 sm:p-5 lg:p-6 pb-20 md:pb-6">
-        {currentTab === 'road-to-eagle' && !isParent && (
-          <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
-        )}
-        {currentTab === 'road-to-eagle' && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="eagle"
-            onNavigate={handleNavigate} 
-          />
-        )}
-
+        {/* ── 1. HOME DASHBOARDS ── */}
         {(!currentTab || currentTab === 'home') && isLeaderOrOwner && (
           <LeaderHome 
             currentUser={currentUser} 
@@ -1192,43 +1374,158 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'feed' && isParent && (
+        {/* ── 2. SCOUTS & PATROLS HUB (LEADER / OWNER) ── */}
+        {currentTab === 'scouts-hub' && (isLeaderOrOwner || isExecutive) && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Scouts & Patrols Hub"
+              hubSubtitle="Manage patrol rosters, record session roll call, sign off rank advancements, and generate reports."
+              colorTheme="emerald"
+              activeTab={scoutsHubSubTab}
+              onChange={(tabId) => setScoutsHubSubTab(tabId)}
+              tabs={[
+                { id: 'roster', label: 'Patrol Roster', icon: 'Users' },
+                { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare' },
+                { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award' },
+                { id: 'reports', label: 'Reports & Audits', icon: 'FileText' }
+              ]}
+            />
+            {scoutsHubSubTab === 'roster' && <PatrolRoster currentUser={currentUser} />}
+            {scoutsHubSubTab === 'attendance' && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
+            {scoutsHubSubTab === 'advancement' && <ScoutList currentUser={currentUser} />}
+            {scoutsHubSubTab === 'reports' && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
+          </div>
+        )}
+
+        {/* ── 3. COMMUNICATIONS HUB (LEADER / OWNER) ── */}
+        {currentTab === 'communication-hub' && (isLeaderOrOwner || isExecutive) && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Communications Hub"
+              hubSubtitle="Direct parent messaging, whole-troop broadcasts, patrol channels, and conference approvals."
+              colorTheme="indigo"
+              activeTab={commHubSubTab}
+              onChange={(tabId) => setCommHubSubTab(tabId)}
+              tabs={[
+                { id: 'direct-messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount },
+                { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', badge: unreadAlertsCount },
+                { id: 'chat', label: 'Patrol Messenger', icon: 'Radio', badge: unreadChatCount },
+                { id: 'parent-requests', label: 'Parent Approvals', icon: 'Inbox', badge: unreadRequestsCount }
+              ]}
+            />
+            {commHubSubTab === 'direct-messages' && <LeaderMessagingHub currentUser={currentUser} onNavigate={handleNavigate} />}
+            {commHubSubTab === 'broadcasts' && <AdminPanel currentUser={currentUser} initialTab="broadcasts" onNavigate={handleNavigate} />}
+            {commHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+            {commHubSubTab === 'parent-requests' && <AdminPanel currentUser={currentUser} initialTab="requests" extraData={adminExtraData} onNavigate={handleNavigate} />}
+          </div>
+        )}
+
+        {/* ── 4. COMMUNICATIONS HUB (PARENT) ── */}
+        {currentTab === 'communication-hub' && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
-            initialTab="feed"
+            initialTab="messages"
             onNavigate={handleNavigate} 
           />
         )}
 
-        {currentTab === 'feed' && isScout && (
-          <ScoutAlertsFeed 
-            currentUser={currentUser} 
-            onNavigate={handleNavigate} 
-          />
+        {/* ── 5. ADMIN & SETTINGS HUB (LEADER / OWNER) ── */}
+        {currentTab === 'admin-hub' && (isLeaderOrOwner || isExecutive) && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle={isOwner ? "👑 Troop Owner Administration" : "⚜️ Leadership Administration"}
+              hubSubtitle="Manage system user credentials, security permissions, lesson curriculums, and safety training."
+              colorTheme={isOwner ? "amber" : "purple"}
+              activeTab={adminHubSubTab}
+              onChange={(tabId) => setAdminHubSubTab(tabId)}
+              tabs={[
+                { id: 'admin', label: isOwner ? '👑 Superadmin Console' : '⚜️ Leader Administration', icon: isOwner ? 'Crown' : 'Shield' },
+                { id: 'profile', label: 'My Profile & Safety Training (SPT)', icon: 'User' },
+                { id: 'lesson-plans', label: 'Lesson Curriculum', icon: 'GraduationCap' }
+              ]}
+            />
+            {adminHubSubTab === 'admin' && (
+              <AdminPanel 
+                currentUser={currentUser} 
+                initialTab={adminInitialTab} 
+                extraData={adminExtraData} 
+                onNavigate={handleNavigate} 
+              />
+            )}
+            {adminHubSubTab === 'profile' && (
+              <ScoutProfile 
+                currentUser={currentUser} 
+                initialTab={profileInitialTab} 
+                onNavigate={handleNavigate} 
+              />
+            )}
+            {adminHubSubTab === 'lesson-plans' && (
+              <LessonPlans currentUser={currentUser} />
+            )}
+          </div>
         )}
 
-        {currentTab === 'events' && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="events"
-            onNavigate={handleNavigate} 
-          />
+        {/* ── 6. ADVANCEMENT HUB (SCOUT) ── */}
+        {currentTab === 'advancement-hub' && isScout && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="My Scouting Advancement"
+              hubSubtitle="Track your journey from Scout to Eagle, view merit badge progress, and plan service milestones."
+              colorTheme="emerald"
+              activeTab={advancementHubSubTab}
+              onChange={(tabId) => setAdvancementHubSubTab(tabId)}
+              tabs={[
+                { id: 'advancement', label: '7 Ranks Progress', icon: 'Compass' },
+                { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: 'Star' },
+                { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain' }
+              ]}
+            />
+            {advancementHubSubTab === 'advancement' && <AdvancementTracker currentUser={currentUser} />}
+            {advancementHubSubTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
+            {advancementHubSubTab === 'road-to-eagle' && <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />}
+          </div>
         )}
 
-        {currentTab === 'resources' && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="resources"
-            onNavigate={handleNavigate} 
-          />
+        {/* ── 7. SCHEDULE & TASKS HUB (SCOUT) ── */}
+        {currentTab === 'events-hub' && isScout && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Schedule & Weekly Tasks"
+              hubSubtitle="Upcoming troop meetings, campouts, packing checklists, and weekly skill challenges."
+              colorTheme="sky"
+              activeTab={eventsHubSubTab}
+              onChange={(tabId) => setEventsHubSubTab(tabId)}
+              tabs={[
+                { id: 'events', label: 'Troop Calendar & RSVPs', icon: 'Calendar' },
+                { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen' }
+              ]}
+            />
+            {eventsHubSubTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
+            {eventsHubSubTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
+          </div>
         )}
 
-        {currentTab === 'profile' && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="family"
-            onNavigate={handleNavigate} 
-          />
+        {/* ── 8. PATROL & TARBIYAH HUB (SCOUT) ── */}
+        {currentTab === 'tarbiyah-hub' && isScout && (
+          <div className="space-y-4">
+            <HubSubNav
+              hubTitle="Patrol & Tarbiyah Hub"
+              hubSubtitle="Encrypted patrol messenger, Islamic knowledge & duas, handbook guides, and personal reflections."
+              colorTheme="amber"
+              activeTab={tarbiyahHubSubTab}
+              onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
+              tabs={[
+                { id: 'chat', label: 'Patrol Chat', icon: 'MessageSquare', badge: unreadChatCount },
+                { id: 'islamic', label: 'Islamic Knowledge', icon: 'Sparkles' },
+                { id: 'resources', label: 'Handbook & Videos', icon: 'Book' },
+                { id: 'journal', label: 'My Journal & Notes', icon: 'FileText' }
+              ]}
+            />
+            {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'resources' && <VideoResources currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
+          </div>
         )}
 
         {(currentTab === 'admin' || currentTab === 'global-admin' || currentTab === 'parent-requests' || currentTab === 'admin-requests') && (isLeaderOrOwner || isExecutive) && (

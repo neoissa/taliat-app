@@ -1,7 +1,7 @@
 /**
- * Role-Based Mobile Navigation Configurations
+ * Role-Based Mobile Navigation Configurations (5-Hub Architecture)
  * 
- * Provides tailored bottom tab architectures for Leaders, Owners, Scouts, and Parents
+ * Provides tailored 5-hub architectures for Leaders, Owners, Scouts, and Parents
  * featuring vibrant color themes and dedicated Lucide icons.
  */
 
@@ -15,36 +15,36 @@ export const LEADER_OWNER_TABS = [
     badgeKey: null
   },
   {
+    id: 'scouts-hub',
+    label: 'Scouts & Patrols',
+    icon: 'Users',
+    theme: 'emerald',
+    description: 'Patrol Roster, Attendance, Advancement & Reports',
+    badgeKey: null
+  },
+  {
     id: 'events',
-    label: 'Schedule & Calendar',
+    label: 'Calendar & Events',
     icon: 'Calendar',
     theme: 'sky',
-    description: 'Upcoming Troop Events & Weekly Meetings',
+    description: 'Troop Schedule, RSVPs & Ingestion',
     badgeKey: null
   },
   {
-    id: 'parent-requests',
-    label: 'Parent Requests',
-    icon: 'Inbox',
+    id: 'communication-hub',
+    label: 'Communications',
+    icon: 'MessageSquare',
     theme: 'amber',
-    description: 'Pending Parent Approvals & Inquiries',
-    badgeKey: 'unreadRequestsCount'
+    description: 'Parent DMs, Broadcasts & Patrol Chat',
+    badgeKey: 'unreadDirectMessagesCount'
   },
   {
-    id: 'roster',
-    label: 'Roster & Profiles',
-    icon: 'Users',
-    theme: 'indigo',
-    description: 'Patrol Roster, Contacts & Scout Details',
+    id: 'admin-hub',
+    label: 'Admin & Settings',
+    icon: 'Sliders',
+    theme: 'purple',
+    description: 'User Roles, System Administration & Profile',
     badgeKey: null
-  },
-  {
-    id: 'broadcasts',
-    label: 'Alerts & Broadcasts',
-    icon: 'Megaphone',
-    theme: 'rose',
-    description: 'Troop Broadcast Center & Announcements',
-    badgeKey: 'unreadAlertsCount'
   }
 ];
 
@@ -58,35 +58,35 @@ export const SCOUT_TABS = [
     badgeKey: null
   },
   {
-    id: 'assignments',
-    label: 'Assignments & Tasks',
-    icon: 'CheckSquare',
-    theme: 'amber',
-    description: 'Weekly Homework, Tasks & Challenges',
-    badgeKey: null
-  },
-  {
-    id: 'advancement',
-    label: 'Advancement & Rank',
+    id: 'advancement-hub',
+    label: 'My Advancement',
     icon: 'Award',
     theme: 'emerald',
-    description: '7 Ranks Advancement & Milestones',
+    description: '7 Ranks, Merit Badges & Eagle Roadmap',
     badgeKey: null
   },
   {
-    id: 'feed',
-    label: 'Alerts & Feed',
-    icon: 'Bell',
-    theme: 'amber',
-    description: 'Troop Alerts & Live Announcements',
-    badgeKey: 'unreadAlertsCount'
+    id: 'events-hub',
+    label: 'Schedule & Tasks',
+    icon: 'Calendar',
+    theme: 'sky',
+    description: 'Troop Calendar, RSVPs & Homework',
+    badgeKey: null
   },
   {
-    id: 'counselors',
-    label: 'Counselor Directory',
-    icon: 'Compass',
+    id: 'tarbiyah-hub',
+    label: 'Patrol & Tarbiyah',
+    icon: 'Sparkles',
+    theme: 'amber',
+    description: 'Patrol Chat, Islamic Knowledge & Guides',
+    badgeKey: 'unreadChatCount'
+  },
+  {
+    id: 'profile',
+    label: 'My Profile',
+    icon: 'User',
     theme: 'teal',
-    description: 'Merit Badge Counselors Directory',
+    description: 'Scout Profile, Credentials & Service Log',
     badgeKey: null
   }
 ];
@@ -102,35 +102,35 @@ export const PARENT_TABS = [
   },
   {
     id: 'events',
-    label: 'Children Schedule',
+    label: 'Calendar & Schedule',
     icon: 'Calendar',
     theme: 'sky',
     description: 'Child Meetings, Hikes & Calendar',
     badgeKey: null
   },
   {
-    id: 'assignments',
-    label: 'Homework & Tasks',
-    icon: 'BookOpen',
+    id: 'communication-hub',
+    label: 'Messages & Alerts',
+    icon: 'MessageSquare',
     theme: 'amber',
-    description: 'Child Homework & Activity Submissions',
-    badgeKey: null
+    description: 'Leader Inquiries, Meeting Requests & Alerts',
+    badgeKey: 'unreadDirectMessagesCount'
   },
   {
     id: 'road-to-eagle',
-    label: 'Road to Eagle',
+    label: 'Eagle & Progress',
     icon: 'Mountain',
     theme: 'teal',
-    description: 'Eagle Scout Roadmap & Projects',
+    description: 'Eagle Scout Roadmap & Child Advancement',
     badgeKey: null
   },
   {
-    id: 'feed',
-    label: 'Alerts & Feed',
-    icon: 'Bell',
-    theme: 'amber',
-    description: 'Troop Alerts & Family Notifications',
-    badgeKey: 'unreadAlertsCount'
+    id: 'profile',
+    label: 'Family Profile',
+    icon: 'User',
+    theme: 'indigo',
+    description: 'Family Profile & Contacts',
+    badgeKey: null
   }
 ];
 
