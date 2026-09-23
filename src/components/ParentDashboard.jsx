@@ -355,6 +355,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [meritSubTabMap, setMeritSubTabMap] = useState({}); // { [scoutUid]: 'planned' | 'earned' | 'in_progress' | 'eagle_required' | 'all' }
   const [expandedBadgeMap, setExpandedBadgeMap] = useState({}); // { [badgeKey]: boolean }
   const [badgeSearchMap, setBadgeSearchMap] = useState({}); // { [scoutUid]: string }
+  const [showParentGuide, setShowParentGuide] = useState(true);
 
   // Sync initial tab when changed by parent container
   useEffect(() => {
@@ -1400,6 +1401,81 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </button>
             </div>
           )}
+
+          {/* ── SECTION 1.4: EDUCATIONAL PARENT PORTAL GUIDE ── */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/30 border border-slate-800 hover:border-indigo-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3">
+            <div 
+              onClick={() => setShowParentGuide(!showParentGuide)}
+              className="flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Compass size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                    <span>👨‍👩‍👧 Family Scouting Portal Quick Guide</span>
+                    <span className="text-[10px] text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                      Parent Guide
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    How to track your child's advancement, review reports, file absence notices, and message leaders.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-bold p-1 rounded-lg bg-slate-800 group-hover:bg-slate-750 transition cursor-pointer"
+              >
+                {showParentGuide ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+
+            {showParentGuide && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
+                <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <Award size={14} />
+                    <span>1. Track Advancement</span>
+                  </div>
+                  <p className="text-[11px] text-slate-350 leading-relaxed">
+                    View active rank progress (Scout to Eagle), certified merit badges, and weekly learning challenges for each child.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                    <Calendar size={14} />
+                    <span>2. Schedule & Absences</span>
+                  </div>
+                  <p className="text-[11px] text-slate-350 leading-relaxed">
+                    RSVP to troop campouts and file absence notices in advance so missed sessions are excused on attendance records.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <Printer size={14} />
+                    <span>3. Sign Reports & Forms</span>
+                  </div>
+                  <p className="text-[11px] text-slate-350 leading-relaxed">
+                    Review and digitally sign official progress reports published by unit leaders, and submit annual BSA medical forms.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-purple-400 font-bold">
+                    <MessageSquare size={14} />
+                    <span>4. Conferences & DMs</span>
+                  </div>
+                  <p className="text-[11px] text-slate-350 leading-relaxed">
+                    Request a 1-on-1 leader conference or send direct messages to patrol scoutmasters regarding your child's progress.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* SECTION 1.5: DUAL-PARENT HOUSEHOLD SUMMARY WIDGET */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">

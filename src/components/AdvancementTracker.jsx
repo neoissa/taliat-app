@@ -1099,7 +1099,7 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
         onClose={() => setShowUniversalPendingModal(false)}
         scoutId={scoutId}
         currentUser={currentUser}
-        onNavigate={null}
+        onNavigate={onNavigate}
       />
     </div>
   );

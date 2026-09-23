@@ -63,6 +63,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [selectedPendingScoutId, setSelectedPendingScoutId] = useState(null);
   const [showScheduleMeetingModal, setShowScheduleMeetingModal] = useState(false);
+  const [showLeaderGuide, setShowLeaderGuide] = useState(true);
 
   // Resolved Patrols for Leader
   const accessibleGroups = getAccessiblePatrols(currentUser, groups);
@@ -513,6 +514,81 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── 1.6 EDUCATIONAL LEADER WORKFLOW GUIDE ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/30 border border-slate-800 hover:border-indigo-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3">
+        <div 
+          onClick={() => setShowLeaderGuide(!showLeaderGuide)}
+          className="flex items-center justify-between cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shrink-0">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                <span>⚜️ Troop Leadership Workflow & Quick Guide</span>
+                <span className="text-[10px] text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                  How-To
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Key steps for taking roll call, verifying oral submissions, communicating with parents, and managing patrols.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-xs text-indigo-400 hover:text-indigo-300 font-bold p-1 rounded-lg bg-slate-800 group-hover:bg-slate-750 transition cursor-pointer"
+          >
+            {showLeaderGuide ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {showLeaderGuide && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <CheckCircle2 size={14} />
+                <span>1. Take Roll Call</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Click <strong>Take Roll Call</strong> during weekly sessions to log attendance. Absences marked with parent notices automatically record as Excused.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                <Clock size={14} />
+                <span>2. Test & Sign-off</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Click <strong>Review Action Items</strong> to open the testing queue. Ask candidates their oral prompt, then click <em>Conduct Test & Sign-off</em>.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-indigo-400 font-bold">
+                <MessageSquare size={14} />
+                <span>3. Parent Inquiries</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Parent messages, conference requests, and signed progress reports appear in the <strong>Action Center</strong> for 1-click scheduling or replies.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                <Megaphone size={14} />
+                <span>4. Troop Broadcasts</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Publish whole-troop announcements and packing lists directly to parent and scout notification feeds with real-time push badges.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── 1.7 UNIFIED LEADER ACTION CENTER & INQUIRIES ── */}
@@ -1197,8 +1273,12 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       {/* Universal Pending Queue Modal */}
       <UniversalPendingQueueModal
         isOpen={showPendingModal}
-        onClose={() => setShowPendingModal(false)}
-        scoutId={selectedPendingScoutId || scouts[0]?.uid || currentUser?.uid}
+        onClose={() => {
+          setShowPendingModal(false);
+          setSelectedPendingScoutId(null);
+        }}
+        targetScoutId={selectedPendingScoutId}
+        scoutId={selectedPendingScoutId || 'all'}
         currentUser={currentUser}
         onNavigate={onNavigate}
       />

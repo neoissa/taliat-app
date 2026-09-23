@@ -103,8 +103,7 @@ export default function UniversalPendingQueueModal({
       setGroups(currentGroups);
     });
 
-    const q = query(collection(db, 'users'), where('role', '==', 'scout'));
-    const unsubScouts = onSnapshot(q, (snap) => {
+    const unsubScouts = onSnapshot(collection(db, 'users'), (snap) => {
       const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
       const scoped = filterScoutsForUser(list, currentUser, currentGroups, 'all');
       setAllScouts(scoped);
@@ -118,9 +117,14 @@ export default function UniversalPendingQueueModal({
 
   // Sync prop changes
   useEffect(() => {
-    if (targetScoutId) setActiveScoutId(targetScoutId);
-    else if (propScoutId) setActiveScoutId(propScoutId);
-  }, [targetScoutId, propScoutId]);
+    if (targetScoutId) {
+      setActiveScoutId(targetScoutId);
+    } else if (propScoutId && propScoutId !== 'all') {
+      setActiveScoutId(propScoutId);
+    } else if (isLeaderOrOwner) {
+      setActiveScoutId('all');
+    }
+  }, [targetScoutId, propScoutId, isLeaderOrOwner]);
 
   // 2. Fetch Assignments Master List
   useEffect(() => {
@@ -1177,6 +1181,22 @@ export default function UniversalPendingQueueModal({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
             />
+          </div>
+        </div>
+
+        {/* ── 2.5 EDUCATIONAL WORKFLOW GUIDE BANNER ── */}
+        <div className="bg-slate-950/60 border-b border-slate-800 px-4 py-2.5 flex items-start gap-2.5 text-xs">
+          <Sparkles size={16} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-slate-300 text-[11px] leading-relaxed">
+            {isLeaderOrOwner ? (
+              <span>
+                <strong className="text-amber-300">How to Review & Sign Off:</strong> Ask the scout the <strong className="text-emerald-300">Oral Testing Prompt</strong> listed under each submission during weekly troop meetings or conferences. Once verified, click <strong className="text-white bg-emerald-750 px-1.5 py-0.2 rounded font-mono">Conduct Test & Sign-off ✓</strong> to officially award the requirement and sync their advancement snapshot.
+              </span>
+            ) : (
+              <span>
+                <strong className="text-amber-300">Scout Testing Queue:</strong> These items are submitted and awaiting oral demonstration with your Troop Leader or Merit Badge Counselor. Be prepared to explain or recite the prompt during our next troop meeting.
+              </span>
+            )}
           </div>
         </div>
 

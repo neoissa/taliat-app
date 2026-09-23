@@ -32,7 +32,10 @@ import {
   Zap,
   AlertTriangle,
   AlertCircle,
-  Bell
+  Bell,
+  Send,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
@@ -69,6 +72,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
     riskLevel: 'green' // 'green' | 'yellow' | 'red'
   });
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showScoutGuide, setShowScoutGuide] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const scoutUid = currentUser?.uid;
@@ -411,6 +415,71 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── 1.4. SCOUT ADVANCEMENT STEP-BY-STEP GUIDE ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/30 border border-slate-800 hover:border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3">
+        <div 
+          onClick={() => setShowScoutGuide(!showScoutGuide)}
+          className="flex items-center justify-between cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <Compass size={18} />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                <span>⚜️ How Scouting Advancement Works (3 Simple Steps)</span>
+                <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                  Scout Guide
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Your path from Scout to Eagle: learn skills, request oral tests, and earn rank certifications.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-xs text-emerald-400 hover:text-emerald-300 font-bold p-1 rounded-lg bg-slate-800 group-hover:bg-slate-750 transition cursor-pointer"
+          >
+            {showScoutGuide ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {showScoutGuide && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <BookOpen size={14} />
+                <span>1. Learn & Practice</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Work on rank requirements, outdoor skills, and merit badges with your patrol during weekly meetings and campouts.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                <Send size={14} />
+                <span>2. Submit for Oral Testing</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Open <strong>My Advancement</strong> and click the circle next to any requirement to submit it to your Scoutmaster for oral review.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                <Award size={14} />
+                <span>3. Demonstrate & Advance</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Answer the testing questions during troop review. When signed off, your rank progress increases toward your next badge and Eagle rank!
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── 1.5. COMPACT ATTENDANCE RISK ADVISORY (Only when attention needed) ── */}
