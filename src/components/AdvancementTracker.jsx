@@ -117,12 +117,13 @@ function getCategoryThematicIcon(catName = '') {
   return '📜';
 }
 
-export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false, onBack }) {
+export default function AdvancementTracker({ currentUser = {}, scoutId: customScoutId, readOnly = false, onBack, onNavigate }) {
   const [selectedScoutId, setSelectedScoutId] = useState('');
   const [scoutsList, setScoutsList] = useState([]);
   const [groups, setGroups] = useState([]);
   const [batchUpdatesMsg, setBatchUpdatesMsg] = useState('');
 
+  const isOwner = currentUser?.role === 'owner' || currentUser?.isOwner || currentUser?.email === 'neoissa@gmail.com';
   const isSuperUser = checkIsSuperUser(currentUser);
   const isLeader = !isOwner && (currentUser?.role === 'leader' || currentUser?.role === 'admin' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_leader' || !!currentUser?.leaderPosition || isSuperUser);
   const isLeaderOrOwner = isOwner || isLeader || isSuperUser;
