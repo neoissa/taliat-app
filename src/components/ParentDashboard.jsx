@@ -229,6 +229,38 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'past'
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (!initialTab) return;
+    const tabMap = {
+      'overview': 'overview',
+      'home': 'overview',
+      'events': 'events',
+      'calendar': 'events',
+      'messages': 'messages',
+      'communication-hub': 'messages',
+      'chat': 'messages',
+      'direct-messages': 'messages',
+      'eagle': 'eagle',
+      'road-to-eagle': 'eagle',
+      'family': 'family',
+      'profile': 'family',
+      'homework': 'homework',
+      'assignments': 'homework',
+      'tasks': 'tasks',
+      'forms': 'tasks',
+      'advancement': 'advancement',
+      'ranks': 'advancement',
+      'merit-badges': 'advancement',
+      'feed': 'feed',
+      'broadcasts': 'feed',
+      'alerts': 'feed',
+      'reports': 'reports',
+      'resources': 'resources',
+      'attendance': 'events'
+    };
+    setActiveTab(tabMap[initialTab] || initialTab);
+  }, [initialTab]);
+
   // Synced Collections
   const [ranksProgressMap, setRanksProgressMap] = useState({}); // { [scoutId]: ranksData }
   const [meritProgressMap, setMeritProgressMap] = useState({});

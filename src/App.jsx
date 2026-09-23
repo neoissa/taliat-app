@@ -426,6 +426,13 @@ export default function App() {
   const [adminHubSubTab, setAdminHubSubTab] = useState('admin');
 
   const handleNavigate = (tab, extraData = null) => {
+    // 0. Home & Parent Hub Aliases
+    if (tab === 'parent-hub' || tab === 'parent-dashboard' || tab === 'family-hub' || tab === 'home') {
+      setCurrentTab('home');
+      setMobileMenuOpen(false);
+      return;
+    }
+
     // 1. Scouts & Patrols Sub-tools
     if (tab === 'roster') {
       setCurrentTab('scouts-hub');
@@ -453,8 +460,15 @@ export default function App() {
       return;
     }
     if (tab === 'reports') {
-      setCurrentTab('scouts-hub');
-      setScoutsHubSubTab('reports');
+      if (isParent) {
+        setCurrentTab('reports');
+      } else if (isScout) {
+        setCurrentTab('profile');
+        setProfileInitialTab('reports');
+      } else {
+        setCurrentTab('scouts-hub');
+        setScoutsHubSubTab('reports');
+      }
       setMobileMenuOpen(false);
       return;
     }
@@ -482,10 +496,12 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'road-to-eagle') {
+    if (tab === 'road-to-eagle' || tab === 'eagle') {
       if (isScout) {
         setCurrentTab('advancement-hub');
         setAdvancementHubSubTab('road-to-eagle');
+      } else if (isParent) {
+        setCurrentTab('road-to-eagle');
       } else {
         setCurrentTab('road-to-eagle');
       }
@@ -498,13 +514,15 @@ export default function App() {
       if (isScout) {
         setCurrentTab('events-hub');
         setEventsHubSubTab('events');
+      } else if (isParent) {
+        setCurrentTab('events');
       } else {
         setCurrentTab('events');
       }
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'assignments' || tab === 'tasks' || tab === 'homework') {
+    if (tab === 'assignments' || tab === 'homework') {
       if (isScout) {
         setCurrentTab('events-hub');
         setEventsHubSubTab('assignments');
@@ -512,6 +530,20 @@ export default function App() {
         setCurrentTab('assignments');
       } else {
         setCurrentTab('assignments');
+      }
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'tasks' || tab === 'forms') {
+      if (isParent) {
+        setCurrentTab('tasks');
+      } else if (isScout) {
+        setCurrentTab('events-hub');
+        setEventsHubSubTab('assignments');
+      } else {
+        setCurrentTab('admin-hub');
+        setAdminHubSubTab('admin');
+        setAdminInitialTab('forms');
       }
       setMobileMenuOpen(false);
       return;
@@ -528,14 +560,17 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'broadcasts' || tab === 'troop-broadcasts' || tab === 'broadcast') {
+    if (tab === 'broadcasts' || tab === 'troop-broadcasts' || tab === 'broadcast' || tab === 'feed' || tab === 'alerts') {
       if (isLeaderOrOwner || isExecutive) {
         setCurrentTab('communication-hub');
         setCommHubSubTab('broadcasts');
         setAdminInitialTab('broadcasts');
         setAdminExtraData(extraData);
-      } else {
+      } else if (isParent) {
         setCurrentTab('feed');
+      } else {
+        setCurrentTab('tarbiyah-hub');
+        setTarbiyahHubSubTab('resources');
       }
       setMobileMenuOpen(false);
       return;
@@ -1466,7 +1501,7 @@ export default function App() {
         )}
 
         {/* ── 6. ADVANCEMENT HUB ── */}
-        {currentTab === 'advancement-hub' && (
+        {currentTab === 'advancement-hub' && !isParent && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="My Scouting Advancement"
@@ -1485,9 +1520,16 @@ export default function App() {
             {advancementHubSubTab === 'road-to-eagle' && <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />}
           </div>
         )}
+        {currentTab === 'advancement-hub' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="advancement"
+            onNavigate={handleNavigate} 
+          />
+        )}
 
         {/* ── 7. SCHEDULE & TASKS HUB ── */}
-        {currentTab === 'events-hub' && (
+        {currentTab === 'events-hub' && !isParent && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="Schedule & Weekly Tasks"
@@ -1504,9 +1546,16 @@ export default function App() {
             {eventsHubSubTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
           </div>
         )}
+        {currentTab === 'events-hub' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="events"
+            onNavigate={handleNavigate} 
+          />
+        )}
 
         {/* ── 8. PATROL & TARBIYAH HUB ── */}
-        {currentTab === 'tarbiyah-hub' && (
+        {currentTab === 'tarbiyah-hub' && !isParent && (
           <div className="space-y-4">
             <HubSubNav
               hubTitle="Patrol & Tarbiyah Hub"
@@ -1526,6 +1575,13 @@ export default function App() {
             {tarbiyahHubSubTab === 'resources' && <VideoResources currentUser={currentUser} />}
             {tarbiyahHubSubTab === 'journal' && <ScoutJournalNotes currentUser={currentUser} />}
           </div>
+        )}
+        {currentTab === 'tarbiyah-hub' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="resources"
+            onNavigate={handleNavigate} 
+          />
         )}
 
         {(currentTab === 'admin' || currentTab === 'global-admin' || currentTab === 'parent-requests' || currentTab === 'admin-requests') && (isLeaderOrOwner || isExecutive) && (
@@ -1548,6 +1604,23 @@ export default function App() {
           />
         )}
         {currentTab === 'merit-badges' && !isParent && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'merit-badges' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="advancement"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {(currentTab === 'road-to-eagle' || currentTab === 'eagle') && !isParent && (
+          <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />
+        )}
+        {(currentTab === 'road-to-eagle' || currentTab === 'eagle') && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="eagle"
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'assignments' && !isParent && <AssignmentsManager currentUser={currentUser} />}
         {currentTab === 'assignments' && isParent && (
           <ParentDashboard 
@@ -1556,14 +1629,60 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
+        {(currentTab === 'tasks' || currentTab === 'forms') && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="tasks"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {(currentTab === 'tasks' || currentTab === 'forms') && !isParent && (isLeaderOrOwner || isExecutive) && (
+          <AdminPanel 
+            currentUser={currentUser} 
+            initialTab="forms" 
+            extraData={adminExtraData} 
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'events' && !isParent && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'events' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="events"
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'lesson-plans' && isLeaderOrOwner && <LessonPlans currentUser={currentUser} />}
         {currentTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
         {currentTab === 'service-log' && <ServiceLogs currentUser={currentUser} />}
         {currentTab === 'resources' && !isParent && <VideoResources currentUser={currentUser} />}
+        {currentTab === 'resources' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="resources"
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'profile' && !isParent && <ScoutProfile currentUser={currentUser} initialTab={profileInitialTab} onNavigate={handleNavigate} />}
+        {currentTab === 'profile' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="family"
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
         {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
+        {currentTab === 'reports' && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="reports"
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {currentTab === 'reports' && isScout && (
+          <ScoutProfile currentUser={currentUser} initialTab="reports" onNavigate={handleNavigate} />
+        )}
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'attendance' && isParent && (
           <ParentDashboard 
@@ -1588,6 +1707,27 @@ export default function App() {
             currentUser={currentUser} 
             onNavigate={handleNavigate} 
           />
+        )}
+        {(currentTab === 'broadcasts' || currentTab === 'troop-broadcasts' || currentTab === 'broadcast') && (isLeaderOrOwner || isExecutive) && (
+          <AdminPanel 
+            currentUser={currentUser} 
+            initialTab="broadcasts" 
+            extraData={adminExtraData} 
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {(currentTab === 'feed' || currentTab === 'alerts') && isParent && (
+          <ParentDashboard 
+            currentUser={currentUser} 
+            initialTab="feed" 
+            onNavigate={handleNavigate} 
+          />
+        )}
+        {(currentTab === 'feed' || currentTab === 'alerts') && isScout && (
+          <ScoutAlertsFeed currentUser={currentUser} onNavigate={handleNavigate} />
+        )}
+        {(currentTab === 'counselors' || currentTab === 'counselor-directory') && (
+          <ScoutProfile currentUser={currentUser} initialTab="counselors" onNavigate={handleNavigate} />
         )}
       </main>
 
