@@ -409,14 +409,15 @@ export default function AdminPanel({ currentUser, initialTab = 'users', onNaviga
 
   // Authorization check
   const isExecutive = isOwner || currentUser?.role === 'admin' || currentUser?.role === 'executive' || currentUser?.isExecutive || currentUser?.leaderPosition === 'Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scoutmaster' || currentUser?.leaderPosition === 'Assistant Scout Master';
+  const isLeader = isOwner || isExecutive || currentUser?.role === 'leader' || currentUser?.role === 'assistant_leader';
 
-  if (!isOwner && !isExecutive) {
+  if (!isLeader) {
     return (
       <div className="p-8 bg-slate-800 border border-slate-700 rounded-3xl text-center max-w-xl mx-auto space-y-3 shadow-xl">
         <ShieldAlert className="text-red-400 mx-auto" size={40} />
-        <h3 className="text-lg font-bold text-white">Executive Access Restricted</h3>
+        <h3 className="text-lg font-bold text-white">Leadership Access Restricted</h3>
         <p className="text-xs text-slate-400 leading-relaxed">
-          The Executive Hub is strictly restricted to Troop Executives, Scoutmasters, and Superadministrators.
+          The Leadership Administration Hub is strictly restricted to Troop Leaders, Scoutmasters, and Superadministrators.
         </p>
       </div>
     );

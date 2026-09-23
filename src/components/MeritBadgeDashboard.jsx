@@ -1188,6 +1188,58 @@ export default function MeritBadgeDashboard({ currentUser, scoutId: customScoutI
         <ScoutCounselorsTab currentUser={currentUser} onNavigate={onNavigate} />
       ) : (
         <>
+          {/* ── EDUCATIONAL GUIDE: HOW TO EARN MERIT BADGES ── */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-amber-950/20 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3 print-hide">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0">
+                🏅
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>⚜️ How to Earn Merit Badges (3 Simple Steps)</span>
+                  <span className="text-[10px] text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
+                    Scout Roadmap
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Follow these steps to choose subjects, prepare workbooks, and earn sign-offs toward your 21 Eagle badges.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 text-xs">
+              <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                  <Star size={14} />
+                  <span>1. Choose & Plan</span>
+                </div>
+                <p className="text-[11px] text-slate-350 leading-relaxed">
+                  Browse 137 official badges. Click <strong className="text-white">Add to Plan</strong> to prioritize your 14 Eagle-Required and 7 Elective subjects.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <BookOpen size={14} />
+                  <span>2. Study & Complete Workbook</span>
+                </div>
+                <p className="text-[11px] text-slate-350 leading-relaxed">
+                  Open any badge to read requirements, review the <strong className="text-white">Official Pamphlet</strong>, and download the <strong className="text-white">PDF Workbook</strong>.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                  <Users size={14} />
+                  <span>3. Test with Troop Counselor</span>
+                </div>
+                <p className="text-[11px] text-slate-350 leading-relaxed">
+                  Connect with our 27+ certified in-house Counselors, submit your work for review, and receive your certified badge!
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Smart Recommendations & In-House Counselor Fast-Track Banner */}
           {recommendedBadges.length > 0 && (
             <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/30 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3.5 print-hide">

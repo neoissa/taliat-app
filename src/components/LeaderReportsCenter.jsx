@@ -888,7 +888,7 @@ function SingleScoutCustomReport({
 // ── MAIN LEADER REPORTS CENTER CONTROLLER COMPONENT ──
 export default function LeaderReportsCenter({ currentUser, onNavigate }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
-  const isLeader = currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster';
+  const isLeader = isOwner || currentUser?.role === 'leader' || currentUser?.role === 'scoutmaster' || currentUser?.role === 'assistant_scoutmaster' || currentUser?.role === 'admin' || currentUser?.role === 'assistant_leader';
 
   // Scouts & Groups Data
   const [scoutsList, setScoutsList] = useState([]);

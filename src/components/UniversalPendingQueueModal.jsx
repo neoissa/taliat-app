@@ -635,6 +635,7 @@ export default function UniversalPendingQueueModal({
     const leaderName = currentUser?.fullName || currentUser?.username || 'Troop Leader';
 
     try {
+      const updatePromises = [];
       const rankUpdatesByScoutAndRank = {};
       const islamicUpdatesByScout = {};
       const meritUpdatesByScoutAndBadge = {};
@@ -722,9 +723,6 @@ export default function UniversalPendingQueueModal({
           );
         }
       });
-
-      // Execute all atomic batch updates in parallel
-      const updatePromises = [];
 
       // 1. Commit rank updates
       Object.entries(rankUpdatesByScoutAndRank).forEach(([sUid, ranksMap]) => {

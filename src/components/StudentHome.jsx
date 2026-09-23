@@ -401,7 +401,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
 
           {/* 4. Service Hours */}
           <div 
-            onClick={() => onNavigate && onNavigate('road-to-eagle')}
+            onClick={() => onNavigate && onNavigate('service-log')}
             className="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">

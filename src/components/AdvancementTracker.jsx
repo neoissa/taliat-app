@@ -832,6 +832,23 @@ export default function AdvancementTracker({ currentUser = {}, scoutId: customSc
             </div>
           </div>
 
+          {/* Scout Advancement & Oral Testing Educational Guidance */}
+          {isScout && (
+            <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3.5 sm:p-4 shadow-md flex items-start gap-3 text-xs text-slate-300 print-hide">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 mt-0.5">
+                💡
+              </div>
+              <div className="space-y-0.5">
+                <strong className="text-white font-bold block">How Requirement Sign-Offs Work (3 Steps):</strong>
+                <p className="leading-relaxed text-slate-350 text-[11px]">
+                  1. Study & practice the skills below with your patrol. <br />
+                  2. Tap the circle or click <strong className="text-emerald-400">Submit for Approval</strong> when you are ready to be tested. <br />
+                  3. During troop meetings or patrol reviews, your Scoutmaster will ask you the demonstration questions and certify your completion!
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Categories & Requirements Checklist */}
           <div className="space-y-3.5">
             {selectedRankData.categories.map((cat, catIdx) => (

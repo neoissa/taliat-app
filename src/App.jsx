@@ -636,6 +636,50 @@ export default function App() {
     }
 
     // 6. Admin & Profile Sub-tools
+    if (tab === 'admin-hub') {
+      if (extraData?.subTab) {
+        setAdminHubSubTab(extraData.subTab);
+      }
+      if (extraData?.tab) {
+        setAdminInitialTab(extraData.tab);
+        setAdminExtraData(extraData);
+      }
+      setCurrentTab('admin-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'scouts-hub') {
+      if (extraData?.subTab) {
+        setScoutsHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('scouts-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'communication-hub') {
+      if (extraData?.subTab) {
+        setCommHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('communication-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'events-hub') {
+      if (extraData?.subTab) {
+        setEventsHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('events-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
+    if (tab === 'tarbiyah-hub') {
+      if (extraData?.subTab) {
+        setTarbiyahHubSubTab(extraData.subTab);
+      }
+      setCurrentTab('tarbiyah-hub');
+      setMobileMenuOpen(false);
+      return;
+    }
     if (tab === 'admin' || tab === 'global-admin') {
       if (extraData?.tab) {
         setAdminInitialTab(extraData.tab);
