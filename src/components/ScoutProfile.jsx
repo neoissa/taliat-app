@@ -46,7 +46,11 @@ import {
   Flame,
   Target,
   CheckSquare,
-  Compass
+  Compass,
+  Tent,
+  Shirt,
+  BookOpen,
+  Heart
 } from 'lucide-react';
 import { SCOUT_YOUTH_POSITIONS, ADULT_LEADER_POSITIONS } from '../data/rolesData';
 import { HASSAN_LEADERSHIP_PROFILE } from '../data/leaderCredentialsData';
@@ -58,6 +62,12 @@ import LiveClockAndCalendar from './LiveClockAndCalendar';
 import ServiceLogs from './ServiceLogs';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
 import SignaturePadModal from './SignaturePadModal';
+import ScoutDigitalIdCard from './ScoutDigitalIdCard';
+import ScoutMedicalReadiness from './ScoutMedicalReadiness';
+import ScoutLeadershipClock from './ScoutLeadershipClock';
+import ScoutTarbiyahMilestones from './ScoutTarbiyahMilestones';
+import ScoutUniformGear from './ScoutUniformGear';
+import ScoutOutdoorRecord from './ScoutOutdoorRecord';
 import { signPublishedReportByScout } from '../services/publishedReportsService';
 import { 
   calculateScoutCompliance, 
@@ -1152,14 +1162,89 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
           type="button"
           onClick={() => setActiveProfileTab('personal')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports'].includes(activeProfileTab)
+            activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab)
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
               : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
           }`}
         >
           <User size={15} />
-          <span>{isParent ? '👨‍👩‍👧 Family Profile' : '👤 Personal Info'}</span>
+          <span>{isParent ? '👨‍👩‍👧 Family Profile' : isScout ? '💳 ID Pass & Personal' : '👤 Personal Info'}</span>
         </button>
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('medical')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'medical'
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <HeartPulse size={15} className={activeProfileTab === 'medical' ? 'text-white' : 'text-rose-400'} />
+            <span>❤️ Medical & Safety</span>
+          </button>
+        )}
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('outdoor')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'outdoor'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Tent size={15} className={activeProfileTab === 'outdoor' ? 'text-white' : 'text-emerald-400'} />
+            <span>🏕️ Outdoor & Camping</span>
+          </button>
+        )}
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('leadership')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'leadership'
+                ? 'bg-amber-600 text-slate-950 font-black shadow-lg shadow-amber-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Crown size={15} className={activeProfileTab === 'leadership' ? 'text-slate-950' : 'text-amber-400'} />
+            <span>👑 Leadership & Eagle Clock</span>
+          </button>
+        )}
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('tarbiyah')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'tarbiyah'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Sparkles size={15} className={activeProfileTab === 'tarbiyah' ? 'text-white' : 'text-teal-400'} />
+            <span>🌙 Islamic Tarbiyah</span>
+          </button>
+        )}
+
+        {isScout && (
+          <button
+            type="button"
+            onClick={() => setActiveProfileTab('gear')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeProfileTab === 'gear'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-950/50'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+            }`}
+          >
+            <Shirt size={15} className={activeProfileTab === 'gear' ? 'text-white' : 'text-indigo-400'} />
+            <span>🎽 Uniform & Gear</span>
+          </button>
+        )}
 
         {isScout && (
           <button
@@ -1968,9 +2053,102 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         <ServiceLogs currentUser={currentUser} scoutId={currentUser.uid} />
       )}
 
-      {/* ── TAB 3: PERSONAL INFORMATION (OR DEFAULT) ── */}
-      {(activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports'].includes(activeProfileTab)) && (
+      {/* ── TAB: BSA HEALTH & MEDICAL READINESS ── */}
+      {activeProfileTab === 'medical' && isScout && (
+        <ScoutMedicalReadiness
+          scout={fullUserData || currentUser}
+          currentUser={currentUser}
+          canEdit={isOwner || isLeader || isParent}
+          onSaveSuccess={(updated) => {
+            setFullUserData(prev => ({ ...prev, ...updated }));
+            if (updated.allergies !== undefined) setAllergies(updated.allergies);
+            if (updated.medicalNotes !== undefined) setMedicalNotes(updated.medicalNotes);
+            if (updated.dietaryRestrictions !== undefined) setDietaryRestrictions(updated.dietaryRestrictions);
+          }}
+        />
+      )}
+
+      {/* ── TAB: OUTDOOR, CAMPING & TREK LOG ── */}
+      {activeProfileTab === 'outdoor' && isScout && (
+        <ScoutOutdoorRecord
+          scout={fullUserData || currentUser}
+          currentUser={currentUser}
+          attendanceStats={attendanceStats}
+          canEdit={true}
+          onSaveSuccess={(updated) => {
+            setFullUserData(prev => ({ ...prev, ...updated }));
+          }}
+        />
+      )}
+
+      {/* ── TAB: POSITION OF RESPONSIBILITY & EAGLE CLOCK ── */}
+      {activeProfileTab === 'leadership' && isScout && (
+        <ScoutLeadershipClock
+          scout={fullUserData || currentUser}
+          currentUser={currentUser}
+          canEdit={isOwner || isLeader}
+          onSaveSuccess={(updated) => {
+            setFullUserData(prev => ({ ...prev, ...updated }));
+            if (updated.scoutPosition) setScoutPosition(updated.scoutPosition);
+            if (updated.previousPositions) setPreviousPositions(updated.previousPositions);
+          }}
+        />
+      )}
+
+      {/* ── TAB: ISLAMIC TARBIYAH & MILESTONES ── */}
+      {activeProfileTab === 'tarbiyah' && isScout && (
+        <ScoutTarbiyahMilestones
+          scout={fullUserData || currentUser}
+          currentUser={currentUser}
+          canEdit={true}
+          onSaveSuccess={(updated) => {
+            setFullUserData(prev => ({ ...prev, ...updated }));
+          }}
+        />
+      )}
+
+      {/* ── TAB: UNIFORM & GEAR PROFILE ── */}
+      {activeProfileTab === 'gear' && isScout && (
+        <ScoutUniformGear
+          scout={fullUserData || currentUser}
+          currentUser={currentUser}
+          canEdit={true}
+          onSaveSuccess={(updated) => {
+            setFullUserData(prev => ({ ...prev, ...updated }));
+          }}
+        />
+      )}
+
+      {/* ── TAB 3: PERSONAL INFORMATION & DIGITAL ID PASS (OR DEFAULT) ── */}
+      {(activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab)) && (
         <div className="space-y-6">
+          {/* Digital Scout ID Pass ("Kashaf Card") */}
+          {isScout && (
+            <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-7 shadow-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 font-black text-lg shadow-inner">
+                    💳
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Official Digital Scout ID Pass</h3>
+                    <p className="text-[11px] text-slate-400">Interactive 3D Kashaf Card with QR Verification & Emergency Medical Dialers</p>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Taliʿa Scout ID Pass
+                </span>
+              </div>
+              <ScoutDigitalIdCard
+                scout={fullUserData || currentUser}
+                currentUser={currentUser}
+                patrolName={patrolName}
+                rankName={rankName}
+                attendanceRate={attendanceStats.attendanceRate}
+              />
+            </div>
+          )}
+
           {/* If Scout has attendance warnings, show advisory banner on Personal Tab */}
           {currentUser.role === 'scout' && attendanceStats.totalSessions > 0 && attendanceStats.riskLevel !== 'green' && (
             <div 
