@@ -26,6 +26,7 @@ import ScoutJournalNotes from './components/ScoutJournalNotes';
 import ParentDashboard from './components/ParentDashboard';
 import ScoutAlertsFeed from './components/ScoutAlertsFeed';
 import RoleAndLeadershipGuide from './components/RoleAndLeadershipGuide';
+import PatrolMeetingView from './components/PatrolMeetingView';
 import DynamicIcon from './components/DynamicIcon';
 import MobileTabManager from './components/MobileTabManager';
 import MobileTabBar from './components/MobileTabBar';
@@ -1633,11 +1634,11 @@ export default function App() {
               onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
               tabs={[
                 { id: 'chat', label: 'Patrol Live Messenger', icon: 'MessageSquare', badge: unreadChatCount },
-                { id: 'meetings', label: 'Patrol Meetings & Halqas', icon: 'Users' }
+                { id: 'meetings', label: 'Patrol Meeting & Google Meet', icon: 'Video' }
               ]}
             />
             {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
-            {tarbiyahHubSubTab === 'meetings' && <PatrolChat currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'meetings' && <PatrolMeetingView currentUser={currentUser} onNavigate={handleNavigate} />}
           </div>
         )}
         {(currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && isParent && (

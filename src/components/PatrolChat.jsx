@@ -53,7 +53,8 @@ import {
   Bookmark, 
   Volume2, 
   VolumeX, 
-  ChevronDown 
+  ChevronDown,
+  Video
 } from 'lucide-react';
 
 // ── Curated Scouting, Islamic & Basic Emoticons System ──
@@ -1044,6 +1045,23 @@ export default function PatrolChat({ currentUser }) {
         {/* Right Header Action Icons */}
         <div className="flex items-center gap-1.5 flex-wrap self-end sm:self-auto">
           
+          {/* Active Google Meet Shortcut if available */}
+          {(activeGroupData?.nextMeetingLink || activeGroupData?.nextMeeting?.meetLink || activeGroupData?.meetingLink) && (
+            <button
+              type="button"
+              onClick={() => {
+                const link = activeGroupData.nextMeetingLink || activeGroupData.nextMeeting?.meetLink || activeGroupData.meetingLink;
+                const formatted = link.startsWith('http') ? link : `https://${link}`;
+                window.open(formatted, '_blank', 'noopener,noreferrer');
+              }}
+              className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 font-black text-xs px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-teal-950/50 hover:scale-105"
+              title="Join Active Patrol Google Meet"
+            >
+              <Video size={14} className="text-slate-950" />
+              <span>Join Meet</span>
+            </button>
+          )}
+
           {/* Search Button */}
           <button
             type="button"
