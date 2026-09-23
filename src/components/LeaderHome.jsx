@@ -14,6 +14,8 @@ import {
   Printer,
   Sparkles,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Shield,
   CheckCircle2,
   CheckCheck,
@@ -26,7 +28,8 @@ import {
   MapPin,
   Phone,
   Video,
-  Megaphone
+  Megaphone,
+  Zap
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
