@@ -166,7 +166,7 @@ function formatAudioDuration(seconds) {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-export default function PatrolChat({ currentUser }) {
+export default function PatrolChat({ currentUser, onMarkRead }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
   const isLeader = currentUser?.role === 'leader';
   const isLeaderOrOwner = isOwner || isLeader;
@@ -340,6 +340,25 @@ export default function PatrolChat({ currentUser }) {
 
     return () => unsubscribe();
   }, [activeRoomId]);
+
+  // ── Auto-Mark Messages as Read in LocalStorage & Global Listener ──
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const now = Date.now().toString();
+    const keys = [
+      `last_read_chat_${currentUser.uid}_${activeRoomId || 'general-stream'}`,
+      `last_read_chat_${currentUser.uid}_general-stream`
+    ];
+    if (currentUser.groupId) keys.push(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`);
+    if (currentUser.patrolId) keys.push(`last_read_chat_${currentUser.uid}_${currentUser.patrolId}`);
+
+    keys.forEach(k => {
+      try { localStorage.setItem(k, now); } catch (_) {}
+    });
+
+    if (onMarkRead) onMarkRead();
+    window.dispatchEvent(new CustomEvent('patrol_chat_read', { detail: { roomId: activeRoomId, timestamp: now } }));
+  }, [activeRoomId, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, messages.length]);
 
   // ── 4. Fetch Active Group Details & Room Metadata (Pinned Messages) ──
   useEffect(() => {
@@ -804,6 +823,26 @@ export default function PatrolChat({ currentUser }) {
     }
   };
 
+  // ── Mark All Read Action ──
+  const handleMarkAllRead = () => {
+    if (!currentUser?.uid) return;
+    const now = Date.now().toString();
+    const keys = [
+      `last_read_chat_${currentUser.uid}_${activeRoomId || 'general-stream'}`,
+      `last_read_chat_${currentUser.uid}_general-stream`
+    ];
+    if (currentUser.groupId) keys.push(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`);
+    if (currentUser.patrolId) keys.push(`last_read_chat_${currentUser.uid}_${currentUser.patrolId}`);
+
+    keys.forEach(k => {
+      try { localStorage.setItem(k, now); } catch (_) {}
+    });
+
+    if (onMarkRead) onMarkRead();
+    window.dispatchEvent(new CustomEvent('patrol_chat_read', { detail: { roomId: activeRoomId, timestamp: now } }));
+    showToast("✓ All messages marked as read");
+  };
+
   // ── Poll Actions: Create Poll ──
   const handleAddPollOption = () => {
     if (pollOptions.length < 6) {
@@ -1061,6 +1100,17 @@ export default function PatrolChat({ currentUser }) {
               <span>Join Meet</span>
             </button>
           )}
+
+          {/* Mark All Read Button */}
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            className="p-2 bg-slate-800/80 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 rounded-xl border border-slate-700 hover:border-emerald-500/40 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            title="Mark all messages as read"
+          >
+            <CheckCheck size={16} className="text-emerald-400" />
+            <span className="hidden xl:inline text-[11px]">Mark read</span>
+          </button>
 
           {/* Search Button */}
           <button

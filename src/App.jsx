@@ -275,6 +275,23 @@ export default function App() {
     const roomId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
     const lastReadStorageKey = `last_read_chat_${currentUser.uid}_${roomId}`;
 
+    const isViewingChat = 
+      ((currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && tarbiyahHubSubTab === 'chat') ||
+      ((currentTab === 'communication-hub' || currentTab === 'comm-hub') && commHubSubTab === 'chat') ||
+      currentTab === 'chat';
+
+    if (isViewingChat) {
+      const now = Date.now().toString();
+      try {
+        localStorage.setItem(lastReadStorageKey, now);
+        localStorage.setItem(`last_read_chat_${currentUser.uid}_general-stream`, now);
+        if (currentUser.groupId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`, now);
+        if (currentUser.patrolId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.patrolId}`, now);
+      } catch (_) {}
+      setUnreadChatCount(0);
+      return;
+    }
+
     const q = query(
       collection(db, 'chats', roomId, 'messages'),
       orderBy('timestamp', 'desc'),
@@ -282,14 +299,27 @@ export default function App() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      const lastReadTimeStr = localStorage.getItem(lastReadStorageKey);
-      const lastReadTime = lastReadTimeStr ? Number(lastReadTimeStr) : 0;
+      const isCurrentlyViewingChat = 
+        ((currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && tarbiyahHubSubTab === 'chat') ||
+        ((currentTab === 'communication-hub' || currentTab === 'comm-hub') && commHubSubTab === 'chat') ||
+        currentTab === 'chat';
 
-      if (currentTab === 'chat') {
-        localStorage.setItem(lastReadStorageKey, Date.now().toString());
+      if (isCurrentlyViewingChat) {
+        const now = Date.now().toString();
+        try {
+          localStorage.setItem(lastReadStorageKey, now);
+          localStorage.setItem(`last_read_chat_${currentUser.uid}_general-stream`, now);
+          if (currentUser.groupId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`, now);
+          if (currentUser.patrolId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.patrolId}`, now);
+        } catch (_) {}
         setUnreadChatCount(0);
         return;
       }
+
+      const lastReadTimeStr = localStorage.getItem(lastReadStorageKey) || 
+                              (currentUser.groupId ? localStorage.getItem(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`) : null) ||
+                              localStorage.getItem(`last_read_chat_${currentUser.uid}_general-stream`);
+      const lastReadTime = lastReadTimeStr ? Number(lastReadTimeStr) : 0;
 
       let count = 0;
       snap.docs.forEach(docSnap => {
@@ -305,17 +335,36 @@ export default function App() {
     }, (err) => console.warn("Unread chat listener error:", err));
 
     return () => unsub();
-  }, [currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, currentTab]);
+  }, [currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, currentUser?.leaderId, currentTab, tarbiyahHubSubTab, commHubSubTab]);
 
-  // Reset unread count when switching to chat tab
+  // Global event listener to immediately clear unread chat count when chat marks messages as read
   useEffect(() => {
-    if (currentTab === 'chat' && currentUser?.uid) {
+    const handleChatReadEvent = () => {
+      setUnreadChatCount(0);
+    };
+    window.addEventListener('patrol_chat_read', handleChatReadEvent);
+    return () => window.removeEventListener('patrol_chat_read', handleChatReadEvent);
+  }, []);
+
+  // Reset unread count when switching to chat or patrol-hub tab
+  useEffect(() => {
+    const isViewingChat = 
+      ((currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && tarbiyahHubSubTab === 'chat') ||
+      ((currentTab === 'communication-hub' || currentTab === 'comm-hub') && commHubSubTab === 'chat') ||
+      currentTab === 'chat';
+
+    if (isViewingChat && currentUser?.uid) {
+      const now = Date.now().toString();
       const roomId = currentUser.groupId || currentUser.patrolId || currentUser.leaderId || 'general-stream';
-      const lastReadStorageKey = `last_read_chat_${currentUser.uid}_${roomId}`;
-      localStorage.setItem(lastReadStorageKey, Date.now().toString());
+      try {
+        localStorage.setItem(`last_read_chat_${currentUser.uid}_${roomId}`, now);
+        localStorage.setItem(`last_read_chat_${currentUser.uid}_general-stream`, now);
+        if (currentUser.groupId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`, now);
+        if (currentUser.patrolId) localStorage.setItem(`last_read_chat_${currentUser.uid}_${currentUser.patrolId}`, now);
+      } catch (_) {}
       setUnreadChatCount(0);
     }
-  }, [currentTab, currentUser?.uid]);
+  }, [currentTab, tarbiyahHubSubTab, commHubSubTab, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, currentUser?.leaderId]);
 
   // Real-time unread notifications listener (Scouts & Leaders)
   useEffect(() => {
@@ -636,12 +685,33 @@ export default function App() {
     if (tab === 'tarbiyah-hub' || tab === 'patrol-hub') {
       if (extraData?.subTab) {
         setTarbiyahHubSubTab(extraData.subTab);
+        if (extraData.subTab === 'chat') setUnreadChatCount(0);
+      } else {
+        setTarbiyahHubSubTab('chat');
+        setUnreadChatCount(0);
       }
+      const now = Date.now().toString();
+      const roomId = currentUser?.groupId || currentUser?.patrolId || currentUser?.leaderId || 'general-stream';
+      try {
+        localStorage.setItem(`last_read_chat_${currentUser?.uid}_${roomId}`, now);
+        localStorage.setItem(`last_read_chat_${currentUser?.uid}_general-stream`, now);
+        if (currentUser?.groupId) localStorage.setItem(`last_read_chat_${currentUser?.uid}_${currentUser.groupId}`, now);
+        if (currentUser?.patrolId) localStorage.setItem(`last_read_chat_${currentUser?.uid}_${currentUser.patrolId}`, now);
+      } catch (_) {}
       setCurrentTab('tarbiyah-hub');
       setMobileMenuOpen(false);
       return;
     }
     if (tab === 'chat' || tab === 'patrol-chat') {
+      setUnreadChatCount(0);
+      const now = Date.now().toString();
+      const roomId = currentUser?.groupId || currentUser?.patrolId || currentUser?.leaderId || 'general-stream';
+      try {
+        localStorage.setItem(`last_read_chat_${currentUser?.uid}_${roomId}`, now);
+        localStorage.setItem(`last_read_chat_${currentUser?.uid}_general-stream`, now);
+        if (currentUser?.groupId) localStorage.setItem(`last_read_chat_${currentUser?.uid}_${currentUser.groupId}`, now);
+        if (currentUser?.patrolId) localStorage.setItem(`last_read_chat_${currentUser?.uid}_${currentUser.patrolId}`, now);
+      } catch (_) {}
       if (isScout) {
         setCurrentTab('tarbiyah-hub');
         setTarbiyahHubSubTab('chat');
@@ -682,9 +752,10 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'communication-hub') {
+    if (tab === 'communication-hub' || tab === 'comm-hub') {
       if (extraData?.subTab) {
         setCommHubSubTab(extraData.subTab);
+        if (extraData.subTab === 'chat') setUnreadChatCount(0);
       }
       setCurrentTab('communication-hub');
       setMobileMenuOpen(false);
@@ -695,14 +766,6 @@ export default function App() {
         setEventsHubSubTab(extraData.subTab);
       }
       setCurrentTab('events-hub');
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'tarbiyah-hub') {
-      if (extraData?.subTab) {
-        setTarbiyahHubSubTab(extraData.subTab);
-      }
-      setCurrentTab('tarbiyah-hub');
       setMobileMenuOpen(false);
       return;
     }
@@ -809,7 +872,7 @@ export default function App() {
     .filter(tab => tab.visible)
     .map(tab => {
       let badge = 0;
-      if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat' || tab.id === 'tarbiyah-hub') badge = unreadChatCount;
+      if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat' || tab.id === 'tarbiyah-hub' || tab.id === 'patrol-hub') badge = unreadChatCount;
       if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
       if (tab.badgeKey === 'unreadDirectMessagesCount' || tab.id === 'direct-messages') badge = unreadDirectMessagesCount;
       if (tab.id === 'communication-hub' || tab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
@@ -828,7 +891,7 @@ export default function App() {
       const foundTab = (navState?.tabs || []).find(t => t.id === tabId);
       if (foundTab && foundTab.visible !== false) {
         let badge = 0;
-        if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat' || foundTab.id === 'tarbiyah-hub') badge = unreadChatCount;
+        if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat' || foundTab.id === 'tarbiyah-hub' || foundTab.id === 'patrol-hub') badge = unreadChatCount;
         if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
         if (foundTab.badgeKey === 'unreadDirectMessagesCount' || foundTab.id === 'direct-messages') badge = unreadDirectMessagesCount;
         if (foundTab.id === 'communication-hub' || foundTab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
@@ -1522,7 +1585,7 @@ export default function App() {
             />
             {commHubSubTab === 'direct-messages' && <LeaderMessagingHub currentUser={currentUser} onNavigate={handleNavigate} />}
             {commHubSubTab === 'broadcasts' && <AdminPanel currentUser={currentUser} initialTab="broadcasts" onNavigate={handleNavigate} />}
-            {commHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+            {commHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
             {commHubSubTab === 'parent-requests' && <AdminPanel currentUser={currentUser} initialTab="requests" extraData={adminExtraData} onNavigate={handleNavigate} />}
           </div>
         )}
@@ -1637,7 +1700,7 @@ export default function App() {
                 { id: 'meetings', label: 'Patrol Meeting & Google Meet', icon: 'Video' }
               ]}
             />
-            {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+            {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
             {tarbiyahHubSubTab === 'meetings' && <PatrolMeetingView currentUser={currentUser} onNavigate={handleNavigate} />}
           </div>
         )}
@@ -1762,7 +1825,7 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'chat' && <PatrolChat currentUser={currentUser} />}
+        {currentTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
         {currentTab === 'reports' && isLeaderOrOwner && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
         {currentTab === 'reports' && isParent && (
           <ParentDashboard 
