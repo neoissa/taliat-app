@@ -86,6 +86,20 @@ export default function App() {
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
   const [navState, setNavState] = useState(() => buildResolvedNavState(null, { isOwner: false, isScout: true }));
 
+  const [attendanceInitialData, setAttendanceInitialData] = useState(null);
+  const [profileInitialTab, setProfileInitialTab] = useState('personal');
+  const [adminInitialTab, setAdminInitialTab] = useState('users');
+  const [adminExtraData, setAdminExtraData] = useState(null);
+
+  // Sub-tab states for Hub navigation
+  const [scoutsHubSubTab, setScoutsHubSubTab] = useState('roster');
+  const [commHubSubTab, setCommHubSubTab] = useState('direct-messages');
+  const [advancementHubSubTab, setAdvancementHubSubTab] = useState('advancement');
+  const [eventsHubSubTab, setEventsHubSubTab] = useState('events');
+  const [knowledgeHubSubTab, setKnowledgeHubSubTab] = useState('islamic');
+  const [tarbiyahHubSubTab, setTarbiyahHubSubTab] = useState('chat');
+  const [adminHubSubTab, setAdminHubSubTab] = useState('admin');
+
   // Live ticking clock for header and sidebar navigation
   useEffect(() => {
     const timer = setInterval(() => {
@@ -473,20 +487,6 @@ export default function App() {
       console.error("Failed to sign out:", err);
     }
   };
-
-  const [attendanceInitialData, setAttendanceInitialData] = useState(null);
-  const [profileInitialTab, setProfileInitialTab] = useState('personal');
-  const [adminInitialTab, setAdminInitialTab] = useState('users');
-  const [adminExtraData, setAdminExtraData] = useState(null);
-
-  // Sub-tab states for Hub navigation
-  const [scoutsHubSubTab, setScoutsHubSubTab] = useState('roster');
-  const [commHubSubTab, setCommHubSubTab] = useState('direct-messages');
-  const [advancementHubSubTab, setAdvancementHubSubTab] = useState('advancement');
-  const [eventsHubSubTab, setEventsHubSubTab] = useState('events');
-  const [knowledgeHubSubTab, setKnowledgeHubSubTab] = useState('islamic');
-  const [tarbiyahHubSubTab, setTarbiyahHubSubTab] = useState('chat');
-  const [adminHubSubTab, setAdminHubSubTab] = useState('admin');
 
   const handleNavigate = (tab, extraData = null) => {
     // 0. Home & Parent Hub Aliases
