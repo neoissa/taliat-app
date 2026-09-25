@@ -125,43 +125,45 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
   const isScout = !isOwner && !isExecutive && !isLeader && !isParent;
 
   // Profile information states
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [scoutEmail, setScoutEmail] = useState('');
-  const [parentEmail, setParentEmail] = useState('');
-  const [scoutPhone, setScoutPhone] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [photoPreview, setPhotoPreview] = useState('');
+  const [fullName, setFullName] = useState(currentUser?.fullName || '');
+  const [username, setUsername] = useState(currentUser?.username || (currentUser?.email ? currentUser.email.split('@')[0] : ''));
+  const [bio, setBio] = useState(currentUser?.bio || '');
+  const [scoutEmail, setScoutEmail] = useState(currentUser?.personalEmail || currentUser?.scoutEmail || currentUser?.email || '');
+  const [parentEmail, setParentEmail] = useState(currentUser?.parentEmail || '');
+  const [scoutPhone, setScoutPhone] = useState(currentUser?.scoutPhone || currentUser?.phone || '');
+  const [parentPhone, setParentPhone] = useState(currentUser?.parentPhone || '');
+  const [photoUrl, setPhotoUrl] = useState(currentUser?.photoURL || currentUser?.avatar || '');
+  const [photoPreview, setPhotoPreview] = useState(currentUser?.photoURL || currentUser?.avatar || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   // Extended Profile fields
-  const [bsaId, setBsaId] = useState('');
-  const [schoolGrade, setSchoolGrade] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [medicalNotes, setMedicalNotes] = useState('');
-  const [dietaryRestrictions, setDietaryRestrictions] = useState('');
-  const [parent1Name, setParent1Name] = useState('');
-  const [parent1Relation, setParent1Relation] = useState('Father');
-  const [parent2Name, setParent2Name] = useState('');
-  const [parent2Relation, setParent2Relation] = useState('Mother');
-  const [emergencyContactName, setEmergencyContactName] = useState('');
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
-  const [emergencyContactRelation, setEmergencyContactRelation] = useState('');
-  const [homeAddress, setHomeAddress] = useState('');
-  const [cityStateZip, setCityStateZip] = useState('');
+  const [bsaId, setBsaId] = useState(currentUser?.bsaId || '');
+  const [schoolGrade, setSchoolGrade] = useState(currentUser?.schoolGrade || currentUser?.grade || '');
+  const [birthDate, setBirthDate] = useState(currentUser?.birthDate || currentUser?.dob || '');
+  const [allergies, setAllergies] = useState(currentUser?.allergies || '');
+  const [medicalNotes, setMedicalNotes] = useState(currentUser?.medicalNotes || '');
+  const [dietaryRestrictions, setDietaryRestrictions] = useState(currentUser?.dietaryRestrictions || '');
+  const [parent1Name, setParent1Name] = useState(currentUser?.parent1Name || '');
+  const [parent1Relation, setParent1Relation] = useState(currentUser?.parent1Relation || 'Father');
+  const [parent2Name, setParent2Name] = useState(currentUser?.parent2Name || '');
+  const [parent2Relation, setParent2Relation] = useState(currentUser?.parent2Relation || 'Mother');
+  const [emergencyContactName, setEmergencyContactName] = useState(currentUser?.emergencyContactName || '');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(currentUser?.emergencyContactPhone || '');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState(currentUser?.emergencyContactRelation || '');
+  const [homeAddress, setHomeAddress] = useState(currentUser?.homeAddress || currentUser?.address || '');
+  const [cityStateZip, setCityStateZip] = useState(currentUser?.cityStateZip || '');
   const [parentLinkedScouts, setParentLinkedScouts] = useState([]);
-  const [leaderPosition, setLeaderPosition] = useState('Assistant Scoutmaster');
-  const [scoutPosition, setScoutPosition] = useState('General Scout / Member');
-  const [previousPositions, setPreviousPositions] = useState([]);
+  const [leaderPosition, setLeaderPosition] = useState(currentUser?.leaderPosition || 'Assistant Scoutmaster');
+  const [scoutPosition, setScoutPosition] = useState(currentUser?.scoutPosition || currentUser?.position || 'General Scout / Member');
+  const [previousPositions, setPreviousPositions] = useState(
+    Array.isArray(currentUser?.previousPositions) ? currentUser.previousPositions : Array.isArray(currentUser?.pastPositions) ? currentUser.pastPositions : []
+  );
 
-  const [patrolName, setPatrolName] = useState('Taliʿa');
-  const [rankName, setRankName] = useState('Scout');
-  const [spt, setSpt] = useState('');
-  const [sptFileUrl, setSptFileUrl] = useState('');
-  const [sptFileName, setSptFileName] = useState('');
+  const [patrolName, setPatrolName] = useState(currentUser?.patrolName || currentUser?.patrol || 'Taliʿa');
+  const [rankName, setRankName] = useState(currentUser?.rank || 'Scout');
+  const [spt, setSpt] = useState(currentUser?.spt || currentUser?.sptDate || currentUser?.yptDate || '');
+  const [sptFileUrl, setSptFileUrl] = useState(currentUser?.sptFileUrl || '');
+  const [sptFileName, setSptFileName] = useState(currentUser?.sptFileName || '');
   const [uploadingSpt, setUploadingSpt] = useState(false);
   const [activeProfileTab, setActiveProfileTab] = useState(
     (!initialTab || initialTab === 'profile') ? 'personal' : (initialTab === 'counselors' ? 'credentials' : initialTab)
@@ -222,7 +224,7 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
   const [excuseSuccessMsg, setExcuseSuccessMsg] = useState('');
   
   // Loading & Saving states
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!currentUser?.uid);
   const [updating, setUpdating] = useState(false);
   const [savingSpt, setSavingSpt] = useState(false);
   const [leaderData, setLeaderData] = useState(null);
@@ -242,69 +244,72 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
       setLoading(false);
       return;
     }
+
+    // Fallback safety timeout so loading never hangs
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+
     const userRef = doc(db, 'users', currentUser.uid);
-    const unsubProfile = onSnapshot(userRef, async (snap) => {
+    const unsubProfile = onSnapshot(userRef, (snap) => {
+      clearTimeout(safetyTimer);
       try {
         if (snap.exists()) {
           const data = snap.data();
           setFullUserData(data);
-          setFullName(data.fullName || '');
-          setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
-          setBio(data.bio || '');
-          setScoutEmail(data.personalEmail || data.scoutEmail || data.email || '');
-          setParentEmail(data.parentEmail || '');
-          setScoutPhone(data.scoutPhone || data.phone || '');
-          setParentPhone(data.parentPhone || '');
-          setPhotoUrl(data.photoURL || '');
-          setPhotoPreview(data.photoURL || '');
-          setBsaId(data.bsaId || '');
-          setSchoolGrade(data.schoolGrade || data.grade || '');
-          setBirthDate(data.birthDate || data.dob || '');
-          setAllergies(data.allergies || '');
-          setMedicalNotes(data.medicalNotes || '');
-          setDietaryRestrictions(data.dietaryRestrictions || '');
-          setParent1Name(data.parent1Name || '');
-          setParent1Relation(data.parent1Relation || 'Father');
-          setParent2Name(data.parent2Name || '');
-          setParent2Relation(data.parent2Relation || 'Mother');
-          setEmergencyContactName(data.emergencyContactName || '');
-          setEmergencyContactPhone(data.emergencyContactPhone || '');
-          setEmergencyContactRelation(data.emergencyContactRelation || '');
-          setHomeAddress(data.homeAddress || data.address || '');
-          setCityStateZip(data.cityStateZip || '');
+          if (data.fullName !== undefined) setFullName(data.fullName || '');
+          if (data.username !== undefined) setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
+          if (data.bio !== undefined) setBio(data.bio || '');
+          if (data.personalEmail || data.scoutEmail || data.email) setScoutEmail(data.personalEmail || data.scoutEmail || data.email || '');
+          if (data.parentEmail !== undefined) setParentEmail(data.parentEmail || '');
+          if (data.scoutPhone !== undefined || data.phone !== undefined) setScoutPhone(data.scoutPhone || data.phone || '');
+          if (data.parentPhone !== undefined) setParentPhone(data.parentPhone || '');
+          if (data.photoURL !== undefined) {
+            setPhotoUrl(data.photoURL || '');
+            setPhotoPreview(data.photoURL || '');
+          }
+          if (data.bsaId !== undefined) setBsaId(data.bsaId || '');
+          if (data.schoolGrade !== undefined || data.grade !== undefined) setSchoolGrade(data.schoolGrade || data.grade || '');
+          if (data.birthDate !== undefined || data.dob !== undefined) setBirthDate(data.birthDate || data.dob || '');
+          if (data.allergies !== undefined) setAllergies(data.allergies || '');
+          if (data.medicalNotes !== undefined) setMedicalNotes(data.medicalNotes || '');
+          if (data.dietaryRestrictions !== undefined) setDietaryRestrictions(data.dietaryRestrictions || '');
+          if (data.parent1Name !== undefined) setParent1Name(data.parent1Name || '');
+          if (data.parent1Relation !== undefined) setParent1Relation(data.parent1Relation || 'Father');
+          if (data.parent2Name !== undefined) setParent2Name(data.parent2Name || '');
+          if (data.parent2Relation !== undefined) setParent2Relation(data.parent2Relation || 'Mother');
+          if (data.emergencyContactName !== undefined) setEmergencyContactName(data.emergencyContactName || '');
+          if (data.emergencyContactPhone !== undefined) setEmergencyContactPhone(data.emergencyContactPhone || '');
+          if (data.emergencyContactRelation !== undefined) setEmergencyContactRelation(data.emergencyContactRelation || '');
+          if (data.homeAddress !== undefined || data.address !== undefined) setHomeAddress(data.homeAddress || data.address || '');
+          if (data.cityStateZip !== undefined) setCityStateZip(data.cityStateZip || '');
 
-          setRankName(data.rank || 'Scout');
-          setScoutPosition(data.scoutPosition || data.position || 'General Scout / Member');
-          setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
-          setPreviousPositions(Array.isArray(data.previousPositions) ? data.previousPositions : Array.isArray(data.pastPositions) ? data.pastPositions : []);
-          setSpt(data.spt || data.sptDate || data.yptDate || '');
-          setSptFileUrl(data.sptFileUrl || '');
-          setSptFileName(data.sptFileName || '');
+          if (data.rank !== undefined) setRankName(data.rank || 'Scout');
+          if (data.scoutPosition !== undefined || data.position !== undefined) setScoutPosition(data.scoutPosition || data.position || 'General Scout / Member');
+          if (data.leaderPosition !== undefined) setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
+          if (data.previousPositions !== undefined || data.pastPositions !== undefined) {
+            setPreviousPositions(Array.isArray(data.previousPositions) ? data.previousPositions : Array.isArray(data.pastPositions) ? data.pastPositions : []);
+          }
+          if (data.spt !== undefined || data.sptDate !== undefined || data.yptDate !== undefined) {
+            setSpt(data.spt || data.sptDate || data.yptDate || '');
+          }
+          if (data.sptFileUrl !== undefined) setSptFileUrl(data.sptFileUrl || '');
+          if (data.sptFileName !== undefined) setSptFileName(data.sptFileName || '');
 
           if (data.username === 'anehme' || (data.personalEmail && data.personalEmail.includes('anehme')) || (data.email && data.email.includes('anehme')) || (data.fullName && data.fullName.toLowerCase().includes('anehme'))) {
             syncAnehmeBadges(db, currentUser.uid).catch(err => console.warn('Anehme badges sync in profile:', err));
           }
           
           if (data.leaderId) {
-            try {
-              const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
-              if (leaderSnap.exists()) {
-                setLeaderData(leaderSnap.data());
-              }
-            } catch (lErr) {
-              console.warn("Could not fetch leader data:", lErr);
-            }
+            getDoc(doc(db, 'users', data.leaderId)).then(leaderSnap => {
+              if (leaderSnap.exists()) setLeaderData(leaderSnap.data());
+            }).catch(lErr => console.warn("Could not fetch leader data:", lErr));
           }
           
           if (data.groupId) {
-            try {
-              const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
-              if (groupSnap.exists()) {
-                setPatrolName(groupSnap.data().name);
-              }
-            } catch (gErr) {
-              console.warn("Could not fetch group data:", gErr);
-            }
+            getDoc(doc(db, 'groups', data.groupId)).then(groupSnap => {
+              if (groupSnap.exists()) setPatrolName(groupSnap.data().name);
+            }).catch(gErr => console.warn("Could not fetch group data:", gErr));
           }
         }
       } catch (err) {
@@ -313,11 +318,15 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         setLoading(false);
       }
     }, (err) => {
+      clearTimeout(safetyTimer);
       console.error("Failed to listen to user profile:", err);
       setLoading(false);
     });
     
-    return () => unsubProfile();
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubProfile();
+    };
   }, [currentUser?.uid]);
 
   // Real-time listener for linked children if parent
@@ -875,8 +884,13 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     return s.status === attendanceFilter;
   });
 
-  if (loading) {
-    return <div className="text-center py-10 text-slate-400 text-sm">Loading profile settings...</div>;
+  if (loading && !currentUser) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-sm gap-3">
+        <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>Loading Scout Profile...</span>
+      </div>
+    );
   }
 
   return (
