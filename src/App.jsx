@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import StudentHome from './components/StudentHome';
 import LeaderHome from './components/LeaderHome';
@@ -83,7 +84,7 @@ export default function App() {
   const [unreadDirectMessagesCount, setUnreadDirectMessagesCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
-  const [navState, setNavState] = useState(null);
+  const [navState, setNavState] = useState(() => buildResolvedNavState(null, { isOwner: false, isScout: true }));
 
   // Live ticking clock for header and sidebar navigation
   useEffect(() => {
@@ -95,12 +96,22 @@ export default function App() {
 
   // 1. Real-time Firebase Auth & User Profile Listener
   useEffect(() => {
+    let unsubscribeProfile = () => {};
+
+    // Fallback safety timer so authLoading never spins forever
+    const authTimeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 2500);
+
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      clearTimeout(authTimeout);
+      unsubscribeProfile();
+
       if (user) {
         const userRef = doc(db, 'users', user.uid);
         
         // Listen to Firestore profile document in real-time
-        const unsubscribeProfile = onSnapshot(userRef, (snap) => {
+        unsubscribeProfile = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             setCurrentUser({
               uid: user.uid,
@@ -126,15 +137,17 @@ export default function App() {
           });
           setAuthLoading(false);
         });
-
-        return () => unsubscribeProfile();
       } else {
         setCurrentUser(null);
         setAuthLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      clearTimeout(authTimeout);
+      unsubscribeProfile();
+      unsubscribeAuth();
+    };
   }, []);
 
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -446,11 +459,9 @@ export default function App() {
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
     if (currentUser) {
-      if (!currentTab) {
+      if (!currentTab || currentTab === '') {
         setCurrentTab('home');
       }
-    } else {
-      setCurrentTab('');
     }
   }, [currentUser?.role, currentUser?.uid]);
 
@@ -1520,29 +1531,30 @@ export default function App() {
 
       {/* ── MAIN CONTENT WORKSPACE (FITS ALL SCREEN SIZES) ── */}
       <main className="main-content-area p-3.5 sm:p-5 lg:p-6 pb-20 md:pb-6">
-        {/* ── 1. HOME DASHBOARDS ── */}
-        {(!currentTab || currentTab === 'home') && isLeaderOrOwner && (
-          <LeaderHome 
-            currentUser={currentUser} 
-            onNavigate={handleNavigate} 
-          />
-        )}
-        
-        {(!currentTab || currentTab === 'home') && isScout && (
-          <StudentHome 
-            currentUser={currentUser} 
-            unreadChatCount={unreadChatCount} 
-            onNavigate={handleNavigate} 
-          />
-        )}
+        <ErrorBoundary onReset={() => setCurrentTab('home')}>
+          {/* ── 1. HOME DASHBOARDS ── */}
+          {(!currentTab || currentTab === 'home') && isLeaderOrOwner && (
+            <LeaderHome 
+              currentUser={currentUser} 
+              onNavigate={handleNavigate} 
+            />
+          )}
+          
+          {(!currentTab || currentTab === 'home') && isParent && (
+            <ParentDashboard 
+              currentUser={currentUser} 
+              initialTab="overview"
+              onNavigate={handleNavigate} 
+            />
+          )}
 
-        {(!currentTab || currentTab === 'home') && isParent && (
-          <ParentDashboard 
-            currentUser={currentUser} 
-            initialTab="overview"
-            onNavigate={handleNavigate} 
-          />
-        )}
+          {(!currentTab || currentTab === 'home') && !isLeaderOrOwner && !isParent && (
+            <StudentHome 
+              currentUser={currentUser} 
+              unreadChatCount={unreadChatCount} 
+              onNavigate={handleNavigate} 
+            />
+          )}
 
         {/* ── 2. SCOUTS & PATROLS HUB (LEADER / OWNER) ── */}
         {currentTab === 'scouts-hub' && (isLeaderOrOwner || isExecutive) && (
@@ -1883,6 +1895,7 @@ export default function App() {
         {(currentTab === 'counselors' || currentTab === 'counselor-directory') && (
           <ScoutProfile currentUser={currentUser} initialTab="counselors" onNavigate={handleNavigate} />
         )}
+        </ErrorBoundary>
       </main>
 
       {/* ── CONTEXT-AWARE ROLE-SPECIFIC MOBILE BOTTOM TAB BAR ── */}
