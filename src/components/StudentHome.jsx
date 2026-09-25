@@ -435,7 +435,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 </div>
                 <span className="text-xs font-black text-white group-hover:text-emerald-300 transition">My Advancement</span>
               </div>
-              <p className="text-[10px] text-slate-400 leading-tight">7 Ranks & Eagle Progress</p>
+              <p className="text-[10px] text-slate-400 leading-tight">7 Ranks, Handbooks & Videos</p>
             </button>
 
             <button
@@ -472,9 +472,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
                   <GraduationCap size={15} />
                 </div>
-                <span className="text-xs font-black text-white group-hover:text-emerald-300 transition">Knowledge Hub</span>
+                <span className="text-xs font-black text-white group-hover:text-emerald-300 transition">Islamic Tarbiyah</span>
               </div>
-              <p className="text-[10px] text-slate-400 leading-tight">Handbooks, Videos & Duas</p>
+              <p className="text-[10px] text-slate-400 leading-tight">Duas, Quran & Ethics</p>
             </button>
 
             <button

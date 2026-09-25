@@ -41,7 +41,7 @@ export const MASTER_TABS_REGISTRY = [
       parent: 'Mountain'
     },
     category: 'outdoors',
-    description: '7 Ranks Progress, Merit Badges & Road to Eagle',
+    description: '7 Ranks, Merit Badges, Road to Eagle, Scouting Handbooks, Video Demonstrations & Leadership Guide',
     allowedRoles: ['scout', 'parent'],
     badgeKey: null
   },
@@ -91,23 +91,23 @@ export const MASTER_TABS_REGISTRY = [
   },
   {
     id: 'knowledge-hub',
-    defaultLabel: 'Knowledge Hub',
+    defaultLabel: 'Islamic Tarbiyah',
     labelByRole: {
-      scout: '📚 Knowledge Hub',
-      parent: '📚 Knowledge Hub',
-      leader: '📚 Knowledge Hub',
-      owner: '📚 Knowledge Hub'
+      scout: '🕌 Islamic Tarbiyah',
+      parent: '🕌 Islamic Tarbiyah',
+      leader: '🕌 Islamic Tarbiyah',
+      owner: '🕌 Islamic Tarbiyah'
     },
-    defaultIcon: 'GraduationCap',
+    defaultIcon: 'Sparkles',
     iconByRole: {
-      owner: 'GraduationCap',
-      admin: 'GraduationCap',
-      leader: 'GraduationCap',
-      parent: 'GraduationCap',
-      scout: 'GraduationCap'
+      owner: 'Sparkles',
+      admin: 'Sparkles',
+      leader: 'Sparkles',
+      parent: 'Sparkles',
+      scout: 'Sparkles'
     },
     category: 'academics',
-    description: 'Islamic Knowledge, Scouting Handbooks, Video Tutorials & Leadership Guide',
+    description: 'Islamic Ethics, Essential Scouting Duas, Quran & Spiritual Tarbiyah',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
     badgeKey: null
   },

@@ -224,6 +224,8 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
   // Loading & Saving states
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [savingSpt, setSavingSpt] = useState(false);
+  const [leaderData, setLeaderData] = useState(null);
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
   
@@ -242,61 +244,74 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
     }
     const userRef = doc(db, 'users', currentUser.uid);
     const unsubProfile = onSnapshot(userRef, async (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setFullUserData(data);
-        setFullName(data.fullName || '');
-        setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
-        setBio(data.bio || '');
-        setScoutEmail(data.personalEmail || data.scoutEmail || data.email || '');
-        setParentEmail(data.parentEmail || '');
-        setScoutPhone(data.scoutPhone || data.phone || '');
-        setParentPhone(data.parentPhone || '');
-        setPhotoUrl(data.photoURL || '');
-        setPhotoPreview(data.photoURL || '');
-        setBsaId(data.bsaId || '');
-        setSchoolGrade(data.schoolGrade || data.grade || '');
-        setBirthDate(data.birthDate || data.dob || '');
-        setAllergies(data.allergies || '');
-        setMedicalNotes(data.medicalNotes || '');
-        setDietaryRestrictions(data.dietaryRestrictions || '');
-        setParent1Name(data.parent1Name || '');
-        setParent1Relation(data.parent1Relation || 'Father');
-        setParent2Name(data.parent2Name || '');
-        setParent2Relation(data.parent2Relation || 'Mother');
-        setEmergencyContactName(data.emergencyContactName || '');
-        setEmergencyContactPhone(data.emergencyContactPhone || '');
-        setEmergencyContactRelation(data.emergencyContactRelation || '');
-        setHomeAddress(data.homeAddress || data.address || '');
-        setCityStateZip(data.cityStateZip || '');
+      try {
+        if (snap.exists()) {
+          const data = snap.data();
+          setFullUserData(data);
+          setFullName(data.fullName || '');
+          setUsername(data.username || currentUser.username || (currentUser.email ? currentUser.email.split('@')[0] : ''));
+          setBio(data.bio || '');
+          setScoutEmail(data.personalEmail || data.scoutEmail || data.email || '');
+          setParentEmail(data.parentEmail || '');
+          setScoutPhone(data.scoutPhone || data.phone || '');
+          setParentPhone(data.parentPhone || '');
+          setPhotoUrl(data.photoURL || '');
+          setPhotoPreview(data.photoURL || '');
+          setBsaId(data.bsaId || '');
+          setSchoolGrade(data.schoolGrade || data.grade || '');
+          setBirthDate(data.birthDate || data.dob || '');
+          setAllergies(data.allergies || '');
+          setMedicalNotes(data.medicalNotes || '');
+          setDietaryRestrictions(data.dietaryRestrictions || '');
+          setParent1Name(data.parent1Name || '');
+          setParent1Relation(data.parent1Relation || 'Father');
+          setParent2Name(data.parent2Name || '');
+          setParent2Relation(data.parent2Relation || 'Mother');
+          setEmergencyContactName(data.emergencyContactName || '');
+          setEmergencyContactPhone(data.emergencyContactPhone || '');
+          setEmergencyContactRelation(data.emergencyContactRelation || '');
+          setHomeAddress(data.homeAddress || data.address || '');
+          setCityStateZip(data.cityStateZip || '');
 
-        setRankName(data.rank || 'Scout');
-        setScoutPosition(data.scoutPosition || data.position || 'General Scout / Member');
-        setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
-        setPreviousPositions(Array.isArray(data.previousPositions) ? data.previousPositions : Array.isArray(data.pastPositions) ? data.pastPositions : []);
-        setSpt(data.spt || data.sptDate || data.yptDate || '');
-        setSptFileUrl(data.sptFileUrl || '');
-        setSptFileName(data.sptFileName || '');
+          setRankName(data.rank || 'Scout');
+          setScoutPosition(data.scoutPosition || data.position || 'General Scout / Member');
+          setLeaderPosition(data.leaderPosition || currentUser?.leaderPosition || 'Assistant Scoutmaster');
+          setPreviousPositions(Array.isArray(data.previousPositions) ? data.previousPositions : Array.isArray(data.pastPositions) ? data.pastPositions : []);
+          setSpt(data.spt || data.sptDate || data.yptDate || '');
+          setSptFileUrl(data.sptFileUrl || '');
+          setSptFileName(data.sptFileName || '');
 
-        if (data.username === 'anehme' || (data.personalEmail && data.personalEmail.includes('anehme')) || (data.email && data.email.includes('anehme')) || (data.fullName && data.fullName.toLowerCase().includes('anehme'))) {
-          syncAnehmeBadges(db, currentUser.uid).catch(err => console.warn('Anehme badges sync in profile:', err));
-        }
-        
-        if (data.leaderId) {
-          const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
-          if (leaderSnap.exists()) {
-            setLeaderData(leaderSnap.data());
+          if (data.username === 'anehme' || (data.personalEmail && data.personalEmail.includes('anehme')) || (data.email && data.email.includes('anehme')) || (data.fullName && data.fullName.toLowerCase().includes('anehme'))) {
+            syncAnehmeBadges(db, currentUser.uid).catch(err => console.warn('Anehme badges sync in profile:', err));
+          }
+          
+          if (data.leaderId) {
+            try {
+              const leaderSnap = await getDoc(doc(db, 'users', data.leaderId));
+              if (leaderSnap.exists()) {
+                setLeaderData(leaderSnap.data());
+              }
+            } catch (lErr) {
+              console.warn("Could not fetch leader data:", lErr);
+            }
+          }
+          
+          if (data.groupId) {
+            try {
+              const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
+              if (groupSnap.exists()) {
+                setPatrolName(groupSnap.data().name);
+              }
+            } catch (gErr) {
+              console.warn("Could not fetch group data:", gErr);
+            }
           }
         }
-        
-        if (data.groupId) {
-          const groupSnap = await getDoc(doc(db, 'groups', data.groupId));
-          if (groupSnap.exists()) {
-            setPatrolName(groupSnap.data().name);
-          }
-        }
+      } catch (err) {
+        console.error("Error loading user profile snapshot:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, (err) => {
       console.error("Failed to listen to user profile:", err);
       setLoading(false);

@@ -452,20 +452,20 @@ export default function App() {
       return;
     }
     if (tab === 'handbooks' || tab === 'field-manuals' || tab === 'scouting-handbook') {
-      setCurrentTab('knowledge-hub');
-      setKnowledgeHubSubTab('handbooks');
+      setCurrentTab('advancement-hub');
+      setAdvancementHubSubTab('handbooks');
       setMobileMenuOpen(false);
       return;
     }
     if (tab === 'videos' || tab === 'video-tutorials' || tab === 'spt-videos') {
-      setCurrentTab('knowledge-hub');
-      setKnowledgeHubSubTab('videos');
+      setCurrentTab('advancement-hub');
+      setAdvancementHubSubTab('videos');
       setMobileMenuOpen(false);
       return;
     }
     if (tab === 'leadership' || tab === 'leadership-guide' || tab === 'roles' || tab === 'role-guide') {
-      setCurrentTab('knowledge-hub');
-      setKnowledgeHubSubTab('leadership');
+      setCurrentTab('advancement-hub');
+      setAdvancementHubSubTab('leadership');
       setMobileMenuOpen(false);
       return;
     }
@@ -473,8 +473,8 @@ export default function App() {
       if (isParent) {
         setCurrentTab('resources');
       } else {
-        setCurrentTab('knowledge-hub');
-        setKnowledgeHubSubTab('handbooks');
+        setCurrentTab('advancement-hub');
+        setAdvancementHubSubTab('handbooks');
       }
       setMobileMenuOpen(false);
       return;
@@ -1577,19 +1577,25 @@ export default function App() {
           <div className="space-y-4">
             <HubSubNav
               hubTitle="My Scouting Advancement"
-              hubSubtitle="Track your journey from Scout to Eagle, view merit badge progress, and plan service milestones."
+              hubSubtitle="Track your journey from Scout to Eagle, merit badges, scouting handbooks, demonstration videos, and leadership role guides."
               colorTheme="emerald"
               activeTab={advancementHubSubTab}
               onChange={(tabId) => setAdvancementHubSubTab(tabId)}
               tabs={[
                 { id: 'advancement', label: '7 Ranks Progress', icon: 'Compass' },
                 { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: 'Star' },
-                { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain' }
+                { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain' },
+                { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book' },
+                { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video' },
+                { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown' }
               ]}
             />
             {advancementHubSubTab === 'advancement' && <AdvancementTracker currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'road-to-eagle' && <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />}
+            {advancementHubSubTab === 'handbooks' && <VideoResources currentUser={currentUser} initialTab="handbooks" />}
+            {advancementHubSubTab === 'videos' && <VideoResources currentUser={currentUser} initialTab="videos" />}
+            {advancementHubSubTab === 'leadership' && <RoleAndLeadershipGuide currentUser={currentUser} />}
           </div>
         )}
         {currentTab === 'advancement-hub' && isParent && (
@@ -1604,22 +1610,16 @@ export default function App() {
         {(currentTab === 'knowledge-hub' || currentTab === 'knowledge') && (
           <div className="space-y-4">
             <HubSubNav
-              hubTitle="Knowledge Hub"
-              hubSubtitle="Comprehensive scouting handbooks, Islamic tarbiyah & duas, skill demonstration videos, and leadership role guides."
+              hubTitle="Islamic Tarbiyah & Knowledge"
+              hubSubtitle="Essential scouting duas, Islamic character development, halqa resources, and spiritual tarbiyah."
               colorTheme="emerald"
               activeTab={knowledgeHubSubTab}
               onChange={(tabId) => setKnowledgeHubSubTab(tabId)}
               tabs={[
-                { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles' },
-                { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book' },
-                { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video' },
-                { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown' }
+                { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles' }
               ]}
             />
             {knowledgeHubSubTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
-            {knowledgeHubSubTab === 'handbooks' && <VideoResources currentUser={currentUser} initialTab="handbooks" />}
-            {knowledgeHubSubTab === 'videos' && <VideoResources currentUser={currentUser} initialTab="videos" />}
-            {knowledgeHubSubTab === 'leadership' && <RoleAndLeadershipGuide currentUser={currentUser} />}
           </div>
         )}
 
