@@ -39,11 +39,12 @@ import {
 } from '../services/directMessagingService';
 
 const COURTESY_PROMPTS = [
-  'Assalāmu ʿAlaykum!',
-  'Jazākallāhu Khayran!',
-  'Thank you for the update.',
-  'Understood, will coordinate with my scout.',
-  'Looking forward to Friday’s session.'
+  'Assalāmu ʿAlaykum! Hope all is well.',
+  'My scout will be 10 minutes late today.',
+  'Please excuse my scout from this Friday’s session.',
+  'Quick question regarding rank advancement.',
+  'Jazākallāhu Khayran! Thank you for the update.',
+  'Understood, will coordinate with my scout.'
 ];
 
 const QUICK_EMOJIS = ['👍', '❤️', '⚜️', '🕌', '🤲', '🏕️', '👏', '✨', '✅', '🫡'];
@@ -76,6 +77,22 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const messagesEndRef = useRef(null);
+
+  // 1-Click Fast Start Chat with a specific leader
+  const handleQuickStartLeader = async (leaderUid, leaderName, leaderRole) => {
+    // Check if a thread with this leader already exists
+    const existing = threads.find(t => t.leaderUid === leaderUid);
+    if (existing) {
+      setActiveThreadId(existing.threadId);
+      return;
+    }
+
+    // Open modal pre-filled with this leader
+    setNewTargetLeaderUid(leaderUid);
+    setNewSubject(`Message to ${leaderName}`);
+    setNewInitialMessage('Assalāmu ʿAlaykum!');
+    setShowNewModal(true);
+  };
 
   // 1. Subscribe to Parent's Direct Threads
   useEffect(() => {
@@ -293,6 +310,32 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
           <Plus size={16} />
           <span>New Conversation</span>
         </button>
+      </div>
+
+      {/* ── QUICK 1-TAP LEADER LAUNCH BAR (Mobile & Parent Friendly) ── */}
+      <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-none shadow-md">
+        <span className="text-[10px] uppercase font-black text-slate-400 px-1 shrink-0 flex items-center gap-1">
+          <Users size={12} className="text-emerald-400" />
+          <span>Quick Chat:</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => handleQuickStartLeader('leadership', 'Troop Leadership Team', 'Troop Leadership')}
+          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+        >
+          <span>⚜️ Troop Leadership</span>
+        </button>
+        {availableLeaders.slice(0, 4).map(ldr => (
+          <button
+            key={ldr.uid}
+            type="button"
+            onClick={() => handleQuickStartLeader(ldr.uid, ldr.fullName || ldr.username, ldr.leaderPosition || ldr.role || 'Leader')}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <div className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px]">👨‍💼</div>
+            <span>{ldr.fullName || ldr.username}</span>
+          </button>
+        ))}
       </div>
 
       {/* ── 2-PANE CHAT CONSOLE ── */}

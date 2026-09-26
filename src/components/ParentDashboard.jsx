@@ -227,10 +227,11 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [parentDoc, setParentDoc] = useState(currentUser);
   const [linkedScouts, setLinkedScouts] = useState([]);
   const [selectedScoutId, setSelectedScoutId] = useState('all'); // 'all' | scoutId
-  const [activeTab, setActiveTab] = useState(initialTab || 'overview'); // 'overview' | 'homework' | 'advancement' | 'events' | 'feed' | 'reports' | 'tasks' | 'family'
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview'); // 'overview' | 'homework' | 'eagle' | 'events' | 'messages' | 'family'
   const [familySubTab, setFamilySubTab] = useState('household'); // 'household' | 'medical-id' | 'digital-pass'
   const [medicalScoutId, setMedicalScoutId] = useState('');
-  const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'past'
+  const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'attendance' | 'past'
+  const [eagleSubTab, setEagleSubTab] = useState('badges'); // 'badges' | 'ranks' | 'resources'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -240,12 +241,17 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       'home': 'overview',
       'events': 'events',
       'calendar': 'events',
+      'attendance': 'events',
       'messages': 'messages',
       'communication-hub': 'messages',
       'chat': 'messages',
       'direct-messages': 'messages',
       'eagle': 'eagle',
       'road-to-eagle': 'eagle',
+      'advancement': 'eagle',
+      'ranks': 'eagle',
+      'merit-badges': 'eagle',
+      'resources': 'eagle',
       'family': 'family',
       'profile': 'family',
       'medical': 'family',
@@ -256,17 +262,12 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       'health': 'family',
       'homework': 'homework',
       'assignments': 'homework',
-      'tasks': 'tasks',
-      'forms': 'tasks',
-      'advancement': 'advancement',
-      'ranks': 'advancement',
-      'merit-badges': 'advancement',
-      'feed': 'feed',
-      'broadcasts': 'feed',
-      'alerts': 'feed',
-      'reports': 'reports',
-      'resources': 'resources',
-      'attendance': 'events'
+      'tasks': 'overview',
+      'forms': 'overview',
+      'feed': 'overview',
+      'broadcasts': 'overview',
+      'alerts': 'overview',
+      'reports': 'overview'
     };
     const resolved = tabMap[initialTab] || initialTab;
     setActiveTab(resolved);
@@ -274,6 +275,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       setFamilySubTab('medical-id');
     } else if (initialTab === 'digital-id' || initialTab === 'id-pass' || initialTab === 'id-card') {
       setFamilySubTab('digital-pass');
+    } else if (initialTab === 'attendance') {
+      setEventSubTab('attendance');
+    } else if (initialTab === 'advancement' || initialTab === 'ranks' || initialTab === 'merit-badges') {
+      setEagleSubTab('ranks');
+    } else if (initialTab === 'resources') {
+      setEagleSubTab('resources');
+    } else if (initialTab === 'eagle' || initialTab === 'road-to-eagle') {
+      setEagleSubTab('badges');
     }
   }, [initialTab]);
 
@@ -1265,100 +1274,163 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         </div>
       </div>
 
-      {/* ── 2. STICKY PROMINENT CHILD SWITCHER ── */}
+      {/* ── 2. STICKY PROMINENT APP CHILD SWITCHER ── */}
       {linkedScouts.length > 0 && (
-        <div className="sticky top-2 z-30 bg-slate-900/95 backdrop-blur border border-slate-750 p-2.5 rounded-2xl shadow-lg flex items-center gap-2 overflow-x-auto scrollbar-none">
-          <span className="text-[10px] uppercase font-black text-slate-400 px-2 shrink-0 flex items-center gap-1">
-            <Users size={12} className="text-emerald-400" />
-            <span>Child View:</span>
-          </span>
+        <div className="sticky top-2 z-30 bg-slate-900/95 backdrop-blur-md border border-slate-750 p-3 rounded-2xl shadow-xl space-y-2">
+          {linkedScouts.length === 1 ? (
+            /* Single Child Focus Card */
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/40 p-3 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center font-black text-lg text-emerald-300 shrink-0 shadow-md">
+                  {linkedScouts[0].fullName?.charAt(0) || linkedScouts[0].username?.charAt(0) || '👦'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">My Scout:</span>
+                    <h3 className="font-black text-white text-sm sm:text-base">
+                      {linkedScouts[0].fullName || linkedScouts[0].username}
+                    </h3>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                      {getLatestAchievedRank(ranksProgressMap[linkedScouts[0].uid] || {}, linkedScouts[0].rank).name}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    {linkedScouts[0].patrolName || linkedScouts[0].patrol || 'Troop Member'} &bull; Information is scoped for your scout
+                  </p>
+                </div>
+              </div>
 
-          {linkedScouts.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setSelectedScoutId('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
-                isAllView
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 scale-[1.02]'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
-              }`}
-            >
-              <span>👨‍👩‍👧 All Family View</span>
-              <span className="text-[10px] bg-black/25 px-1.5 py-0.2 rounded-full font-mono">{linkedScouts.length}</span>
-            </button>
-          )}
+              {/* Quick Jump Action Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('homework')}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition cursor-pointer flex items-center gap-1 shrink-0"
+                >
+                  <BookOpen size={12} />
+                  <span>Homework</span>
+                  {activeHomework.length > 0 && (
+                    <span className="bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full text-[9px] font-black">
+                      {activeHomework.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('events')}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition cursor-pointer flex items-center gap-1 shrink-0"
+                >
+                  <Calendar size={12} />
+                  <span>Schedule</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('eagle')}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition cursor-pointer flex items-center gap-1 shrink-0"
+                >
+                  <Target size={12} />
+                  <span>Eagle Road</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('messages')}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 transition cursor-pointer flex items-center gap-1 shrink-0"
+                >
+                  <MessageSquare size={12} />
+                  <span>Chat Leader</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Multi-Child Selector (2+ Kids) */
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+              <span className="text-[10px] uppercase font-black text-slate-400 px-1 shrink-0 flex items-center gap-1.5">
+                <Users size={14} className="text-emerald-400" />
+                <span>Select Child:</span>
+              </span>
 
-          {linkedScouts.map(scout => {
-            const isSelected = scout.uid === selectedScoutId;
-            const sRanks = ranksProgressMap[scout.uid] || {};
-            const latestRank = getLatestAchievedRank(sRanks, scout.rank);
-            return (
               <button
-                key={scout.uid}
                 type="button"
-                onClick={() => setSelectedScoutId(scout.uid)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2.5 cursor-pointer shrink-0 ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 scale-[1.02]'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+                onClick={() => setSelectedScoutId('all')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                  isAllView
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 scale-[1.02]'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-750'
                 }`}
               >
-                <div className="w-6 h-6 rounded-full bg-slate-950/60 border border-white/20 flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
-                  {scout.fullName?.charAt(0) || scout.username?.charAt(0) || 'S'}
-                </div>
-                <span>{scout.fullName || scout.username}</span>
-                <span className="text-[10px] opacity-80 font-mono">({latestRank.name})</span>
+                <span>👨‍👩‍👧 All Kids ({linkedScouts.length})</span>
               </button>
-            );
-          })}
+
+              {linkedScouts.map(scout => {
+                const isSelected = scout.uid === selectedScoutId;
+                const sRanks = ranksProgressMap[scout.uid] || {};
+                const latestRank = getLatestAchievedRank(sRanks, scout.rank);
+                return (
+                  <button
+                    key={scout.uid}
+                    type="button"
+                    onClick={() => setSelectedScoutId(scout.uid)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2.5 cursor-pointer shrink-0 ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 scale-[1.02]'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-750'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-slate-950/70 border border-white/20 flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
+                      {scout.fullName?.charAt(0) || scout.username?.charAt(0) || '👦'}
+                    </div>
+                    <span>{scout.fullName || scout.username}</span>
+                    <span className="text-[10px] opacity-80 font-mono">({latestRank.name})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── 3. PRIMARY PARENT PORTAL TABS ── */}
+      {/* ── 3. SIMPLIFIED 6-PILLAR APP TAB NAVIGATION ── */}
       <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none">
         {[
-          { id: 'overview', label: 'Family Overview', icon: Home },
+          { 
+            id: 'overview', 
+            label: 'Family Hub', 
+            icon: Home,
+            badge: (pendingReportsToSign.length > 0 || urgentTasks.length > 0) ? `⚡ ${pendingReportsToSign.length + urgentTasks.length}` : null,
+            badgeColor: 'bg-amber-500 text-slate-950 font-black animate-pulse'
+          },
+          { 
+            id: 'events', 
+            label: 'Calendar & Schedule', 
+            icon: Calendar,
+            badge: null
+          },
           { 
             id: 'homework', 
-            label: 'Assignments & Learning', 
+            label: 'Homework & Quests', 
             icon: BookOpen,
             badge: activeHomework.length > 0 ? `${activeHomework.length} Active` : null,
             badgeColor: 'bg-amber-500 text-slate-950 font-black'
           },
-          { id: 'events', label: 'Upcoming Schedule & RSVP', icon: Calendar },
-          { id: 'attendance', label: 'Attendance & Compliance', icon: Clock },
+          { 
+            id: 'eagle', 
+            label: 'Road to Eagle', 
+            icon: Target,
+            badge: null
+          },
           { 
             id: 'messages', 
-            label: 'Direct Inquiries & Chat', 
+            label: 'Leader Chat', 
             icon: MessageSquare,
             badge: unreadDmsCount > 0 ? `💬 ${unreadDmsCount}` : null,
             badgeColor: 'bg-emerald-500 text-white font-black animate-pulse'
           },
           { 
-            id: 'feed', 
-            label: 'Alerts & Activity Feed', 
-            icon: Bell, 
-            badge: unreadNotifsCount > 0 ? unreadNotifsCount : null, 
-            badgeColor: 'bg-sky-500 text-white font-black animate-pulse' 
-          },
-          { 
-            id: 'reports', 
-            label: 'Official Progress Reports', 
-            icon: Printer,
-            badge: pendingReportsToSign.length > 0 ? `✍️ ${pendingReportsToSign.length} To Sign` : null,
-            badgeColor: 'bg-amber-500 text-slate-950 font-black animate-pulse'
-          },
-          { 
-            id: 'tasks', 
-            label: 'Forms & Waivers', 
-            icon: Zap, 
-            badge: urgentTasks.length > 0 ? `⚡ ${urgentTasks.length}` : null, 
-            badgeColor: 'bg-red-500 text-white font-black' 
-          },
-          { id: 'eagle', label: '🦅 Road to Eagle', icon: Target },
-          { id: 'resources', label: resourcesTabTitle, icon: Compass },
-          { id: 'advancement', label: 'Advancement & Badges', icon: Award },
-          { id: 'family', label: 'Household Profile', icon: User }
+            id: 'family', 
+            label: 'Household & Medical ID', 
+            icon: HeartPulse,
+            badge: null
+          }
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -1369,11 +1441,11 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 scale-[1.02]'
-                  : 'bg-slate-850 border border-slate-750 text-slate-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02] border border-emerald-400/40'
+                  : 'bg-slate-850 border border-slate-750 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={15} />
               <span>{t.label}</span>
               {t.badge && (
                 <span className={`text-[9px] px-2 py-0.5 rounded-full ${t.badgeColor}`}>
@@ -2224,6 +2296,19 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
             </div>
           </div>
 
+          {/* ℹ️ Parent View-Only Mode Banner */}
+          <div className="bg-sky-950/40 border border-sky-500/40 p-4 rounded-2xl flex items-center gap-3 text-xs text-sky-200">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-300 shrink-0">
+              <BookOpen size={18} />
+            </div>
+            <div className="min-w-0">
+              <strong className="font-extrabold text-white block">📖 Parent View-Only Mode</strong>
+              <p className="mt-0.5 leading-relaxed text-slate-300">
+                You can review assignments, due dates, instructions, video materials, and leader feedback comments here. Scouts complete and submit their work inside their own Scout Portal.
+              </p>
+            </div>
+          </div>
+
           {/* Active Homework Items */}
           <div className="space-y-3">
             {activeHomework.length === 0 ? (
@@ -2374,30 +2459,43 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               <div>
                 <h3 className="font-extrabold text-white text-base flex items-center gap-2">
                   <Calendar size={18} className="text-sky-400" />
-                  <span>Troop Schedule & Child Targeting</span>
+                  <span>Troop Schedule & Attendance</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Transparent audience tags clarify exactly which events apply to your scouts and family.
+                  View upcoming troop meetings, campouts, session times, and roll-call records for your scouts.
                 </p>
               </div>
 
-              {/* Sub Tabs: Upcoming vs Past */}
-              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto">
+              {/* Sub Tabs: Upcoming vs Attendance vs Past */}
+              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto overflow-x-auto scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setEventSubTab('upcoming')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
                     eventSubTab === 'upcoming'
                       ? 'bg-emerald-600 text-white shadow-md'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
+                  <Calendar size={13} />
                   <span>Upcoming Schedule</span>
                 </button>
                 <button
                   type="button"
+                  onClick={() => setEventSubTab('attendance')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    eventSubTab === 'attendance'
+                      ? 'bg-sky-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Clock size={13} />
+                  <span>Attendance Records</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setEventSubTab('past')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
                     eventSubTab === 'past'
                       ? 'bg-purple-600 text-white shadow-md'
                       : 'text-slate-400 hover:text-white'
@@ -2408,6 +2506,27 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
             </div>
           </div>
+
+          {/* ℹ️ Parent View-Only & RSVP Mode Banner */}
+          <div className="bg-sky-950/40 border border-sky-500/40 p-4 rounded-2xl flex items-center gap-3 text-xs text-sky-200">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-300 shrink-0">
+              <Calendar size={18} />
+            </div>
+            <div className="min-w-0">
+              <strong className="font-extrabold text-white block">📅 Troop Schedule & RSVP Mode</strong>
+              <p className="mt-0.5 leading-relaxed text-slate-300">
+                Review meeting dates, locations, packing lists, and departure times. Click <strong>Attending</strong> or <strong>Can't Go</strong> on any event card below to let leaders know your family's status.
+              </p>
+            </div>
+          </div>
+
+          {/* Attendance Sub-Tab View */}
+          {eventSubTab === 'attendance' && (
+            <ParentAttendanceFeed 
+              currentUser={currentUser} 
+              linkedScouts={linkedScouts} 
+            />
+          )}
 
           {/* Confirmed 1-on-1 Leader Conferences (Pinned to top of Upcoming Schedule) */}
           {eventSubTab === 'upcoming' && confirmedConferences.length > 0 && (
@@ -2487,7 +2606,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           )}
 
           {/* Events Stream */}
-          {(() => {
+          {eventSubTab !== 'attendance' && (() => {
             const todayStr = new Date().toISOString().split('T')[0];
             const upcomingList = eventsList.filter(e => (e.date || '') >= todayStr);
             const pastList = eventsList.filter(e => (e.date || '') < todayStr);
@@ -2860,55 +2979,122 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         </div>
       )}
 
-      {/* ── TAB: ROAD TO EAGLE CAPSTONE TRACKER ── */}
-      {activeTab === 'eagle' && (
-        <ParentEagleTracker
-          linkedScouts={linkedScouts}
-          selectedScoutId={selectedScoutId}
-          onSelectScout={(sId) => setSelectedScoutId(sId)}
-          allGroups={allGroups}
-          ranksProgressMap={ranksProgressMap}
-          meritProgressMap={meritProgressMap}
-        />
-      )}
+      {/* ── 9. TAB 4: ROAD TO EAGLE & ADVANCEMENT CAPSTONE TRACKER ── */}
+      {(activeTab === 'eagle' || activeTab === 'advancement' || activeTab === 'resources') && (
+        <div className="space-y-6">
+          <div className="bg-slate-850 border border-slate-750 p-6 rounded-3xl shadow-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <Target size={18} className="text-amber-400" />
+                  <span>Road to Eagle & Rank Advancement</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Track the 21 required merit badges, 7 scouting ranks, and tarbiyah milestones for your scouts.
+                </p>
+              </div>
 
-      {/* ── TAB: PATROL-SCOPED RESOURCES & SAFETY DIRECTORY ── */}
-      {activeTab === 'resources' && (
-        <ParentPatrolResources
-          linkedScouts={linkedScouts}
-          selectedScoutId={selectedScoutId}
-          onSelectScout={(sId) => setSelectedScoutId(sId)}
-          allGroups={allGroups}
-          allUsers={allUsers}
-          onNavigate={onNavigate}
-        />
-      )}
+              {/* Sub Tabs: 21 Badges vs 7 Ranks vs Patrol Resources */}
+              <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-750 self-start sm:self-auto overflow-x-auto scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setEagleSubTab('badges')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    eagleSubTab === 'badges'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Target size={13} />
+                  <span>21 Eagle Badges</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEagleSubTab('ranks')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    eagleSubTab === 'ranks'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Award size={13} />
+                  <span>7 Ranks Journey</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEagleSubTab('resources')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    eagleSubTab === 'resources'
+                      ? 'bg-sky-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Compass size={13} />
+                  <span>Patrol Safety</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-      {/* ── 10. TAB 7: ADVANCEMENT & BADGES (Complete & In-Progress Progress) ── */}
-      {activeTab === 'advancement' && (
-        <div className="space-y-8">
-          {scopedScouts.map(scout => {
-            const sRanks = ranksProgressMap[scout.uid] || {};
-            const sMerit = meritProgressMap[scout.uid] || {};
-            const sIslamic = islamicProgressMap[scout.uid] || {};
+          {/* ℹ️ Parent Progress Viewer Banner */}
+          <div className="bg-sky-950/40 border border-sky-500/40 p-4 rounded-2xl flex items-center gap-3 text-xs text-sky-200">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-300 shrink-0">
+              <Target size={18} />
+            </div>
+            <div className="min-w-0">
+              <strong className="font-extrabold text-white block">🦅 Parent Advancement & Progress Viewer</strong>
+              <p className="mt-0.5 leading-relaxed text-slate-300">
+                You can review badges earned, requirements in progress, and rank journeys. Milestone requirements and badges are officially certified and signed off by Scoutmasters and Counselors.
+              </p>
+            </div>
+          </div>
 
-            // Available BSA ranks (including AOL if scout has progress)
-            const aolHasProgress = sRanks['arrow_of_light'] && (
-              sRanks['arrow_of_light'].completed ||
-              Object.keys(sRanks['arrow_of_light'].completedRequirements || sRanks['arrow_of_light'].steps || {}).length > 0
-            );
-            const bsaRanks = aolHasProgress ? RANKS_DATA : RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
+          {eagleSubTab === 'badges' && (
+            <ParentEagleTracker
+              linkedScouts={linkedScouts}
+              selectedScoutId={selectedScoutId}
+              onSelectScout={(sId) => setSelectedScoutId(sId)}
+              allGroups={allGroups}
+              ranksProgressMap={ranksProgressMap}
+              meritProgressMap={meritProgressMap}
+            />
+          )}
 
-            const latestRank = getLatestAchievedRank(sRanks, scout.rank);
-            const nextRank = getNextIncompleteRank(sRanks);
-            const completedRanks = bsaRanks.filter(r => isRankCompleted(r, sRanks));
+          {eagleSubTab === 'resources' && (
+            <ParentPatrolResources
+              linkedScouts={linkedScouts}
+              selectedScoutId={selectedScoutId}
+              onSelectScout={(sId) => setSelectedScoutId(sId)}
+              allGroups={allGroups}
+              allUsers={allUsers}
+              onNavigate={onNavigate}
+            />
+          )}
 
-            // Active inspected rank for this scout
-            const currentSelectedRankId = selectedRankMap[scout.uid] || nextRank.id || 'scout';
-            const selectedRank = RANKS_DATA.find(r => r.id === currentSelectedRankId) || nextRank || RANKS_DATA[0];
-            const isSelectedRankCompleted = isRankCompleted(selectedRank, sRanks);
-            const selectedRankStats = getRankCompletionPercentage(selectedRank.id, sRanks);
-            const selectedRankReqs = (sRanks[selectedRank.id] || {}).completedRequirements || (sRanks[selectedRank.id] || {}).steps || {};
+          {eagleSubTab === 'ranks' && (
+            <div className="space-y-8">
+              {scopedScouts.map(scout => {
+                const sRanks = ranksProgressMap[scout.uid] || {};
+                const sMerit = meritProgressMap[scout.uid] || {};
+                const sIslamic = islamicProgressMap[scout.uid] || {};
+
+                // Available BSA ranks (including AOL if scout has progress)
+                const aolHasProgress = sRanks['arrow_of_light'] && (
+                  sRanks['arrow_of_light'].completed ||
+                  Object.keys(sRanks['arrow_of_light'].completedRequirements || sRanks['arrow_of_light'].steps || {}).length > 0
+                );
+                const bsaRanks = aolHasProgress ? RANKS_DATA : RANKS_DATA.filter(r => r.id !== 'arrow_of_light');
+
+                const latestRank = getLatestAchievedRank(sRanks, scout.rank);
+                const nextRank = getNextIncompleteRank(sRanks);
+                const completedRanks = bsaRanks.filter(r => isRankCompleted(r, sRanks));
+
+                // Active inspected rank for this scout
+                const currentSelectedRankId = selectedRankMap[scout.uid] || nextRank.id || 'scout';
+                const selectedRank = RANKS_DATA.find(r => r.id === currentSelectedRankId) || nextRank || RANKS_DATA[0];
+                const isSelectedRankCompleted = isRankCompleted(selectedRank, sRanks);
+                const selectedRankStats = getRankCompletionPercentage(selectedRank.id, sRanks);
+                const selectedRankReqs = (sRanks[selectedRank.id] || {}).completedRequirements || (sRanks[selectedRank.id] || {}).steps || {};
             const selectedRankDate = (sRanks[selectedRank.id] || {}).completedDate || (sRanks[selectedRank.id] || {}).dateCompleted || (sRanks[selectedRank.id] || {}).approvedAt || null;
 
             // Total Requirements Certified across all ranks
@@ -4058,6 +4244,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               </div>
             );
           })}
+            </div>
+          )}
         </div>
       )}
 
