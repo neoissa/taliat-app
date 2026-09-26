@@ -23,6 +23,14 @@ export const LEADER_OWNER_TABS = [
     badgeKey: null
   },
   {
+    id: 'lesson-plans',
+    label: 'Lesson Curriculum',
+    icon: 'GraduationCap',
+    theme: 'purple',
+    description: 'Patrol Lesson Plans & Weekly Agendas',
+    badgeKey: null
+  },
+  {
     id: 'events',
     label: 'Calendar & Events',
     icon: 'Calendar',
@@ -40,10 +48,18 @@ export const LEADER_OWNER_TABS = [
   },
   {
     id: 'admin-hub',
-    label: 'Admin & Settings',
+    label: 'Leader Admin Console',
     icon: 'Sliders',
-    theme: 'purple',
-    description: 'User Roles, System Administration & Profile',
+    theme: 'teal',
+    description: 'User Management & Security Governance',
+    badgeKey: null
+  },
+  {
+    id: 'profile',
+    label: 'My Profile & Training (SPT)',
+    icon: 'ShieldCheck',
+    theme: 'emerald',
+    description: 'Leader Profile, Credentials & Safety Protection Training',
     badgeKey: null
   }
 ];

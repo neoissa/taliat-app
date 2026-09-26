@@ -876,13 +876,13 @@ export default function App() {
     }
 
     // 6. Admin & Profile Sub-tools
-    if (tab === 'admin-hub') {
-      if (extraData?.subTab) {
-        setAdminHubSubTab(extraData.subTab);
-      }
+    if (tab === 'admin-hub' || tab === 'admin' || tab === 'global-admin') {
       if (extraData?.tab) {
         setAdminInitialTab(extraData.tab);
         setAdminExtraData(extraData);
+      } else {
+        setAdminInitialTab('users');
+        setAdminExtraData(null);
       }
       setCurrentTab('admin-hub');
       setMobileMenuOpen(false);
@@ -913,22 +913,8 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'admin' || tab === 'global-admin') {
-      if (extraData?.tab) {
-        setAdminInitialTab(extraData.tab);
-        setAdminExtraData(extraData);
-      } else {
-        setAdminInitialTab('users');
-        setAdminExtraData(null);
-      }
-      setCurrentTab('admin-hub');
-      setAdminHubSubTab('admin');
-      setMobileMenuOpen(false);
-      return;
-    }
-    if (tab === 'lesson-plans') {
-      setCurrentTab('admin-hub');
-      setAdminHubSubTab('lesson-plans');
+    if (tab === 'lesson-plans' || tab === 'curriculum') {
+      setCurrentTab('lesson-plans');
       setMobileMenuOpen(false);
       return;
     }
@@ -1757,39 +1743,13 @@ export default function App() {
         )}
 
         {/* ── 5. ADMIN & SETTINGS HUB (LEADER / OWNER) ── */}
-        {currentTab === 'admin-hub' && (isLeaderOrOwner || isExecutive) && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle={isOwner ? "👑 Troop Owner Administration" : "⚜️ Leadership Administration"}
-              hubSubtitle="Manage system user credentials, security permissions, lesson curriculums, and safety training."
-              colorTheme={isOwner ? "amber" : "purple"}
-              activeTab={adminHubSubTab}
-              onChange={(tabId) => setAdminHubSubTab(tabId)}
-              tabs={[
-                { id: 'admin', label: isOwner ? '👑 Superadmin Console' : '⚜️ Leader Administration', icon: isOwner ? 'Crown' : 'Shield' },
-                { id: 'profile', label: 'My Profile & Safety Training (SPT)', icon: 'User' },
-                { id: 'lesson-plans', label: 'Lesson Curriculum', icon: 'GraduationCap' }
-              ]}
-            />
-            {adminHubSubTab === 'admin' && (
-              <AdminPanel 
-                currentUser={currentUser} 
-                initialTab={adminInitialTab} 
-                extraData={adminExtraData} 
-                onNavigate={handleNavigate} 
-              />
-            )}
-            {adminHubSubTab === 'profile' && (
-              <ScoutProfile 
-                currentUser={currentUser} 
-                initialTab={profileInitialTab || 'personal'} 
-                onNavigate={handleNavigate} 
-              />
-            )}
-            {adminHubSubTab === 'lesson-plans' && (
-              <LessonPlans currentUser={currentUser} />
-            )}
-          </div>
+        {(currentTab === 'admin-hub' || currentTab === 'admin') && (isLeaderOrOwner || isExecutive) && (
+          <AdminPanel 
+            currentUser={currentUser} 
+            initialTab={adminInitialTab} 
+            extraData={adminExtraData} 
+            onNavigate={handleNavigate} 
+          />
         )}
 
         {/* ── 6. ADVANCEMENT HUB ── */}

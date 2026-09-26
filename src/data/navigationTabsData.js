@@ -313,10 +313,20 @@ export const MASTER_TABS_REGISTRY = [
   },
   {
     id: 'lesson-plans',
-    defaultLabel: 'Lesson Plans',
+    defaultLabel: 'Lesson Curriculum',
+    labelByRole: {
+      owner: '🎓 Lesson Curriculum',
+      admin: '🎓 Lesson Curriculum',
+      leader: '🎓 Lesson Curriculum'
+    },
     defaultIcon: 'GraduationCap',
+    iconByRole: {
+      owner: 'GraduationCap',
+      admin: 'GraduationCap',
+      leader: 'GraduationCap'
+    },
     category: 'academics',
-    description: 'Shared lesson curriculum, skills teaching guides, and patrol materials',
+    description: 'Patrol lesson curriculum, weekly agendas, and skills teaching guides',
     allowedRoles: ['owner', 'admin', 'leader'],
     badgeKey: null
   },
@@ -386,7 +396,7 @@ export function getDefaultRoleTabs(userRoleContext) {
   let primaryHubIds = [];
 
   if (isOwner || isExecutive || isLeader) {
-    primaryHubIds = ['home', 'scouts-hub', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub'];
+    primaryHubIds = ['home', 'scouts-hub', 'lesson-plans', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub', 'profile'];
   } else if (isParent) {
     primaryHubIds = ['home', 'events', 'assignments', 'communication-hub', 'road-to-eagle', 'knowledge-hub', 'profile'];
   } else {
@@ -421,7 +431,7 @@ export function getDefaultBottomTabIds(userRoleContext) {
   const { isOwner, isLeader, isExecutive, isParent } = userRoleContext || {};
   
   if (isOwner || isExecutive || isLeader) {
-    return ['home', 'scouts-hub', 'events', 'communication-hub'];
+    return ['home', 'scouts-hub', 'lesson-plans', 'events'];
   }
   if (isParent) {
     return ['home', 'events', 'assignments', 'communication-hub'];
