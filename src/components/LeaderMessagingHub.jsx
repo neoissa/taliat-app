@@ -394,15 +394,15 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
               )}
             </div>
 
-            {/* Filter Pills with Counts */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+            {/* Filter Pills with Counts - Wrapped for 100% Visibility */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
               {[
                 { id: 'all', label: 'All', count: threads.length },
-                { id: 'unread', label: 'Unread', count: unreadCount, isBadge: unreadCount > 0 },
-                { id: 'inquiry', label: 'Inquiries', count: inquiryCount },
-                { id: 'request', label: 'Requests', count: requestCount },
-                { id: 'suggestion', label: 'Suggestions', count: suggestionCount },
-                { id: 'resolved', label: 'Resolved', count: resolvedCount }
+                { id: 'unread', label: 'Unread', count: unreadCount, isBadge: unreadCount > 0, icon: '⭐' },
+                { id: 'inquiry', label: 'Inquiries', count: inquiryCount, icon: '🔒' },
+                { id: 'request', label: 'Requests', count: requestCount, icon: '📋' },
+                { id: 'suggestion', label: 'Suggestions', count: suggestionCount, icon: '💡' },
+                { id: 'resolved', label: 'Resolved', count: resolvedCount, icon: '✓' }
               ].map(tab => {
                 const isActive = categoryFilter === tab.id;
                 return (
@@ -410,18 +410,19 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                     key={tab.id}
                     type="button"
                     onClick={() => setCategoryFilter(tab.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
                       isActive
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                        : 'bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-850 border-slate-800 hover:border-slate-700'
                     }`}
                   >
+                    {tab.icon && <span className="text-[10px]">{tab.icon}</span>}
                     <span>{tab.label}</span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                       isActive 
-                        ? 'bg-indigo-800/80 text-white' 
+                        ? 'bg-indigo-800 text-white' 
                         : tab.isBadge
-                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          ? 'bg-rose-500 text-white animate-pulse'
                           : 'bg-slate-800 text-slate-400'
                     }`}>
                       {tab.count}
@@ -765,8 +766,8 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Preset Quick Replies Bar */}
-              <div className="px-5 py-2.5 bg-slate-900/60 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-none">
+              {/* Preset Quick Replies Bar - Wrapped for full visibility */}
+              <div className="px-5 py-2.5 bg-slate-900/60 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
                 <span className="text-[10px] uppercase font-black text-indigo-400 px-1 shrink-0 flex items-center gap-1">
                   <Sparkles size={11} />
                   <span>Quick Reply:</span>
@@ -786,7 +787,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
               {/* Chat Input & Action Composer */}
               <form onSubmit={handleSendMessage} className="p-4 bg-slate-900 border-t border-slate-800 space-y-2.5">
                 {showEmojiPicker && (
-                  <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto animate-fadeIn">
+                  <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 flex flex-wrap items-center gap-2 animate-fadeIn">
                     {QUICK_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
