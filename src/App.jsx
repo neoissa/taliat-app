@@ -21,6 +21,8 @@ import AssignmentsManager from './components/AssignmentsManager';
 import EventsManager from './components/EventsManager';
 import LeaderReportsCenter from './components/LeaderReportsCenter';
 import LeaderMessagingHub from './components/LeaderMessagingHub';
+import LeaderBroadcastCenter from './components/LeaderBroadcastCenter';
+import LeaderParentRequests from './components/LeaderParentRequests';
 import PatrolAttendance from './components/PatrolAttendance';
 import ScoutAttendance from './components/ScoutAttendance';
 import ScoutJournalNotes from './components/ScoutJournalNotes';
@@ -1596,9 +1598,17 @@ export default function App() {
               ]}
             />
             {commHubSubTab === 'direct-messages' && <LeaderMessagingHub currentUser={currentUser} onNavigate={handleNavigate} />}
-            {commHubSubTab === 'broadcasts' && <AdminPanel currentUser={currentUser} initialTab="broadcasts" onNavigate={handleNavigate} />}
+            {commHubSubTab === 'broadcasts' && <LeaderBroadcastCenter currentUser={currentUser} onNavigate={handleNavigate} />}
             {commHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
-            {commHubSubTab === 'parent-requests' && <AdminPanel currentUser={currentUser} initialTab="requests" extraData={adminExtraData} onNavigate={handleNavigate} />}
+            {commHubSubTab === 'parent-requests' && (
+              <LeaderParentRequests 
+                currentUser={currentUser} 
+                onNavigate={handleNavigate} 
+                initialRequestId={adminExtraData?.requestId} 
+                autoOpenConfirm={adminExtraData?.confirmMeeting} 
+                initialFilterTab={adminExtraData?.filterTab || 'pending'} 
+              />
+            )}
           </div>
         )}
 
