@@ -1768,33 +1768,33 @@ ${lockedClosing}`;
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* ── HEADER BANNER ── */}
-      <div className={`border-2 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+      <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-6 border backdrop-blur-md shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 transition-all ${
         isOwner 
-          ? 'bg-gradient-to-r from-slate-900 via-amber-950/50 to-slate-900 border-amber-500/60 shadow-amber-950/40' 
-          : 'bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border-emerald-500/40 shadow-emerald-950/30'
+          ? 'bg-gradient-to-r from-slate-900 via-amber-950/30 to-slate-900/90 border-amber-500/35 shadow-amber-950/20' 
+          : 'bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 border-emerald-500/30 shadow-emerald-950/20'
       }`}>
-        <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shrink-0 ${
+        <div className="flex items-start sm:items-center gap-4 min-w-0">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shrink-0 border ${
             isOwner 
-              ? 'bg-gradient-to-br from-amber-500 to-amber-700 shadow-amber-950/60' 
-              : 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-950/60'
+              ? 'bg-gradient-to-br from-amber-500 to-amber-700 border-amber-400/40 shadow-amber-950/50' 
+              : 'bg-gradient-to-br from-emerald-500 to-teal-700 border-emerald-400/30 shadow-emerald-950/50'
           }`}>
-            {isOwner ? <Crown size={28} /> : <Shield size={28} />}
+            {isOwner ? <Crown size={24} /> : <Shield size={24} />}
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-xl font-black text-white">
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                 {isOwner ? '👑 Supreme Troop Owner & Executive Hub' : '⚡ Executive Leadership & Management Hub'}
               </h2>
-              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase border ${
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
                 isOwner 
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' 
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
               }`}>
                 {isOwner ? '👑 Troop Superadmin (Full Authority)' : '⚜️ Scoutmaster Console'}
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-1">
+            <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
               {isOwner 
                 ? 'Supreme troop governance: full username modification privileges, account provisioning, role elevations, patrol architecture, broadcasts, and system registries.'
                 : 'Executive troop management: patrol administration, scout advancement oversight, event coordination, and parent communications. (Username modifications are restricted to Troop Owner).'
@@ -1803,77 +1803,85 @@ ${lockedClosing}`;
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <button
             onClick={() => setActiveTab('calendar-sync')}
-            className={`border font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md shrink-0 ${
+            className={`font-semibold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 border shadow-sm ${
               activeTab === 'calendar-sync'
                 ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-950/50'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                : 'bg-slate-800/80 hover:bg-slate-750 text-slate-200 border-slate-700/80'
             }`}
             title="Import & Sync Official 2026–27 Scout Year Calendar (.xlsx)"
           >
-            <Calendar size={15} className="text-emerald-400" />
-            <span>🗓️ Master Calendar Sync</span>
+            <Calendar size={14} className="text-emerald-400" />
+            <span>Master Calendar Sync</span>
           </button>
           {onNavigate && (
             <button
               onClick={() => onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md"
+              className="bg-slate-800/80 hover:bg-slate-750 text-slate-200 border border-slate-700/80 font-semibold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
               title="Open 2026-2027 Calendar Generator & Events Hub"
             >
-              <Calendar size={15} className="text-teal-400" />
-              <span>⚡ Calendar Generator</span>
+              <Sparkles size={14} className="text-teal-400" />
+              <span>Calendar Generator</span>
             </button>
           )}
           <button
             onClick={() => setShowRosterExportModal(true)}
-            className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700 transition cursor-pointer flex items-center gap-2 shadow-md shrink-0"
+            className="bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white font-semibold text-xs px-3.5 py-2 rounded-xl border border-slate-700/80 transition cursor-pointer flex items-center gap-2 shadow-sm"
             title="Export Troop & Dual-Parent Household Roster to CSV or Formatted PDF"
           >
-            <FileSpreadsheet size={15} className="text-emerald-400" />
+            <FileSpreadsheet size={14} className="text-emerald-400" />
             <span>Export Roster Data</span>
           </button>
           <button
             onClick={() => setShowUserModal(true)}
-            className={`font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg ${
+            className={`font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md ${
               isOwner 
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-950/50' 
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/50'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-950/40' 
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-950/40'
             }`}
           >
-            <UserPlus size={16} />
+            <UserPlus size={15} />
             <span>Create New User</span>
           </button>
         </div>
       </div>
 
       {/* ── NAVIGATION TABS ── */}
-      <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1.5 p-1.5 bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-x-auto scrollbar-none shadow-sm backdrop-blur-sm">
         {[
-          { id: 'users', label: `Global User Directory (${users.length})`, icon: Users },
-          { id: 'patrols', label: `Patrol Architecture & Edit (${groups.length})`, icon: FolderTree },
+          { id: 'users', label: 'Global User Directory', count: users.length, icon: Users },
+          { id: 'patrols', label: 'Patrol Architecture & Edit', count: groups.length, icon: FolderTree },
           { id: 'patrol-progress', label: 'Patrol Progress & Insights', icon: TrendingUp },
           { id: 'calendar-sync', label: 'Master Calendar Ingestion (.xlsx)', icon: Calendar },
-          { id: 'history', label: `Approval History & Audit Trail (${filteredApprovalHistory.length})`, icon: History },
-          { id: 'rsvps', label: 'Event RSVPs & Attendance Monitor', icon: UserCheck },
+          { id: 'history', label: 'Approval History & Audit Trail', count: filteredApprovalHistory.length, icon: History },
+          { id: 'rsvps', label: 'Event RSVPs & Attendance', icon: UserCheck },
           { id: 'requests', label: 'Parent Inquiries & Requests', icon: MessageSquare },
-          { id: 'broadcasts', label: `Troop Broadcasts (${broadcasts.length})`, icon: Megaphone },
-          { id: 'forms', label: `Parent Forms & Waivers (${parentTasks.length})`, icon: FileText }
+          { id: 'broadcasts', label: 'Troop Broadcasts', count: broadcasts.length, icon: Megaphone },
+          { id: 'forms', label: 'Parent Forms & Waivers', count: parentTasks.length, icon: FileText }
         ].map(t => {
           const Icon = t.icon;
+          const isActive = activeTab === t.id;
           return (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                activeTab === t.id
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
-                  : 'bg-slate-850 border border-slate-750 text-slate-400 hover:text-white'
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
               <span>{t.label}</span>
+              {t.count !== undefined && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold ${
+                  isActive ? 'bg-emerald-700/80 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {t.count}
+                </span>
+              )}
             </button>
           );
         })}
@@ -1883,23 +1891,31 @@ ${lockedClosing}`;
       {activeTab === 'users' && (
         <div className="space-y-4">
           {/* Controls Bar */}
-          <div className="bg-slate-850 border border-slate-750 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+          <div className="bg-slate-900/70 border border-slate-800/80 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md backdrop-blur-sm">
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+              <div className="relative flex-1 sm:w-72">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
                 <input
                   type="text"
-                  placeholder="Search by name or email..."
+                  placeholder="Search by name, handle, or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950/80 border border-slate-750/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition"
                 />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-slate-500 hover:text-white"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
 
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                className="bg-slate-950/80 border border-slate-750/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer transition"
               >
                 <option value="all">All Roles ({users.length})</option>
                 <option value="executive">⚜️ Scoutmaster & ASMs ({execLeadersList.length})</option>
@@ -1909,50 +1925,61 @@ ${lockedClosing}`;
               </select>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowRosterExportModal(true)}
-                className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="bg-slate-800/80 hover:bg-slate-750 text-slate-200 hover:text-white font-semibold text-xs px-3.5 py-2 rounded-xl border border-slate-700/80 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
               >
                 <FileSpreadsheet size={13} className="text-emerald-400" />
                 <span>Export Roster (CSV / PDF)</span>
               </button>
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-mono text-slate-400 bg-slate-950/60 border border-slate-800 px-2.5 py-1 rounded-lg">
                 Showing {filteredUsers.length} of {users.length} accounts
               </span>
             </div>
           </div>
 
           {/* Users Table */}
-          <div className="bg-slate-850 border border-slate-750 rounded-3xl overflow-hidden shadow-xl">
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl backdrop-blur-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-750">
+                <thead className="bg-slate-950/70 text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-800/80">
                   <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Role & Position</th>
-                    <th className="p-4">Assigned Patrol</th>
-                    <th className="p-4">Linked Profile Details</th>
-                    <th className="p-4 text-right">Actions</th>
+                    <th className="py-3.5 px-4 font-semibold">User</th>
+                    <th className="py-3.5 px-4 font-semibold">Role & Position</th>
+                    <th className="py-3.5 px-4 font-semibold">Assigned Patrol</th>
+                    <th className="py-3.5 px-4 font-semibold">Linked Profile Details</th>
+                    <th className="py-3.5 px-4 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-750">
+                <tbody className="divide-y divide-slate-800/50">
                   {filteredUsers.map(u => {
-                    const uPatrol = groups.find(g => g.id === u.groupId)?.name || (u.groupId ? 'Patrol' : 'Unassigned');
+                    const rawPatrol = groups.find(g => g.id === u.groupId)?.name;
+                    const patrolDisplayName = rawPatrol
+                      ? (rawPatrol.toLowerCase().includes('patrol') ? rawPatrol : `${rawPatrol} Patrol`)
+                      : null;
                     const isSuper = u.role === 'owner' || u.email === 'neoissa@gmail.com';
 
                     return (
-                      <tr key={u.uid} className="hover:bg-slate-800/50 transition">
-                        <td className="p-4">
+                      <tr key={u.uid} className="hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-xs shrink-0">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
+                              isSuper 
+                                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' 
+                                : u.role === 'leader' 
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                                : u.role === 'parent'
+                                ? 'bg-sky-500/15 border-sky-500/30 text-sky-300'
+                                : 'bg-emerald-600/15 border-emerald-500/30 text-emerald-300'
+                            }`}>
                               {u.fullName?.charAt(0) || u.username?.charAt(0) || 'U'}
                             </div>
                             <div className="min-w-0">
-                              <strong className="text-white block truncate">{u.fullName || u.username}</strong>
+                              <strong className="text-slate-100 block truncate font-semibold text-xs">{u.fullName || u.username}</strong>
                               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
-                                <span className="font-mono text-emerald-400 font-semibold">@{u.username || u.email?.split('@')[0]}</span>
+                                <span className="font-mono text-emerald-400 font-medium">@{u.username || u.email?.split('@')[0]}</span>
                                 {(u.personalEmail || u.scoutEmail || u.parentEmail || (u.email && !u.email.endsWith('@talia.app') && u.email !== `${u.username}@talia.app`)) && (
                                   <span className="truncate">&bull; {u.personalEmail || u.scoutEmail || u.parentEmail || u.email}</span>
                                 )}
@@ -1961,50 +1988,83 @@ ${lockedClosing}`;
                           </div>
                         </td>
 
-                        <td className="p-4">
-                          <span className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full border font-bold ${
-                            isSuper ? 'bg-amber-950 text-amber-300 border-amber-600' :
-                            u.role === 'leader' ? 'bg-emerald-950 text-emerald-300 border-emerald-600' :
-                            u.role === 'parent' ? 'bg-sky-950 text-sky-300 border-sky-600' :
-                            (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' ? 'bg-amber-950 text-amber-300 border-amber-600' :
-                            'bg-slate-900 text-slate-300 border-slate-700'
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full border font-semibold ${
+                            isSuper 
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+                              : u.role === 'leader' 
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
+                              : u.role === 'parent' 
+                              ? 'bg-sky-500/15 text-sky-300 border-sky-500/30' 
+                              : (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' 
+                              ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' 
+                              : 'bg-slate-800/80 text-slate-300 border-slate-700/80'
                           }`}>
-                            {isSuper ? '👑 Owner' : u.role === 'leader' ? `⚜️ ${u.leaderPosition || 'Leader'}` : u.role === 'parent' ? '👨‍👩‍👧 Parent' : (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' ? `🎖️ ${u.scoutPosition || u.position}` : '🏕️ Scout'}
+                            {isSuper 
+                              ? '👑 Owner' 
+                              : u.role === 'leader' 
+                              ? `⚜️ ${u.leaderPosition || 'Leader'}` 
+                              : u.role === 'parent' 
+                              ? '👨‍👩‍👧 Parent' 
+                              : (u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' 
+                              ? `🎖️ ${u.scoutPosition || u.position}` 
+                              : '🏕️ Scout'
+                            }
                           </span>
                         </td>
 
-                        <td className="p-4">
-                          <span className="text-slate-300 font-medium">
-                            {uPatrol !== 'Unassigned' ? `👥 ${uPatrol} Patrol` : <span className="text-slate-500 italic">None</span>}
-                          </span>
-                        </td>
-
-                        <td className="p-4 text-slate-400 text-[11px]">
-                          {u.role === 'parent' ? (
-                            <span>{Array.isArray(u.linkedScoutIds) ? `${u.linkedScoutIds.length} Linked Children` : 'No children linked'}</span>
-                          ) : u.role === 'scout' ? (
-                            <span>
-                              Rank: <strong className="text-white">{u.rank || 'Scout'}</strong>
-                              {(u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' && (
-                                <span className="text-amber-400 font-semibold block text-[10px]">
-                                  🎖️ {u.scoutPosition || u.position}
-                                </span>
-                              )}
+                        <td className="py-3 px-4">
+                          {patrolDisplayName ? (
+                            <span className="inline-flex items-center gap-1.5 text-slate-200 text-xs font-medium bg-slate-800/60 border border-slate-750/70 px-2.5 py-1 rounded-lg">
+                              <Users size={12} className="text-emerald-400 shrink-0" />
+                              <span className="truncate">{patrolDisplayName}</span>
                             </span>
                           ) : (
-                            <span>
-                              SPT: <strong className={(u.spt || u.sptDate || u.sptFileUrl || u.yptCompleted) ? 'text-emerald-400' : 'text-amber-400'}>
-                                {(u.spt || u.sptDate) ? `✓ ${u.spt || u.sptDate}` : ((u.sptFileUrl || u.yptCompleted) ? '✓ Certified' : 'Pending')}
-                              </strong>
-                            </span>
+                            <span className="text-slate-500 text-xs italic">— None —</span>
                           )}
                         </td>
 
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-3 px-4 text-slate-300 text-[11px]">
+                          {u.role === 'parent' ? (
+                            Array.isArray(u.linkedScoutIds) && u.linkedScoutIds.length > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-slate-300 font-medium">
+                                <Users size={12} className="text-sky-400" />
+                                <span>{u.linkedScoutIds.length} {u.linkedScoutIds.length === 1 ? 'Linked Child' : 'Linked Children'}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 italic">No children linked</span>
+                            )
+                          ) : u.role === 'scout' ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span>
+                                Rank: <strong className="text-white font-semibold">{u.rank || 'Scout'}</strong>
+                              </span>
+                              {(u.scoutPosition || u.position) && (u.scoutPosition || u.position) !== 'General Scout / Member' && (
+                                <span className="text-indigo-300 font-medium text-[10px]">
+                                  🎖️ {u.scoutPosition || u.position}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            (u.spt || u.sptDate || u.sptFileUrl || u.yptCompleted) ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+                                <CheckCircle2 size={12} />
+                                <span>{(u.spt || u.sptDate) ? `✓ ${u.spt || u.sptDate}` : '✓ Certified'}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
+                                <Clock size={12} />
+                                <span>SPT: Pending</span>
+                              </span>
+                            )
+                          )}
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenEditUser(u)}
-                              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                              className="p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 transition cursor-pointer"
                               title="Edit User Details"
                             >
                               <Edit3 size={13} />
@@ -2013,7 +2073,7 @@ ${lockedClosing}`;
                             {/* WhatsApp Share Button */}
                             <button
                               onClick={() => handleOpenWhatsAppModal(u)}
-                              className="p-2 bg-slate-800 hover:bg-emerald-950/80 text-emerald-400 hover:text-emerald-300 rounded-xl border border-slate-700 hover:border-emerald-500/50 transition cursor-pointer"
+                              className="p-1.5 bg-slate-800/80 hover:bg-emerald-950/80 text-emerald-400 hover:text-emerald-300 rounded-lg border border-slate-700/80 hover:border-emerald-500/50 transition cursor-pointer"
                               title="Share Credentials & App Link via WhatsApp"
                             >
                               <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -2029,7 +2089,7 @@ ${lockedClosing}`;
                                 setResetErrMsg('');
                                 setResetSuccessMsg('');
                               }}
-                              className="p-2 bg-slate-800 hover:bg-amber-950/80 text-amber-400 hover:text-amber-200 rounded-xl border border-slate-700 hover:border-amber-500/50 transition cursor-pointer"
+                              className="p-1.5 bg-slate-800/80 hover:bg-amber-950/80 text-amber-400 hover:text-amber-200 rounded-lg border border-slate-700/80 hover:border-amber-500/50 transition cursor-pointer"
                               title="Clear All Progress & Reset Profile"
                             >
                               <RotateCcw size={13} />
@@ -2038,7 +2098,7 @@ ${lockedClosing}`;
                             {!isSuper && (
                               <button
                                 onClick={() => handleDeleteUser(u)}
-                                className="p-2 bg-slate-800 hover:bg-red-600/80 text-slate-400 hover:text-white rounded-xl border border-slate-700 transition cursor-pointer"
+                                className="p-1.5 bg-slate-800/80 hover:bg-red-950/80 text-slate-400 hover:text-red-300 rounded-lg border border-slate-700/80 hover:border-red-500/50 transition cursor-pointer"
                                 title="Delete User Account"
                               >
                                 <Trash2 size={13} />
