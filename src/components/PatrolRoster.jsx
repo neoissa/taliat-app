@@ -1518,6 +1518,7 @@ export default function PatrolRoster({ currentUser = {} }) {
         scoutEmail: editScoutEmail.trim() || null,
         personalEmail: editScoutEmail.trim() || null,
         scoutPhone: editScoutPhone.trim() || null,
+        phone: editScoutPhone.trim() || null,
         parentEmail: editParentEmail.trim() || null,
         parentPhone: editParentPhone.trim() || null,
         groupId: editGroupId || null,

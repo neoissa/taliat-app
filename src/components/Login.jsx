@@ -44,35 +44,39 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
         const isHissa = cleanInput === 'hissa' || cleanInput === 'hassan' || user.email === 'hissa@talia.app' || user.email === 'hassan@talia.app';
         const isAnehme = cleanInput === 'anehme' || cleanInput.includes('anehme') || user.email === 'anehme@talia.app';
 
+        const existingData = userDoc.exists() ? userDoc.data() : {};
+
         if (isNeo) {
           forcedRole = 'owner';
           forcedOwner = true;
-          await setDoc(userRef, { 
+          const neoUpdates = { 
             role: 'owner', 
             isOwner: true, 
-            fullName: 'Neo Issa',
-            scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
-            scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
-            meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
-            credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-            spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-            sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            fullName: existingData.fullName || 'Neo Issa',
+            scoutingLeadership: existingData.scoutingLeadership || HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
+            scoutingTrainings: existingData.scoutingTrainings || HASSAN_LEADERSHIP_PROFILE.trainings,
+            meritBadgeCounselorSubjects: existingData.meritBadgeCounselorSubjects || HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
+            credentialsValidThrough: existingData.credentialsValidThrough || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            spt: existingData.spt || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            sptDate: existingData.sptDate || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
             yptCompleted: true
-          }, { merge: true });
+          };
+          await setDoc(userRef, neoUpdates, { merge: true });
         } else if (isHissa) {
-          forcedRole = 'leader';
-          await setDoc(userRef, { 
-            role: 'leader',
-            leaderPosition: 'Committee Chair / Troop Leader',
-            fullName: 'Hassan Nehme',
-            scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
-            scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
-            meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
-            credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-            spt: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-            sptDate: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+          forcedRole = existingData.role || 'leader';
+          const hissaUpdates = { 
+            role: existingData.role || 'leader',
+            leaderPosition: existingData.leaderPosition || 'Committee Chair / Troop Leader',
+            fullName: existingData.fullName || 'Hassan Nehme',
+            scoutingLeadership: existingData.scoutingLeadership || HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
+            scoutingTrainings: existingData.scoutingTrainings || HASSAN_LEADERSHIP_PROFILE.trainings,
+            meritBadgeCounselorSubjects: existingData.meritBadgeCounselorSubjects || HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
+            credentialsValidThrough: existingData.credentialsValidThrough || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            spt: existingData.spt || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
+            sptDate: existingData.sptDate || HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
             yptCompleted: true
-          }, { merge: true });
+          };
+          await setDoc(userRef, hissaUpdates, { merge: true });
         }
 
         if (isAnehme) {
@@ -80,12 +84,12 @@ export default function Login({ onUserAuthenticated, onLoginSuccess }) {
         }
 
         if (userDoc.exists()) {
-          const data = userDoc.data();
+          const data = { ...userDoc.data(), ...((isNeo || isHissa) ? {} : {}) };
           notifySuccess({
             uid: user.uid,
             email: user.email,
             role: forcedRole || data.role || 'scout',
-            isOwner: forcedOwner || data.isOwner || false,
+            isOwner: forcedOwner || data.isOwner || (data.role === 'owner'),
             leaderId: data.leaderId || null,
             leaderPosition: data.leaderPosition || null,
             groupId: data.groupId || data.patrolId || null,

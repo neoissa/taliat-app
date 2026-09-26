@@ -200,7 +200,7 @@ export default function App() {
     return () => unsub();
   }, [currentUser?.uid, isOwner, isLeader, isExecutive, isParent, isScout]);
 
-  // 2. Proactively sync Owner (neoissa@gmail.com) and Hissa/Hassan leadership credentials on load
+  // 2. Proactively sync Owner (neoissa@gmail.com) and Hissa/Hassan leadership credentials on load if missing
   useEffect(() => {
     if (!currentUser?.uid) return;
 
@@ -216,31 +216,33 @@ export default function App() {
 
     if (isNeo || isHissa || currentUser.role === 'owner') {
       const userRef = doc(db, 'users', currentUser.uid);
-      const updates = {
-        scoutingLeadership: HASSAN_LEADERSHIP_PROFILE.leadershipPositions,
-        scoutingTrainings: HASSAN_LEADERSHIP_PROFILE.trainings,
-        meritBadgeCounselorSubjects: HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects,
-        credentialsValidThrough: HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough,
-        credentialsValidFormatted: HASSAN_LEADERSHIP_PROFILE.validityFormatted,
-        bsaCouncil: HASSAN_LEADERSHIP_PROFILE.bsaCouncil,
-        certifyingOrg: HASSAN_LEADERSHIP_PROFILE.certifyingOrg,
-        yptCompleted: true
-      };
+      const updates = {};
+
+      if (!currentUser.scoutingLeadership) updates.scoutingLeadership = HASSAN_LEADERSHIP_PROFILE.leadershipPositions;
+      if (!currentUser.scoutingTrainings) updates.scoutingTrainings = HASSAN_LEADERSHIP_PROFILE.trainings;
+      if (!currentUser.meritBadgeCounselorSubjects) updates.meritBadgeCounselorSubjects = HASSAN_LEADERSHIP_PROFILE.meritBadgeCounselorSubjects;
+      if (!currentUser.credentialsValidThrough) updates.credentialsValidThrough = HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough;
+      if (!currentUser.credentialsValidFormatted) updates.credentialsValidFormatted = HASSAN_LEADERSHIP_PROFILE.validityFormatted;
+      if (!currentUser.bsaCouncil) updates.bsaCouncil = HASSAN_LEADERSHIP_PROFILE.bsaCouncil;
+      if (!currentUser.certifyingOrg) updates.certifyingOrg = HASSAN_LEADERSHIP_PROFILE.certifyingOrg;
+      if (currentUser.yptCompleted === undefined) updates.yptCompleted = true;
 
       if (!currentUser.spt) {
         updates.spt = HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough;
         updates.sptDate = HASSAN_LEADERSHIP_PROFILE.credentialsValidThrough;
       }
 
-      if (isNeo) {
+      if (isNeo && (currentUser.role !== 'owner' || !currentUser.isOwner)) {
         updates.role = 'owner';
         updates.isOwner = true;
         updates.email = 'neoissa@gmail.com';
       }
 
-      setDoc(userRef, updates, { merge: true })
-        .then(() => console.log("Leadership credentials synced successfully."))
-        .catch(err => console.error("Leadership credentials sync failed:", err));
+      if (Object.keys(updates).length > 0) {
+        setDoc(userRef, updates, { merge: true })
+          .then(() => console.log("Leadership credentials initialized successfully."))
+          .catch(err => console.error("Leadership credentials sync failed:", err));
+      }
     }
   }, [currentUser?.uid, currentUser?.email, currentUser?.username, currentUser?.role]);
 
