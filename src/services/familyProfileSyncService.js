@@ -117,16 +117,44 @@ export async function syncParentProfileToChildren({
       emergencyContactPhone: emergencyContactPhone || null,
       emergencyContactRelation: emergencyContactRelation || 'Emergency Contact',
 
-      // Health & Medical Notes (if specified)
+      // Scout Identity & School Grade (parent verified)
+      ...(health.bsaId !== undefined ? { bsaId: (health.bsaId || '').trim() || null } : {}),
+      ...(health.birthDate !== undefined ? { birthDate: (health.birthDate || '').trim() || null, dob: (health.birthDate || '').trim() || null } : {}),
+      ...(health.schoolGrade !== undefined ? { schoolGrade: (health.schoolGrade || '').trim() || null, grade: (health.schoolGrade || '').trim() || null } : {}),
+
+      // Comprehensive BSA Health & Medical Records
+      ...(health.medPartAValidDate !== undefined ? { medPartAValidDate: (health.medPartAValidDate || '').trim() || null, medicalValidDate: (health.medPartAValidDate || '').trim() || null } : {}),
+      ...(health.medPartCValidDate !== undefined ? { medPartCValidDate: (health.medPartCValidDate || '').trim() || null } : {}),
+      ...(health.medPartCPhysicianName !== undefined ? { medPartCPhysicianName: (health.medPartCPhysicianName || '').trim() || null } : {}),
+      ...(health.tetanusDate !== undefined ? { tetanusDate: (health.tetanusDate || '').trim() || null } : {}),
+      ...(health.bloodType !== undefined ? { bloodType: (health.bloodType || '').trim() || 'O+' } : {}),
+      ...(health.swimLevel !== undefined ? { swimLevel: (health.swimLevel || '').trim() || 'Swimmer' } : {}),
+      ...(health.swimTestDate !== undefined ? { swimTestDate: (health.swimTestDate || '').trim() || null } : {}),
+
+      // Health Insurance & Pediatrician
+      ...(health.insuranceCompany !== undefined ? { insuranceCompany: (health.insuranceCompany || '').trim() || null } : {}),
+      ...(health.insurancePolicyNumber !== undefined ? { insurancePolicyNumber: (health.insurancePolicyNumber || '').trim() || null } : {}),
+      ...(health.primaryDoctorName !== undefined ? { primaryDoctorName: (health.primaryDoctorName || '').trim() || null } : {}),
+      ...(health.primaryDoctorPhone !== undefined ? { primaryDoctorPhone: (health.primaryDoctorPhone || '').trim() || null } : {}),
+
+      // Health & Medical Notes
       ...(health.allergies !== undefined ? { allergies: (health.allergies || '').trim() || null } : {}),
       ...(health.medicalNotes !== undefined ? { medicalNotes: (health.medicalNotes || '').trim() || null } : {}),
       ...(health.dietaryRestrictions !== undefined ? { dietaryRestrictions: (health.dietaryRestrictions || '').trim() || null } : {}),
+      updatedMedicalAt: nowIso,
 
       // Metadata & Permission verification
       parentUids: arrayUnion(parentUid),
       syncedFromParentUid: parentUid,
       lastParentSyncAt: nowIso
     };
+
+    // Clean undefined values
+    Object.keys(scoutPayload).forEach(key => {
+      if (scoutPayload[key] === undefined) {
+        delete scoutPayload[key];
+      }
+    });
 
     batch.set(scoutRef, scoutPayload, { merge: true });
     syncedScoutCount++;

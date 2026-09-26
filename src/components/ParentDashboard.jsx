@@ -19,6 +19,8 @@ import ScoutProgressReport from './ScoutProgressReport';
 import SignaturePadModal from './SignaturePadModal';
 import DigitalVerificationStamp from './DigitalVerificationStamp';
 import PublishedReportViewerModal from './PublishedReportViewerModal';
+import ScoutDigitalIdCard from './ScoutDigitalIdCard';
+import ScoutMedicalReadiness from './ScoutMedicalReadiness';
 import ParentAlertsFeed from './ParentAlertsFeed';
 import ParentEagleTracker from './ParentEagleTracker';
 import ParentPatrolResources from './ParentPatrolResources';
@@ -226,6 +228,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const [linkedScouts, setLinkedScouts] = useState([]);
   const [selectedScoutId, setSelectedScoutId] = useState('all'); // 'all' | scoutId
   const [activeTab, setActiveTab] = useState(initialTab || 'overview'); // 'overview' | 'homework' | 'advancement' | 'events' | 'feed' | 'reports' | 'tasks' | 'family'
+  const [familySubTab, setFamilySubTab] = useState('household'); // 'household' | 'medical-id' | 'digital-pass'
+  const [medicalScoutId, setMedicalScoutId] = useState('');
   const [eventSubTab, setEventSubTab] = useState('upcoming'); // 'upcoming' | 'past'
   const [loading, setLoading] = useState(true);
 
@@ -244,6 +248,12 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       'road-to-eagle': 'eagle',
       'family': 'family',
       'profile': 'family',
+      'medical': 'family',
+      'medical-id': 'family',
+      'digital-id': 'family',
+      'id-pass': 'family',
+      'id-card': 'family',
+      'health': 'family',
       'homework': 'homework',
       'assignments': 'homework',
       'tasks': 'tasks',
@@ -258,7 +268,13 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       'resources': 'resources',
       'attendance': 'events'
     };
-    setActiveTab(tabMap[initialTab] || initialTab);
+    const resolved = tabMap[initialTab] || initialTab;
+    setActiveTab(resolved);
+    if (initialTab === 'medical' || initialTab === 'medical-id' || initialTab === 'health') {
+      setFamilySubTab('medical-id');
+    } else if (initialTab === 'digital-id' || initialTab === 'id-pass' || initialTab === 'id-card') {
+      setFamilySubTab('digital-pass');
+    }
   }, [initialTab]);
 
   // Synced Collections
@@ -506,14 +522,32 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       matchingScouts.forEach(s => {
         if (!next[s.uid]) {
           next[s.uid] = {
+            bsaId: s.bsaId || '',
+            birthDate: s.birthDate || s.dob || '',
+            schoolGrade: s.schoolGrade || s.grade || '',
+            medPartAValidDate: s.medPartAValidDate || s.medicalValidDate || '',
+            medPartCValidDate: s.medPartCValidDate || '',
+            medPartCPhysicianName: s.medPartCPhysicianName || '',
+            tetanusDate: s.tetanusDate || '',
+            swimLevel: s.swimLevel || 'Swimmer',
+            swimTestDate: s.swimTestDate || '',
+            bloodType: s.bloodType || 'O+',
             allergies: s.allergies || '',
+            dietaryRestrictions: s.dietaryRestrictions || 'Halal Standard',
             medicalNotes: s.medicalNotes || '',
-            dietaryRestrictions: s.dietaryRestrictions || ''
+            insuranceCompany: s.insuranceCompany || '',
+            insurancePolicyNumber: s.insurancePolicyNumber || '',
+            primaryDoctorName: s.primaryDoctorName || '',
+            primaryDoctorPhone: s.primaryDoctorPhone || ''
           };
         }
       });
       return next;
     });
+
+    if (matchingScouts.length > 0 && !medicalScoutId) {
+      setMedicalScoutId(matchingScouts[0].uid);
+    }
 
     if (matchingScouts.length > 0 && selectedScoutId !== 'all' && !matchingScouts.some(s => s.uid === selectedScoutId)) {
       setSelectedScoutId(matchingScouts[0].uid);
@@ -4027,447 +4061,810 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         </div>
       )}
 
-      {/* ── 11. TAB 8: HOUSEHOLD PROFILE ── */}
+      {/* ── 11. TAB 8: HOUSEHOLD & MEDICAL ID CENTER ── */}
       {activeTab === 'family' && (
-        <div className="bg-slate-850 border border-slate-750 p-6 sm:p-7 rounded-3xl shadow-xl space-y-6">
-          <div className="flex justify-between items-center border-b border-slate-750 pb-4">
+        <div className="bg-slate-850 border border-slate-750 p-5 sm:p-7 rounded-3xl shadow-xl space-y-6">
+          {/* Header & Sub-Tab Navigation */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-750 pb-4">
             <div>
-              <h3 className="font-extrabold text-white text-lg">Dual-Parent Household & Identity Profile</h3>
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
+                  Family Governance
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {linkedScouts.length} Linked Scout{linkedScouts.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              <h3 className="font-extrabold text-white text-lg sm:text-xl">
+                Household Profile & Scout Medical ID Center
+              </h3>
               <p className="text-xs text-slate-400">
-                Identify Father, Mother, and Guardians, designate the Primary Account Holder for greetings, and manage emergency contacts.
+                Manage parent contacts, household address, BSA health records (Parts A/B/C), and digital ID passes for your scouts.
               </p>
             </div>
-            {!isEditingFamily ? (
-              <button
-                type="button"
-                onClick={() => setIsEditingFamily(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
-              >
-                <Edit3 size={14} />
-                <span>Edit Profile</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditingFamily(false)}
-                className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
 
-          {familyMsg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600 font-bold">{familyMsg}</p>}
-
-          <form onSubmit={handleSaveFamilyProfile} className="space-y-6">
-            {/* 1. Primary Account Holder Selector */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 p-5 rounded-2xl border border-emerald-500/40 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
-                    <span>⭐ Primary Account Holder & Portal Greeting</span>
-                  </h4>
-                  <p className="text-xs text-slate-400">
-                    Select which parent or guardian receives main dashboard greetings and primary correspondence.
-                  </p>
-                </div>
-                <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-mono font-bold">
-                  Active: {primaryName} ({primaryRelation})
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {/* Radio Card 1: Parent 1 */}
-                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
-                  primaryAccountHolder === 'parent1'
-                    ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/30'
-                    : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
-                }`}>
-                  <input
-                    type="radio"
-                    name="primaryAccountHolder"
-                    value="parent1"
-                    disabled={!isEditingFamily}
-                    checked={primaryAccountHolder === 'parent1'}
-                    onChange={() => setPrimaryAccountHolder('parent1')}
-                    className="mt-1 text-emerald-500 focus:ring-emerald-500"
-                  />
-                  <div className="space-y-0.5">
-                    <strong className="text-sm font-bold text-white block">
-                      {parent1Name || 'Parent 1'}
-                    </strong>
-                    <span className="text-xs text-emerald-400 block font-medium">
-                      Relationship: {parent1Relation || 'Father'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      {parent1Email || 'Primary email'}
-                    </span>
-                  </div>
-                </label>
-
-                {/* Radio Card 2: Parent 2 */}
-                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
-                  primaryAccountHolder === 'parent2'
-                    ? 'bg-teal-950/50 border-teal-500 ring-2 ring-teal-500/30'
-                    : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
-                }`}>
-                  <input
-                    type="radio"
-                    name="primaryAccountHolder"
-                    value="parent2"
-                    disabled={!isEditingFamily}
-                    checked={primaryAccountHolder === 'parent2'}
-                    onChange={() => setPrimaryAccountHolder('parent2')}
-                    className="mt-1 text-teal-500 focus:ring-teal-500"
-                  />
-                  <div className="space-y-0.5">
-                    <strong className="text-sm font-bold text-white block">
-                      {parent2Name || 'Parent 2 (Mother / Guardian)'}
-                    </strong>
-                    <span className="text-xs text-teal-400 block font-medium">
-                      Relationship: {parent2Relation || 'Mother'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      {parent2Email || 'Secondary email'}
-                    </span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* 2. Parent 1 Details */}
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h4 className="font-extrabold text-emerald-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={14} />
-                  <span>Parent 1 Profile</span>
-                </h4>
-                {primaryAccountHolder === 'parent1' && (
-                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
-                    ⭐ Designated Primary Holder
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
-                  <select
-                    disabled={!isEditingFamily}
-                    value={parent1Relation}
-                    onChange={(e) => setParent1Relation(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
-                  >
-                    <option value="Father">Father</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Guardian">Guardian</option>
-                    <option value="Grandparent">Grandparent</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    value={parent1Name}
-                    onChange={(e) => setParent1Name(e.target.value)}
-                    placeholder="e.g. Ghadeer Fares"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    disabled={!isEditingFamily}
-                    value={parent1Phone}
-                    onChange={(e) => setParent1Phone(e.target.value)}
-                    placeholder="(555) 000-0000"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    disabled={!isEditingFamily}
-                    value={parent1Email}
-                    onChange={(e) => setParent1Email(e.target.value)}
-                    placeholder="parent1@example.com"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Parent 2 Details */}
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h4 className="font-extrabold text-teal-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={14} />
-                  <span>Parent 2 Profile</span>
-                </h4>
-                {primaryAccountHolder === 'parent2' && (
-                  <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
-                    ⭐ Designated Primary Holder
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
-                  <select
-                    disabled={!isEditingFamily}
-                    value={parent2Relation}
-                    onChange={(e) => setParent2Relation(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
-                  >
-                    <option value="Mother">Mother</option>
-                    <option value="Father">Father</option>
-                    <option value="Guardian">Guardian</option>
-                    <option value="Grandparent">Grandparent</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    placeholder="Mother / Second Parent Full Name"
-                    value={parent2Name}
-                    onChange={(e) => setParent2Name(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    disabled={!isEditingFamily}
-                    placeholder="(555) 000-0000"
-                    value={parent2Phone}
-                    onChange={(e) => setParent2Phone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    disabled={!isEditingFamily}
-                    placeholder="second.parent@example.com"
-                    value={parent2Email}
-                    onChange={(e) => setParent2Email(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Address & Emergency */}
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
-              <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <Home size={14} />
-                <span>Household Address & Emergency Contact</span>
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="sm:col-span-2 md:col-span-3">
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Home Street Address</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    placeholder="123 Scouting Way"
-                    value={familyAddress}
-                    onChange={(e) => setFamilyAddress(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">City, State, Zip</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    placeholder="Dearborn, MI 48126"
-                    value={cityStateZip}
-                    onChange={(e) => setCityStateZip(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Name</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    placeholder="e.g. Grandparent / Relative"
-                    value={emergencyContactName}
-                    onChange={(e) => setEmergencyContactName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Phone</label>
-                  <input
-                    type="tel"
-                    disabled={!isEditingFamily}
-                    placeholder="(555) 123-4567"
-                    value={emergencyContactPhone}
-                    onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Relationship</label>
-                  <input
-                    type="text"
-                    disabled={!isEditingFamily}
-                    placeholder="e.g. Grandparent, Uncle, Family Friend"
-                    value={emergencyContactRelation}
-                    onChange={(e) => setEmergencyContactRelation(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Linked Scouts Health & Safety Profiles */}
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-red-500/30 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2 flex-wrap gap-2">
-                <div>
-                  <h4 className="font-extrabold text-red-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <HeartPulse size={14} />
-                    <span>Linked Scouts Health, Allergies & Dietary Profiles</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Parent-managed health records automatically synchronize with linked scout documents and are locked from scout editing.
-                  </p>
-                </div>
-                <span className="text-[10px] bg-red-950/80 text-red-300 border border-red-500/40 px-2 py-0.5 rounded-full font-bold">
-                  🔒 Parent-Only Governance
-                </span>
-              </div>
-
-              {linkedScouts.length === 0 ? (
-                <p className="text-xs text-slate-400 italic p-3 bg-slate-950/60 rounded-xl border border-slate-800">
-                  No scouts currently linked to this guardian account.
-                </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!isEditingFamily ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFamily(true)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md hover:scale-[1.02]"
+                >
+                  <Edit3 size={14} />
+                  <span>Edit Records</span>
+                </button>
               ) : (
-                <div className="space-y-4">
-                  {linkedScouts.map((scout) => {
-                    const health = scoutHealthMap[scout.uid] || {
-                      allergies: scout.allergies || '',
-                      medicalNotes: scout.medicalNotes || '',
-                      dietaryRestrictions: scout.dietaryRestrictions || ''
-                    };
-
-                    return (
-                      <div 
-                        key={scout.uid}
-                        className="bg-slate-950/80 p-4 rounded-2xl border border-slate-755 space-y-3 shadow-md"
-                      >
-                        <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">⚜️</span>
-                            <strong className="text-xs font-bold text-white">
-                              {scout.fullName || scout.username}
-                            </strong>
-                            <span className="text-[10px] bg-slate-800 text-emerald-300 px-2 py-0.5 rounded-full font-mono font-bold">
-                              {scout.rank || 'Scout'} Rank
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-slate-400">
-                            ID: {scout.uid?.substring(0, 8)}...
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                              Allergies & Medical Alerts
-                            </label>
-                            <textarea
-                              rows={2}
-                              disabled={!isEditingFamily}
-                              value={health.allergies || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setScoutHealthMap(prev => ({
-                                  ...prev,
-                                  [scout.uid]: {
-                                    ...(prev[scout.uid] || {}),
-                                    allergies: val
-                                  }
-                                }));
-                              }}
-                              placeholder="e.g. Peanuts, Bee stings, Inhaler needed..."
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                              Dietary Restrictions
-                            </label>
-                            <textarea
-                              rows={2}
-                              disabled={!isEditingFamily}
-                              value={health.dietaryRestrictions || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setScoutHealthMap(prev => ({
-                                  ...prev,
-                                  [scout.uid]: {
-                                    ...(prev[scout.uid] || {}),
-                                    dietaryRestrictions: val
-                                  }
-                                }));
-                              }}
-                              placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                            Confidential Medical Instructions & Physician Notes
-                          </label>
-                          <textarea
-                            rows={2}
-                            disabled={!isEditingFamily}
-                            value={health.medicalNotes || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setScoutHealthMap(prev => ({
-                                ...prev,
-                                  [scout.uid]: {
-                                  ...(prev[scout.uid] || {}),
-                                  medicalNotes: val
-                                }
-                              }));
-                            }}
-                            placeholder="Medication administration instructions, emergency protocols, or confidential health notes for troop leadership..."
-                            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFamily(false)}
+                  className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  Cancel Editing
+                </button>
               )}
             </div>
+          </div>
+
+          {/* Sub-Tab Navigation Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setFamilySubTab('household')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                familySubTab === 'household'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
+                  : 'bg-slate-900 border border-slate-750 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Home size={14} />
+              <span>1. Dual-Parent Household</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFamilySubTab('medical-id')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                familySubTab === 'medical-id'
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-950/40'
+                  : 'bg-slate-900 border border-slate-750 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <HeartPulse size={14} />
+              <span>2. Scout Medical ID & BSA Health</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFamilySubTab('digital-pass')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                familySubTab === 'digital-pass'
+                  ? 'bg-teal-600 text-white shadow-md shadow-teal-950/40'
+                  : 'bg-slate-900 border border-slate-750 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <User size={14} />
+              <span>3. Digital Scout ID Pass ("Kashaf Card")</span>
+            </button>
+          </div>
+
+          {familyMsg && (
+            <div className="p-3.5 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-300 animate-fadeIn flex items-center gap-2 shadow-lg">
+              <CheckCircle2 size={16} />
+              <span>{familyMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveFamilyProfile} className="space-y-6">
+            {/* ── SUBTAB 1: DUAL-PARENT HOUSEHOLD ── */}
+            {familySubTab === 'household' && (
+              <div className="space-y-5 animate-fadeIn">
+                {/* 1. Primary Account Holder Selector */}
+                <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 p-5 rounded-2xl border border-emerald-500/40 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <h4 className="font-extrabold text-white text-sm flex items-center gap-1.5">
+                        <span>⭐ Primary Account Holder & Portal Greeting</span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Select which parent or guardian receives main dashboard greetings and primary correspondence.
+                      </p>
+                    </div>
+                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-mono font-bold">
+                      Active: {primaryName} ({primaryRelation})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Radio Card 1: Parent 1 */}
+                    <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
+                      primaryAccountHolder === 'parent1'
+                        ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/30'
+                        : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="primaryAccountHolder"
+                        value="parent1"
+                        disabled={!isEditingFamily}
+                        checked={primaryAccountHolder === 'parent1'}
+                        onChange={() => setPrimaryAccountHolder('parent1')}
+                        className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                      />
+                      <div className="space-y-0.5">
+                        <strong className="text-sm font-bold text-white block">
+                          {parent1Name || 'Parent 1'}
+                        </strong>
+                        <span className="text-xs text-emerald-400 block font-medium">
+                          Relationship: {parent1Relation || 'Father'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {parent1Email || 'Primary email'}
+                        </span>
+                      </div>
+                    </label>
+
+                    {/* Radio Card 2: Parent 2 */}
+                    <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition ${
+                      primaryAccountHolder === 'parent2'
+                        ? 'bg-teal-950/50 border-teal-500 ring-2 ring-teal-500/30'
+                        : 'bg-slate-950/60 border-slate-755 hover:border-slate-600'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="primaryAccountHolder"
+                        value="parent2"
+                        disabled={!isEditingFamily}
+                        checked={primaryAccountHolder === 'parent2'}
+                        onChange={() => setPrimaryAccountHolder('parent2')}
+                        className="mt-1 text-teal-500 focus:ring-teal-500"
+                      />
+                      <div className="space-y-0.5">
+                        <strong className="text-sm font-bold text-white block">
+                          {parent2Name || 'Parent 2 (Mother / Guardian)'}
+                        </strong>
+                        <span className="text-xs text-teal-400 block font-medium">
+                          Relationship: {parent2Relation || 'Mother'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {parent2Email || 'Secondary email'}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 2. Parent 1 Details */}
+                <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h4 className="font-extrabold text-emerald-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <User size={14} />
+                      <span>Parent 1 Profile</span>
+                    </h4>
+                    {primaryAccountHolder === 'parent1' && (
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                        ⭐ Designated Primary Holder
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
+                      <select
+                        disabled={!isEditingFamily}
+                        value={parent1Relation}
+                        onChange={(e) => setParent1Relation(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
+                      >
+                        <option value="Father">Father</option>
+                        <option value="Mother">Mother</option>
+                        <option value="Guardian">Guardian</option>
+                        <option value="Grandparent">Grandparent</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        value={parent1Name}
+                        onChange={(e) => setParent1Name(e.target.value)}
+                        placeholder="e.g. Ghadeer Fares"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        disabled={!isEditingFamily}
+                        value={parent1Phone}
+                        onChange={(e) => setParent1Phone(e.target.value)}
+                        placeholder="(555) 000-0000"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        disabled={!isEditingFamily}
+                        value={parent1Email}
+                        onChange={(e) => setParent1Email(e.target.value)}
+                        placeholder="parent1@example.com"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Parent 2 Details */}
+                <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h4 className="font-extrabold text-teal-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <User size={14} />
+                      <span>Parent 2 Profile</span>
+                    </h4>
+                    {primaryAccountHolder === 'parent2' && (
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                        ⭐ Designated Primary Holder
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Relationship *</label>
+                      <select
+                        disabled={!isEditingFamily}
+                        value={parent2Relation}
+                        onChange={(e) => setParent2Relation(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-medium"
+                      >
+                        <option value="Mother">Mother</option>
+                        <option value="Father">Father</option>
+                        <option value="Guardian">Guardian</option>
+                        <option value="Grandparent">Grandparent</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        placeholder="Mother / Second Parent Full Name"
+                        value={parent2Name}
+                        onChange={(e) => setParent2Name(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        disabled={!isEditingFamily}
+                        placeholder="(555) 000-0000"
+                        value={parent2Phone}
+                        onChange={(e) => setParent2Phone(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        disabled={!isEditingFamily}
+                        placeholder="second.parent@example.com"
+                        value={parent2Email}
+                        onChange={(e) => setParent2Email(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Address & Emergency */}
+                <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-755 space-y-4">
+                  <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Home size={14} />
+                    <span>Household Address & Emergency Contact</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="sm:col-span-2 md:col-span-3">
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Home Street Address</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        placeholder="123 Scouting Way"
+                        value={familyAddress}
+                        onChange={(e) => setFamilyAddress(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">City, State, Zip</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        placeholder="Dearborn, MI 48126"
+                        value={cityStateZip}
+                        onChange={(e) => setCityStateZip(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Name</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        placeholder="e.g. Grandparent / Relative"
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Phone</label>
+                      <input
+                        type="tel"
+                        disabled={!isEditingFamily}
+                        placeholder="(555) 123-4567"
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Emergency Contact Relationship</label>
+                      <input
+                        type="text"
+                        disabled={!isEditingFamily}
+                        placeholder="e.g. Grandparent, Uncle, Family Friend"
+                        value={emergencyContactRelation}
+                        onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── SUBTAB 2: SCOUT MEDICAL ID & BSA HEALTH RECORDS ── */}
+            {familySubTab === 'medical-id' && (
+              <div className="space-y-6 animate-fadeIn">
+                {linkedScouts.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic p-6 bg-slate-950/60 rounded-2xl border border-slate-800 text-center">
+                    No scouts currently linked to this guardian account.
+                  </p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Scout Selection Ribbon (if multiple scouts) */}
+                    {linkedScouts.length > 1 && (
+                      <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-none">
+                        <span className="text-xs font-bold text-slate-400 uppercase mr-1">Select Child:</span>
+                        {linkedScouts.map(scout => (
+                          <button
+                            key={scout.uid}
+                            type="button"
+                            onClick={() => setMedicalScoutId(scout.uid)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                              medicalScoutId === scout.uid
+                                ? 'bg-rose-600 text-white shadow-md shadow-rose-950/50'
+                                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-750'
+                            }`}
+                          >
+                            <span>⚜️</span>
+                            <span>{scout.fullName || scout.username}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {linkedScouts.filter(s => linkedScouts.length === 1 || s.uid === (medicalScoutId || linkedScouts[0].uid)).map(scout => {
+                      const health = scoutHealthMap[scout.uid] || {};
+                      const updateHealthField = (field, val) => {
+                        setScoutHealthMap(prev => ({
+                          ...prev,
+                          [scout.uid]: {
+                            ...(prev[scout.uid] || {}),
+                            [field]: val
+                          }
+                        }));
+                      };
+
+                      const getValidityBadge = (dateStr) => {
+                        if (!dateStr) return { label: '⚠️ Needs Submission', color: 'bg-rose-500/20 text-rose-300 border-rose-500/40' };
+                        const today = new Date();
+                        const exp = new Date(dateStr + 'T12:00:00');
+                        const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+                        if (diffDays < 0) return { label: '🚨 Expired', color: 'bg-rose-500/20 text-rose-300 border-rose-500/50' };
+                        if (diffDays <= 30) return { label: `⚠️ Expires in ${diffDays}d`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/50' };
+                        return { label: `✓ Valid (${diffDays}d left)`, color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' };
+                      };
+
+                      const partABadge = getValidityBadge(health.medPartAValidDate);
+                      const partCBadge = getValidityBadge(health.medPartCValidDate);
+
+                      return (
+                        <div key={scout.uid} className="bg-slate-900/90 border border-slate-755 rounded-3xl p-5 sm:p-6 space-y-6 shadow-xl">
+                          {/* Child Header Card */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 font-black text-xl shrink-0 shadow-md">
+                                🏥
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                  <span className="text-xs font-black text-white">{scout.fullName || scout.username}</span>
+                                  <span className="text-[10px] bg-slate-800 text-emerald-300 px-2 py-0.2 rounded-full font-mono font-bold">
+                                    {scout.rank || 'Scout'} Rank
+                                  </span>
+                                  <span className={`text-[10px] font-bold border px-2 py-0.2 rounded-full ${partABadge.color}`}>
+                                    Part A/B: {partABadge.label}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-slate-400">
+                                  Official BSA Medical ID & Health Readiness Records &bull; UID: <span className="font-mono">{scout.uid}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                              <a
+                                href="https://filestore.scouting.org/filestore/HealthSafety/pdf/680-001_ABC.pdf"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1"
+                              >
+                                <span>Download BSA Form (PDF)</span>
+                                <ExternalLink size={12} />
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* 1. BSA Annual Health & Medical Record Expiration */}
+                          <div className="bg-slate-950/80 p-4 rounded-2xl border border-rose-500/30 space-y-3">
+                            <h4 className="font-extrabold text-rose-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <Calendar size={14} />
+                              <span>BSA Annual Health & Medical Record (Parts A, B & C)</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Part A & B Valid Through *</label>
+                                <input
+                                  type="date"
+                                  disabled={!isEditingFamily}
+                                  value={health.medPartAValidDate || ''}
+                                  onChange={(e) => updateHealthField('medPartAValidDate', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 disabled:opacity-60 font-mono"
+                                />
+                                <span className="text-[10px] text-slate-400 block mt-1">General campouts & meetings (valid 1 yr)</span>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Part C Exam Valid Through</label>
+                                <input
+                                  type="date"
+                                  disabled={!isEditingFamily}
+                                  value={health.medPartCValidDate || ''}
+                                  onChange={(e) => updateHealthField('medPartCValidDate', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 disabled:opacity-60 font-mono"
+                                />
+                                <span className="text-[10px] text-slate-400 block mt-1">High Adventure & 72+ hour treks</span>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Part C Examining Physician / Clinic</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="e.g. Dr. Sarah Jenkins, MD"
+                                  value={health.medPartCPhysicianName || ''}
+                                  onChange={(e) => updateHealthField('medPartCPhysicianName', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 disabled:opacity-60"
+                                />
+                                <span className="text-[10px] text-slate-400 block mt-1">Certified physician signature on file</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. Scout Identity, BSA ID & Vitals */}
+                          <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-755 space-y-3">
+                            <h4 className="font-extrabold text-emerald-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <ShieldCheck size={14} />
+                              <span>Scout Identity, BSA ID & Vitals</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">BSA Member ID *</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="e.g. BSA-13928114"
+                                  value={health.bsaId || scout.bsaId || ''}
+                                  onChange={(e) => updateHealthField('bsaId', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date of Birth</label>
+                                <input
+                                  type="date"
+                                  disabled={!isEditingFamily}
+                                  value={health.birthDate || scout.birthDate || scout.dob || ''}
+                                  onChange={(e) => updateHealthField('birthDate', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">School Grade</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="e.g. 8th Grade"
+                                  value={health.schoolGrade || scout.schoolGrade || scout.grade || ''}
+                                  onChange={(e) => updateHealthField('schoolGrade', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Blood Type</label>
+                                <select
+                                  disabled={!isEditingFamily}
+                                  value={health.bloodType || 'O+'}
+                                  onChange={(e) => updateHealthField('bloodType', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-bold"
+                                >
+                                  <option value="O+">O+</option>
+                                  <option value="O-">O-</option>
+                                  <option value="A+">A+</option>
+                                  <option value="A-">A-</option>
+                                  <option value="B+">B+</option>
+                                  <option value="B-">B-</option>
+                                  <option value="AB+">AB+</option>
+                                  <option value="AB-">AB-</option>
+                                  <option value="Unknown">Unknown</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Tetanus Booster Date</label>
+                                <input
+                                  type="date"
+                                  disabled={!isEditingFamily}
+                                  value={health.tetanusDate || ''}
+                                  onChange={(e) => updateHealthField('tetanusDate', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 3. Swim Classification */}
+                          <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-755 space-y-3">
+                            <h4 className="font-extrabold text-sky-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <span>🏊 Swim Classification & Water Safety</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Swim Classification Level</label>
+                                <select
+                                  disabled={!isEditingFamily}
+                                  value={health.swimLevel || 'Swimmer'}
+                                  onChange={(e) => updateHealthField('swimLevel', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 disabled:opacity-60 font-bold"
+                                >
+                                  <option value="Swimmer">🏊 Swimmer (Passed BSA 100-Yard Test)</option>
+                                  <option value="Beginner">🟡 Beginner (Passed 50-Foot Test)</option>
+                                  <option value="Non-Swimmer">🔴 Non-Swimmer (Requires Life Jacket / Restricted Area)</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Swim Test Certified Date</label>
+                                <input
+                                  type="date"
+                                  disabled={!isEditingFamily}
+                                  value={health.swimTestDate || ''}
+                                  onChange={(e) => updateHealthField('swimTestDate', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 4. Physician & Health Insurance */}
+                          <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-755 space-y-3">
+                            <h4 className="font-extrabold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <Heart size={14} />
+                              <span>Primary Physician & Health Insurance</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Primary Pediatrician / Doctor</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="Dr. Name"
+                                  value={health.primaryDoctorName || ''}
+                                  onChange={(e) => updateHealthField('primaryDoctorName', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 disabled:opacity-60"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Doctor Office Phone</label>
+                                <input
+                                  type="tel"
+                                  disabled={!isEditingFamily}
+                                  placeholder="(555) 000-0000"
+                                  value={health.primaryDoctorPhone || ''}
+                                  onChange={(e) => updateHealthField('primaryDoctorPhone', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Insurance Company / Provider</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="e.g. Blue Cross Blue Shield"
+                                  value={health.insuranceCompany || ''}
+                                  onChange={(e) => updateHealthField('insuranceCompany', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 disabled:opacity-60"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Insurance Policy / Group ID</label>
+                                <input
+                                  type="text"
+                                  disabled={!isEditingFamily}
+                                  placeholder="e.g. XGJ-9948123"
+                                  value={health.insurancePolicyNumber || ''}
+                                  onChange={(e) => updateHealthField('insurancePolicyNumber', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 disabled:opacity-60 font-mono"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 5. Allergies, Dietary & Confidential Medical Notes */}
+                          <div className="bg-slate-950/80 p-4 rounded-2xl border border-red-500/30 space-y-3">
+                            <h4 className="font-extrabold text-red-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <AlertTriangle size={14} />
+                              <span>Allergies, Dietary & Confidential Health Instructions</span>
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                                  Allergies & Medical Alerts
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  disabled={!isEditingFamily}
+                                  value={health.allergies || ''}
+                                  onChange={(e) => updateHealthField('allergies', e.target.value)}
+                                  placeholder="e.g. Peanuts, Bee stings, Inhaler needed..."
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                                  Dietary Restrictions
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  disabled={!isEditingFamily}
+                                  value={health.dietaryRestrictions || ''}
+                                  onChange={(e) => updateHealthField('dietaryRestrictions', e.target.value)}
+                                  placeholder="e.g. Strictly Zabiha Halal, Gluten-free, Vegetarian..."
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                                Confidential Medical Instructions & Medication Administration Notes
+                              </label>
+                              <textarea
+                                rows={2}
+                                disabled={!isEditingFamily}
+                                value={health.medicalNotes || ''}
+                                onChange={(e) => updateHealthField('medicalNotes', e.target.value)}
+                                placeholder="Medication administration instructions, emergency protocols, or confidential health notes for troop leadership..."
+                                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 disabled:opacity-60 font-sans"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SUBTAB 3: DIGITAL SCOUT ID PASS ("KASHAF CARD") ── */}
+            {familySubTab === 'digital-pass' && (
+              <div className="space-y-6 animate-fadeIn">
+                {linkedScouts.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic p-6 bg-slate-950/60 rounded-2xl border border-slate-800 text-center">
+                    No scouts currently linked to this guardian account.
+                  </p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Scout Selector Ribbon (if multiple scouts) */}
+                    {linkedScouts.length > 1 && (
+                      <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-none">
+                        <span className="text-xs font-bold text-slate-400 uppercase mr-1">Select Child:</span>
+                        {linkedScouts.map(scout => (
+                          <button
+                            key={scout.uid}
+                            type="button"
+                            onClick={() => setMedicalScoutId(scout.uid)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                              medicalScoutId === scout.uid
+                                ? 'bg-teal-600 text-white shadow-md shadow-teal-950/50'
+                                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-750'
+                            }`}
+                          >
+                            <span>🪪</span>
+                            <span>{scout.fullName || scout.username}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {linkedScouts.filter(s => linkedScouts.length === 1 || s.uid === (medicalScoutId || linkedScouts[0].uid)).map(scout => {
+                      const health = scoutHealthMap[scout.uid] || {};
+                      const mergedScoutProfile = {
+                        ...scout,
+                        ...health,
+                        parent1Name: parent1Name || parentDoc?.parent1Name,
+                        parentPhone: parent1Phone || parentDoc?.parent1Phone,
+                        emergencyContactName,
+                        emergencyContactPhone,
+                        emergencyContactRelation,
+                        homeAddress: familyAddress,
+                        cityStateZip
+                      };
+
+                      return (
+                        <div key={scout.uid} className="bg-slate-900 border border-slate-755 rounded-3xl p-6 space-y-4 shadow-xl">
+                          <ScoutDigitalIdCard
+                            scout={mergedScoutProfile}
+                            currentUser={mergedScoutProfile}
+                            patrolName={scout.patrolName || 'Dhulfiqār Patrol'}
+                            rankName={scout.rank || 'Scout'}
+                            attendanceRate={100}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Sync Notice Banner */}
             <div className="bg-sky-950/40 border border-sky-500/30 rounded-2xl p-4 flex items-center gap-3">
@@ -4475,8 +4872,8 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                 <ShieldCheck size={16} />
               </div>
               <div className="text-xs text-slate-300">
-                <strong className="text-white block font-bold">Automatic Multi-Child Profile Propagation</strong>
-                Saving updates will instantly sync parent contact info, household address, emergency contacts, and medical profiles across all <strong>{linkedScouts.length}</strong> linked child scout records.
+                <strong className="text-white block font-bold">Automatic Multi-Child Profile Propagation & Real-Time Sync</strong>
+                Saving updates will instantly sync parent contact info, household address, emergency contacts, and complete medical profiles across all <strong>{linkedScouts.length}</strong> linked child scout records in real time.
               </div>
             </div>
 
@@ -4484,10 +4881,10 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
               <button
                 type="submit"
                 disabled={familySaving}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg hover:scale-[1.02]"
               >
                 <Save size={15} />
-                <span>{familySaving ? 'Saving & Propagating...' : 'Save Household Updates & Sync to Scouts'}</span>
+                <span>{familySaving ? 'Saving & Propagating...' : 'Save Updates & Sync to All Scouts'}</span>
               </button>
             )}
           </form>
