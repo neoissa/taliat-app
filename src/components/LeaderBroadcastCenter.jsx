@@ -1176,11 +1176,16 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
       {/* ──────────────── TAB 3: READY TEMPLATES & PRESETS ──────────────── */}
       {activeView === 'templates' && (
         <div className="space-y-4 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Sparkles className="text-amber-400" size={18} />
-              <span>1-Click Ready Broadcast Templates</span>
-            </h3>
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Sparkles className="text-amber-400" size={18} />
+                <span>1-Click Ready Broadcast Templates</span>
+              </h3>
+              <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full font-bold self-start sm:self-auto">
+                {PRESET_TEMPLATES.length} Ready Templates Available
+              </span>
+            </div>
             <p className="text-xs text-slate-400">
               Pick a pre-formatted template below to immediately populate the broadcast composer with standard troop schedules, gear lists, or medical reminders.
             </p>

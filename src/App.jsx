@@ -890,7 +890,7 @@ export default function App() {
       if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat' || tab.id === 'tarbiyah-hub' || tab.id === 'patrol-hub') badge = unreadChatCount;
       if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
       if (tab.badgeKey === 'unreadDirectMessagesCount' || tab.id === 'direct-messages') badge = unreadDirectMessagesCount;
-      if (tab.id === 'communication-hub' || tab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
+      if (tab.id === 'communication-hub' || tab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadRequestsCount + unreadChatCount;
       return {
         ...tab,
         badge
@@ -909,7 +909,7 @@ export default function App() {
         if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat' || foundTab.id === 'tarbiyah-hub' || foundTab.id === 'patrol-hub') badge = unreadChatCount;
         if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
         if (foundTab.badgeKey === 'unreadDirectMessagesCount' || foundTab.id === 'direct-messages') badge = unreadDirectMessagesCount;
-        if (foundTab.id === 'communication-hub' || foundTab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadAlertsCount + unreadRequestsCount;
+        if (foundTab.id === 'communication-hub' || foundTab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadRequestsCount + unreadChatCount;
         items.push({
           id: foundTab.id,
           label: foundTab.label,
@@ -1594,7 +1594,7 @@ export default function App() {
               onChange={(tabId) => setCommHubSubTab(tabId)}
               tabs={[
                 { id: 'direct-messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount },
-                { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', badge: unreadAlertsCount },
+                { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone' },
                 { id: 'chat', label: 'Patrol Messenger', icon: 'Radio', badge: unreadChatCount },
                 { id: 'parent-requests', label: 'Parent Approvals', icon: 'Inbox', badge: unreadRequestsCount }
               ]}

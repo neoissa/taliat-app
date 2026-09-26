@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import {
   MessageSquare,
   Send,
@@ -26,7 +26,11 @@ import {
   ArrowLeft,
   ExternalLink,
   Award,
-  Plus
+  Plus,
+  RotateCcw,
+  MessageCircle,
+  HelpCircle,
+  CheckCheck
 } from 'lucide-react';
 import {
   createDirectThread,
@@ -37,11 +41,11 @@ import {
   subscribeToThreadMessages,
   formatThreadTime
 } from '../services/directMessagingService';
-import { getAccessiblePatrols, isSuperUser } from '../utils/patrolScoping';
+import { getAccessiblePatrols } from '../utils/patrolScoping';
 
 const LEADER_PRESET_REPLIES = [
   'Assalāmu ʿAlaykum! Noted, will address at Friday session.',
-  'Thank you for bringing this to our attention.',
+  'Thank you for reaching out. We are reviewing this now.',
   'Advancement record has been reviewed and updated.',
   'Let’s discuss this briefly before Friday roll call at 6:30 PM.',
   'Suggestion noted and shared with the troop committee.'
@@ -158,10 +162,13 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
     return threads.find(t => t.threadId === activeThreadId) || null;
   }, [threads, activeThreadId]);
 
-  // Unread Count
-  const unreadCount = useMemo(() => {
-    return threads.filter(t => t.unreadByLeader).length;
-  }, [threads]);
+  // Counts for Badges
+  const unreadCount = useMemo(() => threads.filter(t => t.unreadByLeader).length, [threads]);
+  const inquiryCount = useMemo(() => threads.filter(t => t.category === 'inquiry').length, [threads]);
+  const requestCount = useMemo(() => threads.filter(t => t.category === 'request').length, [threads]);
+  const suggestionCount = useMemo(() => threads.filter(t => t.category === 'suggestion').length, [threads]);
+  const resolvedCount = useMemo(() => threads.filter(t => t.status === 'resolved').length, [threads]);
+  const activeCount = useMemo(() => threads.filter(t => t.status !== 'resolved').length, [threads]);
 
   // Filtered Threads
   const filteredThreads = useMemo(() => {
@@ -289,190 +296,258 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
   const getCategoryBadge = (cat) => {
     switch (cat) {
       case 'inquiry':
-        return { label: '🔒 Private Inquiry', bg: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
+        return { label: 'Private Inquiry', icon: '🔒', bg: 'bg-purple-950/70 text-purple-300 border-purple-500/40' };
       case 'request':
-        return { label: '📋 Official Request', bg: 'bg-sky-950/80 text-sky-300 border-sky-500/40' };
+        return { label: 'Official Request', icon: '📋', bg: 'bg-sky-950/70 text-sky-300 border-sky-500/40' };
       case 'suggestion':
-        return { label: '💡 Troop Suggestion', bg: 'bg-amber-950/80 text-amber-300 border-amber-500/40' };
+        return { label: 'Suggestion', icon: '💡', bg: 'bg-amber-950/70 text-amber-300 border-amber-500/40' };
       default:
-        return { label: '💬 Direct Chat', bg: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+        return { label: 'Direct Chat', icon: '💬', bg: 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40' };
     }
   };
 
-  return (
-    <div className="space-y-4 max-w-6xl mx-auto font-sans pb-10">
-      
-      {/* ── TOP HERO BANNER ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-indigo-950/40 border-2 border-indigo-500/40 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400 flex items-center justify-center text-2xl shrink-0 text-indigo-300 shadow-md">
-            🛡️
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-              <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Leader Direct Messaging Inbox
-              </span>
-              {unreadCount > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
-                  {unreadCount} Unread
-                </span>
-              )}
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Parent Inquiries & Feedback Console
-            </h2>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Review incoming guardian messages or initiate a private 1-on-1 conversation with any parent.
-            </p>
-          </div>
-        </div>
+  const displayPatrolName = isTroopWide 
+    ? 'Troop-Wide Oversight' 
+    : accessiblePatrols[0]?.name 
+      ? (accessiblePatrols[0].name.toLowerCase().endsWith('patrol') ? accessiblePatrols[0].name : `${accessiblePatrols[0].name} Patrol`) 
+      : 'Assigned Patrol';
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          <button
-            type="button"
-            onClick={() => setShowNewModal(true)}
-            className="bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/50 hover:scale-[1.02] shrink-0"
-          >
-            <Plus size={15} />
-            <span>Message a Parent</span>
-          </button>
-          
-          <span className="text-xs bg-slate-900 border border-slate-750 text-slate-300 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shrink-0">
-            <Users size={14} className="text-indigo-400" />
-            <span>{isTroopWide ? 'Troop-Wide Oversight' : accessiblePatrols[0]?.name ? `${accessiblePatrols[0].name} Patrol` : 'Assigned Patrol'}</span>
-          </span>
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto font-sans pb-12">
+      
+      {/* ── 1. SLEEK MODERN HEADER BANNER ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-13 h-13 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-2xl shadow-inner shrink-0">
+              <MessageSquare size={26} />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full">
+                  Leader Direct Messaging Inbox
+                </span>
+                {unreadCount > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1 shadow-sm">
+                    <span>{unreadCount}</span>
+                    <span>Unread</span>
+                  </span>
+                )}
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Parent Inquiries & Feedback Console
+              </h1>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                Review incoming guardian messages, answer private inquiries, or initiate a secure 1-on-1 discussion with any parent.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Metrics & CTA */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs bg-slate-950/80 px-3.5 py-2.5 rounded-2xl border border-slate-800 text-slate-300">
+              <Users size={14} className="text-indigo-400" />
+              <span className="font-semibold">{displayPatrolName}</span>
+              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-400">{activeCount} Active</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowNewModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-indigo-950/40 hover:scale-[1.01]"
+            >
+              <Plus size={16} />
+              <span>Message a Parent</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── 2-PANE CHAT CONSOLE ── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
+      {/* ── 2. TWO-PANE CHAT CONSOLE ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-12 min-h-[640px]">
         
-        {/* ── LEFT PANE: INBOX & THREADS (Col 1-5) ── */}
-        <div className={`md:col-span-5 lg:col-span-4 border-r border-slate-800 flex flex-col ${
+        {/* ── LEFT PANE: INBOX & THREADS LIST (Col 1-5) ── */}
+        <div className={`md:col-span-5 lg:col-span-4 border-r border-slate-800/80 flex flex-col bg-slate-900/60 ${
           activeThreadId ? 'hidden md:flex' : 'flex'
         }`}>
           
-          {/* Search & Patrol Scoping Filter */}
-          <div className="p-3.5 border-b border-slate-800 space-y-2.5 bg-slate-900/90">
+          {/* Search & Filter Header */}
+          <div className="p-4 border-b border-slate-800/80 space-y-3 bg-slate-900/90">
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+              <Search size={14} className="absolute left-3.5 top-3 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search parents, scouts, or messages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-750 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans transition"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white p-0.5 rounded"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
-            {/* Category Filter Tabs */}
+            {/* Filter Pills with Counts */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
               {[
-                { id: 'all', label: 'All' },
-                { id: 'unread', label: `⭐ Unread (${unreadCount})` },
-                { id: 'inquiry', label: '🔒 Inquiries' },
-                { id: 'request', label: '📋 Requests' },
-                { id: 'suggestion', label: '💡 Suggestions' },
-                { id: 'resolved', label: '✓ Resolved' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCategoryFilter(tab.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
-                    categoryFilter === tab.id
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'all', label: 'All', count: threads.length },
+                { id: 'unread', label: 'Unread', count: unreadCount, isBadge: unreadCount > 0 },
+                { id: 'inquiry', label: 'Inquiries', count: inquiryCount },
+                { id: 'request', label: 'Requests', count: requestCount },
+                { id: 'suggestion', label: 'Suggestions', count: suggestionCount },
+                { id: 'resolved', label: 'Resolved', count: resolvedCount }
+              ].map(tab => {
+                const isActive = categoryFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setCategoryFilter(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                      isActive 
+                        ? 'bg-indigo-800/80 text-white' 
+                        : tab.isBadge
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Threads List Items */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 max-h-[520px]">
+          {/* Threads List Feed */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 max-h-[560px]">
             {loadingThreads ? (
-              <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading parent messages...</span>
+              <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-3">
+                <div className="w-7 h-7 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="font-semibold text-slate-300">Loading parent conversations...</span>
               </div>
             ) : filteredThreads.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs space-y-2">
-                <div className="text-2xl">📭</div>
-                <p className="font-bold text-slate-300">No matching conversations</p>
-                <p className="text-[11px] text-slate-500">
-                  {searchQuery ? 'Try a different search term.' : 'Click "+ Message a Parent" to start a 1-on-1 conversation.'}
-                </p>
+              <div className="p-10 text-center text-slate-400 text-xs space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-2xl mx-auto shadow-inner text-slate-500">
+                  📭
+                </div>
+                <div>
+                  <p className="font-bold text-slate-200 text-sm">No matching conversations</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                    {searchQuery ? 'No results matched your search keywords.' : 'All caught up! No active inquiries from parents.'}
+                  </p>
+                </div>
+                {!searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewModal(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-950/50 hover:bg-indigo-950 px-3.5 py-2 rounded-xl border border-indigo-500/30 transition cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Start New Conversation</span>
+                  </button>
+                )}
               </div>
             ) : (
               filteredThreads.map(t => {
                 const isSelected = t.threadId === activeThreadId;
                 const isUnread = t.unreadByLeader;
                 const catBadge = getCategoryBadge(t.category);
+                const isResolved = t.status === 'resolved';
+
+                // Format parent initials
+                const initials = (t.parentName || 'Parent')
+                  .split(' ')
+                  .map(n => n[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase();
 
                 return (
                   <button
                     key={t.threadId}
                     type="button"
                     onClick={() => setActiveThreadId(t.threadId)}
-                    className={`w-full p-3.5 text-left transition flex items-start gap-3 cursor-pointer ${
+                    className={`w-full p-4 text-left transition flex items-start gap-3.5 cursor-pointer border-l-4 ${
                       isSelected
-                        ? 'bg-slate-800/90 border-l-4 border-indigo-500'
+                        ? 'bg-slate-800/80 border-indigo-500 shadow-inner'
                         : isUnread
-                        ? 'bg-indigo-950/20 hover:bg-slate-800/50'
-                        : 'hover:bg-slate-850/60'
+                        ? 'bg-indigo-950/20 hover:bg-slate-800/40 border-indigo-400'
+                        : 'border-transparent hover:bg-slate-850/50'
                     }`}
                   >
-                    {/* Avatar */}
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 border ${
-                      isUnread
-                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-400 shadow-sm shadow-indigo-950/50'
-                        : 'bg-slate-800 text-slate-300 border-slate-700'
-                    }`}>
-                      👨‍👩‍👧
+                    {/* Avatar Ring */}
+                    <div className="relative shrink-0">
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black border transition ${
+                        isUnread
+                          ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-950/50'
+                          : isSelected
+                          ? 'bg-slate-700 text-white border-slate-600'
+                          : 'bg-slate-950 text-slate-400 border-slate-800'
+                      }`}>
+                        {initials || 'P'}
+                      </div>
+                      {isUnread && (
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-slate-900 animate-pulse" />
+                      )}
                     </div>
 
+                    {/* Content Meta */}
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center justify-between gap-1">
                         <strong className={`text-xs truncate block ${
-                          isUnread ? 'text-white font-black' : 'text-slate-200 font-bold'
+                          isUnread ? 'text-white font-black' : isSelected ? 'text-white font-bold' : 'text-slate-300 font-bold'
                         }`}>
                           {t.parentName || 'Parent / Guardian'}
                         </strong>
-                        <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        <span className={`text-[10px] font-mono shrink-0 ${
+                          isUnread ? 'text-indigo-300 font-bold' : 'text-slate-500'
+                        }`}>
                           {formatThreadTime(t.lastUpdated)}
                         </span>
                       </div>
 
+                      {/* Badges Row */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold border ${catBadge.bg}`}>
-                          {catBadge.label}
+                        <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1 ${catBadge.bg}`}>
+                          <span>{catBadge.icon}</span>
+                          <span>{catBadge.label}</span>
                         </span>
+
                         {t.scoutName && (
-                          <span className="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded-md font-medium">
+                          <span className="text-[9px] bg-slate-950 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-md font-medium truncate max-w-[130px]">
                             👦 {t.scoutName}
                           </span>
                         )}
-                        {t.status === 'resolved' && (
-                          <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded-md font-bold">
+
+                        {isResolved && (
+                          <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded-md font-bold">
                             ✓ Resolved
                           </span>
                         )}
                       </div>
 
+                      {/* Subject / Snippet */}
                       <p className={`text-xs truncate ${
-                        isUnread ? 'text-indigo-200 font-semibold' : 'text-slate-400'
+                        isUnread ? 'text-indigo-100 font-semibold' : 'text-slate-400'
                       }`}>
-                        {t.lastMessage || 'Conversation started'}
+                        {t.lastMessage || t.subject || 'Conversation opened'}
                       </p>
                     </div>
-
-                    {isUnread && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-sm shadow-indigo-400/80 shrink-0 mt-1 animate-pulse" />
-                    )}
                   </button>
                 );
               })
@@ -480,62 +555,105 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
           </div>
         </div>
 
-        {/* ── RIGHT PANE: LIVE CONVERSATION (Col 6-12) ── */}
+        {/* ── RIGHT PANE: LIVE CONVERSATION OR COMMAND CENTER (Col 6-12) ── */}
         <div className={`md:col-span-7 lg:col-span-8 flex flex-col bg-slate-950/40 ${
           !activeThreadId ? 'hidden md:flex' : 'flex'
         }`}>
           {!activeThread ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-              <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-3xl shadow-lg">
-                🛡️
+            /* ── RICH COMMAND CENTER EMPTY STATE ── */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 text-center space-y-6 max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-3xl shadow-xl shadow-indigo-950/30">
+                <MessageCircle size={32} />
               </div>
-              <h3 className="text-base font-black text-white">Select a Parent Conversation</h3>
-              <p className="text-xs text-slate-400 max-w-sm">
-                Choose a direct message thread from the left inbox to view confidential parent messages, or click &ldquo;Message a Parent&rdquo; to start a new thread.
-              </p>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-black text-white">
+                  Leader & Parent Direct Channel
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed max-w-md mx-auto">
+                  Select an inquiry from the left inbox to view messages, or initiate a secure 1-on-1 conversation with any scout parent.
+                </p>
+              </div>
+
+              {/* 3 Quick Guidance Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left">
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+                  <div className="text-indigo-400 font-bold text-xs flex items-center gap-1.5">
+                    <Lock size={13} />
+                    <span>Private & Scoped</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    Strictly confidential between leadership and guardian.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+                  <div className="text-emerald-400 font-bold text-xs flex items-center gap-1.5">
+                    <Award size={13} />
+                    <span>Scout Linked</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    Instant 1-click access to scout advancement & records.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+                  <div className="text-amber-400 font-bold text-xs flex items-center gap-1.5">
+                    <Sparkles size={13} />
+                    <span>Instant Alerts</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    Parents receive real-time notifications on their portal.
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setShowNewModal(true)}
-                className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-6 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-xl shadow-indigo-950/50 hover:scale-[1.02]"
               >
-                <Plus size={15} />
+                <Plus size={16} />
                 <span>Message a Parent</span>
               </button>
             </div>
           ) : (
+            /* ── ACTIVE CONVERSATION PANE ── */
             <>
-              {/* Chat Header */}
-              <div className="p-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3 min-w-0">
+              {/* Top Conversation Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800/80 bg-slate-900/90 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => setActiveThreadId(null)}
-                    className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
+                    className="md:hidden text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800 border border-slate-700"
+                    title="Back to inbox"
                   >
                     <ArrowLeft size={16} />
                   </button>
 
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400 flex items-center justify-center text-lg shrink-0 text-indigo-300">
-                    👨‍👩‍👧
+                  {/* Guardian Avatar */}
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-600/20 border border-indigo-400/40 flex items-center justify-center text-sm font-black text-indigo-300 shrink-0">
+                    {(activeThread.parentName || 'P').slice(0, 2).toUpperCase()}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-black text-white truncate">
+                      <h3 className="text-sm sm:text-base font-black text-white truncate">
                         {activeThread.parentName || 'Parent / Guardian'}
                       </h3>
                       {activeThread.scoutName && (
-                        <span className="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.2 rounded-full font-bold">
-                          Parent of: {activeThread.scoutName}
+                        <span className="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-2.5 py-0.5 rounded-full font-bold">
+                          Parent of {activeThread.scoutName}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-1 flex-wrap">
                       {activeThread.parentPhone && (
                         <a 
                           href={`tel:${activeThread.parentPhone}`}
-                          className="hover:text-white flex items-center gap-1 text-[11px]"
+                          className="hover:text-white flex items-center gap-1 text-[11px] bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800 transition"
                         >
                           <Phone size={11} className="text-emerald-400" />
                           <span>{activeThread.parentPhone}</span>
@@ -544,7 +662,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                       {activeThread.parentEmail && (
                         <a 
                           href={`mailto:${activeThread.parentEmail}`}
-                          className="hover:text-white flex items-center gap-1 text-[11px]"
+                          className="hover:text-white flex items-center gap-1 text-[11px] bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800 transition"
                         >
                           <Mail size={11} className="text-sky-400" />
                           <span className="truncate max-w-[150px]">{activeThread.parentEmail}</span>
@@ -554,16 +672,16 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                   </div>
                 </div>
 
+                {/* Right Action Tools */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Jump to Scout Profile if available */}
                   {activeThread.scoutId && onNavigate && (
                     <button
                       type="button"
                       onClick={() => onNavigate('scouts', { scoutId: activeThread.scoutId })}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-slate-750 transition cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                     >
                       <Award size={13} className="text-amber-400" />
-                      <span>Scout Record</span>
+                      <span className="hidden sm:inline">Scout Record</span>
                     </button>
                   )}
 
@@ -571,28 +689,50 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                   <button
                     type="button"
                     onClick={handleToggleStatus}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border shadow-sm ${
                       activeThread.status === 'resolved'
                         ? 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
                         : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80'
                     }`}
                   >
-                    <CheckCircle2 size={13} />
-                    <span>{activeThread.status === 'resolved' ? 'Re-open' : 'Mark Resolved'}</span>
+                    {activeThread.status === 'resolved' ? (
+                      <>
+                        <RotateCcw size={13} className="text-slate-400" />
+                        <span>Re-open</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={13} className="text-emerald-400" />
+                        <span>Mark Resolved</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
 
-              {/* Chat Messages Feed */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3.5 max-h-[420px]">
+              {/* Subject Title Banner if available */}
+              {activeThread.subject && (
+                <div className="px-5 py-2.5 bg-slate-900/50 border-b border-slate-800/60 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Topic:</span>
+                    <span className="text-indigo-300 font-semibold">{activeThread.subject}</span>
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${getCategoryBadge(activeThread.category).bg}`}>
+                    {getCategoryBadge(activeThread.category).label}
+                  </span>
+                </div>
+              )}
+
+              {/* Chat Messages Stream */}
+              <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[420px]">
                 {loadingMessages ? (
-                  <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                  <div className="p-10 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                     <span>Loading messages...</span>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs italic">
-                    No messages in this thread yet.
+                  <div className="p-10 text-center text-slate-500 text-xs italic">
+                    No messages in this conversation yet. Send the first response below!
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -603,20 +743,20 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                         key={msg.id}
                         className={`flex flex-col ${isLeader ? 'items-end' : 'items-start'}`}
                       >
-                        <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1.5 mb-1 px-1.5 text-[11px] text-slate-400">
                           <strong className={isLeader ? 'text-indigo-300 font-bold' : 'text-emerald-300 font-bold'}>
                             {msg.senderName || (isLeader ? 'Leader' : 'Parent')}
                           </strong>
                           <span>&bull;</span>
-                          <span className="font-mono">{formatThreadTime(msg.createdAt)}</span>
+                          <span className="font-mono text-slate-500">{formatThreadTime(msg.createdAt)}</span>
                         </div>
 
-                        <div className={`p-3.5 rounded-2xl max-w-md text-xs leading-relaxed shadow-md ${
+                        <div className={`p-4 rounded-2xl max-w-lg text-xs leading-relaxed shadow-lg ${
                           isLeader
-                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none border border-indigo-400/40'
-                            : 'bg-slate-900 text-slate-100 rounded-bl-none border border-slate-750 shadow-slate-950/50'
+                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-xs border border-indigo-400/40 shadow-indigo-950/40'
+                            : 'bg-slate-900 text-slate-100 rounded-bl-xs border border-slate-750 shadow-slate-950/50'
                         }`}>
-                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                          <p className="whitespace-pre-wrap font-sans">{msg.text}</p>
                         </div>
                       </div>
                     );
@@ -625,27 +765,28 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Preset Quick Replies */}
-              <div className="px-4 py-2 bg-slate-900/60 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                <span className="text-[10px] uppercase font-black text-slate-400 px-1 shrink-0">
-                  Quick Reply:
+              {/* Preset Quick Replies Bar */}
+              <div className="px-5 py-2.5 bg-slate-900/60 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="text-[10px] uppercase font-black text-indigo-400 px-1 shrink-0 flex items-center gap-1">
+                  <Sparkles size={11} />
+                  <span>Quick Reply:</span>
                 </span>
                 {LEADER_PRESET_REPLIES.map((preset, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setMessageInput(preset)}
-                    className="px-2.5 py-1 rounded-lg text-[11px] bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-medium whitespace-nowrap transition cursor-pointer shrink-0 border border-slate-700"
+                    className="px-3 py-1 rounded-xl text-[11px] bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white font-medium whitespace-nowrap transition cursor-pointer shrink-0 border border-slate-800 hover:border-slate-700"
                   >
                     {preset}
                   </button>
                 ))}
               </div>
 
-              {/* Chat Input Bar */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-slate-900 border-t border-slate-800 space-y-2">
+              {/* Chat Input & Action Composer */}
+              <form onSubmit={handleSendMessage} className="p-4 bg-slate-900 border-t border-slate-800 space-y-2.5">
                 {showEmojiPicker && (
-                  <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 flex items-center gap-2 overflow-x-auto">
+                  <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 flex items-center gap-2 overflow-x-auto animate-fadeIn">
                     {QUICK_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
@@ -654,7 +795,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                           setMessageInput(prev => prev + emoji);
                           setShowEmojiPicker(false);
                         }}
-                        className="text-lg hover:scale-125 transition p-1 cursor-pointer"
+                        className="text-lg hover:scale-125 transition p-1.5 cursor-pointer rounded-lg hover:bg-slate-850"
                       >
                         {emoji}
                       </button>
@@ -662,11 +803,11 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-slate-400 hover:text-amber-400 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                    className="p-2.5 text-slate-400 hover:text-amber-400 rounded-xl hover:bg-slate-800 transition cursor-pointer border border-transparent hover:border-slate-750"
                     title="Insert Emoji"
                   >
                     <Smile size={18} />
@@ -683,19 +824,19 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                         handleSendMessage();
                       }
                     }}
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none font-sans"
+                    className="flex-1 bg-slate-950 border border-slate-750 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none font-sans leading-relaxed transition"
                   />
 
                   <button
                     type="submit"
                     disabled={!messageInput.trim() || isSendingMessage}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold p-2.5 rounded-xl transition cursor-pointer flex items-center justify-center shadow-lg"
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold p-3 rounded-2xl transition cursor-pointer flex items-center justify-center shadow-lg shadow-indigo-950/50"
                   >
                     <Send size={16} />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 px-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 px-1 flex-wrap gap-2">
                   <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-300">
                     <input
                       type="checkbox"
@@ -705,7 +846,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                     />
                     <span>Mark conversation as Resolved after sending</span>
                   </label>
-                  <span>Press <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-300">Enter</kbd> to send</span>
+                  <span>Press <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-300 border border-slate-700">Enter</kbd> to send, <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-300 border border-slate-700">Shift+Enter</kbd> for new line</span>
                 </div>
               </form>
             </>
@@ -713,33 +854,36 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
         </div>
       </div>
 
-      {/* ── MODAL: START NEW CONVERSATION WITH PARENT ── */}
+      {/* ── 3. MODAL: START NEW CONVERSATION WITH PARENT ── */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-900 p-5 border-b border-indigo-500/30 flex items-center justify-between">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-scaleUp">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400 flex items-center justify-center text-xl">
-                  💬
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-lg">
+                  <MessageSquare size={18} />
                 </div>
                 <div>
                   <h3 className="font-black text-white text-base">Message a Parent Directly</h3>
-                  <p className="text-xs text-slate-300">Start a private 1-on-1 discussion with a parent/guardian</p>
+                  <p className="text-xs text-slate-400">Initiate a private 1-on-1 discussion with a parent/guardian</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
+            {/* Modal Form */}
             <form onSubmit={handleCreateThreadAsLeader} className="p-5 space-y-4 text-xs">
               {/* Category Selector */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
                   Topic Category *
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -753,10 +897,10 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                       key={cat.id}
                       type="button"
                       onClick={() => setNewCategory(cat.id)}
-                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
                         newCategory === cat.id
                           ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-md'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                       }`}
                     >
                       <strong className="block text-xs font-bold text-indigo-300">{cat.label}</strong>
@@ -768,15 +912,15 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
 
               {/* Select Scout (Quick Helper) */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
                   Select Scout (Optional helper to auto-select parent)
                 </label>
                 <select
                   value={newScoutId}
                   onChange={(e) => handleScoutSelect(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans cursor-pointer"
                 >
-                  <option value="">-- Select Scout Member --</option>
+                  <option value="">-- Select Scout Member (Optional) --</option>
                   {allScouts.map(s => (
                     <option key={s.uid} value={s.uid}>
                       👦 {s.fullName || s.username} ({s.patrolName || 'Scout'})
@@ -787,14 +931,14 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
 
               {/* Select Parent Recipient */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
                   Select Parent / Guardian *
                 </label>
                 <select
                   required
                   value={newParentUid}
                   onChange={(e) => setNewParentUid(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans cursor-pointer"
                 >
                   <option value="">-- Choose Parent Guardian --</option>
                   {allParents.map(p => (
@@ -807,7 +951,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
 
               {/* Subject Line */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
                   Subject Title
                 </label>
                 <input
@@ -815,13 +959,13 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                   placeholder="e.g. Update regarding advancement review / campout preparation..."
                   value={newSubject}
                   onChange={(e) => setNewSubject(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
                 />
               </div>
 
               {/* Initial Message Text */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
                   Message Body *
                 </label>
                 <textarea
@@ -830,15 +974,16 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                   placeholder="Type your message to the parent..."
                   value={newInitialMessage}
                   onChange={(e) => setNewInitialMessage(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans leading-relaxed"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-slate-800">
+              {/* Modal Buttons */}
+              <div className="flex gap-2.5 pt-3 border-t border-slate-800">
                 <button
                   type="submit"
                   disabled={!newParentUid || !newInitialMessage.trim() || isSubmittingNew}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/50"
                 >
                   <Send size={14} />
                   <span>{isSubmittingNew ? 'Sending...' : 'Send Message to Parent'}</span>
@@ -846,7 +991,7 @@ export default function LeaderMessagingHub({ currentUser = {}, onNavigate, initi
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-5 py-3 rounded-2xl transition cursor-pointer border border-slate-700"
                 >
                   Cancel
                 </button>
