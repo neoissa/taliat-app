@@ -84,6 +84,7 @@ export default function App() {
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [unreadRequestsCount, setUnreadRequestsCount] = useState(0);
   const [unreadDirectMessagesCount, setUnreadDirectMessagesCount] = useState(0);
+  const [unreadHomeworkCount, setUnreadHomeworkCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customizeNavOpen, setCustomizeNavOpen] = useState(false);
   const [navState, setNavState] = useState(() => buildResolvedNavState(null, { isOwner: false, isScout: true }));
@@ -397,7 +398,7 @@ export default function App() {
     }
   }, [currentTab, tarbiyahHubSubTab, commHubSubTab, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId, currentUser?.leaderId]);
 
-  // Real-time unread notifications listener (Scouts & Leaders)
+  // Real-time unread notifications listener (Scouts, Parents & Leaders)
   useEffect(() => {
     if (!currentUser?.uid) {
       setUnreadAlertsCount(0);
@@ -424,6 +425,22 @@ export default function App() {
           setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
         }
       }, (err) => console.warn("Subcol notifications listener fallback:", err)));
+    } else if (isParent) {
+      // 1. Listen to /parent_notifications
+      unsubs.push(onSnapshot(collection(db, 'parent_notifications'), (snap) => {
+        const parentUnread = snap.docs
+          .map(d => d.data())
+          .filter(n => (!n.recipientUid || n.recipientUid === uId || n.parentEmail === currentUser.email) && !n.read && !n.isRead).length;
+        setUnreadAlertsCount(parentUnread);
+      }, (err) => console.warn("Parent notifications listener fallback:", err)));
+
+      // 2. Listen to subcollection /users/{parentUid}/notifications
+      unsubs.push(onSnapshot(collection(db, 'users', uId, 'notifications'), (snap) => {
+        const subcolUnread = snap.docs.filter(d => !d.data().read && !d.data().isRead).length;
+        if (subcolUnread > 0) {
+          setUnreadAlertsCount(prev => Math.max(prev, subcolUnread));
+        }
+      }, (err) => console.warn("Parent subcol notifications listener fallback:", err)));
     } else if (isLeaderRole) {
       // Listen to /leader_notifications and subcollection /users/{leaderUid}/notifications
       unsubs.push(onSnapshot(collection(db, 'leader_notifications'), (snap) => {
@@ -447,7 +464,7 @@ export default function App() {
     }
 
     return () => unsubs.forEach(u => u());
-  }, [currentUser?.uid, currentUser?.role, currentUser?.email, isLeader, isOwner, isExecutive]);
+  }, [currentUser?.uid, currentUser?.role, currentUser?.email, isParent, isLeader, isOwner, isExecutive]);
 
   // Real-time unread direct messages listener (Parents & Leaders)
   useEffect(() => {
@@ -473,6 +490,118 @@ export default function App() {
 
     return () => unsub();
   }, [currentUser?.uid, currentUser?.role, isParent, isLeader, isOwner, isExecutive]);
+
+  // Real-time Homework & Challenges notification listener (Scouts, Parents & Leaders)
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setUnreadHomeworkCount(0);
+      return;
+    }
+
+    const unsubs = [];
+    const isScout = currentUser.role === 'scout' || (!currentUser.role && !isParent && !isLeader && !isOwner);
+
+    if (isScout) {
+      let allAssignments = [];
+      let scoutRecords = {};
+
+      const computeScoutHomework = () => {
+        const myGroupId = currentUser.groupId || currentUser.patrolId;
+        const myUid = currentUser.uid;
+        let pendingCount = 0;
+
+        allAssignments.forEach(a => {
+          const isAssigned = !a.assignedTarget || a.assignedTarget === 'all' || 
+            (a.assignedTarget === 'patrol' && (a.targetGroupId === myGroupId || a.patrolId === myGroupId)) ||
+            (a.assignedTarget === 'scout' && (a.targetScoutUid === myUid || a.scoutId === myUid));
+
+          if (isAssigned) {
+            const rec = scoutRecords[a.id] || {};
+            const isDone = !!(rec.isCompleted || rec.status === 'completed' || rec.verifiedByLeader);
+            if (!isDone) {
+              pendingCount++;
+            }
+          }
+        });
+        setUnreadHomeworkCount(pendingCount);
+      };
+
+      unsubs.push(onSnapshot(collection(db, 'assignments'), (snap) => {
+        allAssignments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        computeScoutHomework();
+      }, (err) => console.warn("Assignments listener error:", err)));
+
+      unsubs.push(onSnapshot(collection(db, 'user_progress', currentUser.uid, 'assignments'), (snap) => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data(); });
+        scoutRecords = map;
+        computeScoutHomework();
+      }, (err) => console.warn("Scout homework progress listener error:", err)));
+
+    } else if (isParent) {
+      let allAssignments = [];
+      let homeworkRecords = {};
+      let linkedChildren = [];
+
+      const computeParentHomework = () => {
+        let pendingCount = 0;
+        linkedChildren.forEach(child => {
+          const childUid = child.uid;
+          const childGroupId = child.groupId || child.patrolId;
+
+          allAssignments.forEach(a => {
+            const isAssigned = !a.assignedTarget || a.assignedTarget === 'all' || 
+              (a.assignedTarget === 'patrol' && (a.targetGroupId === childGroupId || a.patrolId === childGroupId)) ||
+              (a.assignedTarget === 'scout' && (a.targetScoutUid === childUid || a.scoutId === childUid));
+
+            if (isAssigned) {
+              const key = `${a.id}_${childUid}`;
+              const rec = homeworkRecords[key] || {};
+              const isDone = !!(rec.isCompleted || rec.status === 'completed' || rec.verifiedByLeader);
+              if (!isDone) {
+                pendingCount++;
+              }
+            }
+          });
+        });
+        setUnreadHomeworkCount(pendingCount);
+      };
+
+      unsubs.push(onSnapshot(query(collection(db, 'users'), where('role', '==', 'scout')), (snap) => {
+        const scouts = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        linkedChildren = scouts.filter(s => 
+          s.parentUid === currentUser.uid || 
+          (currentUser.email && s.parentEmail === currentUser.email) ||
+          (Array.isArray(currentUser.childrenUids) && currentUser.childrenUids.includes(s.uid)) ||
+          (Array.isArray(currentUser.linkedScoutIds) && currentUser.linkedScoutIds.includes(s.uid))
+        );
+        computeParentHomework();
+      }, (err) => console.warn("Linked children listener error:", err)));
+
+      unsubs.push(onSnapshot(collection(db, 'assignments'), (snap) => {
+        allAssignments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        computeParentHomework();
+      }, (err) => console.warn("Assignments listener error:", err)));
+
+      unsubs.push(onSnapshot(collection(db, 'scout_homework'), (snap) => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data(); });
+        homeworkRecords = map;
+        computeParentHomework();
+      }, (err) => console.warn("Scout homework listener error:", err)));
+
+    } else if (isLeader || isOwner || isExecutive) {
+      unsubs.push(onSnapshot(collection(db, 'scout_homework'), (snap) => {
+        const awaitingVerification = snap.docs.filter(d => {
+          const rec = d.data();
+          return (rec.status === 'submitted' || !!rec.submittedAt) && !rec.verifiedByLeader && !rec.isCompleted;
+        }).length;
+        setUnreadHomeworkCount(awaitingVerification);
+      }, (err) => console.warn("Leader scout homework listener error:", err)));
+    }
+
+    return () => unsubs.forEach(u => u());
+  }, [currentUser?.uid, currentUser?.role, currentUser?.groupId, currentUser?.patrolId, currentUser?.email, isParent, isLeader, isOwner, isExecutive]);
 
   // 4. Automatically set default tab when user logs in or role changes
   useEffect(() => {
@@ -890,6 +1019,8 @@ export default function App() {
       if (tab.badgeKey === 'unreadChatCount' || tab.id === 'chat' || tab.id === 'tarbiyah-hub' || tab.id === 'patrol-hub') badge = unreadChatCount;
       if (tab.badgeKey === 'unreadAlertsCount' || tab.id === 'feed') badge = unreadAlertsCount;
       if (tab.badgeKey === 'unreadDirectMessagesCount' || tab.id === 'direct-messages') badge = unreadDirectMessagesCount;
+      if (tab.badgeKey === 'unreadHomeworkCount' || tab.id === 'assignments' || tab.id === 'homework') badge = unreadHomeworkCount;
+      if (tab.id === 'events-hub') badge = unreadHomeworkCount;
       if (tab.id === 'communication-hub' || tab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadRequestsCount + unreadChatCount;
       return {
         ...tab,
@@ -909,6 +1040,8 @@ export default function App() {
         if (foundTab.badgeKey === 'unreadChatCount' || foundTab.id === 'chat' || foundTab.id === 'tarbiyah-hub' || foundTab.id === 'patrol-hub') badge = unreadChatCount;
         if (foundTab.badgeKey === 'unreadAlertsCount' || foundTab.id === 'feed') badge = unreadAlertsCount;
         if (foundTab.badgeKey === 'unreadDirectMessagesCount' || foundTab.id === 'direct-messages') badge = unreadDirectMessagesCount;
+        if (foundTab.badgeKey === 'unreadHomeworkCount' || foundTab.id === 'assignments' || foundTab.id === 'homework') badge = unreadHomeworkCount;
+        if (foundTab.id === 'events-hub') badge = unreadHomeworkCount;
         if (foundTab.id === 'communication-hub' || foundTab.id === 'comm-hub') badge = unreadDirectMessagesCount + unreadRequestsCount + unreadChatCount;
         items.push({
           id: foundTab.id,
@@ -1747,7 +1880,7 @@ export default function App() {
               onChange={(tabId) => setEventsHubSubTab(tabId)}
               tabs={[
                 { id: 'events', label: 'Troop Calendar & RSVPs', icon: 'Calendar' },
-                { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen' }
+                { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen', badge: unreadHomeworkCount }
               ]}
             />
             {eventsHubSubTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
@@ -1920,6 +2053,8 @@ export default function App() {
         unreadAlertsCount={unreadAlertsCount}
         unreadRequestsCount={unreadRequestsCount}
         unreadChatCount={unreadChatCount}
+        unreadDirectMessagesCount={unreadDirectMessagesCount}
+        unreadHomeworkCount={unreadHomeworkCount}
       />
 
       {/* ── MOBILE & DESKTOP TAB CUSTOMIZATION DRAWER/MODAL ── */}

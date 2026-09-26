@@ -16,17 +16,22 @@ export default function MobileTabBar({
   customPreferences,
   unreadAlertsCount = 0,
   unreadRequestsCount = 0,
-  unreadChatCount = 0
+  unreadChatCount = 0,
+  unreadDirectMessagesCount = 0,
+  unreadHomeworkCount = 0
 }) {
   // Load tailored role navigation tabs
   const roleTabs = getRoleNavigationConfig(userRoleContext, customPreferences);
 
   // Map badge counts dynamically
   const getBadgeCount = (badgeKey, tabId) => {
-    if (tabId === 'communication-hub' || tabId === 'comm-hub') return unreadRequestsCount + unreadAlertsCount + unreadChatCount;
+    if (tabId === 'communication-hub' || tabId === 'comm-hub') return unreadRequestsCount + unreadDirectMessagesCount + unreadChatCount;
     if (badgeKey === 'unreadRequestsCount' || tabId === 'parent-requests') return unreadRequestsCount;
     if (badgeKey === 'unreadAlertsCount' || tabId === 'feed') return unreadAlertsCount;
-    if (badgeKey === 'unreadChatCount' || tabId === 'chat' || tabId === 'tarbiyah-hub') return unreadChatCount;
+    if (badgeKey === 'unreadChatCount' || tabId === 'chat' || tabId === 'tarbiyah-hub' || tabId === 'patrol-hub') return unreadChatCount;
+    if (badgeKey === 'unreadDirectMessagesCount' || tabId === 'direct-messages') return unreadDirectMessagesCount;
+    if (badgeKey === 'unreadHomeworkCount' || tabId === 'assignments' || tabId === 'homework') return unreadHomeworkCount;
+    if (tabId === 'events-hub') return unreadHomeworkCount;
     return 0;
   };
 

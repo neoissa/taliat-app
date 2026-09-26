@@ -232,6 +232,11 @@ export default function PatrolChat({ currentUser, onMarkRead }) {
   const [pollSubmitting, setPollSubmitting] = useState(false);
   const [expandedPollVoters, setExpandedPollVoters] = useState({}); // { [messageId]: boolean }
 
+  // ── First Unread Message & Smart Scroll State ──
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
+  const initialLastReadTimestampRef = useRef(0);
+  const hasInitiallyScrolledRef = useRef(false);
+
   const bottomRef = useRef();
   const chatContainerRef = useRef();
   const fileInputRef = useRef();
@@ -320,9 +325,19 @@ export default function PatrolChat({ currentUser, onMarkRead }) {
     return () => unsub();
   }, [isOwner, isLeader, currentUser?.uid, currentUser?.groupId, currentUser?.patrolId]);
 
-  // ── 3. Fetch Messages for activeRoomId ──
+  // ── 3. Fetch Messages for activeRoomId & Jump to First Unread ──
   useEffect(() => {
     if (!activeRoomId) return;
+
+    // 1. Capture existing lastReadTime BEFORE it gets marked as read
+    const key = `last_read_chat_${currentUser?.uid}_${activeRoomId}`;
+    const lastReadStr = localStorage.getItem(key) || 
+                        (currentUser?.groupId ? localStorage.getItem(`last_read_chat_${currentUser.uid}_${currentUser.groupId}`) : null) ||
+                        localStorage.getItem(`last_read_chat_${currentUser?.uid}_general-stream`);
+    const initialLastRead = lastReadStr ? Number(lastReadStr) : 0;
+    initialLastReadTimestampRef.current = initialLastRead;
+    hasInitiallyScrolledRef.current = false;
+    setFirstUnreadMessageId(null);
 
     const q = query(
       collection(db, 'chats', activeRoomId, 'messages'),
@@ -333,13 +348,46 @@ export default function PatrolChat({ currentUser, onMarkRead }) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMessages(msgs);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+
+      if (!hasInitiallyScrolledRef.current && msgs.length > 0) {
+        hasInitiallyScrolledRef.current = true;
+
+        // Find first unread message sent by another member
+        let firstUnread = null;
+        if (initialLastRead > 0) {
+          firstUnread = msgs.find(m => {
+            if (m.senderId === currentUser?.uid) return false;
+            const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : 0);
+            return msgTime > initialLastRead;
+          });
+        }
+
+        if (firstUnread) {
+          setFirstUnreadMessageId(firstUnread.id);
+          setTimeout(() => {
+            const targetEl = document.getElementById('chat-unread-banner') || document.getElementById(`chat-msg-${firstUnread.id}`);
+            if (targetEl) {
+              targetEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+            } else {
+              bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+            }
+          }, 60);
+        } else {
+          // No unread: jump directly to bottom without slow dragging animation
+          setTimeout(() => {
+            bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+          }, 40);
+        }
+      } else if (hasInitiallyScrolledRef.current) {
+        // When new message arrives while user is in active chat
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+      }
     }, (err) => {
       console.error('Chat snapshot error:', err);
     });
 
     return () => unsubscribe();
-  }, [activeRoomId]);
+  }, [activeRoomId, currentUser?.uid, currentUser?.groupId]);
 
   // ── Auto-Mark Messages as Read in LocalStorage & Global Listener ──
   useEffect(() => {
@@ -1314,6 +1362,18 @@ export default function PatrolChat({ currentUser, onMarkRead }) {
                     <span className="bg-slate-800/90 border border-slate-700/80 text-slate-300 text-[10px] font-semibold px-3 py-1 rounded-full shadow-md backdrop-blur-md">
                       {formatDateSeparator(m.timestamp)}
                     </span>
+                  </div>
+                )}
+
+                {/* Unread Messages Divider Banner */}
+                {m.id === firstUnreadMessageId && (
+                  <div id="chat-unread-banner" className="flex items-center gap-3 my-3.5 select-none animate-fadeIn">
+                    <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-rose-500/40 to-rose-500"></div>
+                    <span className="bg-rose-950/90 border border-rose-500/50 text-rose-300 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                      <span>Unread Messages Below</span>
+                    </span>
+                    <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-rose-500/40 to-rose-500"></div>
                   </div>
                 )}
 
