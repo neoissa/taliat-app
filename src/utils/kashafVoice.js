@@ -92,9 +92,13 @@ export function formatPatrolSignature(patrolName = '') {
   if (!patrolName || typeof patrolName !== 'string') {
     return DEFAULT_PATROL_SIGNATURE;
   }
-  const clean = patrolName.trim();
+  let clean = patrolName.trim();
   if (!clean || clean.toLowerCase() === 'all' || clean.toLowerCase() === 'troop') {
     return DEFAULT_PATROL_SIGNATURE;
+  }
+  // Strip duplicate trailing "Patrol" if already prefixed with "Patrol"
+  if (clean.toLowerCase().startsWith('patrol') && clean.toLowerCase().endsWith(' patrol')) {
+    clean = clean.replace(/\s+patrol$/i, '').trim();
   }
   if (clean.toLowerCase().startsWith('patrol ')) {
     return clean;
@@ -472,6 +476,111 @@ export function formatKashafEventWhatsApp(event, optionsOrPatrol = '') {
 }
 
 /**
+ * Formats Markdown/Plan Content into Structured Indented WhatsApp Text
+ */
+export function formatLessonPlanContentForWhatsApp(rawContent) {
+  if (!rawContent || !rawContent.trim()) return '';
+
+  const lines = rawContent.split('\n');
+  const formattedBlocks = [];
+  let currentMainItem = null;
+  let currentSubItems = [];
+
+  const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+
+  const flushCurrent = () => {
+    if (currentMainItem) {
+      if (currentSubItems.length > 0) {
+        formattedBlocks.push(`${currentMainItem}\n${currentSubItems.join('\n')}`);
+      } else {
+        formattedBlocks.push(currentMainItem);
+      }
+      currentMainItem = null;
+      currentSubItems = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    // 1. Skip redundant main section title headers (e.g. ### 🎯 Session Milestones...)
+    if (/^#+\s*(?:🎯\s*)?(?:Session Milestones|Curriculum Breakdown|Objectives)/i.test(trimmed) ||
+        /^\*{1,2}(?:🎯\s*)?(?:Session Milestones|Curriculum Breakdown|Objectives)[\*:]*/i.test(trimmed)) {
+      continue;
+    }
+
+    // 2. Check if this is a numbered main point (e.g., "1. **Title**" or "1) Title")
+    const numberedMatch = trimmed.match(/^(\d+)[\.\)]\s*(.*)/);
+    if (numberedMatch) {
+      flushCurrent();
+      const numIdx = parseInt(numberedMatch[1], 10) - 1;
+      const emojiPrefix = numberEmojis[numIdx] || `*${numberedMatch[1]}.*`;
+      let title = numberedMatch[2].trim();
+      // Normalize double asterisks **title** to *title*
+      title = title.replace(/\*\*(.*?)\*\*/g, '*$1*');
+      // Strip leading/trailing bullet artifacts
+      title = title.replace(/^[\.\-\*•]+\s*/, '');
+      if (!title.startsWith('*') || !title.endsWith('*')) {
+        title = `*${title.replace(/^\*+|\*+$/g, '')}*`;
+      }
+      currentMainItem = `${emojiPrefix} ${applyIslamicTransliteration(title)}`;
+      continue;
+    }
+
+    // 3. Check if this is a sub-point: Focus:, Milestone:, Objective:, Tarbiyah:, etc.
+    const isSubKeyword = /^\s*[\-\*•]?\s*\*(?:Focus|Milestone|Objective|Tarbiyah|Outcome|Lead|Time|Gear|Skills?):/i.test(trimmed) ||
+                         /^(?:Focus|Milestone|Objective|Tarbiyah|Outcome|Lead|Time|Gear|Skills?):/i.test(trimmed);
+    const isIndented = rawLine.startsWith('   ') || rawLine.startsWith('\t') || rawLine.startsWith('  ');
+
+    if (isSubKeyword || (isIndented && currentMainItem)) {
+      let cleanSub = trimmed
+        .replace(/^[\-\*•]\s*/, '')
+        .replace(/\*\*(.*?)\*\*/g, '*$1*')
+        .trim();
+
+      // Bold standard labels cleanly (e.g. *Focus:* or *Milestone:*)
+      cleanSub = cleanSub.replace(/^(?:\*?)(Focus|Milestone|Objective|Tarbiyah|Outcome|Lead|Time|Gear|Skills?)(?:\*?):\s*/i, '*$1:* ');
+
+      if (currentMainItem) {
+        currentSubItems.push(`   ▫️ ${applyIslamicTransliteration(cleanSub)}`);
+      } else {
+        formattedBlocks.push(`• ${applyIslamicTransliteration(cleanSub)}`);
+      }
+      continue;
+    }
+
+    // 4. Check if this is a bulleted main point
+    const bulletMatch = trimmed.match(/^[•\-\*]\s+(.*)/);
+    if (bulletMatch) {
+      flushCurrent();
+      let title = bulletMatch[1].trim();
+      title = title.replace(/\*\*(.*?)\*\*/g, '*$1*');
+      if (!title.startsWith('*') || !title.endsWith('*')) {
+        title = `*${title.replace(/^\*+|\*+$/g, '')}*`;
+      }
+      currentMainItem = `• ${applyIslamicTransliteration(title)}`;
+      continue;
+    }
+
+    // 5. Fallback line
+    let cleanLine = trimmed
+      .replace(/^[\-\*•]\s*/, '')
+      .replace(/\*\*(.*?)\*\*/g, '*$1*');
+
+    if (currentMainItem) {
+      currentSubItems.push(`   ▫️ ${applyIslamicTransliteration(cleanLine)}`);
+    } else {
+      formattedBlocks.push(`• ${applyIslamicTransliteration(cleanLine)}`);
+    }
+  }
+
+  flushCurrent();
+  return formattedBlocks.join('\n\n');
+}
+
+/**
  * Lesson Plan WhatsApp Briefing Generator (Rules 1-15)
  */
 export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
@@ -492,15 +601,11 @@ export function formatKashafLessonPlanWhatsApp(plan, patrolName = '') {
     }
   }
 
-  // Milestones & Activities
+  // Milestones & Activities with Proper Indentation
   if (plan.content && plan.content.trim()) {
-    const rawLines = plan.content.split('\n').map(l => l.trim()).filter(Boolean);
-    const bullets = rawLines.map(line => {
-      const clean = line.replace(/^[-*•\d+.)]\s*/, '').trim();
-      return `• ${applyIslamicTransliteration(clean)}`;
-    });
-    if (bullets.length > 0) {
-      blocks.push(`🎯 *Session Milestones:*\n${bullets.join('\n')}`);
+    const formattedContent = formatLessonPlanContentForWhatsApp(plan.content);
+    if (formattedContent) {
+      blocks.push(`🎯 *Session Milestones:*\n\n${formattedContent}`);
     }
   }
 

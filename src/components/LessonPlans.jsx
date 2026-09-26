@@ -380,7 +380,7 @@ export default function LessonPlans({ currentUser }) {
 
   const handleCopyEditorWhatsAppMsg = () => {
     const selectedGroup = groups.find(g => g.id === targetGroupId) || accessibleGroups.find(g => g.id === targetGroupId);
-    const pName = selectedGroup?.name ? `${selectedGroup.name} Patrol` : '';
+    const pName = selectedGroup?.name || '';
     const currentEditorPlan = {
       title: planTitle,
       date: planDate,
@@ -403,7 +403,7 @@ export default function LessonPlans({ currentUser }) {
     resources: resources.filter(r => r.name && r.url)
   };
   const selectedGroupInEditor = groups.find(g => g.id === targetGroupId) || accessibleGroups.find(g => g.id === targetGroupId);
-  const previewPatrolName = selectedGroupInEditor?.name ? `${selectedGroupInEditor.name} Patrol` : '';
+  const previewPatrolName = selectedGroupInEditor?.name || '';
   const editorWhatsAppMsg = formatKashafLessonPlanWhatsApp(editorPreviewPlan, previewPatrolName);
 
   return (
@@ -945,7 +945,7 @@ export default function LessonPlans({ currentUser }) {
                       <span>Live Message Preview (Editable):</span>
                       <button
                         onClick={() => {
-                          const pName = selectedPlan.patrolName || (activePatrol?.name ? `${activePatrol.name} Patrol` : '');
+                          const pName = selectedPlan.patrolName || activePatrol?.name || '';
                           setCustomWhatsAppMsg(formatKashafLessonPlanWhatsApp(selectedPlan, pName));
                         }}
                         className="text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 font-semibold"
