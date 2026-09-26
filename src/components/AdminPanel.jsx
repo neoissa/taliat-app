@@ -1848,15 +1848,70 @@ ${lockedClosing}`;
         </div>
       </div>
 
-      {/* ── NAVIGATION TABS ── */}
-      <div className="flex gap-1.5 p-1.5 bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-x-auto scrollbar-none shadow-sm backdrop-blur-sm">
+      {/* ── EXECUTIVE OVERVIEW STATS (QUICK METRICS) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-3.5 backdrop-blur-sm shadow-md flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <Users size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Total Accounts</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-bold text-white font-mono">{users.length}</span>
+              <span className="text-[10px] text-slate-400 truncate">({scoutsList.length} Scouts &bull; {execLeadersList.length + patrolLeadersList.length} Leaders)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-3.5 backdrop-blur-sm shadow-md flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0">
+            <FolderTree size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Patrol Units</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-bold text-white font-mono">{groups.length}</span>
+              <span className="text-[10px] text-slate-400 truncate">Active Patrols</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-3.5 backdrop-blur-sm shadow-md flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+            <History size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Audit Trail</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-bold text-white font-mono">{filteredApprovalHistory.length}</span>
+              <span className="text-[10px] text-slate-400 truncate">Verified Approvals</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-3.5 backdrop-blur-sm shadow-md flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <Megaphone size={18} />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Operations</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-bold text-white font-mono">{broadcasts.length + parentTasks.length}</span>
+              <span className="text-[10px] text-slate-400 truncate">({broadcasts.length} Broadcasts &bull; {parentTasks.length} Forms)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── NAVIGATION TABS (RESPONSIVE & FULLY VISIBLE) ── */}
+      <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-900/80 rounded-2xl border border-slate-800/90 shadow-md backdrop-blur-md">
         {[
           { id: 'users', label: 'Global User Directory', count: users.length, icon: Users },
           { id: 'patrols', label: 'Patrol Architecture & Edit', count: groups.length, icon: FolderTree },
           { id: 'patrol-progress', label: 'Patrol Progress & Insights', icon: TrendingUp },
           { id: 'calendar-sync', label: 'Master Calendar Ingestion (.xlsx)', icon: Calendar },
           { id: 'history', label: 'Approval History & Audit Trail', count: filteredApprovalHistory.length, icon: History },
-          { id: 'rsvps', label: 'Event RSVPs & Attendance', icon: UserCheck },
+          { id: 'rsvps', label: 'Event RSVPs & Attendance', count: attendanceSessions.length > 0 ? attendanceSessions.length : undefined, icon: UserCheck },
           { id: 'requests', label: 'Parent Inquiries & Requests', icon: MessageSquare },
           { id: 'broadcasts', label: 'Troop Broadcasts', count: broadcasts.length, icon: Megaphone },
           { id: 'forms', label: 'Parent Forms & Waivers', count: parentTasks.length, icon: FileText }
@@ -1867,17 +1922,17 @@ ${lockedClosing}`;
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950/40 font-bold border border-emerald-400/30'
+                  : 'bg-slate-800/40 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750/50'
               }`}
             >
-              <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
+              <Icon size={14} className={isActive ? 'text-white' : 'text-emerald-400/80'} />
               <span>{t.label}</span>
               {t.count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold ${
-                  isActive ? 'bg-emerald-700/80 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold ${
+                  isActive ? 'bg-emerald-900/70 text-emerald-100 border border-emerald-400/30' : 'bg-slate-900/80 text-emerald-300 border border-slate-700/60'
                 }`}>
                   {t.count}
                 </span>
