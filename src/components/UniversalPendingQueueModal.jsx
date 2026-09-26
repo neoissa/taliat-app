@@ -8,6 +8,7 @@ import {
   TAQIBAT_AND_DUAS_DATA, 
   INFALLIBLES_FULL_BIOGRAPHIES 
 } from '../data/islamicBasicsData';
+import { RANKS_DATA, getLatestAchievedRank } from '../data/ranksData';
 import { MERIT_BADGES } from '../data/meritBadges';
 import { 
   isSuperUser, 
