@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -19,25 +19,34 @@ import {
   Trophy, 
   User, 
   Video, 
-  ChevronRight,
-  Shield,
-  ShieldCheck,
-  Flame,
-  Target,
-  Compass,
-  Heart,
-  MapPin,
-  Check,
-  ArrowRight,
-  Zap,
-  AlertTriangle,
-  AlertCircle,
-  Bell,
-  Send,
-  ChevronUp,
-  ChevronDown,
-  GraduationCap,
-  Radio
+  ChevronRight, 
+  Shield, 
+  ShieldCheck, 
+  Flame, 
+  Target, 
+  Compass, 
+  Heart, 
+  MapPin, 
+  Check, 
+  ArrowRight, 
+  Zap, 
+  AlertTriangle, 
+  AlertCircle, 
+  Bell, 
+  Send, 
+  ChevronUp, 
+  ChevronDown, 
+  GraduationCap, 
+  Radio, 
+  CheckSquare, 
+  HelpCircle, 
+  PlayCircle, 
+  Info, 
+  Users, 
+  Bookmark, 
+  FileCheck, 
+  Layers, 
+  FileCode 
 } from 'lucide-react';
 import RankIcon from './RankIcon';
 import AssignmentsManager from './AssignmentsManager';
@@ -64,6 +73,9 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [eagleData, setEagleData] = useState({});
   const [islamicProgress, setIslamicProgress] = useState({});
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+  const [homeworkList, setHomeworkList] = useState([]);
+  const [scoutHomeworkProgress, setScoutHomeworkProgress] = useState({});
+  const [activeGuideTab, setActiveGuideTab] = useState('advancement'); // 'advancement' | 'homework' | 'eagle' | 'patrol' | 'schedule' | 'profile'
   const [attendanceStats, setAttendanceStats] = useState({
     totalSessions: 0,
     presentCount: 0,
@@ -78,6 +90,35 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   const [loading, setLoading] = useState(true);
 
   const scoutUid = currentUser?.uid;
+
+  // 0. Subscribe to Assignments and Scout Homework Records
+  useEffect(() => {
+    if (!scoutUid) return;
+
+    const unsubAssign = onSnapshot(collection(db, 'assignments'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31'));
+      setHomeworkList(list);
+    }, (err) => console.warn("Homework load fallback:", err));
+
+    const unsubHw = onSnapshot(collection(db, 'scout_homework'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data(); });
+      setScoutHomeworkProgress(prev => ({ ...prev, ...map }));
+    }, (err) => console.warn("Scout homework load fallback:", err));
+
+    const unsubProg = onSnapshot(collection(db, 'user_progress', scoutUid, 'assignments'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[`${d.id}_${scoutUid}`] = d.data(); });
+      setScoutHomeworkProgress(prev => ({ ...prev, ...map }));
+    }, (err) => console.warn("Scout prog assignments fallback:", err));
+
+    return () => {
+      unsubAssign();
+      unsubHw();
+      unsubProg();
+    };
+  }, [scoutUid]);
 
   // 1. Subscribe to scout's rank progress
   useEffect(() => {
@@ -259,6 +300,99 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   // Compute smart recommended merit badges
   const recommendedBadges = getRecommendedBadges(currentUser, meritBadgesProgress);
 
+  // Filter relevant homework for this scout
+  const scoutAssignedHomework = useMemo(() => {
+    return homeworkList.filter(a => {
+      if (a.assignedTarget === 'patrol' && currentUser?.groupId && a.targetGroupId !== currentUser.groupId) return false;
+      if (a.assignedTarget === 'scout' && a.targetScoutUid !== scoutUid) return false;
+      return true;
+    });
+  }, [homeworkList, currentUser?.groupId, scoutUid]);
+
+  // Comprehensive real-time homework analysis
+  const homeworkAnalysis = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let completedCount = 0;
+    let submittedCount = 0;
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    let pendingCount = 0;
+
+    const activeTasks = [];
+
+    scoutAssignedHomework.forEach(a => {
+      const key = `${a.id}_${scoutUid}`;
+      const rec = scoutHomeworkProgress[key] || {};
+      const isCompleted = !!(rec.isCompleted || rec.status === 'completed' || rec.verifiedByLeader || (rec.completed && !rec.pending));
+      const isSubmitted = rec.status === 'submitted' || (!!rec.submittedAt && !isCompleted);
+
+      if (isCompleted) {
+        completedCount++;
+        return;
+      }
+
+      pendingCount++;
+      if (isSubmitted) {
+        submittedCount++;
+      }
+
+      let isOverdue = false;
+      let diffDays = null;
+      if (a.dueDate) {
+        const due = new Date(a.dueDate);
+        due.setHours(0, 0, 0, 0);
+        diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) {
+          isOverdue = true;
+          overdueCount++;
+        } else if (diffDays === 0) {
+          dueTodayCount++;
+        }
+      }
+
+      activeTasks.push({
+        ...a,
+        record: rec,
+        isSubmitted,
+        isOverdue,
+        diffDays,
+        dueLabel: isSubmitted 
+          ? 'Submitted (In Review)'
+          : isOverdue 
+          ? `Overdue (${Math.abs(diffDays)}d late)`
+          : diffDays === 0 
+          ? 'Due Today'
+          : diffDays === 1
+          ? 'Due Tomorrow'
+          : diffDays !== null
+          ? `Due in ${diffDays}d`
+          : 'Assigned'
+      });
+    });
+
+    // Sort active tasks: overdue first, then due today, then closest due date
+    activeTasks.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
+    });
+
+    const urgentTask = activeTasks.length > 0 ? activeTasks[0] : null;
+
+    return {
+      totalAssigned: scoutAssignedHomework.length,
+      completedCount,
+      submittedCount,
+      overdueCount,
+      dueTodayCount,
+      pendingCount,
+      activeTasks,
+      urgentTask
+    };
+  }, [scoutAssignedHomework, scoutHomeworkProgress, scoutUid]);
+
   return (
     <div className="space-y-3.5 pb-6">
       {/* ── 1. WELCOME HERO CARD ── */}
@@ -297,7 +431,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <span>Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || 'Scout'}!</span>
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Dhulfiqār Scouting Hub &bull; Complete missions, earn merit badges, log service hours, and advance on your Road to Eagle.
+                Dhulfiqār Scouting Hub &bull; Master outdoor skills, complete weekly homework, earn merit badges, and advance on your Road to Eagle.
               </p>
             </div>
           </div>
@@ -309,6 +443,20 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             >
               <Award size={14} />
               <span>⚜️ My Advancement</span>
+            </button>
+            <button
+              onClick={() => onNavigate && onNavigate('assignments')}
+              className="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-orange-950/40 hover:scale-[1.02]"
+            >
+              <BookOpen size={14} />
+              <span>Weekly Homework</span>
+              {homeworkAnalysis.pendingCount > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  homeworkAnalysis.overdueCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-orange-950 text-orange-200'
+                }`}>
+                  {homeworkAnalysis.pendingCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
@@ -330,8 +478,8 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           </div>
         </div>
 
-        {/* ── Streamlined 4-Item Horizontal Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-750/70 relative z-10 text-xs">
+        {/* ── Streamlined 5-Item Horizontal Summary Bar ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-slate-750/70 relative z-10 text-xs">
           {/* 1. Active Rank */}
           <div 
             onClick={() => onNavigate && onNavigate('advancement')}
@@ -348,7 +496,48 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
 
-          {/* 2. Attendance Standing Tile */}
+          {/* 2. Weekly Homework Tile */}
+          <div 
+            onClick={() => onNavigate && onNavigate('assignments')}
+            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
+              homeworkAnalysis.overdueCount > 0
+                ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
+                : homeworkAnalysis.dueTodayCount > 0
+                ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
+                : homeworkAnalysis.pendingCount > 0
+                ? 'bg-orange-950/30 border-orange-500/40 hover:border-orange-400'
+                : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              homeworkAnalysis.overdueCount > 0
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                : homeworkAnalysis.dueTodayCount > 0
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                : homeworkAnalysis.pendingCount > 0
+                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
+                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+            }`}>
+              <BookOpen size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[10px] block uppercase font-bold tracking-wider ${
+                  homeworkAnalysis.overdueCount > 0 ? 'text-rose-400' : homeworkAnalysis.dueTodayCount > 0 ? 'text-amber-400' : 'text-slate-400'
+                }`}>Homework</span>
+                {homeworkAnalysis.overdueCount > 0 ? (
+                  <span className="text-[9px] px-1 rounded font-bold uppercase bg-rose-500/30 text-rose-300">Late</span>
+                ) : homeworkAnalysis.dueTodayCount > 0 ? (
+                  <span className="text-[9px] px-1 rounded font-bold uppercase bg-amber-500/30 text-amber-300">Today</span>
+                ) : null}
+              </div>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {homeworkAnalysis.completedCount} / {homeworkAnalysis.totalAssigned} Done
+              </strong>
+            </div>
+          </div>
+
+          {/* 3. Attendance Standing Tile */}
           <div 
             onClick={() => onNavigate && onNavigate('profile', 'attendance')}
             className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
@@ -385,7 +574,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
 
-          {/* 3. Merit Badges */}
+          {/* 4. Merit Badges */}
           <div 
             onClick={() => onNavigate && onNavigate('merit-badges')}
             className="bg-slate-900/80 border border-slate-800 hover:border-amber-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
@@ -401,7 +590,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </div>
           </div>
 
-          {/* 4. Service Hours */}
+          {/* 5. Service Hours */}
           <div 
             onClick={() => onNavigate && onNavigate('service-log')}
             className="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
@@ -439,6 +628,28 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </button>
 
             <button
+              onClick={() => onNavigate && onNavigate('assignments')}
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-orange-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 group-hover:scale-110 transition">
+                  <BookOpen size={15} />
+                </div>
+                <div className="flex items-center justify-between gap-1 flex-1 min-w-0">
+                  <span className="text-xs font-black text-white group-hover:text-orange-300 transition">Weekly Homework</span>
+                  {homeworkAnalysis.pendingCount > 0 && (
+                    <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full ${
+                      homeworkAnalysis.overdueCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-orange-500 text-slate-950'
+                    }`}>
+                      {homeworkAnalysis.pendingCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Challenges & Submissions</p>
+            </button>
+
+            <button
               onClick={() => onNavigate && onNavigate('events')}
               className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-sky-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
             >
@@ -449,19 +660,6 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                 <span className="text-xs font-black text-white group-hover:text-sky-300 transition">Troop Schedule</span>
               </div>
               <p className="text-[10px] text-slate-400 leading-tight">Events, Meetings & RSVPs</p>
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('assignments')}
-              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-orange-500/50 rounded-xl text-left transition group cursor-pointer shadow-xs"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 group-hover:scale-110 transition">
-                  <BookOpen size={15} />
-                </div>
-                <span className="text-xs font-black text-white group-hover:text-orange-300 transition">Weekly Homework</span>
-              </div>
-              <p className="text-[10px] text-slate-400 leading-tight">Challenges & Submissions</p>
             </button>
 
             <button
@@ -526,8 +724,112 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
       </div>
 
-      {/* ── 1.4. SCOUT ADVANCEMENT STEP-BY-STEP GUIDE ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/30 border border-slate-800 hover:border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3">
+      {/* ── 1.2. ACTIVE WEEKLY HOMEWORK & ACTION REMINDER BANNER ── */}
+      {homeworkAnalysis.urgentTask ? (
+        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xl border transition-all duration-300 ${
+          homeworkAnalysis.urgentTask.isOverdue
+            ? 'bg-gradient-to-r from-rose-950/70 via-slate-900 to-rose-950/40 border-rose-500/60 shadow-rose-950/30'
+            : homeworkAnalysis.urgentTask.diffDays === 0
+            ? 'bg-gradient-to-r from-amber-950/70 via-slate-900 to-amber-950/40 border-amber-500/60 shadow-amber-950/30'
+            : 'bg-gradient-to-r from-orange-950/60 via-slate-900 to-slate-850 border-orange-500/40 shadow-orange-950/30'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-lg border ${
+                homeworkAnalysis.urgentTask.isOverdue
+                  ? 'bg-rose-500/20 border-rose-500/50 text-rose-300'
+                  : homeworkAnalysis.urgentTask.diffDays === 0
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-orange-500/20 border-orange-500/50 text-orange-300'
+              }`}>
+                {homeworkAnalysis.urgentTask.type === 'video' ? '🎬' : '📝'}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                    homeworkAnalysis.urgentTask.isOverdue
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                      : homeworkAnalysis.urgentTask.diffDays === 0
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                      : 'bg-orange-500/20 text-orange-300 border-orange-500/40'
+                  }`}>
+                    {homeworkAnalysis.urgentTask.isOverdue 
+                      ? '🚨 Overdue Homework' 
+                      : homeworkAnalysis.urgentTask.diffDays === 0 
+                      ? '⚡ Due Today' 
+                      : '📚 Active Homework'}
+                  </span>
+                  <span className="text-[11px] text-slate-300 font-semibold">
+                    {homeworkAnalysis.urgentTask.category || 'Scouting Skills'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    &bull; {homeworkAnalysis.pendingCount} of {homeworkAnalysis.totalAssigned} Tasks Remaining
+                  </span>
+                </div>
+
+                <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                  <span>{homeworkAnalysis.urgentTask.title}</span>
+                </h3>
+
+                <p className="text-xs text-slate-300 mt-0.5 max-w-2xl line-clamp-1">
+                  {homeworkAnalysis.urgentTask.description || 'Watch the video lesson or complete the worksheet to submit for Scoutmaster review.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('assignments')}
+                className={`font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg hover:scale-[1.02] ${
+                  homeworkAnalysis.urgentTask.isOverdue
+                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/50'
+                    : homeworkAnalysis.urgentTask.diffDays === 0
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-950/50'
+                    : 'bg-orange-600 hover:bg-orange-500 text-white shadow-orange-950/50'
+                }`}
+              >
+                <span>{homeworkAnalysis.urgentTask.isSubmitted ? 'View Submission' : 'Start & Submit Assignment'}</span>
+                <ArrowRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('assignments')}
+                className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs px-3 py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+              >
+                All Homework
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : homeworkAnalysis.totalAssigned > 0 && homeworkAnalysis.pendingCount === 0 ? (
+        <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-emerald-950/20 border border-emerald-500/40 p-3.5 sm:p-4 rounded-2xl shadow-lg flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-base shrink-0">
+              ✓
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-extrabold text-white">
+                🎉 All Weekly Homework Up To Date!
+              </h4>
+              <p className="text-[11px] text-slate-350">
+                You've completed all {homeworkAnalysis.completedCount} assigned challenges. Keep up the high standard of excellence!
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('assignments')}
+            className="text-xs bg-slate-800 hover:bg-slate-750 text-emerald-300 font-bold px-3 py-1.5 rounded-xl border border-slate-700 transition cursor-pointer shrink-0"
+          >
+            Review Archive
+          </button>
+        </div>
+      ) : null}
+
+      {/* ── 1.4. SCOUT QUICK START & INTERACTIVE APP ORIENTATION GUIDE ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/30 border border-slate-800 hover:border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3.5">
         <div 
           onClick={() => setShowScoutGuide(!showScoutGuide)}
           className="flex items-center justify-between cursor-pointer group"
@@ -537,14 +839,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               <Compass size={18} />
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
-                <span>⚜️ How Scouting Advancement Works (3 Simple Steps)</span>
+              <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2 flex-wrap">
+                <span>⚜️ Scout Quick Start & Interactive App Guide</span>
                 <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
-                  Scout Guide
+                  Orientation
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                Your path from Scout to Eagle: learn skills, request oral tests, and earn rank certifications.
+                Learn how to submit rank requirements, do weekly homework, chat with your patrol, and track your Road to Eagle.
               </p>
             </div>
           </div>
@@ -557,36 +859,389 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
         </div>
 
         {showScoutGuide && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <BookOpen size={14} />
-                <span>1. Learn & Practice</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Work on rank requirements, outdoor skills, and merit badges with your patrol during weekly meetings and campouts.
-              </p>
+          <div className="space-y-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
+            {/* Guide Interactive Sub-Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('advancement')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'advancement'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <Award size={13} />
+                <span>1. Rank Advancement</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('homework')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'homework'
+                    ? 'bg-orange-600 text-white shadow-md shadow-orange-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <BookOpen size={13} />
+                <span>2. Weekly Homework</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('eagle')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'eagle'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <Star size={13} />
+                <span>3. Road to Eagle</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('patrol')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'patrol'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <MessageSquare size={13} />
+                <span>4. Patrol Chat & Voice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('schedule')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'schedule'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <Calendar size={13} />
+                <span>5. Schedule & Roll Call</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('profile')}
+                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeGuideTab === 'profile'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-950/50'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-750'
+                }`}
+              >
+                <User size={13} />
+                <span>6. Digital ID & Profile</span>
+              </button>
             </div>
 
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                <Send size={14} />
-                <span>2. Submit for Oral Testing</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Open <strong>My Advancement</strong> and click the circle next to any requirement to submit it to your Scoutmaster for oral review.
-              </p>
-            </div>
+            {/* Guide Tab Body */}
+            {activeGuideTab === 'advancement' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                      ⚜️
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Rank Advancement & Testing Works</h4>
+                      <p className="text-[11px] text-slate-400">Step-by-step path from Scout to Tenderfoot, Second Class, First Class, Star, Life & Eagle</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('advancement')}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>Open My Advancement</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
 
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <Award size={14} />
-                <span>3. Demonstrate & Advance</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span>1️⃣</span> Learn the Skill
+                    </span>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Practice knots, first aid, outdoor cooking, and pioneering with your patrol during Friday meetings and campouts.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <span>2️⃣</span> Click to Request Test
+                    </span>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      In <strong>My Advancement</strong>, tap the circle next to any requirement. It will mark it as <em>Pending Oral Review</em> for your Scoutmaster.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-sky-400 font-bold flex items-center gap-1">
+                      <span>3️⃣</span> Oral Test & Sign-off
+                    </span>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Demonstrate the skill to your Scoutmaster. When approved, your rank percentage increases immediately toward your next badge!
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Answer the testing questions during troop review. When signed off, your rank progress increases toward your next badge and Eagle rank!
-              </p>
-            </div>
+            )}
+
+            {activeGuideTab === 'homework' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
+                      📚
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Weekly Homework & Challenges Work</h4>
+                      <p className="text-[11px] text-slate-400">Instructional video lessons, skill worksheets, and submission for Patrol Leader review</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('assignments')}
+                    className="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>Open Weekly Homework</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-orange-400 font-bold flex items-center gap-1">
+                      <span>🎬</span> 1. Watch & Study
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Open active assignments to watch YouTube scouting video tutorials and study assigned reading materials.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-sky-400 font-bold flex items-center gap-1">
+                      <span>📝</span> 2. Write Responses
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Answer the reflection prompts and worksheet questions in the text field or attach documentation links.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span>✅</span> 3. Submit for Sign-off
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Tap <strong>Submit Homework</strong>. Your Patrol Leader or Scoutmaster will grade it and award completion credits.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeGuideTab === 'eagle' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                      🦅
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Merit Badges & The Road to Eagle Work</h4>
+                      <p className="text-[11px] text-slate-400">21 Merit Badges, Eagle Service Projects, and Board of Review milestones</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('road-to-eagle')}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>Explore Road to Eagle</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <span>🎖️</span> 14 Eagle-Required
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Complete Camping, First Aid, Citizenship in Society, Environmental Science, Swimming, and other core badges.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span>🌟</span> 7 Elective Badges
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Choose 7 elective badges matched with our in-house certified troop counselors covering 27+ subject specialties.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-purple-400 font-bold flex items-center gap-1">
+                      <span>🛠️</span> Eagle Service Project
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Plan and lead a community leadership project using the multi-stage digital workbook tracker before age 18.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeGuideTab === 'patrol' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                      💬
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Patrol Chat & Voice Messenger Works</h4>
+                      <p className="text-[11px] text-slate-400">Encrypted messaging, audio voice notes, pinned packing lists, and Google Meet</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('tarbiyah-hub', { subTab: 'chat' })}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>Launch Patrol Hub</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-indigo-400 font-bold flex items-center gap-1">
+                      <span>🎙️</span> Audio Voice Memos
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Tap the Mic button to record audio notes with interactive waveform playback ($1.5\times$ and $2\times$ speeds).
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <span>📌</span> Pinned Announcements
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      View important leader notices and star critical messages to save packing lists and meet locations to your drawer.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-sky-400 font-bold flex items-center gap-1">
+                      <span>📹</span> Video Huddles
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Join weekly online patrol halqas and virtual skill reviews directly via the Patrol Meeting tab.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeGuideTab === 'schedule' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+                      📅
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Troop Schedule & Roll Call Works</h4>
+                      <p className="text-[11px] text-slate-400">Friday halqas, weekend campouts, RSVPs, and attendance standing</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('events')}
+                    className="bg-sky-600 hover:bg-sky-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>View Troop Calendar</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-sky-400 font-bold flex items-center gap-1">
+                      <span>🗓️</span> Master Calendar
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Check meeting dates, timings, venue addresses, and specific packing lists for every troop gathering.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span>🎯</span> Attendance Standing
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Attend regularly to maintain a green standing. Roll call is taken every session and syncs to your advancement record.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <span>📝</span> Absence Notices
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      If you are sick or travelling, submit an excuse note from your profile so your absence is marked as <em>Excused</em>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeGuideTab === 'profile' && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                      🪪
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white">How Digital Scout ID & Profile Records Work</h4>
+                      <p className="text-[11px] text-slate-400">Digital troop ID card, medical forms, uniform inspection, and official report signatures</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate && onNavigate('profile')}
+                    className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <span>Open Scout Profile</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-purple-400 font-bold flex items-center gap-1">
+                      <span>🪪</span> Digital ID Card
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Show your official troop card with QR code, BSA ID, rank credentials, and emergency contact numbers.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-rose-400 font-bold flex items-center gap-1">
+                      <span>🏥</span> Medical Readiness
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Ensure your BSA Annual Health & Medical Record (Parts A/B/C) and allergy notes are always up to date.
+                    </p>
+                  </div>
+                  <div className="bg-slate-850/80 border border-slate-800 p-3 rounded-xl space-y-1">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <span>✍️</span> Digital Signatures
+                    </span>
+                    <p className="text-[11px] text-slate-350 leading-relaxed">
+                      Digitally sign official published progress reports and advancement certificates directly on your phone or tablet.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
