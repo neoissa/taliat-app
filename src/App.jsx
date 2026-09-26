@@ -45,7 +45,7 @@ import { HASSAN_LEADERSHIP_PROFILE } from './data/leaderCredentialsData';
 import { syncAnehmeBadges } from './utils/anehmeMeritBadges';
 import { auth, db } from './firebase';
 import { signOut } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import {
   Menu,
   X,
