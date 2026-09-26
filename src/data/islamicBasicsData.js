@@ -790,12 +790,60 @@ export const INFALLIBLES_FULL_BIOGRAPHIES = [
   }
 ];
 
+export const TAQLEED_KNOWLEDGE_DATA = [
+  {
+    id: "taqleed_definition_rational",
+    title: "1. Definition & Rational Necessity of Taqleed",
+    arabic: "التقليد والضرورة العقلية",
+    category: "Taqleed & Jurisprudence",
+    summary: "Taqleed means acting according to the verdicts and legal rulings of a qualified, living Mujtahid in practical Islamic laws (Furu al-Din).",
+    details: "In Islamic jurisprudence, every adult believer (Mukallaf) must fulfill their religious obligations through one of three distinct paths:\n\n1. **Ijtihad**: Becoming a master jurist (Mujtahid) capable of extracting rulings directly from the Holy Quran, authentic Sunnah of the Prophet & Ahlul Bayt, consensus (Ijma'), and sound intellect ('Aql).\n2. **Ihtiyat (Precaution)**: Acting in a manner that guarantees fulfillment of duties across all jurists' opinions (very difficult for laypeople).\n3. **Taqleed (Following an Expert)**: Following the legal verdicts of the most learned living jurist (Al-A'lam).\n\n• **Common-Sense Rational Analogy**: Just as a person suffering from illness consults a trained medical doctor, or someone building a structure relies on a civil engineer, common sense ('Aql) dictates that a person who is not a specialized scholar of Islamic law must consult an expert jurist (Marja') to ensure their acts of worship and transactions are valid before Allah.",
+    testPrompt: "Explain the definition of Taqleed, name the 3 paths of fulfilling religious duties (Ijtihad, Ihtiyat, Taqleed), and give the rational doctor analogy."
+  },
+  {
+    id: "taqleed_conditions_marja",
+    title: "2. The 8 Mandatory Conditions of a Marja'",
+    arabic: "شروط مرجع التقليد الثمانية",
+    category: "Taqleed & Jurisprudence",
+    summary: "A jurist must meet 8 strict theological, moral, and intellectual qualifications to be qualified as a Marja' al-Taqlid.",
+    details: "According to Ja'fari jurisprudence, the Marja' al-Taqlid whom believers follow must possess all of the following 8 conditions simultaneously:\n\n1. **Adult (Baligh)**: Must have reached religious maturity.\n2. **Sane ('Aaqil)**: Must be of sound mind and supreme intellect.\n3. **Shi'a Ithna 'Ashari**: Must believe in the 12 Infallible Imams of Ahlul Bayt (A.S.).\n4. **Legitimate Birth (Taharat al-Mawlid)**: Born in legitimate wedlock.\n5. **Male (Rajul)**: A male jurist for public emulation as a Marja'.\n6. **Living (Hayy)**: Must be alive when initiating Taqleed (initial taqleed of a deceased scholar is not permissible).\n7. **Just & Pious ('Adil)**: Must possess supreme God-consciousness (Taqwa), avoid all major sins (Kaba'ir), not persist in minor sins, and uphold Islamic honor and dignity.\n8. **The Most Learned (Al-A'lam)**: Must be recognized as more capable than any other living jurist in extracting rulings from Islamic sources.",
+    testPrompt: "Recite at least 5 of the 8 mandatory conditions of a Marja' and explain what 'Adil (just) and Al-A'lam (most learned) mean."
+  },
+  {
+    id: "taqleed_scope_boundaries",
+    title: "3. Scope & Boundaries: Usul vs. Furu al-Din",
+    arabic: "مجال التقليد وحدوده بين الأصول والفروع",
+    category: "Taqleed & Jurisprudence",
+    summary: "Taqleed is strictly forbidden in core beliefs (Usul al-Din) and obligatory in practical laws (Furu al-Din).",
+    details: "Islamic teachings are divided into fundamental beliefs and practical rulings with distinct rules regarding Taqleed:\n\n• **Usul al-Din (Roots of Religion - ❌ NO TAQLEED)**:\n  Taqleed is **STRICTLY FORBIDDEN** in core beliefs: Tawhid (Monotheism), 'Adl (Divine Justice), Nubuwwah (Prophethood), Imamah (Divine Leadership), and Ma'ad (Day of Judgement). Every individual Muslim must reach personal certainty and intellectual conviction through reason, study, and reflection.\n\n• **Furu al-Din (Branches of Practice - ✅ TAQLEED OBLIGATORY)**:\n  Taqleed is **OBLIGATORY** for non-Mujtahids in detailed practical rulings, including Salat, Sawm, Khums, Hajj, business contracts, dietary laws, Halal & Haram, and daily ethics.\n\n• **Dharuriyyat (Self-Evident Essentials - ℹ️ NO TAQLEED NEEDED)**:\n  Universal essentials of Islam that are known by all believers (such as the obligation of the 5 daily prayers, fasting Ramadan, or the prohibition of lying, murder, and alcohol) do not require a fatwa.",
+    testPrompt: "Explain why Taqleed is forbidden in Usul al-Din and why it is obligatory in Furu al-Din."
+  },
+  {
+    id: "taqleed_terminology_fatwa",
+    title: "4. Key Fiqh Terms: Fatwa, Ihtiyat & Risalah",
+    arabic: "المصطلحات الفقهية الأساسية",
+    category: "Taqleed & Jurisprudence",
+    summary: "Essential terminology used by Maraji' in their practical law manuals (Risalah Amaliyyah).",
+    details: "Every scout should understand the primary legal terms found in Islamic rulings:\n\n• **Mujtahid / Faqih**: A scholar who has mastered Quranic sciences, Hadith, Arabic linguistics, Rijal (biography of narrators), and Usul al-Fiqh to deduce laws.\n• **Risalah 'Amaliyyah**: The comprehensive practical law manual published by a Marja' outlining all rulings for daily life.\n• **Fatwa**: A definitive, decisive legal verdict issued by the Marja' without hesitation (e.g. \"It is Wajib to wash the face from top to bottom in Wudu\").\n• **Ihtiyat Wajib (Obligatory Precaution)**: A ruling where the Marja' has not issued a final fatwa. In this case, the follower has two choices: either act according to this precaution, OR refer this specific issue to the *second most learned* living Marja' (Al-Fal-A'lam).\n• **Ihtiyat Mustahab (Recommended Precaution)**: A recommended precaution where the Marja' has already provided a definitive fatwa, but suggests an even safer optional practice.\n• **Fatwa bil-Jawaz (Permissibility)**: A ruling stating an action is permissible (Ja'iz / Halal).",
+    testPrompt: "Explain the difference between a definitive Fatwa, Ihtiyat Wajib (Obligatory Precaution), and Ihtiyat Mustahab (Recommended Precaution)."
+  },
+  {
+    id: "taqleed_identifying_alam",
+    title: "5. How to Identify the Most Learned Marja'",
+    arabic: "طرق تشخيص المجتهد الأعلم",
+    category: "Taqleed & Jurisprudence",
+    summary: "The 3 recognized Islamic methods for determining which scholar is the most learned (Al-A'lam).",
+    details: "Since believers must follow the most learned living jurist (Al-A'lam), Islamic jurisprudence provides 3 clear evidentiary methods to identify him:\n\n1. **Direct Personal Knowledge**: If the follower is personally an expert scholar capable of evaluating the research and depth of living jurists.\n2. **Testimony of Two Just Experts (Ahl al-Khibrah)**: When two just, trustworthy scholars of jurisprudence testify that a specific Mujtahid is the most learned, provided two other just experts do not contradict their testimony.\n3. **Widespread Acclaim & Consensus (Al-Shuyoo')**: When a scholar becomes widely acknowledged and recognized as the most learned among religious scholars, seminaries (Hawza 'Ilmiyyah), and religious leaders.\n\n• **Consulting Respected Leaders**: Young scouts and youth typically determine their Marja' by consulting their local pious scholars, teachers, and parents who have consulted Ahl al-Khibrah.",
+    testPrompt: "List the 3 methods for identifying the most learned Marja' (Al-A'lam) in Islamic jurisprudence."
+  }
+];
+
 export const ISLAMIC_BASICS_TOPICS = [
   {
     "id": "taqleed",
-    "title": "Concept of Taqleed (Following a Marja')",
+    "title": "Concept of Taqleed & Ijtihad (Following a Marja')",
     "category": "Belief & Practice",
-    "text": "Taqleed means following a qualified Islamic jurist (Marja' al-Taqlid) in matters of practical religious laws (Furu al-Din).\n\n• **Why Taqleed is Required**: A person who is not a qualified Mujtahid (expert jurist capable of extracting rulings directly from the Quran and Hadith) must refer to the most learned living scholar (Al-A'lam) to ensure their acts of worship and transactions are valid.\n• **Scope of Taqleed**: Taqleed applies strictly to practical rulings (Fiqh). In fundamental beliefs (Usul al-Din like Tawhid, Adl, Nubuwwah, Imamah, Qiyamah), every Muslim must achieve personal conviction through reason and understanding without Taqleed.\n• **The Risalah Amaliyyah**: The Marja' publishes a practical law book (Risalah) that guides followers through worship, dietary laws, business ethics, and daily life."
+    "text": "Taqleed means following a qualified Islamic jurist (Marja' al-Taqlid) in practical religious laws (Furu al-Din).\n\n• **Why Taqleed is Required**: A person who is not a qualified Mujtahid (expert jurist capable of extracting rulings directly from the Quran and Hadith) must refer to the most learned living scholar (Al-A'lam) to ensure their acts of worship and transactions are valid before Allah, just as a patient consults a doctor for medicine.\n• **Scope of Taqleed**: Taqleed applies strictly to practical rulings (Fiqh). In fundamental beliefs (Usul al-Din like Tawhid, Adl, Nubuwwah, Imamah, Qiyamah), every Muslim must achieve personal conviction through reason and understanding without Taqleed.\n• **The 8 Conditions of a Marja'**: Must be Baligh (Adult), Sane, Twelver Shia, Legitimate birth, Male, Living when starting taqleed, Just & Pious ('Adil), and the Most Learned (Al-A'lam).\n• **Key Terminology**: Fatwa (definitive ruling), Ihtiyat Wajib (obligatory precaution - can refer to second most learned), Risalah Amaliyyah (practical law manual)."
   },
   {
     "id": "ghadir_khumm",

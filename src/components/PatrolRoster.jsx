@@ -269,12 +269,15 @@ function ScoutDetail({ scout, currentUser, onBack, onScheduleMeeting }) {
   // Derive summary metrics for scout
   const completedRanksCount = RANKS_DATA.filter(rank => isRankCompleted(rank, ranksProgress)).length;
 
-  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout.rank);
-  const nextTargetRank = getNextIncompleteRank(ranksProgress);
-  const activeRank = latestAchievedRank.name;
+  const latestAchievedRank = getLatestAchievedRank(ranksProgress, scout?.rank);
+  const nextTargetRank = getNextIncompleteRank(ranksProgress) || latestAchievedRank || RANKS_DATA[0];
+  const activeRank = latestAchievedRank?.name || 'Scout';
+  const activeRankData = nextTargetRank || latestAchievedRank || RANKS_DATA[0];
+  const activeRankProgress = ranksProgress[activeRankData.id] || {};
+  const completedReqs = activeRankProgress.completedRequirements || activeRankProgress.steps || activeRankProgress.requirements || {};
 
   const targetStats = getRankCompletionPercentage(nextTargetRank.id, ranksProgress);
-  const activePercent = targetStats.percentage;
+  const activePercent = targetStats?.percentage || 0;
 
   // Merit Badge Stats
   const badgesEarned = MERIT_BADGES.filter(b => {
@@ -941,10 +944,11 @@ function ScoutDetail({ scout, currentUser, onBack, onScheduleMeeting }) {
               </tr>
             </thead>
             <tbody>
-              {activeRankData.categories ? activeRankData.categories.map((category) => 
-                category.requirements.map((req) => {
-                  const isDone = !!completedReqs[req.id]?.completed;
-                  const completionDate = completedReqs[req.id]?.completedAt || '';
+              {activeRankData?.categories ? activeRankData.categories.map((category) => 
+                (category.requirements || []).map((req) => {
+                  const reqVal = completedReqs[req.id];
+                  const isDone = reqVal === true || reqVal?.completed === true || reqVal === 'completed' || reqVal === 'approved' || reqVal?.approved === true;
+                  const completionDate = typeof reqVal === 'object' ? (reqVal?.completedAt || reqVal?.date || reqVal?.approvedAt || '') : '';
                   return (
                     <tr key={req.id} className="border-t border-slate-300">
                       <td className="p-2 border border-slate-300 font-mono font-bold text-slate-600">{req.number}</td>

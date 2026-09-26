@@ -5,7 +5,8 @@ import {
   ISLAMIC_BASICS_TOPICS, 
   KARBALA_CHARACTERS_DATA, 
   TAQIBAT_AND_DUAS_DATA, 
-  INFALLIBLES_FULL_BIOGRAPHIES 
+  INFALLIBLES_FULL_BIOGRAPHIES,
+  TAQLEED_KNOWLEDGE_DATA 
 } from '../data/islamicBasicsData';
 import { 
   BookOpen, 
@@ -263,6 +264,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
   // Selected item modal / expanded cards
   const [selectedKarbalaChar, setSelectedKarbalaChar] = useState(null);
   const [selectedInfallible, setSelectedInfallible] = useState(null);
+  const [selectedTaqleedTopic, setSelectedTaqleedTopic] = useState(null);
   const [expandedTopic, setExpandedTopic] = useState(null);
 
   // Real-time progress map
@@ -451,6 +453,16 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
       sectionTab: 'branches',
       testPrompt: b.testPrompt,
       summary: b.details
+    })),
+    ...TAQLEED_KNOWLEDGE_DATA.map(t => ({
+      id: t.id,
+      rawId: t.id,
+      title: t.title,
+      subtitle: t.arabic,
+      category: '📜 Taqleed & Jurisprudence',
+      sectionTab: 'taqleed',
+      testPrompt: t.testPrompt,
+      summary: t.summary
     })),
     ...ISLAMIC_BASICS_TOPICS.map(t => ({
       id: t.id,
@@ -714,6 +726,18 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
         </button>
 
         <button
+          onClick={() => setActiveTab('taqleed')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            activeTab === 'taqleed'
+              ? 'bg-amber-700 text-white shadow-lg shadow-amber-950/40 border border-amber-500/30'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700'
+          }`}
+        >
+          <Scroll size={15} className="text-amber-400" />
+          <span>📜 Taqleed & Fiqh Laws ({TAQLEED_KNOWLEDGE_DATA.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('tracker')}
           className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'tracker'
@@ -819,6 +843,7 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                           setActiveTab(item.sectionTab);
                           if (item.sectionTab === 'karbala') setSelectedKarbalaChar(item.rawId);
                           if (item.sectionTab === 'infallibles') setSelectedInfallible(item.rawId);
+                          if (item.sectionTab === 'taqleed') setSelectedTaqleedTopic(item.rawId);
                           if (item.sectionTab === 'tracker') setExpandedTopic(item.rawId);
                         }}
                         className="bg-slate-700/80 hover:bg-slate-700 text-amber-300 hover:text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-slate-600 shrink-0 cursor-pointer"
@@ -1318,6 +1343,206 @@ export default function IslamicKnowledge({ currentUser, scoutId: propScoutId }) 
                     isLeaderOrOwner={isLeaderOrOwner}
                     isScout={isScout}
                     testPrompt={branch.testPrompt}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── TAB: TAQLEED & JURISPRUDENCE ──────────────── */}
+      {activeTab === 'taqleed' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Main Module Banner */}
+          <div className="bg-gradient-to-r from-amber-950/70 via-slate-800 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Fiqh & Jurisprudence
+                  </span>
+                  <span className="text-xs text-amber-300 font-serif font-bold">
+                    باب التقليد والاجتهاد في الشريعة الإسلامية
+                  </span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
+                  <Scroll className="text-amber-400" size={24} />
+                  <span>Taqleed & Following the Living Marja' (التقليد)</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Taqleed means following the authoritative legal verdicts of the most learned living jurist (Al-A'lam) in practical worship and daily laws (Furu al-Din). In fundamental beliefs (Usul al-Din), every Muslim must have personal intellectual conviction without Taqleed.
+                </p>
+              </div>
+
+              {/* Quick Summary Pill / Marja Card */}
+              <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 text-xs space-y-2 shrink-0 max-w-xs shadow-lg">
+                <div className="flex items-center gap-2 text-amber-300 font-bold uppercase text-[10px]">
+                  <Compass size={14} className="text-amber-400" />
+                  <span>The 3 Paths of Mukallaf</span>
+                </div>
+                <div className="space-y-1 text-slate-300 text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-emerald-400 font-bold">1. Ijtihad:</span>
+                    <span>Master jurist who deduces laws</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sky-400 font-bold">2. Ihtiyat:</span>
+                    <span>Acting on universal precaution</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-amber-400 font-bold">3. Taqleed:</span>
+                    <span>Following the living Al-A'lam</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Principles Banner */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-750/70 text-xs text-slate-300">
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750/80">
+                <strong className="text-amber-300 block mb-1">❌ No Taqleed in Usul al-Din</strong>
+                <p className="text-[11px] text-slate-300 leading-snug">Every believer must believe in Tawhid, 'Adl, Nubuwwah, Imamah, & Ma'ad through personal reason and reflection.</p>
+              </div>
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750/80">
+                <strong className="text-emerald-300 block mb-1">✅ Taqleed in Furu al-Din</strong>
+                <p className="text-[11px] text-slate-300 leading-snug">Obligatory in detailed practical rulings (Salat, Fasting, Khums, Halal/Haram) from the living, most learned Marja'.</p>
+              </div>
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-750/80">
+                <strong className="text-teal-300 block mb-1">🩺 The Doctor Analogy</strong>
+                <p className="text-[11px] text-slate-300 leading-snug">Just as sound intellect commands seeing an expert physician for illness, it commands consulting a jurist for divine laws.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5 Structured Taqleed Study Modules */}
+          <div className="space-y-4">
+            {TAQLEED_KNOWLEDGE_DATA.map((topic, index) => {
+              const prog = progress[topic.id] || {};
+              const isSelected = selectedTaqleedTopic === topic.id;
+
+              return (
+                <div
+                  key={topic.id}
+                  className={`bg-slate-800 border-2 rounded-3xl p-5 md:p-6 transition-all shadow-xl space-y-4 ${
+                    prog.completed
+                      ? 'border-emerald-500/40 bg-emerald-950/10'
+                      : prog.pending
+                      ? 'border-amber-500/50 bg-amber-950/15'
+                      : 'border-slate-700/80 hover:border-amber-500/30'
+                  }`}
+                >
+                  {/* Topic Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-750/80 pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-black flex items-center justify-center text-sm shrink-0 shadow-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                            {topic.category}
+                          </span>
+                          <span className="text-xs font-serif text-emerald-400 font-bold">
+                            {topic.arabic}
+                          </span>
+                        </div>
+                        <h4 className="text-base md:text-lg font-black text-white">
+                          {topic.title}
+                        </h4>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTaqleedTopic(isSelected ? null : topic.id)}
+                      className="text-xs font-bold text-amber-300 hover:text-white bg-slate-900/80 hover:bg-amber-600/30 px-3.5 py-1.5 rounded-xl border border-amber-500/30 transition flex items-center gap-1.5 self-start sm:self-center cursor-pointer shrink-0"
+                    >
+                      <span>{isSelected ? 'Collapse Details' : 'Full Fiqh Details'}</span>
+                      {isSelected ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  </div>
+
+                  {/* Summary Box */}
+                  <div className="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-750 text-xs text-slate-200 leading-relaxed font-sans">
+                    <p className="font-medium">{topic.summary}</p>
+                  </div>
+
+                  {/* Deep Details */}
+                  <div className="space-y-3">
+                    <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-line bg-slate-900/40 p-4 rounded-2xl border border-slate-750/60 space-y-2">
+                      {topic.details}
+                    </div>
+
+                    {/* Visual Helpers for Specific Topics */}
+                    {topic.id === 'taqleed_conditions_marja' && (
+                      <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 space-y-2">
+                        <h5 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Shield size={14} /> The 8 Mandatory Qualifications of a Marja' al-Taqlid:
+                        </h5>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">1. Baligh (Adult)</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">2. 'Aaqil (Sane)</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">3. Twelver Shia</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">4. Legitimate Birth</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">5. Male (Rajul)</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-slate-200 font-medium text-center">6. Living (Hayy)</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-emerald-300 font-bold text-center">7. 'Adil (Just)</span>
+                          <span className="bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-amber-300 font-bold text-center">8. Al-A'lam (Most Learned)</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {topic.id === 'taqleed_scope_boundaries' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-rose-950/20 border border-rose-500/40 rounded-2xl p-3.5 space-y-1">
+                          <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
+                            <span>❌ Usul al-Din (Roots of Religion)</span>
+                          </div>
+                          <p className="text-[11px] text-rose-200/90 leading-relaxed">
+                            <strong>No Taqleed Allowed:</strong> Must be grounded in personal conviction, reason ('Aql), and study (Tawhid, Adl, Nubuwwah, Imamah, Ma'ad).
+                          </p>
+                        </div>
+                        <div className="bg-emerald-950/20 border border-emerald-500/40 rounded-2xl p-3.5 space-y-1">
+                          <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                            <span>✅ Furu al-Din (Branches of Practice)</span>
+                          </div>
+                          <p className="text-[11px] text-emerald-200/90 leading-relaxed">
+                            <strong>Taqleed is Obligatory:</strong> Must follow the living Al-A'lam for Salat, Sawm, Khums, Hajj, transactions, and Halal/Haram.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {topic.id === 'taqleed_terminology_fatwa' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-750">
+                          <span className="font-bold text-emerald-400 block mb-0.5">Fatwa (Definitive Verdict)</span>
+                          <span className="text-[11px] text-slate-300">Decisive ruling with no hesitation. Must be followed as stated.</span>
+                        </div>
+                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-750">
+                          <span className="font-bold text-amber-400 block mb-0.5">Ihtiyat Wajib (Obligatory Precaution)</span>
+                          <span className="text-[11px] text-slate-300">No decisive fatwa. Follower can act on it OR refer to the second most learned living jurist (Al-Fal-A'lam).</span>
+                        </div>
+                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-750">
+                          <span className="font-bold text-sky-400 block mb-0.5">Risalah 'Amaliyyah</span>
+                          <span className="text-[11px] text-slate-300">The comprehensive Islamic practical manual published by the Marja'.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Interactive Testing Bar */}
+                  <IslamicTestingBar
+                    itemId={topic.id}
+                    itemTitle={topic.title}
+                    progressEntry={prog}
+                    onToggleSubmitScout={handleToggleSubmitScout}
+                    onApproveLeader={handleApproveLeader}
+                    onReset={handleReset}
+                    isLeaderOrOwner={isLeaderOrOwner}
+                    isScout={isScout}
+                    testPrompt={topic.testPrompt}
                   />
                 </div>
               );
