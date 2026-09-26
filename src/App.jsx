@@ -1681,43 +1681,41 @@ export default function App() {
 
         {/* ── 2. SCOUTS & PATROLS HUB (LEADER / OWNER) ── */}
         {currentTab === 'scouts-hub' && (isLeaderOrOwner || isExecutive) && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Scouts & Patrols Hub"
-              hubSubtitle="Manage patrol rosters, record session roll call, sign off rank advancements, and generate reports."
-              colorTheme="emerald"
-              activeTab={scoutsHubSubTab}
-              onChange={(tabId) => setScoutsHubSubTab(tabId)}
-              tabs={[
-                { id: 'roster', label: 'Patrol Roster', icon: 'Users' },
-                { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare' },
-                { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award' },
-                { id: 'reports', label: 'Reports & Audits', icon: 'FileText' }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="Scouts & Patrols Hub"
+            hubSubtitle="Manage patrol rosters, record session roll call, sign off rank advancements, and generate reports."
+            colorTheme="emerald"
+            activeTab={scoutsHubSubTab}
+            onChange={(tabId) => setScoutsHubSubTab(tabId)}
+            tabs={[
+              { id: 'roster', label: 'Patrol Roster', icon: 'Users', description: 'Active scouts & member profiles' },
+              { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare', description: 'Session check-in & logs' },
+              { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award', description: 'Rank requirements & approvals' },
+              { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' }
+            ]}
+          >
             {scoutsHubSubTab === 'roster' && <PatrolRoster currentUser={currentUser} />}
             {scoutsHubSubTab === 'attendance' && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
             {scoutsHubSubTab === 'advancement' && <ScoutList currentUser={currentUser} />}
             {scoutsHubSubTab === 'reports' && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
-          </div>
+          </HubSubNav>
         )}
 
         {/* ── 3. COMMUNICATIONS HUB (LEADER / OWNER) ── */}
         {currentTab === 'communication-hub' && (isLeaderOrOwner || isExecutive) && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Communications Hub"
-              hubSubtitle="Direct parent messaging, whole-troop broadcasts, patrol channels, and conference approvals."
-              colorTheme="indigo"
-              activeTab={commHubSubTab}
-              onChange={(tabId) => setCommHubSubTab(tabId)}
-              tabs={[
-                { id: 'direct-messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount },
-                { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone' },
-                { id: 'chat', label: 'Patrol Messenger', icon: 'Radio', badge: unreadChatCount },
-                { id: 'parent-requests', label: 'Parent Approvals', icon: 'Inbox', badge: unreadRequestsCount }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="Communications Hub"
+            hubSubtitle="Direct parent messaging, whole-troop broadcasts, patrol channels, and conference approvals."
+            colorTheme="indigo"
+            activeTab={commHubSubTab}
+            onChange={(tabId) => setCommHubSubTab(tabId)}
+            tabs={[
+              { id: 'direct-messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount, description: '1-on-1 private messaging' },
+              { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', description: 'Announcements & SMS/Email' },
+              { id: 'chat', label: 'Patrol Messenger', icon: 'Radio', badge: unreadChatCount, description: 'Encrypted patrol discussions' },
+              { id: 'parent-requests', label: 'Parent Approvals', icon: 'Inbox', badge: unreadRequestsCount, description: 'Conference & signup reviews' }
+            ]}
+          >
             {commHubSubTab === 'direct-messages' && <LeaderMessagingHub currentUser={currentUser} onNavigate={handleNavigate} />}
             {commHubSubTab === 'broadcasts' && <LeaderBroadcastCenter currentUser={currentUser} onNavigate={handleNavigate} />}
             {commHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
@@ -1730,7 +1728,7 @@ export default function App() {
                 initialFilterTab={adminExtraData?.filterTab || 'pending'} 
               />
             )}
-          </div>
+          </HubSubNav>
         )}
 
         {/* ── 4. COMMUNICATIONS HUB (PARENT) ── */}
@@ -1754,29 +1752,28 @@ export default function App() {
 
         {/* ── 6. ADVANCEMENT HUB ── */}
         {currentTab === 'advancement-hub' && !isParent && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="My Scouting Advancement"
-              hubSubtitle="Track your journey from Scout to Eagle, merit badges, scouting handbooks, demonstration videos, and leadership role guides."
-              colorTheme="emerald"
-              activeTab={advancementHubSubTab}
-              onChange={(tabId) => setAdvancementHubSubTab(tabId)}
-              tabs={[
-                { id: 'advancement', label: '7 Ranks Progress', icon: 'Compass' },
-                { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: 'Star' },
-                { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain' },
-                { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book' },
-                { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video' },
-                { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown' }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="My Scouting Advancement"
+            hubSubtitle="Track your journey from Scout to Eagle, merit badges, scouting handbooks, demonstration videos, and leadership role guides."
+            colorTheme="emerald"
+            activeTab={advancementHubSubTab}
+            onChange={(tabId) => setAdvancementHubSubTab(tabId)}
+            tabs={[
+              { id: 'advancement', label: '7 Ranks Progress', icon: 'Compass', description: 'Scout through Eagle' },
+              { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: 'Star', description: 'Required & elective badges' },
+              { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain', description: 'Step-by-step pathway' },
+              { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book', description: 'Official guides & references' },
+              { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video', description: 'Skills & safety training' },
+              { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown', description: 'Position expectations' }
+            ]}
+          >
             {advancementHubSubTab === 'advancement' && <AdvancementTracker currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'merit-badges' && <MeritBadgeDashboard currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'road-to-eagle' && <RoadToEagleGuide currentUser={currentUser} onNavigate={handleNavigate} />}
             {advancementHubSubTab === 'handbooks' && <VideoResources currentUser={currentUser} initialTab="handbooks" />}
             {advancementHubSubTab === 'videos' && <VideoResources currentUser={currentUser} initialTab="videos" />}
             {advancementHubSubTab === 'leadership' && <RoleAndLeadershipGuide currentUser={currentUser} />}
-          </div>
+          </HubSubNav>
         )}
         {currentTab === 'advancement-hub' && isParent && (
           <ParentDashboard 
@@ -1788,38 +1785,36 @@ export default function App() {
 
         {/* ── 7. KNOWLEDGE HUB (ALL ROLES) ── */}
         {(currentTab === 'knowledge-hub' || currentTab === 'knowledge') && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Islamic Tarbiyah & Knowledge"
-              hubSubtitle="Essential scouting duas, Islamic character development, halqa resources, and spiritual tarbiyah."
-              colorTheme="emerald"
-              activeTab={knowledgeHubSubTab}
-              onChange={(tabId) => setKnowledgeHubSubTab(tabId)}
-              tabs={[
-                { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles' }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="Islamic Tarbiyah & Knowledge"
+            hubSubtitle="Essential scouting duas, Islamic character development, halqa resources, and spiritual tarbiyah."
+            colorTheme="emerald"
+            activeTab={knowledgeHubSubTab}
+            onChange={(tabId) => setKnowledgeHubSubTab(tabId)}
+            tabs={[
+              { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles', description: 'Duas, halqas & character' }
+            ]}
+          >
             {knowledgeHubSubTab === 'islamic' && <IslamicBasics currentUser={currentUser} />}
-          </div>
+          </HubSubNav>
         )}
 
         {/* ── 8. PATROL HUB (SCOUTS & LEADERS) ── */}
         {(currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && !isParent && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Patrol Hub"
-              hubSubtitle="Real-time encrypted patrol messenger, team coordination, meeting huddles, and halqas."
-              colorTheme="indigo"
-              activeTab={tarbiyahHubSubTab}
-              onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
-              tabs={[
-                { id: 'chat', label: 'Patrol Live Messenger', icon: 'MessageSquare', badge: unreadChatCount },
-                { id: 'meetings', label: 'Patrol Meeting & Google Meet', icon: 'Video' }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="Patrol Hub"
+            hubSubtitle="Real-time encrypted patrol messenger, team coordination, meeting huddles, and halqas."
+            colorTheme="indigo"
+            activeTab={tarbiyahHubSubTab}
+            onChange={(tabId) => setTarbiyahHubSubTab(tabId)}
+            tabs={[
+              { id: 'chat', label: 'Patrol Live Messenger', icon: 'MessageSquare', badge: unreadChatCount, description: 'Real-time patrol channel' },
+              { id: 'meetings', label: 'Patrol Meeting & Google Meet', icon: 'Video', description: 'Huddle agendas & links' }
+            ]}
+          >
             {tarbiyahHubSubTab === 'chat' && <PatrolChat currentUser={currentUser} onMarkRead={() => setUnreadChatCount(0)} />}
             {tarbiyahHubSubTab === 'meetings' && <PatrolMeetingView currentUser={currentUser} onNavigate={handleNavigate} />}
-          </div>
+          </HubSubNav>
         )}
         {(currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && isParent && (
           <ParentDashboard 
@@ -1831,21 +1826,20 @@ export default function App() {
 
         {/* ── 9. SCHEDULE & TASKS HUB (LEGACY COMPATIBILITY) ── */}
         {currentTab === 'events-hub' && !isParent && (
-          <div className="space-y-4">
-            <HubSubNav
-              hubTitle="Schedule & Weekly Tasks"
-              hubSubtitle="Upcoming troop meetings, campouts, packing checklists, and weekly skill challenges."
-              colorTheme="sky"
-              activeTab={eventsHubSubTab}
-              onChange={(tabId) => setEventsHubSubTab(tabId)}
-              tabs={[
-                { id: 'events', label: 'Troop Calendar & RSVPs', icon: 'Calendar' },
-                { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen', badge: unreadHomeworkCount }
-              ]}
-            />
+          <HubSubNav
+            hubTitle="Schedule & Weekly Tasks"
+            hubSubtitle="Upcoming troop meetings, campouts, packing checklists, and weekly skill challenges."
+            colorTheme="sky"
+            activeTab={eventsHubSubTab}
+            onChange={(tabId) => setEventsHubSubTab(tabId)}
+            tabs={[
+              { id: 'events', label: 'Troop Calendar & RSVPs', icon: 'Calendar', description: 'Meetings, campouts & trips' },
+              { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Weekly tasks & submissions' }
+            ]}
+          >
             {eventsHubSubTab === 'events' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
             {eventsHubSubTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
-          </div>
+          </HubSubNav>
         )}
         {currentTab === 'events-hub' && isParent && (
           <ParentDashboard 
