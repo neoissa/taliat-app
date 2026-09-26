@@ -25,7 +25,7 @@ export default function MobileTabBar({
   const getBadgeCount = (badgeKey, tabId) => {
     if (tabId === 'communication-hub' || tabId === 'comm-hub') return unreadRequestsCount + unreadAlertsCount + unreadChatCount;
     if (badgeKey === 'unreadRequestsCount' || tabId === 'parent-requests') return unreadRequestsCount;
-    if (badgeKey === 'unreadAlertsCount' || tabId === 'broadcasts' || tabId === 'feed') return unreadAlertsCount;
+    if (badgeKey === 'unreadAlertsCount' || tabId === 'feed') return unreadAlertsCount;
     if (badgeKey === 'unreadChatCount' || tabId === 'chat' || tabId === 'tarbiyah-hub') return unreadChatCount;
     return 0;
   };

@@ -11,8 +11,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Users,
-  UserCheck,
-  Shield,
   Clock,
   Search,
   Filter,
@@ -27,21 +25,17 @@ import {
   Check,
   Share2,
   X,
-  Layers,
-  Flame,
   Zap,
-  Info,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   Eye,
   Edit3,
   Paperclip,
   Plus,
-  RefreshCw,
-  LayoutGrid,
   Radio,
-  Bell
+  Bell,
+  ShieldCheck,
+  CheckSquare
 } from 'lucide-react';
 import { publishTroopBroadcast, deleteTroopBroadcast } from '../services/broadcastService';
 import { 
@@ -51,12 +45,12 @@ import {
 } from '../utils/patrolScoping';
 
 export const BROADCAST_CATEGORIES = [
-  { id: 'General Announcement', label: 'General Announcement', icon: '📢', color: 'bg-slate-800 text-slate-200 border-slate-750' },
-  { id: 'Event / Outing Info', label: 'Event / Outing Info', icon: '⛺', color: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50' },
-  { id: 'Advancement Update', label: 'Advancement Update', icon: '⭐', color: 'bg-amber-950/80 text-amber-300 border-amber-500/50' },
-  { id: 'Urgent Notice', label: 'Urgent Notice', icon: '🚨', color: 'bg-red-950/80 text-red-300 border-red-500/50' },
-  { id: 'Waiver / Form Due', label: 'Waiver / Form Due', icon: '📋', color: 'bg-purple-950/80 text-purple-300 border-purple-500/50' },
-  { id: 'Halqa & Spiritual Circle', label: 'Halqa & Spiritual Circle', icon: '🕌', color: 'bg-sky-950/80 text-sky-300 border-sky-500/50' }
+  { id: 'General Announcement', label: 'General', icon: '📢', color: 'bg-slate-800 text-slate-200 border-slate-700' },
+  { id: 'Event / Outing Info', label: 'Event / Outing', icon: '⛺', color: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50' },
+  { id: 'Advancement Update', label: 'Advancement', icon: '⭐', color: 'bg-amber-950/80 text-amber-300 border-amber-500/50' },
+  { id: 'Urgent Notice', label: 'Urgent Notice', icon: '🚨', color: 'bg-rose-950/80 text-rose-300 border-rose-500/50' },
+  { id: 'Waiver / Form Due', label: 'Waivers & Forms', icon: '📋', color: 'bg-purple-950/80 text-purple-300 border-purple-500/50' },
+  { id: 'Halqa & Spiritual Circle', label: 'Halqa & Tarbiyah', icon: '🕌', color: 'bg-sky-950/80 text-sky-300 border-sky-500/50' }
 ];
 
 export const PRESET_TEMPLATES = [
@@ -67,7 +61,7 @@ export const PRESET_TEMPLATES = [
     priority: 'high',
     targetAudience: 'all',
     targetScope: 'troop_wide',
-    summary: 'Essential schedule, departure timing, and mandatory gear list for upcoming outdoor campouts.',
+    summary: 'Essential departure schedule, arrival timings, and mandatory gear checklist for upcoming outdoor campouts.',
     message: `Assalāmu ʿAlaykum Dhulfiqār Families,\n\nPlease review the updated weekend campout schedule and required gear checklist:\n\n• Departure: Friday at 5:30 PM from Troop Headquarters (Highview Elementary)\n• Return: Sunday at 12:00 PM\n• Required Gear: Complete Class A & B uniform, sleeping bag, flashlight, personal mess kit, water bottle, and scout handbook.\n\nAll scouts must have their Annual Health Record (Parts A & B) on file prior to departure.`,
     attachmentLabel: 'Campout Packing Guide & Checklist',
     attachmentUrl: 'https://scouting.org'
@@ -79,7 +73,7 @@ export const PRESET_TEMPLATES = [
     priority: 'normal',
     targetAudience: 'all',
     targetScope: 'troop_wide',
-    summary: 'Invitations for families to celebrate scout rank badges, merit badges, and recognitions.',
+    summary: 'Invitations for families to celebrate scout rank badges, merit badges, and special recognitions.',
     message: `Assalāmu ʿAlaykum Dhulfiqār Families,\n\nWe are pleased to invite all parents, scouts, and family members to our upcoming Court of Honor Advancement Ceremony.\n\n• Date: This Friday at 6:30 PM\n• Location: Main Assembly Hall (Highview Elementary)\n• Attire: Full Class A Field Uniform (clean neckerchief, sash, badges pinned)\n\nWe will celebrate our candidate rank advancements, merit badge credentials, and special achievements. Light refreshments will be served.`,
     attachmentLabel: 'Advancement Program Agenda',
     attachmentUrl: ''
@@ -316,10 +310,10 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
       setTargetAudience('all');
       setComposerMode('compose');
 
-      // Switch back to Feed view so leader sees the new broadcast
+      // Switch back to Feed view
       setTimeout(() => {
         setActiveView('feed');
-      }, 1200);
+      }, 1000);
 
       setTimeout(() => {
         setPublishSuccessMsg('');
@@ -387,33 +381,40 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
   const scoutCount = users.filter(u => u.role === 'scout').length;
 
   return (
-    <div className="space-y-5 font-sans max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 font-sans max-w-6xl mx-auto pb-12">
       
-      {/* ── 1. CLEAN HERO HEADER & METRICS ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/40 border-2 border-emerald-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border border-emerald-400/60 flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-emerald-950/40">
-              📢
+      {/* ── 1. MODERN SLEEK HEADER ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-13 h-13 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl shadow-inner shrink-0">
+              <Megaphone size={26} />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full tracking-wider">
-                  Troop Communications
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                  Troop Broadcast Center
                 </span>
-                <span className="text-xs text-slate-400 font-mono">Simultaneous Fan-Out</span>
+                <span className="text-[11px] text-slate-400">Multi-Channel Fan-out</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Troop Broadcast & Announcements Hub
-              </h2>
-              <p className="text-xs text-slate-300 mt-0.5 max-w-xl">
-                Publish announcements and urgent notices instantly across Parent Feeds, Scout Alerts, and Patrol Streams.
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Troop Announcements & Broadcasts
+              </h1>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                Dispatch verified notices simultaneously across Parent Portals, Scout Feeds, and Patrol Chat streams.
               </p>
             </div>
           </div>
 
-          {/* Quick CTA Button */}
-          <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+          {/* Quick Metrics & CTA */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs bg-slate-950/80 px-3.5 py-2.5 rounded-2xl border border-slate-800">
+              <span className="text-slate-400">Estimated Reach:</span>
+              <strong className="text-emerald-400 font-bold">~{parentCount} Parents</strong>
+              <span className="text-slate-600">&bull;</span>
+              <strong className="text-sky-400 font-bold">~{scoutCount} Scouts</strong>
+            </div>
+
             {activeView !== 'compose' ? (
               <button
                 type="button"
@@ -421,58 +422,39 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                   setActiveView('compose');
                   setComposerMode('compose');
                 }}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/50 hover:scale-[1.02]"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40"
               >
                 <Plus size={16} />
-                <span>+ New Broadcast</span>
+                <span>New Broadcast</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setActiveView('feed')}
-                className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer border border-slate-700 flex items-center gap-1.5"
+                className="bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-2xl transition cursor-pointer border border-slate-700 flex items-center gap-2"
               >
-                <span>View Sent Broadcasts</span>
+                <Megaphone size={14} />
+                <span>View Feed</span>
               </button>
             )}
           </div>
         </div>
-
-        {/* Compact Metrics Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-slate-800/80 text-xs">
-          <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-            <span className="text-slate-400 text-[11px] font-medium">📢 Total Sent:</span>
-            <strong className="text-white font-bold font-mono">{broadcasts.length}</strong>
-          </div>
-          <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-            <span className="text-slate-400 text-[11px] font-medium">👨‍👩‍👧 Parents:</span>
-            <strong className="text-emerald-400 font-bold font-mono">~{parentCount} Reach</strong>
-          </div>
-          <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-            <span className="text-slate-400 text-[11px] font-medium">⚜️ Scouts:</span>
-            <strong className="text-sky-400 font-bold font-mono">~{scoutCount} Reach</strong>
-          </div>
-          <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-            <span className="text-slate-400 text-[11px] font-medium">🚨 Priority Alerts:</span>
-            <strong className="text-amber-400 font-bold font-mono">{urgentCount}</strong>
-          </div>
-        </div>
       </div>
 
-      {/* ── 2. MAIN ORGANIZATIONAL VIEW SWITCHER ── */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2 flex-wrap">
-        <div className="flex items-center gap-2">
+      {/* ── 2. CLEAN SEGMENTED NAVIGATION ── */}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3 flex-wrap">
+        <div className="bg-slate-900/90 p-1 rounded-2xl border border-slate-800 inline-flex items-center gap-1">
           <button
             type="button"
             onClick={() => setActiveView('feed')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
               activeView === 'feed'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 font-black'
-                : 'bg-slate-850 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-750'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Megaphone size={15} />
-            <span>📬 Sent Broadcasts ({broadcasts.length})</span>
+            <Megaphone size={14} />
+            <span>Active Feed</span>
           </button>
 
           <button
@@ -481,145 +463,187 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
               setActiveView('compose');
               setComposerMode('compose');
             }}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
               activeView === 'compose'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 font-black'
-                : 'bg-slate-850 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-750'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Edit3 size={15} />
-            <span>✏️ Compose Broadcast</span>
+            <Edit3 size={14} />
+            <span>Compose Broadcast</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView('templates')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
               activeView === 'templates'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/40 font-black'
-                : 'bg-slate-850 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-750'
+                ? 'bg-amber-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Sparkles size={15} className="text-amber-300" />
-            <span>⚡ Ready Templates ({PRESET_TEMPLATES.length})</span>
+            <Sparkles size={14} className={activeView === 'templates' ? 'text-white' : 'text-amber-400'} />
+            <span>Ready Templates</span>
           </button>
         </div>
+
+        {urgentCount > 0 && activeView === 'feed' && (
+          <span className="text-xs bg-rose-950/60 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+            <AlertTriangle size={13} className="text-rose-400" />
+            <span>{urgentCount} High Priority / Urgent Alert{urgentCount === 1 ? '' : 's'}</span>
+          </span>
+        )}
       </div>
 
-      {/* Global Action Notifications */}
+      {/* Global Notifications */}
       {publishSuccessMsg && (
-        <div className="p-4 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-200 animate-fadeIn flex items-center gap-3 shadow-xl">
-          <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
-          <span>{publishSuccessMsg}</span>
+        <div className="p-4 bg-emerald-950/90 border border-emerald-500 rounded-2xl text-xs font-bold text-emerald-200 animate-fadeIn flex items-center justify-between gap-3 shadow-xl">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+            <span>{publishSuccessMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPublishSuccessMsg('')}
+            className="text-emerald-400 hover:text-emerald-200"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
       {formError && (
-        <div className="p-3.5 bg-rose-950/80 border border-rose-500/60 rounded-2xl text-xs text-rose-300 flex items-center gap-2 animate-fadeIn shadow-lg">
-          <AlertTriangle size={16} className="text-rose-400 shrink-0" />
-          <span>{formError}</span>
+        <div className="p-3.5 bg-rose-950/90 border border-rose-500/60 rounded-2xl text-xs text-rose-200 flex items-center justify-between gap-2 animate-fadeIn shadow-lg">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-rose-400 shrink-0" />
+            <span>{formError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFormError('')}
+            className="text-rose-400 hover:text-rose-200"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* ──────────────── TAB 1: SENT BROADCASTS ARCHIVE & FEED ──────────────── */}
+      {/* ──────────────── TAB 1: ACTIVE BROADCAST FEED ──────────────── */}
       {activeView === 'feed' && (
         <div className="space-y-4 animate-fadeIn">
+          
           {/* Feed Filter & Search Bar */}
-          <div className="bg-slate-850 border border-slate-755 p-3.5 sm:p-4 rounded-2xl shadow-lg space-y-3">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              {/* Search Bar */}
-              <div className="relative flex-1">
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-md space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Search */}
+              <div className="md:col-span-1 relative">
                 <Search className="absolute left-3.5 top-2.5 text-slate-400" size={14} />
                 <input
                   type="text"
-                  placeholder="Search broadcasts by headline, message, or author..."
+                  placeholder="Search by title, message, or author..."
                   value={feedSearchQuery}
                   onChange={(e) => setFeedSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-755 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
                 />
               </div>
 
-              {/* Priority & Scope Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Priority Filter */}
+              <div>
                 <select
                   value={feedPriorityFilter}
                   onChange={(e) => setFeedPriorityFilter(e.target.value)}
-                  className="bg-slate-900 border border-slate-755 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
                 >
-                  <option value="all">Priority: All</option>
-                  <option value="urgent">🚨 Urgent Only</option>
+                  <option value="all">All Priorities</option>
+                  <option value="urgent">🚨 Urgent Notices</option>
                   <option value="high">⚡ High Priority</option>
-                  <option value="normal">Normal</option>
+                  <option value="normal">Normal Announcements</option>
                 </select>
+              </div>
 
+              {/* Scope Filter */}
+              <div>
                 <select
                   value={feedScopeFilter}
                   onChange={(e) => setFeedScopeFilter(e.target.value)}
-                  className="bg-slate-900 border border-slate-755 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
                 >
-                  <option value="all">Scope: All</option>
-                  <option value="troop_wide">⚡ Entire Troop</option>
-                  <option value="patrol_specific">👥 Patrol Specific</option>
+                  <option value="all">All Scopes (Troop & Patrols)</option>
+                  <option value="troop_wide">⚡ Entire Troop Only</option>
+                  <option value="patrol_specific">👥 Patrol Specific Only</option>
                 </select>
               </div>
             </div>
 
-            {/* Category Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-800">
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-2 border-t border-slate-800/80">
               <button
                 type="button"
                 onClick={() => setFeedCategoryFilter('all')}
-                className={`px-3 py-1 rounded-xl text-[11px] font-bold transition whitespace-nowrap cursor-pointer border ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
                   feedCategoryFilter === 'all'
                     ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                    : 'bg-slate-900 text-slate-400 border-slate-755 hover:text-white'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                 }`}
               >
-                All Categories ({broadcasts.length})
+                All
               </button>
-              {BROADCAST_CATEGORIES.map(cat => {
-                const count = broadcasts.filter(b => b.category === cat.id).length;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setFeedCategoryFilter(cat.id)}
-                    className={`px-3 py-1 rounded-xl text-[11px] font-bold transition whitespace-nowrap cursor-pointer border flex items-center gap-1 ${
-                      feedCategoryFilter === cat.id
-                        ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                        : 'bg-slate-900 text-slate-400 border-slate-755 hover:text-white'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.label}</span>
-                    <span className="text-[9px] bg-slate-950/60 px-1.5 py-0.2 rounded-full font-mono">{count}</span>
-                  </button>
-                );
-              })}
+              {BROADCAST_CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFeedCategoryFilter(cat.id)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border flex items-center gap-1.5 ${
+                    feedCategoryFilter === cat.id
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Broadcasts Feed List */}
+          {/* Feed Content / Empty State */}
           {filteredBroadcasts.length === 0 ? (
-            <div className="bg-slate-850 border border-slate-755 p-12 rounded-3xl text-center space-y-3 text-slate-400">
-              <Megaphone size={40} className="mx-auto text-emerald-400 opacity-60" />
-              <h4 className="text-base font-bold text-white">No Broadcasts Found</h4>
-              <p className="text-xs max-w-md mx-auto">
-                {feedCategoryFilter !== 'all' || feedSearchQuery.trim() || feedPriorityFilter !== 'all'
-                  ? 'No announcements match your search or filter criteria.'
-                  : 'No announcements have been dispatched yet. Click "+ New Broadcast" to send an update.'}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveView('compose');
-                  setComposerMode('compose');
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer inline-flex items-center gap-1.5 mt-2"
-              >
-                <Plus size={14} />
-                <span>Create New Announcement</span>
-              </button>
+            <div className="bg-slate-900 border border-slate-800 p-10 sm:p-14 rounded-3xl text-center space-y-4 shadow-xl">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <Megaphone size={30} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-white">
+                  No Broadcasts Found
+                </h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                  {feedCategoryFilter !== 'all' || feedSearchQuery.trim() || feedPriorityFilter !== 'all' || feedScopeFilter !== 'all'
+                    ? 'No announcements match your current filter or search criteria.'
+                    : 'No troop announcements have been sent yet. Click below to compose an update or choose from ready templates.'}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('compose');
+                    setComposerMode('compose');
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40"
+                >
+                  <Plus size={15} />
+                  <span>Create New Announcement</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('templates')}
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Sparkles size={14} className="text-amber-400" />
+                  <span>Browse Templates</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -637,38 +661,38 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                 return (
                   <div
                     key={b.id || b.broadcastId}
-                    className={`border-2 rounded-3xl p-5 sm:p-6 transition shadow-xl space-y-4 ${
+                    className={`bg-slate-900 border rounded-3xl p-5 sm:p-6 transition shadow-xl space-y-4 ${
                       isUrgent
-                        ? 'bg-gradient-to-br from-slate-900 via-rose-950/20 to-slate-900 border-rose-500/60 shadow-rose-950/30'
+                        ? 'border-rose-500/60 shadow-rose-950/20 ring-1 ring-rose-500/30'
                         : isHigh
-                        ? 'bg-gradient-to-br from-slate-900 via-amber-950/20 to-slate-900 border-amber-500/50 shadow-amber-950/20'
-                        : 'bg-slate-850 border-slate-755 hover:border-emerald-500/40'
+                        ? 'border-amber-500/50 shadow-amber-950/15'
+                        : 'border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     {/* Header Row: Category Badge, Priority Pill, Scope & Date */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${catObj.color}`}>
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${catObj.color}`}>
                           <span>{catObj.icon}</span>
                           <span>{b.category || 'Announcement'}</span>
                         </span>
 
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           isUrgent
-                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse'
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse font-black'
                             : isHigh
                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                            : 'bg-slate-900 text-slate-300 border-slate-750'
+                            : 'bg-slate-950 text-slate-300 border-slate-800'
                         }`}>
                           {b.priority?.toUpperCase() || 'NORMAL'}
                         </span>
 
-                        <span className="text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-750 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800 px-2.5 py-0.5 rounded-full">
                           {b.targetScope === 'patrol_specific' ? `👥 ${b.targetGroupName || 'Patrol'}` : '⚡ Entire Troop'}
                         </span>
 
-                        <span className="text-[10px] text-emerald-400 font-mono">
-                          {b.targetAudience === 'parents_only' ? '👨‍👩‍👧 Parents' : b.targetAudience === 'scouts_only' ? '⚜️ Scouts' : '👨‍👩‍👧 Parents & ⚜️ Scouts'}
+                        <span className="text-[10px] text-emerald-400 font-mono font-medium">
+                          {b.targetAudience === 'parents_only' ? '👨‍👩‍👧 Parents Only' : b.targetAudience === 'scouts_only' ? '⚜️ Scouts Only' : '👨‍👩‍👧 Parents & ⚜️ Scouts'}
                         </span>
                       </div>
 
@@ -683,7 +707,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                       <h3 className="text-base sm:text-lg font-black text-white">
                         {b.title}
                       </h3>
-                      <div className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                      <div className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80">
                         {isLongMessage && !isExpanded ? `${b.message.substring(0, 280)}...` : b.message}
                       </div>
 
@@ -706,7 +730,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                           href={b.attachmentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 rounded-xl text-xs font-bold transition shadow-sm"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition shadow-sm"
                         >
                           <Paperclip size={13} className="text-emerald-400" />
                           <span>{b.attachmentLabel || 'View Attachment / Document'}</span>
@@ -716,7 +740,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     )}
 
                     {/* Footer Action Toolbar */}
-                    <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="text-slate-400 text-[11px]">
                         Published by <strong className="text-slate-200">{b.authorName || 'Leadership'}</strong> ({b.authorRole || 'Leader'})
                       </div>
@@ -727,7 +751,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                           href={`https://wa.me/?text=${waText}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                           title="Share this broadcast to WhatsApp group"
                         >
                           <Share2 size={12} />
@@ -776,12 +800,13 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
 
       {/* ──────────────── TAB 2: COMPOSE BROADCAST ──────────────── */}
       {activeView === 'compose' && (
-        <div className="bg-slate-850 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5 animate-fadeIn">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6 animate-fadeIn">
+          
           {/* Header & Mode Switcher */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-755 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
-                <Edit3 size={20} />
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Edit3 size={18} />
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-black text-white">
@@ -794,7 +819,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
             </div>
 
             {/* Compose / Live Preview Toggle */}
-            <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-755 self-start sm:self-auto">
+            <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800 self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setComposerMode('compose')}
@@ -823,11 +848,11 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
           </div>
 
           {composerMode === 'compose' ? (
-            <form onSubmit={handlePublishBroadcast} className="space-y-4">
+            <form onSubmit={handlePublishBroadcast} className="space-y-5">
               
               {/* Row 1: Headline & Category */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 space-y-1">
+                <div className="md:col-span-2 space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase">
                     Broadcast Headline / Title *
                   </label>
@@ -837,18 +862,18 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     placeholder="e.g. Mandatory Meeting: Friday Campout Departure Schedule"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-bold"
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase">
                     Category *
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
                   >
                     {BROADCAST_CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>
@@ -860,7 +885,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
               </div>
 
               {/* Row 2: Audience, Patrol Scope & Priority Box */}
-              <div className="bg-slate-900/90 border border-slate-755 p-4 rounded-2xl space-y-3">
+              <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Scope */}
                   <div className="space-y-1">
@@ -878,7 +903,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                           setTargetGroupId(e.target.value);
                         }
                       }}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
                     >
                       {isSuperUser(currentUser) && (
                         <option value="troop_wide">⚡ Entire Troop (All Patrols)</option>
@@ -897,7 +922,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     <select
                       value={targetAudience}
                       onChange={(e) => setTargetAudience(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-sans"
                     >
                       <option value="all">👨‍👩‍👧 Parents & ⚜️ Scouts (Simultaneous)</option>
                       <option value="parents_only">👨‍👩‍👧 Parents Only</option>
@@ -912,9 +937,9 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {[
-                        { id: 'normal', label: 'Normal', color: priority === 'normal' ? 'bg-slate-700 text-white border-slate-500' : 'bg-slate-950 text-slate-400 border-slate-800' },
-                        { id: 'high', label: 'High', color: priority === 'high' ? 'bg-amber-600 text-white border-amber-400' : 'bg-slate-950 text-slate-400 border-slate-800' },
-                        { id: 'urgent', label: '🚨 Urgent', color: priority === 'urgent' ? 'bg-rose-600 text-white border-rose-400 animate-pulse' : 'bg-slate-950 text-slate-400 border-slate-800' }
+                        { id: 'normal', label: 'Normal', color: priority === 'normal' ? 'bg-slate-700 text-white border-slate-500' : 'bg-slate-900 text-slate-400 border-slate-800' },
+                        { id: 'high', label: 'High', color: priority === 'high' ? 'bg-amber-600 text-white border-amber-400' : 'bg-slate-900 text-slate-400 border-slate-800' },
+                        { id: 'urgent', label: '🚨 Urgent', color: priority === 'urgent' ? 'bg-rose-600 text-white border-rose-400 animate-pulse' : 'bg-slate-900 text-slate-400 border-slate-800' }
                       ].map(p => (
                         <button
                           key={p.id}
@@ -938,7 +963,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-400 font-mono">
-                    Instant Fan-out
+                    Instant Multi-Channel Fan-Out
                   </span>
                 </div>
               </div>
@@ -954,30 +979,30 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     <button
                       type="button"
                       onClick={() => handleInsertFormatting('bullet')}
-                      className="text-[10px] bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                      className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-lg transition cursor-pointer"
                     >
                       + Bullet
                     </button>
                     <button
                       type="button"
                       onClick={() => handleInsertFormatting('date_time')}
-                      className="text-[10px] bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                      className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-lg transition cursor-pointer"
                     >
                       + Schedule & Venue
                     </button>
                     <button
                       type="button"
                       onClick={() => handleInsertFormatting('gear')}
-                      className="text-[10px] bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                      className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-lg transition cursor-pointer"
                     >
                       + Gear List
                     </button>
                     <button
                       type="button"
                       onClick={() => handleInsertFormatting('closing')}
-                      className="text-[10px] bg-slate-900 hover:bg-slate-750 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                      className="text-[10px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-lg transition cursor-pointer"
                     >
-                      + Leadership Sign-off
+                      + Sign-off
                     </button>
                   </div>
                 </div>
@@ -988,7 +1013,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                   placeholder="Enter detailed announcement message, meeting instructions, campout guidelines, or urgent notes..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed shadow-inner"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed shadow-inner"
                 />
               </div>
 
@@ -1004,7 +1029,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     <span>+ Attach Link or PDF Document URL</span>
                   </button>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 animate-fadeIn">
                     <div className="space-y-1">
                       <label className="block text-[11px] font-bold text-slate-300 uppercase flex items-center justify-between">
                         <span className="flex items-center gap-1">
@@ -1028,7 +1053,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                         placeholder="https://drive.google.com/... or web link"
                         value={attachmentUrl}
                         onChange={(e) => setAttachmentUrl(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
                       />
                     </div>
 
@@ -1041,7 +1066,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                         placeholder="e.g. Download Packing Checklist PDF"
                         value={attachmentLabel}
                         onChange={(e) => setAttachmentLabel(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
                       />
                     </div>
                   </div>
@@ -1053,10 +1078,10 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                 <button
                   type="submit"
                   disabled={isPublishing}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs py-3.5 px-6 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/50 disabled:opacity-50"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 px-6 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/40 disabled:opacity-50"
                 >
                   <Send size={15} />
-                  <span>{isPublishing ? 'Publishing & Dispatching...' : '🚀 Publish & Broadcast Update'}</span>
+                  <span>{isPublishing ? 'Publishing & Dispatching...' : 'Publish Broadcast'}</span>
                 </button>
 
                 <button
@@ -1068,9 +1093,9 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                     setAttachmentLabel('');
                     setFormError('');
                   }}
-                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold px-4 py-3.5 rounded-2xl transition cursor-pointer border border-slate-700"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold px-4 py-3 rounded-2xl transition cursor-pointer border border-slate-700"
                 >
-                  Clear Form
+                  Clear
                 </button>
               </div>
             </form>
@@ -1081,11 +1106,11 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                 👁️ Live Preview: This is how your broadcast will appear on Parent & Scout Feeds
               </span>
 
-              <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-2xl space-y-4 max-w-2xl mx-auto">
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 max-w-2xl mx-auto">
                 <div className="flex justify-between items-start gap-3 border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
-                      priority === 'urgent' ? 'bg-red-950 text-red-300 border-red-500 animate-pulse' :
+                      priority === 'urgent' ? 'bg-rose-950 text-rose-300 border-rose-500 animate-pulse' :
                       priority === 'high' ? 'bg-amber-950 text-amber-300 border-amber-500' :
                       'bg-slate-800 text-slate-200 border-slate-700'
                     }`}>
@@ -1106,7 +1131,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                   <h4 className="text-base font-black text-white">
                     {title || 'Your Broadcast Headline'}
                   </h4>
-                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                  <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans bg-slate-900 p-4 rounded-2xl border border-slate-800">
                     {message || 'Your announcement message content will appear here...'}
                   </p>
                 </div>
@@ -1117,7 +1142,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                       href={attachmentUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 rounded-xl text-xs font-bold transition"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600/15 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition"
                     >
                       <Paperclip size={13} />
                       <span>{attachmentLabel || 'Open Attachment / Resource Document'}</span>
@@ -1140,7 +1165,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                   onClick={() => setComposerMode('compose')}
                   className="text-xs text-emerald-400 hover:text-emerald-300 font-bold hover:underline cursor-pointer"
                 >
-                  &larr; Return to Edit Message
+                  &larr; Return to Edit Form
                 </button>
               </div>
             </div>
@@ -1151,13 +1176,13 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
       {/* ──────────────── TAB 3: READY TEMPLATES & PRESETS ──────────────── */}
       {activeView === 'templates' && (
         <div className="space-y-4 animate-fadeIn">
-          <div className="bg-slate-850 border border-slate-755 p-5 rounded-2xl space-y-1">
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Sparkles className="text-amber-400" size={18} />
               <span>1-Click Ready Broadcast Templates</span>
             </h3>
-            <p className="text-xs text-slate-300">
-              Pick a pre-formatted template below to immediately populate the broadcast form with recommended schedules, gear lists, or medical reminders.
+            <p className="text-xs text-slate-400">
+              Pick a pre-formatted template below to immediately populate the broadcast composer with standard troop schedules, gear lists, or medical reminders.
             </p>
           </div>
 
@@ -1167,11 +1192,11 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
               return (
                 <div
                   key={tpl.id}
-                  className="bg-slate-850 border border-slate-755 hover:border-amber-500/50 rounded-3xl p-5 shadow-lg space-y-3 flex flex-col justify-between transition hover:scale-[1.01]"
+                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl p-5 shadow-lg space-y-3 flex flex-col justify-between transition"
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${catObj.color}`}>
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${catObj.color}`}>
                         <span>{catObj.icon}</span>
                         <span>{tpl.category}</span>
                       </span>
@@ -1181,7 +1206,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                           ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
                           : tpl.priority === 'high'
                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                          : 'bg-slate-900 text-slate-300 border-slate-750'
+                          : 'bg-slate-950 text-slate-300 border-slate-800'
                       }`}>
                         {tpl.priority.toUpperCase()}
                       </span>
@@ -1195,7 +1220,7 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                       {tpl.summary}
                     </p>
 
-                    <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono line-clamp-3">
+                    <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 text-[11px] text-slate-300 font-mono line-clamp-3">
                       {tpl.message}
                     </div>
                   </div>
@@ -1203,10 +1228,10 @@ export default function LeaderBroadcastCenter({ currentUser, onNavigate }) {
                   <button
                     type="button"
                     onClick={() => handleApplyPreset(tpl)}
-                    className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40 mt-2"
+                    className="w-full bg-slate-800 hover:bg-slate-750 text-emerald-400 hover:text-emerald-300 border border-slate-700 font-bold text-xs py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm mt-2"
                   >
-                    <Sparkles size={14} />
-                    <span>Use This Template & Edit</span>
+                    <Sparkles size={14} className="text-amber-400" />
+                    <span>Use Template</span>
                   </button>
                 </div>
               );
