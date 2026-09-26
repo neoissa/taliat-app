@@ -37,6 +37,11 @@ import {
   subscribeToThreadMessages,
   formatThreadTime
 } from '../services/directMessagingService';
+import { 
+  getPermittedLeadersForParent, 
+  getLeaderDisplayTag, 
+  isOwnerUser 
+} from '../utils/patrolScoping';
 
 const COURTESY_PROMPTS = [
   'Assalāmu ʿAlaykum! Hope all is well.',
@@ -49,7 +54,8 @@ const COURTESY_PROMPTS = [
 
 const QUICK_EMOJIS = ['👍', '❤️', '⚜️', '🕌', '🤲', '🏕️', '👏', '✨', '✅', '🫡'];
 
-export default function ParentMessagingHub({ currentUser = {}, linkedScouts = [] }) {
+export default function ParentMessagingHub({ currentUser = {}, linkedScouts = [], allGroups = [] }) {
+  const [groups, setGroups] = useState(allGroups || []);
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -121,6 +127,29 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
 
     return () => unsub();
   }, []);
+
+  // 2.5 Fetch Groups / Patrols
+  useEffect(() => {
+    if (allGroups && allGroups.length > 0) {
+      setGroups(allGroups);
+      return;
+    }
+    const unsub = onSnapshot(collection(db, 'groups'), (snap) => {
+      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => !g.archived));
+    }, (err) => console.warn('Failed to load groups for parent messaging:', err));
+
+    return () => unsub();
+  }, [allGroups]);
+
+  // Permitted leaders across all of the parent's children (Owner + Leaders of their children's patrols)
+  const allPermittedLeaders = useMemo(() => {
+    return getPermittedLeadersForParent(availableLeaders, linkedScouts, groups, null);
+  }, [availableLeaders, linkedScouts, groups]);
+
+  // Permitted leaders for the specific child selected in the modal (or all if general family inquiry)
+  const scopedPermittedLeaders = useMemo(() => {
+    return getPermittedLeadersForParent(availableLeaders, linkedScouts, groups, newScoutId || null);
+  }, [availableLeaders, linkedScouts, groups, newScoutId]);
 
   // 3. Subscribe to Active Thread's Messages
   useEffect(() => {
@@ -212,10 +241,10 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
       let targetLeaderUid = newTargetLeaderUid;
 
       if (newTargetLeaderUid !== 'leadership') {
-        const targetObj = availableLeaders.find(l => l.uid === newTargetLeaderUid);
+        const targetObj = scopedPermittedLeaders.find(l => l.uid === newTargetLeaderUid) || availableLeaders.find(l => l.uid === newTargetLeaderUid);
         if (targetObj) {
           leaderName = targetObj.fullName || targetObj.username || 'Leader';
-          leaderRole = targetObj.leaderPosition || targetObj.role || 'Troop Leader';
+          leaderRole = getLeaderDisplayTag(targetObj, groups);
         }
       }
 
@@ -325,17 +354,24 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
         >
           <span>⚜️ Troop Leadership</span>
         </button>
-        {availableLeaders.slice(0, 4).map(ldr => (
-          <button
-            key={ldr.uid}
-            type="button"
-            onClick={() => handleQuickStartLeader(ldr.uid, ldr.fullName || ldr.username, ldr.leaderPosition || ldr.role || 'Leader')}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shrink-0"
-          >
-            <div className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px]">👨‍💼</div>
-            <span>{ldr.fullName || ldr.username}</span>
-          </button>
-        ))}
+        {allPermittedLeaders.map(ldr => {
+          const isOwner = isOwnerUser(ldr);
+          const displayRole = getLeaderDisplayTag(ldr, groups);
+          return (
+            <button
+              key={ldr.uid}
+              type="button"
+              onClick={() => handleQuickStartLeader(ldr.uid, ldr.fullName || ldr.username, displayRole)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <div className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px]">
+                {isOwner ? '⭐' : '👨‍💼'}
+              </div>
+              <span>{ldr.fullName || ldr.username}</span>
+              <span className="text-[10px] text-emerald-400/90 font-medium">({displayRole})</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── 2-PANE CHAT CONSOLE ── */}
@@ -754,45 +790,62 @@ export default function ParentMessagingHub({ currentUser = {}, linkedScouts = []
                 </div>
               </div>
 
-              {/* Recipient Leader */}
+              {/* Associated Child Scout (Selecting a child dynamically filters leaders to their patrol) */}
+              {linkedScouts.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                      Regarding Scout (Child)
+                    </label>
+                    <span className="text-[10px] text-emerald-400 font-medium">Filters leaders to their patrol</span>
+                  </div>
+                  <select
+                    value={newScoutId}
+                    onChange={(e) => {
+                      const sId = e.target.value;
+                      setNewScoutId(sId);
+                      const validForChild = getPermittedLeadersForParent(availableLeaders, linkedScouts, groups, sId);
+                      if (newTargetLeaderUid !== 'leadership' && !validForChild.some(l => l.uid === newTargetLeaderUid)) {
+                        setNewTargetLeaderUid('leadership');
+                      }
+                    }}
+                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans cursor-pointer"
+                  >
+                    <option value="">-- All Children / General Family Inquiries --</option>
+                    {linkedScouts.map(s => {
+                      const pName = s.patrolName || s.patrol || groups.find(g => g.id === (s.groupId || s.patrolId))?.name || 'Patrol';
+                      return (
+                        <option key={s.uid} value={s.uid}>
+                          👦 {s.fullName || s.username} ({pName} • {s.rank || 'Scout'})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Recipient Leader (Strictly Owner and Patrol Leaders) */}
               <div>
                 <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
-                  Target Recipient *
+                  Target Recipient (Owner & Patrol Leaders Only) *
                 </label>
                 <select
                   value={newTargetLeaderUid}
                   onChange={(e) => setNewTargetLeaderUid(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans cursor-pointer"
                 >
-                  <option value="leadership">🌟 Unified Troop Leadership Team (All Leaders & Scoutmaster)</option>
-                  {availableLeaders.map(ldr => (
-                    <option key={ldr.uid} value={ldr.uid}>
-                      👨‍💼 {ldr.fullName || ldr.username} ({ldr.leaderPosition || ldr.role || 'Troop Leader'})
-                    </option>
-                  ))}
+                  <option value="leadership">🌟 Troop Leadership Team (Owner & Scoutmaster)</option>
+                  {scopedPermittedLeaders.map(ldr => {
+                    const isOwner = isOwnerUser(ldr);
+                    const displayRole = getLeaderDisplayTag(ldr, groups);
+                    return (
+                      <option key={ldr.uid} value={ldr.uid}>
+                        {isOwner ? '⭐' : '👨‍💼'} {ldr.fullName || ldr.username} ({displayRole})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
-
-              {/* Associated Child Scout */}
-              {linkedScouts.length > 0 && (
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider text-[11px]">
-                    Regarding Scout (Optional)
-                  </label>
-                  <select
-                    value={newScoutId}
-                    onChange={(e) => setNewScoutId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                  >
-                    <option value="">-- General Family / No Specific Child --</option>
-                    {linkedScouts.map(s => (
-                      <option key={s.uid} value={s.uid}>
-                        👦 {s.fullName || s.username} ({s.rank || 'Scout'} Rank)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {/* Subject Line */}
               <div>

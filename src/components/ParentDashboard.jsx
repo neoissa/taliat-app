@@ -27,6 +27,7 @@ import ParentPatrolResources from './ParentPatrolResources';
 import ParentAttendanceFeed from './ParentAttendanceFeed';
 import ParentMessagingHub from './ParentMessagingHub';
 import { subscribeToParentThreads } from '../services/directMessagingService';
+import { getPermittedLeadersForParent, getLeaderDisplayTag, isOwnerUser } from '../utils/patrolScoping';
 import StatusBadge from './StatusBadge';
 import {
   Award,
@@ -1078,13 +1079,14 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
   const pendingReportsToSign = familyPublishedReports.filter(r => !r.signatures?.parent?.signed);
   const unreadNotifsCount = notifications.filter(n => !n.read).length + pendingReportsToSign.length;
 
-  // Available Troop Leaders for Conference Selection
-  const availableLeaders = allUsers.filter(u => {
+  // Available Troop Leaders for Conference Selection (Strictly Owner and Patrol Leaders of the Selected Child)
+  const allTroopLeaders = allUsers.filter(u => {
     if (!u.role) return false;
     const role = (u.role || '').toLowerCase();
     const pos = (u.leaderPosition || '').toLowerCase();
     return role === 'leader' || role === 'executive_leader' || role === 'admin' || role === 'owner' || u.isLeader || u.isExecutive || pos.length > 0;
   });
+  const availableLeaders = getPermittedLeadersForParent(allTroopLeaders, linkedScouts, allGroups, meetingScoutId || null);
 
   // Family Parent Requests (Conferences, Absences, Signatures)
   const linkedPatrolIds = linkedScouts.map(s => s.groupId || s.patrolId).filter(Boolean);
@@ -5092,6 +5094,7 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
         <ParentMessagingHub 
           currentUser={currentUser} 
           linkedScouts={linkedScouts} 
+          allGroups={allGroups}
         />
       )}
 
@@ -5377,11 +5380,15 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
                 >
                   <option value="">⭐ Any Available Leader / Scoutmaster</option>
-                  {availableLeaders.map(ldr => (
-                    <option key={ldr.uid} value={ldr.uid}>
-                      {ldr.fullName || ldr.username} ({ldr.leaderPosition || ldr.role || 'Troop Leader'})
-                    </option>
-                  ))}
+                  {availableLeaders.map(ldr => {
+                    const isOwner = isOwnerUser(ldr);
+                    const displayRole = getLeaderDisplayTag(ldr, allGroups);
+                    return (
+                      <option key={ldr.uid} value={ldr.uid}>
+                        {isOwner ? '⭐' : '👨‍💼'} {ldr.fullName || ldr.username} ({displayRole})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

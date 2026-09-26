@@ -189,3 +189,135 @@ export function filterScoutsForUser(allScouts = [], user, groups = [], selectedF
     return false;
   });
 }
+
+/**
+ * Checks if a user is an Owner / Superadmin.
+ */
+export function isOwnerUser(user) {
+  if (!user) return false;
+  return (
+    user.role === 'owner' ||
+    user.isOwner === true ||
+    user.email === 'neoissa@gmail.com'
+  );
+}
+
+/**
+ * Resolves leaders that a parent is permitted to message:
+ * Strictly the Troop Owner and the leaders of the parent's linked scout patrol(s).
+ *
+ * @param {Array} allLeaders - List of leader users (role: leader, admin, owner, etc.)
+ * @param {Array} linkedScouts - The parent's linked children (scout users)
+ * @param {Array} groups - List of patrol group documents
+ * @param {String|null} selectedScoutId - Optional scout UID to scope down to that specific child's patrol
+ * @returns {Array} Filtered list of permitted leaders
+ */
+export function getPermittedLeadersForParent(allLeaders = [], linkedScouts = [], groups = [], selectedScoutId = null) {
+  if (!allLeaders || allLeaders.length === 0) return [];
+
+  // Determine target scouts
+  const targetScouts = (selectedScoutId && selectedScoutId !== 'all')
+    ? linkedScouts.filter(s => s.uid === selectedScoutId)
+    : linkedScouts;
+
+  const activeScouts = targetScouts.length > 0 ? targetScouts : linkedScouts;
+
+  // Collect all patrol identifiers for the parent's target scouts
+  const allowedPatrolIds = new Set();
+  const allowedPatrolNorms = new Set();
+  const directScoutLeaderIds = new Set();
+
+  activeScouts.forEach(scout => {
+    if (scout.leaderId) directScoutLeaderIds.add(scout.leaderId);
+
+    const ids = [scout.groupId, scout.patrolId, scout.assignedPatrol, scout.patrol, scout.patrolName].filter(Boolean);
+    ids.forEach(id => {
+      allowedPatrolIds.add(id);
+      allowedPatrolNorms.add(normalizePatrolName(id));
+    });
+
+    if (Array.isArray(scout.assignedPatrols)) {
+      scout.assignedPatrols.forEach(p => {
+        allowedPatrolIds.add(p);
+        allowedPatrolNorms.add(normalizePatrolName(p));
+      });
+    }
+
+    // Match with groups array
+    groups.forEach(g => {
+      if (isScoutInPatrol(scout, g, groups)) {
+        allowedPatrolIds.add(g.id);
+        allowedPatrolNorms.add(normalizePatrolName(g.name));
+      }
+    });
+  });
+
+  // Groups that match any of the child's patrols
+  const matchingGroups = groups.filter(g => {
+    if (allowedPatrolIds.has(g.id)) return true;
+    const gNorm = normalizePatrolName(g.name);
+    return gNorm && allowedPatrolNorms.has(gNorm);
+  });
+
+  // Extract leader IDs assigned to these matching groups
+  const groupAssignedLeaderIds = new Set();
+  matchingGroups.forEach(g => {
+    if (g.leaderId) groupAssignedLeaderIds.add(g.leaderId);
+    if (Array.isArray(g.assignedLeaderIds)) g.assignedLeaderIds.forEach(id => groupAssignedLeaderIds.add(id));
+    if (Array.isArray(g.assistantLeaderIds)) g.assistantLeaderIds.forEach(id => groupAssignedLeaderIds.add(id));
+  });
+
+  return allLeaders.filter(leader => {
+    // 1. Owner is always permitted
+    if (isOwnerUser(leader)) return true;
+
+    // 2. Direct scout leader
+    if (directScoutLeaderIds.has(leader.uid)) return true;
+
+    // 3. Leader assigned to matching group in Firestore
+    if (groupAssignedLeaderIds.has(leader.uid)) return true;
+
+    // 4. Leader's own patrol properties match any allowed patrol
+    const leaderPatrolNorms = [
+      normalizePatrolName(leader.groupId),
+      normalizePatrolName(leader.patrolId),
+      normalizePatrolName(leader.assignedPatrol),
+      normalizePatrolName(leader.patrol),
+      normalizePatrolName(leader.patrolName)
+    ].filter(Boolean);
+
+    if (leader.groupId && allowedPatrolIds.has(leader.groupId)) return true;
+    if (leader.patrolId && allowedPatrolIds.has(leader.patrolId)) return true;
+    if (leader.assignedPatrol && allowedPatrolIds.has(leader.assignedPatrol)) return true;
+
+    if (Array.isArray(leader.assignedPatrols)) {
+      if (leader.assignedPatrols.some(p => allowedPatrolIds.has(p) || allowedPatrolNorms.has(normalizePatrolName(p)))) {
+        return true;
+      }
+    }
+
+    if (leaderPatrolNorms.some(norm => allowedPatrolNorms.has(norm))) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
+/**
+ * Returns formatted role/patrol label for display in Parent chat.
+ */
+export function getLeaderDisplayTag(leader, groups = []) {
+  if (isOwnerUser(leader)) return 'Troop Owner / Headmaster';
+  if (leader.leaderPosition) return leader.leaderPosition;
+  const foundGroup = groups.find(g => 
+    g.leaderId === leader.uid || 
+    (Array.isArray(g.assignedLeaderIds) && g.assignedLeaderIds.includes(leader.uid)) ||
+    g.id === leader.groupId || 
+    g.id === leader.patrolId ||
+    normalizePatrolName(g.name) === normalizePatrolName(leader.assignedPatrol || leader.patrol)
+  );
+  if (foundGroup?.name) return `${foundGroup.name} Patrol Leader`;
+  return leader.role === 'admin' ? 'Troop Admin' : 'Patrol Leader';
+}
+
