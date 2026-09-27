@@ -114,7 +114,7 @@ function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.8) {
   });
 }
 
-export default function ScoutProfile({ currentUser, initialTab = 'personal', onNavigate }) {
+export default function ScoutProfile({ currentUser, initialTab = 'personal', activeTab, onTabChange, onNavigate }) {
   const [fullUserData, setFullUserData] = useState(null);
 
   // Accurate Role Flags
@@ -165,9 +165,15 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
   const [sptFileUrl, setSptFileUrl] = useState(currentUser?.sptFileUrl || '');
   const [sptFileName, setSptFileName] = useState(currentUser?.sptFileName || '');
   const [uploadingSpt, setUploadingSpt] = useState(false);
-  const [activeProfileTab, setActiveProfileTab] = useState(
+  const [internalActiveTab, setInternalActiveTab] = useState(
     (!initialTab || initialTab === 'profile') ? 'personal' : (initialTab === 'counselors' ? 'credentials' : initialTab)
-  ); // 'personal' | 'roles-guide' | 'service' | 'attendance' | 'spt' | 'credentials' | 'security' | 'reports'
+  );
+
+  const activeProfileTab = activeTab !== undefined ? activeTab : internalActiveTab;
+  const setActiveProfileTab = (tab) => {
+    setInternalActiveTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
 
   useEffect(() => {
     if (initialTab) {
@@ -1185,534 +1191,61 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         </div>
       )}
 
-      {/* ── PROFILE SUB-SIDE NAVIGATION & CONTENT LAYOUT ── */}
-      <div className="flex flex-col md:flex-row items-start gap-6">
-        {/* ── LEFT SUB-SIDEBAR NAVIGATION PANEL (DESKTOP) / HORIZONTAL STRIP (MOBILE) ── */}
-        <div className="w-full md:w-64 lg:w-72 shrink-0">
-          
-          {/* Mobile Horizontal Scrollable Sub-Nav (< md) */}
-          <div className="block md:hidden mb-4">
-            <div className="flex items-center gap-1.5 p-1.5 bg-slate-900/95 border border-slate-800 rounded-2xl overflow-x-auto scrollbar-none shadow-inner">
-              {[
-                { id: 'personal', label: isParent ? '👨‍👩‍👧 Family' : isScout ? '💳 ID & Bio' : '👤 Personal', icon: User },
-                ...(isScout ? [
-                  { id: 'medical', label: '❤️ Medical', icon: HeartPulse },
-                  { id: 'gear', label: '🎽 Gear', icon: Shirt },
-                  { id: 'advancement', label: '⚜️ Ranks', icon: Compass },
-                  { id: 'reports', label: '📜 Reports', icon: FileText, badge: publishedReports.length },
-                  { id: 'leadership', label: '👑 Leadership', icon: Crown },
-                  { id: 'attendance', label: '📋 Attendance', icon: Calendar, badge: attendanceStats.absentCount >= 2 ? attendanceStats.absentCount : null },
-                  { id: 'outdoor', label: '🏕️ Camping', icon: Tent },
-                  { id: 'tarbiyah', label: '🌙 Tarbiyah', icon: Sparkles },
-                  { id: 'service', label: '⏱️ Service', icon: Clock }
-                ] : []),
-                ...(!isScout ? [
-                  { id: 'credentials', label: '⚜️ Badges', icon: Award },
-                  { id: 'spt', label: '🛡️ SPT', icon: Shield }
-                ] : []),
-                ...(!isParent ? [
-                  { id: 'roles-guide', label: '👑 Roles', icon: Crown }
-                ] : []),
-                { id: 'security', label: '🔐 Security', icon: Lock }
-              ].map(t => {
-                const isActive = t.id === 'personal'
-                  ? (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
-                  : activeProfileTab === t.id;
-                const Icon = t.icon;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setActiveProfileTab(t.id)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer select-none border ${
-                      isActive
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-950/40 border-emerald-400'
-                        : 'bg-slate-800/90 text-slate-300 hover:bg-slate-750 hover:text-white border-slate-700'
-                    }`}
-                  >
-                    <Icon size={14} className="shrink-0" />
-                    <span>{t.label}</span>
-                    {t.badge > 0 && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black">
-                        {t.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Desktop/Tablet Vertical Sub-Sidebar (md+) */}
-          <div className="hidden md:block">
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 shadow-xl backdrop-blur-md sticky top-20 space-y-4">
-              
-              {/* Header */}
-              <div className="px-2 py-1.5 border-b border-slate-800/80 flex items-center justify-between">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={13} className="text-slate-400" />
-                  <span>Profile Sections</span>
-                </span>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40">
-                  {isScout ? 'Scout File' : isParent ? 'Family File' : 'Leader File'}
-                </span>
-              </div>
-
-              {/* Group 1: Identity & Essentials */}
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-1 pb-0.5">
-                  Identity & Essentials
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={() => setActiveProfileTab('personal')}
-                  className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                    (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-950/40 border-emerald-400 ring-1 ring-emerald-300/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                      (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-800 border border-slate-700/60 text-slate-400 group-hover:text-emerald-400'
-                    }`}>
-                      <User size={15} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-black">{isParent ? 'Family Profile' : isScout ? 'ID Pass & Personal' : 'Personal Info'}</div>
-                      <div className={`text-[10px] truncate ${
-                        (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
-                          ? 'text-emerald-100'
-                          : 'text-slate-400'
-                      }`}>
-                        {isParent ? 'Household & emergency data' : 'Digital card & bio'}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                </button>
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('medical')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'medical'
-                        ? 'bg-gradient-to-r from-rose-600 to-rose-700 text-white shadow-lg shadow-rose-950/40 border-rose-400 ring-1 ring-rose-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'medical'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-rose-400'
-                      }`}>
-                        <HeartPulse size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Medical & Safety</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'medical' ? 'text-rose-100' : 'text-slate-400'}`}>
-                          Allergies & health notes
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
+      {/* ── MOBILE HORIZONTAL SUB-NAV (< md) ── */}
+      <div className="block md:hidden mb-4">
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-900/95 border border-slate-800 rounded-2xl overflow-x-auto scrollbar-none shadow-inner">
+          {[
+            { id: 'personal', label: isParent ? '👨‍👩‍👧 Family' : isScout ? '💳 ID & Bio' : '👤 Personal', icon: User },
+            ...(isScout ? [
+              { id: 'medical', label: '❤️ Medical', icon: HeartPulse },
+              { id: 'gear', label: '🎽 Gear', icon: Shirt },
+              { id: 'advancement', label: '⚜️ Ranks', icon: Compass },
+              { id: 'reports', label: '📜 Reports', icon: FileText, badge: publishedReports.length },
+              { id: 'leadership', label: '👑 Leadership', icon: Crown },
+              { id: 'attendance', label: '📋 Attendance', icon: Calendar, badge: attendanceStats.absentCount >= 2 ? attendanceStats.absentCount : null },
+              { id: 'outdoor', label: '🏕️ Camping', icon: Tent },
+              { id: 'tarbiyah', label: '🌙 Tarbiyah', icon: Sparkles },
+              { id: 'service', label: '⏱️ Service', icon: Clock }
+            ] : []),
+            ...(!isScout ? [
+              { id: 'credentials', label: '⚜️ Badges', icon: Award },
+              { id: 'spt', label: '🛡️ SPT', icon: Shield }
+            ] : []),
+            ...(!isParent ? [
+              { id: 'roles-guide', label: '👑 Roles', icon: Crown }
+            ] : []),
+            { id: 'security', label: '🔐 Security', icon: Lock }
+          ].map(t => {
+            const isActive = t.id === 'personal'
+              ? (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
+              : activeProfileTab === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveProfileTab(t.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer select-none border ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-950/40 border-emerald-400'
+                    : 'bg-slate-800/90 text-slate-300 hover:bg-slate-750 hover:text-white border-slate-700'
+                }`}
+              >
+                <Icon size={14} className="shrink-0" />
+                <span>{t.label}</span>
+                {t.badge > 0 && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black">
+                    {t.badge}
+                  </span>
                 )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('gear')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'gear'
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black shadow-lg shadow-indigo-950/40 border-indigo-400 ring-1 ring-indigo-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'gear'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-indigo-400'
-                      }`}>
-                        <Shirt size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Uniform & Gear</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'gear' ? 'text-indigo-100' : 'text-slate-400'}`}>
-                          Inspection & gear checklist
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-              </div>
-
-              {/* Group 2: Scouting, Advancement & Milestones */}
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-1 pb-0.5">
-                  {isScout ? 'Scouting & Milestones' : 'Leadership & Training'}
-                </div>
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('advancement')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'advancement'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-950/40 border-emerald-400 ring-1 ring-emerald-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'advancement'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-emerald-400'
-                      }`}>
-                        <Compass size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">7 Ranks Advancement</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'advancement' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                          Milestones & sign-offs
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('reports')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'reports'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-950/40 border-emerald-400 ring-1 ring-emerald-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'reports'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-emerald-400'
-                      }`}>
-                        <FileText size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Official Reports</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'reports' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                          Certificates & signatures
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {publishedReports.length > 0 && (
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                          publishedReports.some(r => !r.signatures?.scout?.signed)
-                            ? 'bg-amber-400 text-slate-950 animate-pulse'
-                            : 'bg-slate-950 text-emerald-300'
-                        }`}>
-                          {publishedReports.length}
-                        </span>
-                      )}
-                      <ChevronRight size={14} className="opacity-60 group-hover:opacity-100" />
-                    </div>
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('leadership')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'leadership'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-950/40 border-amber-400 ring-1 ring-amber-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'leadership'
-                          ? 'bg-slate-950/20 text-slate-950'
-                          : 'bg-slate-800 border border-slate-700/60 text-amber-400'
-                      }`}>
-                        <Crown size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Leadership Clock</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'leadership' ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
-                          Tenure & Eagle clock
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('attendance')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'attendance'
-                        ? (attendanceStats.riskLevel === 'red' 
-                            ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-950/40 border-red-400 ring-1 ring-red-300/30' 
-                            : attendanceStats.riskLevel === 'yellow' 
-                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-950/40 border-amber-400 ring-1 ring-amber-300/30' 
-                            : 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg shadow-teal-950/40 border-teal-400 ring-1 ring-teal-300/30')
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'attendance'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-teal-400'
-                      }`}>
-                        <Calendar size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">My Attendance</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'attendance' ? 'text-teal-100' : 'text-slate-400'}`}>
-                          {attendanceStats.percentage}% session presence
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {attendanceStats.absentCount >= 2 && (
-                        <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
-                          {attendanceStats.absentCount}
-                        </span>
-                      )}
-                      <ChevronRight size={14} className="opacity-60 group-hover:opacity-100" />
-                    </div>
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('outdoor')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'outdoor'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-950/40 border-emerald-400 ring-1 ring-emerald-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'outdoor'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-emerald-400'
-                      }`}>
-                        <Tent size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Outdoor & Camping</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'outdoor' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                          Camp nights & trail logs
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('tarbiyah')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'tarbiyah'
-                        ? 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg shadow-teal-950/40 border-teal-400 ring-1 ring-teal-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'tarbiyah'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-teal-400'
-                      }`}>
-                        <Sparkles size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Islamic Tarbiyah</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'tarbiyah' ? 'text-teal-100' : 'text-slate-400'}`}>
-                          Duas & halqa milestones
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('service')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'service'
-                        ? 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg shadow-teal-950/40 border-teal-400 ring-1 ring-teal-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'service'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-teal-400'
-                      }`}>
-                        <Clock size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Service & Volunteering</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'service' ? 'text-teal-100' : 'text-slate-400'}`}>
-                          Logged service hours
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {!isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('credentials')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'credentials'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-950/40 border-amber-400 ring-1 ring-amber-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'credentials'
-                          ? 'bg-slate-950/20 text-slate-950'
-                          : 'bg-slate-800 border border-slate-700/60 text-amber-400'
-                      }`}>
-                        <Award size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Scouting Leadership</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'credentials' ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
-                          Badges & awards
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {!isScout && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('spt')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'spt'
-                        ? 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg shadow-teal-950/40 border-teal-400 ring-1 ring-teal-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'spt'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-800 border border-slate-700/60 text-teal-400'
-                      }`}>
-                        <Shield size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">{isParent ? 'Safety Training (SPT)' : 'SPT Certificate'}</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'spt' ? 'text-teal-100' : 'text-slate-400'}`}>
-                          Youth protection status
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-
-                {!isParent && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfileTab('roles-guide')}
-                    className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                      activeProfileTab === 'roles-guide'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-950/40 border-amber-400 ring-1 ring-amber-300/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeProfileTab === 'roles-guide'
-                          ? 'bg-slate-950/20 text-slate-950'
-                          : 'bg-slate-800 border border-slate-700/60 text-amber-400'
-                      }`}>
-                        <Crown size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-black">Role & Leadership Guide</div>
-                        <div className={`text-[10px] truncate ${activeProfileTab === 'roles-guide' ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
-                          Duties & expectations
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                  </button>
-                )}
-              </div>
-
-              {/* Group 3: Account & Security */}
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-1 pb-0.5">
-                  Account & Security
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveProfileTab('security')}
-                  className={`group w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left border select-none ${
-                    activeProfileTab === 'security'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-950/40 border-purple-400 ring-1 ring-purple-300/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                      activeProfileTab === 'security'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-800 border border-slate-700/60 text-purple-400'
-                    }`}>
-                      <Lock size={15} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-black">Security & Password</div>
-                      <div className={`text-[10px] truncate ${activeProfileTab === 'security' ? 'text-purple-100' : 'text-slate-400'}`}>
-                        PIN, password & auth
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={14} className="shrink-0 opacity-60 group-hover:opacity-100" />
-                </button>
-              </div>
-
-            </div>
-          </div>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        {/* ── RIGHT COLUMN: ACTIVE TAB CONTENT PANE ── */}
-        <div className="flex-1 min-w-0 w-full space-y-6">
+      {/* ── FULL-WIDTH PROFILE TAB CONTENT ── */}
+      <div className="w-full space-y-6">
 
       {/* ── TAB: ADVANCEMENT TRACKER (7 RANKS) ── */}
       {activeProfileTab === 'advancement' && (
@@ -4094,7 +3627,6 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', onN
         </div>
       )}
 
-        </div>
       </div>
 
       {/* ── PUBLISHED REPORT VIEWER & SIGNING MODALS ── */}

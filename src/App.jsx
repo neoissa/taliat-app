@@ -70,7 +70,8 @@ import {
   Crown,
   Sliders,
   Inbox,
-  Megaphone
+  Megaphone,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function App() {
@@ -91,6 +92,8 @@ export default function App() {
 
   const [attendanceInitialData, setAttendanceInitialData] = useState(null);
   const [profileInitialTab, setProfileInitialTab] = useState('personal');
+  const [profileSubTab, setProfileSubTab] = useState('personal');
+  const [sidebarViewMode, setSidebarViewMode] = useState('auto'); // 'auto' | 'main'
   const [adminInitialTab, setAdminInitialTab] = useState('users');
   const [adminExtraData, setAdminExtraData] = useState(null);
 
@@ -622,6 +625,7 @@ export default function App() {
   };
 
   const handleNavigate = (tab, extraData = null) => {
+    setSidebarViewMode('auto');
     // 0. Home & Parent Hub Aliases
     if (tab === 'parent-hub' || tab === 'parent-dashboard' || tab === 'family-hub' || tab === 'home') {
       setCurrentTab('home');
@@ -919,28 +923,27 @@ export default function App() {
       return;
     }
     if (tab === 'profile') {
-      if (extraData) {
-        if (typeof extraData === 'string') {
-          setProfileInitialTab(extraData);
-        } else if (extraData.tab) {
-          setProfileInitialTab(extraData.tab);
-        }
-      } else {
-        setProfileInitialTab('personal');
-      }
+      const pTab = typeof extraData === 'string' ? extraData : extraData?.tab || 'personal';
+      setProfileInitialTab(pTab);
+      setProfileSubTab(pTab);
       setCurrentTab('profile');
+      setSidebarViewMode('auto');
       setMobileMenuOpen(false);
       return;
     }
     if (tab === 'counselors' || tab === 'counselor-directory') {
       setCurrentTab('profile');
-      setProfileInitialTab('counselors');
+      setProfileInitialTab('credentials');
+      setProfileSubTab('credentials');
+      setSidebarViewMode('auto');
       setMobileMenuOpen(false);
       return;
     }
     if (tab === 'service-log') {
       setCurrentTab('profile');
       setProfileInitialTab('service');
+      setProfileSubTab('service');
+      setSidebarViewMode('auto');
       setMobileMenuOpen(false);
       return;
     }
@@ -950,6 +953,7 @@ export default function App() {
   };
 
   const handleTabClick = (tabId) => {
+    setSidebarViewMode('auto');
     handleNavigate(tabId);
     setMobileMenuOpen(false);
   };
@@ -1049,12 +1053,368 @@ export default function App() {
     return items;
   };
 
-  const handleBottomNavClick = (itemId) => {
-    if (itemId === '__more__') {
-      setMobileMenuOpen(true);
-    } else {
-      handleTabClick(itemId);
+  // Returns sub-menu configuration for the current active tab
+  const getActiveSubMenu = () => {
+    if (currentTab === 'profile') {
+      const items = [
+        {
+          id: 'personal',
+          label: isParent ? 'Family Profile' : isScout ? 'ID Pass & Personal' : 'Personal Info',
+          icon: 'User',
+          description: isParent ? 'Household & emergency data' : 'Digital card & bio'
+        },
+        ...(isScout ? [
+          { id: 'medical', label: 'Medical & Safety', icon: 'HeartPulse', description: 'Allergies & health notes' },
+          { id: 'gear', label: 'Uniform & Gear', icon: 'Shirt', description: 'Inspection & gear checklist' },
+          { id: 'advancement', label: '7 Ranks Advancement', icon: 'Compass', description: 'Milestones & sign-offs' },
+          { id: 'reports', label: 'Official Reports', icon: 'FileText', badge: unreadAlertsCount || 0, description: 'Certificates & signatures' },
+          { id: 'leadership', label: 'Leadership Clock', icon: 'Crown', description: 'Tenure & Eagle clock' },
+          { id: 'attendance', label: 'My Attendance', icon: 'Calendar', description: 'Session logs & presence' },
+          { id: 'outdoor', label: 'Outdoor & Camping', icon: 'Tent', description: 'Camp nights & trail logs' },
+          { id: 'tarbiyah', label: 'Islamic Tarbiyah', icon: 'Sparkles', description: 'Duas & halqa milestones' },
+          { id: 'service', label: 'Service & Volunteering', icon: 'Clock', description: 'Logged service hours' }
+        ] : []),
+        ...(!isScout ? [
+          { id: 'credentials', label: 'Scouting Credentials', icon: 'Award', description: 'Badges & leadership awards' },
+          { id: 'spt', label: isParent ? 'Safety Training (SPT)' : 'SPT Certificate', icon: 'Shield', description: 'Youth protection status' }
+        ] : []),
+        ...(!isParent ? [
+          { id: 'roles-guide', label: 'Role & Leadership Guide', icon: 'Crown', description: 'Duties & expectations' }
+        ] : []),
+        { id: 'security', label: 'Security & Password', icon: 'Lock', description: 'PIN, password & auth' }
+      ];
+
+      return {
+        id: 'profile',
+        title: isParent ? 'Family Profile' : isScout ? 'Scout Profile' : isOwner ? 'Owner Profile' : 'Leader Profile',
+        colorTheme: isOwner ? 'amber' : 'emerald',
+        activeTabId: profileSubTab || profileInitialTab || 'personal',
+        onSelect: (subId) => {
+          setProfileSubTab(subId);
+          setProfileInitialTab(subId);
+        },
+        items
+      };
     }
+
+    if (currentTab === 'scouts-hub' && (isLeaderOrOwner || isExecutive)) {
+      return {
+        id: 'scouts-hub',
+        title: 'Scouts & Patrols',
+        colorTheme: 'emerald',
+        activeTabId: scoutsHubSubTab,
+        onSelect: (subId) => setScoutsHubSubTab(subId),
+        items: [
+          { id: 'roster', label: 'Patrol Roster', icon: 'Users', description: 'Active scouts & member profiles' },
+          { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare', description: 'Session check-in & logs' },
+          { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award', description: 'Rank requirements & approvals' },
+          { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' }
+        ]
+      };
+    }
+
+    if (currentTab === 'communication-hub' && (isLeaderOrOwner || isExecutive)) {
+      return {
+        id: 'communication-hub',
+        title: 'Communications',
+        colorTheme: 'indigo',
+        activeTabId: commHubSubTab,
+        onSelect: (subId) => setCommHubSubTab(subId),
+        items: [
+          { id: 'direct-messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount, description: '1-on-1 private messaging' },
+          { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', description: 'Announcements & SMS/Email' },
+          { id: 'chat', label: 'Patrol Messenger', icon: 'Radio', badge: unreadChatCount, description: 'Encrypted patrol discussions' },
+          { id: 'parent-requests', label: 'Parent Approvals', icon: 'Inbox', badge: unreadRequestsCount, description: 'Conference & signup reviews' }
+        ]
+      };
+    }
+
+    if (currentTab === 'advancement-hub' && !isParent) {
+      return {
+        id: 'advancement-hub',
+        title: 'Advancement Hub',
+        colorTheme: 'emerald',
+        activeTabId: advancementHubSubTab,
+        onSelect: (subId) => setAdvancementHubSubTab(subId),
+        items: [
+          { id: 'advancement', label: '7 Ranks Progress', icon: 'Compass', description: 'Scout through Eagle' },
+          { id: 'merit-badges', label: 'Merit Badges & Eagle', icon: 'Star', description: 'Required & elective badges' },
+          { id: 'road-to-eagle', label: 'Road to Eagle Guide', icon: 'Mountain', description: 'Step-by-step pathway' },
+          { id: 'handbooks', label: 'Scouting Handbooks & Forms', icon: 'Book', description: 'Official guides & references' },
+          { id: 'videos', label: 'Video Demonstrations & SPT', icon: 'Video', description: 'Skills & safety training' },
+          { id: 'leadership', label: 'Leadership Roles Guide', icon: 'Crown', description: 'Position expectations' }
+        ]
+      };
+    }
+
+    if ((currentTab === 'tarbiyah-hub' || currentTab === 'patrol-hub') && !isParent) {
+      return {
+        id: 'tarbiyah-hub',
+        title: 'Patrol Hub',
+        colorTheme: 'indigo',
+        activeTabId: tarbiyahHubSubTab,
+        onSelect: (subId) => setTarbiyahHubSubTab(subId),
+        items: [
+          { id: 'chat', label: 'Patrol Live Messenger', icon: 'MessageSquare', badge: unreadChatCount, description: 'Real-time patrol channel' },
+          { id: 'meetings', label: 'Patrol Meeting & Google Meet', icon: 'Video', description: 'Huddle agendas & links' }
+        ]
+      };
+    }
+
+    if (currentTab === 'events-hub' && !isParent) {
+      return {
+        id: 'events-hub',
+        title: 'Schedule & Tasks',
+        colorTheme: 'sky',
+        activeTabId: eventsHubSubTab,
+        onSelect: (subId) => setEventsHubSubTab(subId),
+        items: [
+          { id: 'events', label: 'Troop Calendar & RSVPs', icon: 'Calendar', description: 'Meetings, campouts & trips' },
+          { id: 'assignments', label: 'Homework & Challenges', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Weekly tasks & submissions' }
+        ]
+      };
+    }
+
+    if (currentTab === 'knowledge-hub' || currentTab === 'knowledge') {
+      return {
+        id: 'knowledge-hub',
+        title: 'Islamic Tarbiyah',
+        colorTheme: 'emerald',
+        activeTabId: knowledgeHubSubTab,
+        onSelect: (subId) => setKnowledgeHubSubTab(subId),
+        items: [
+          { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles', description: 'Duas, halqas & character' }
+        ]
+      };
+    }
+
+    return null;
+  };
+
+  const getSubItemTheme = (subItem, isActive, colorTheme) => {
+    switch (colorTheme) {
+      case 'amber':
+        return {
+          activeContainer: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md shadow-amber-950/40 border-amber-400 ring-1 ring-amber-300/30',
+          activeIconBox: 'bg-slate-950/20 text-slate-950',
+          inactiveIconBox: 'bg-slate-800 border border-slate-700/60 text-amber-400 group-hover:text-amber-300',
+          activeIcon: 'text-slate-950',
+          inactiveIcon: 'text-amber-400 group-hover:text-amber-300',
+          activeDesc: 'text-slate-900/80 font-medium',
+          activeBadge: 'bg-slate-950 text-amber-300'
+        };
+      case 'sky':
+        return {
+          activeContainer: 'bg-gradient-to-r from-sky-500 to-sky-600 text-white font-black shadow-md shadow-sky-950/40 border-sky-400 ring-1 ring-sky-300/30',
+          activeIconBox: 'bg-white/20 text-white',
+          inactiveIconBox: 'bg-slate-800 border border-slate-700/60 text-sky-400 group-hover:text-sky-300',
+          activeIcon: 'text-white',
+          inactiveIcon: 'text-sky-400 group-hover:text-sky-300',
+          activeDesc: 'text-sky-100',
+          activeBadge: 'bg-slate-950 text-sky-300'
+        };
+      case 'indigo':
+        return {
+          activeContainer: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-black shadow-md shadow-indigo-950/40 border-indigo-400 ring-1 ring-indigo-300/30',
+          activeIconBox: 'bg-white/20 text-white',
+          inactiveIconBox: 'bg-slate-800 border border-slate-700/60 text-indigo-400 group-hover:text-indigo-300',
+          activeIcon: 'text-white',
+          inactiveIcon: 'text-indigo-400 group-hover:text-indigo-300',
+          activeDesc: 'text-indigo-100',
+          activeBadge: 'bg-slate-950 text-indigo-300'
+        };
+      case 'purple':
+        return {
+          activeContainer: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black shadow-md shadow-purple-950/40 border-purple-400 ring-1 ring-purple-300/30',
+          activeIconBox: 'bg-white/20 text-white',
+          inactiveIconBox: 'bg-slate-800 border border-slate-700/60 text-purple-400 group-hover:text-purple-300',
+          activeIcon: 'text-white',
+          inactiveIcon: 'text-purple-400 group-hover:text-purple-300',
+          activeDesc: 'text-purple-100',
+          activeBadge: 'bg-slate-950 text-purple-300'
+        };
+      case 'emerald':
+      default:
+        return {
+          activeContainer: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-black shadow-md shadow-emerald-950/40 border-emerald-400 ring-1 ring-emerald-300/30',
+          activeIconBox: 'bg-slate-950/20 text-slate-950',
+          inactiveIconBox: 'bg-slate-800 border border-slate-700/60 text-emerald-400 group-hover:text-emerald-300',
+          activeIcon: 'text-slate-950',
+          inactiveIcon: 'text-emerald-400 group-hover:text-emerald-300',
+          activeDesc: 'text-slate-900/80 font-medium',
+          activeBadge: 'bg-slate-950 text-emerald-300'
+        };
+    }
+  };
+
+  const renderNavigationArea = (isMobile = false) => {
+    const activeSubMenu = sidebarViewMode === 'auto' ? getActiveSubMenu() : null;
+
+    if (activeSubMenu) {
+      return (
+        <nav className={`flex-1 ${isMobile ? 'p-3' : 'px-3 py-1'} space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800`}>
+          {/* Back to Main Menu Button */}
+          <button
+            type="button"
+            onClick={() => setSidebarViewMode('main')}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 transition-all duration-200 cursor-pointer shadow-md group select-none"
+          >
+            <div className="w-6 h-6 rounded-lg bg-slate-700/80 border border-slate-600/60 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:-translate-x-0.5 transition-transform shrink-0">
+              <ArrowLeft size={13} />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <span className="block text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Return to</span>
+              <span className="block text-xs font-black truncate text-emerald-400 group-hover:text-emerald-300">Main Menu</span>
+            </div>
+          </button>
+
+          {/* Section Header */}
+          <div className="pt-1 px-1 flex items-center justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 truncate">
+              <Layers size={12} className="text-slate-400 shrink-0" />
+              <span>{activeSubMenu.title} Sections</span>
+            </span>
+            <span className="text-[9px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full border border-slate-700/50 shrink-0 font-bold">
+              {activeSubMenu.items.length} {activeSubMenu.items.length === 1 ? 'section' : 'sections'}
+            </span>
+          </div>
+
+          {/* Sub-Menu Items */}
+          <div className="space-y-1 pt-0.5">
+            {activeSubMenu.items.map((subItem) => {
+              const isSubActive = activeSubMenu.activeTabId === subItem.id;
+              const itemTheme = getSubItemTheme(subItem, isSubActive, activeSubMenu.colorTheme);
+
+              return (
+                <button
+                  key={subItem.id}
+                  type="button"
+                  onClick={() => {
+                    activeSubMenu.onSelect(subItem.id);
+                    if (isMobile) setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group min-h-[42px] border ${
+                    isSubActive
+                      ? itemTheme.activeContainer
+                      : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 pr-1.5">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 shadow-xs ${
+                      isSubActive ? itemTheme.activeIconBox : itemTheme.inactiveIconBox
+                    }`}>
+                      <DynamicIcon
+                        name={subItem.icon}
+                        size={15}
+                        className={isSubActive ? itemTheme.activeIcon : itemTheme.inactiveIcon}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <span className={`block truncate ${isSubActive ? 'font-black' : 'font-semibold'}`}>
+                        {subItem.label}
+                      </span>
+                      {subItem.description && (
+                        <span className={`block text-[10px] truncate ${isSubActive ? itemTheme.activeDesc : 'text-slate-400'}`}>
+                          {subItem.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {subItem.badge > 0 && (
+                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-xs ${
+                        isSubActive ? itemTheme.activeBadge : 'bg-red-500 text-white animate-pulse'
+                      }`}>
+                        {subItem.badge > 99 ? '99+' : subItem.badge}
+                      </span>
+                    )}
+                    <ChevronRight
+                      size={13}
+                      className={`transition-transform duration-200 ${
+                        isSubActive ? 'opacity-90 translate-x-0.5' : 'opacity-0 group-hover:opacity-60'
+                      }`}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      );
+    }
+
+    // Fallback / Main Navigation Menu
+    const currentSubMenuConfig = getActiveSubMenu();
+    return (
+      <nav className={`flex-1 ${isMobile ? 'p-3' : 'px-3 py-1'} space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800`}>
+        {/* If in main menu while viewing a section with sub-tabs, show quick shortcut banner */}
+        {currentSubMenuConfig && (
+          <button
+            type="button"
+            onClick={() => setSidebarViewMode('auto')}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/40 transition mb-2 shadow-xs cursor-pointer group"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Layers size={13} className="text-emerald-400 shrink-0" />
+              <span className="truncate">Open {currentSubMenuConfig.title} Sub-Menu</span>
+            </div>
+            <ChevronRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
+        )}
+
+        <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
+          <span>Navigation Menu</span>
+          <span className="text-[9px] font-mono text-slate-500 font-bold lowercase">{navItems.length} modules</span>
+        </div>
+
+        {navItems.map((item) => {
+          const isActive = currentTab === item.id;
+          const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleTabClick(item.id)}
+              className={`w-full flex items-center justify-between px-3 ${isMobile ? 'py-2.5 min-h-[44px]' : 'py-2'} rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group ${
+                isActive
+                  ? isOwner
+                    ? 'bg-gradient-to-r from-amber-600/25 to-amber-700/15 text-white border-l-4 border-amber-500 shadow-sm font-extrabold'
+                    : 'bg-gradient-to-r from-emerald-600/25 to-teal-650/15 text-white border-l-4 border-emerald-500 shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
+                  isActive
+                    ? `${itemTheme.activePill} ${itemTheme.glow}`
+                    : `${itemTheme.pillBg} ${itemTheme.border}`
+                }`}>
+                  <DynamicIcon 
+                    name={item.icon} 
+                    size={15} 
+                    className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
+                  />
+                </div>
+                <span className={`truncate text-xs ${
+                  isActive 
+                    ? (isOwner ? 'text-amber-300 font-black' : 'text-emerald-300 font-black') 
+                    : 'font-semibold text-slate-300 group-hover:text-white'
+                }`}>
+                  {item.label}
+                </span>
+              </div>
+              {item.badge > 0 ? (
+                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0 shadow-sm">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              ) : (
+                isActive && <ChevronRight size={13} className={isOwner ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+    );
   };
 
   const userPhoto = currentUser.photoURL || currentUser.avatar || currentUser.photo || currentUser.profilePic;
@@ -1319,56 +1679,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Nav Items List */}
-            <nav className="flex-1 p-3 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
-                <span>Navigation Menu</span>
-                <span className="text-[9px] font-mono text-slate-500 font-bold lowercase">{navItems.length} modules</span>
-              </div>
-              {navItems.map((item) => {
-                const isActive = currentTab === item.id;
-                const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleTabClick(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group min-h-[44px] ${
-                      isActive
-                        ? isOwner
-                          ? 'bg-gradient-to-r from-amber-600/30 to-amber-700/20 text-white border-l-4 border-amber-400 font-extrabold shadow-sm'
-                          : 'bg-gradient-to-r from-emerald-600/30 to-teal-650/20 text-white border-l-4 border-emerald-400 font-extrabold shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
-                        isActive
-                          ? `${itemTheme.activePill} ${itemTheme.glow}`
-                          : `${itemTheme.pillBg} ${itemTheme.border}`
-                      }`}>
-                        <DynamicIcon 
-                          name={item.icon} 
-                          size={16} 
-                          className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
-                        />
-                      </div>
-                      <span className={`truncate text-xs ${
-                        isActive 
-                          ? (isOwner ? 'text-amber-300 font-black' : 'text-emerald-300 font-black') 
-                          : 'font-semibold text-slate-300 group-hover:text-white'
-                      }`}>
-                        {item.label}
-                      </span>
-                    </div>
-                    {item.badge > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0 shadow-sm">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+            {/* Dynamic Navigation / Sub-Menu Area */}
+            {renderNavigationArea(true)}
 
             {/* Customization & Logout Footer */}
             <div className="p-3 border-t border-slate-800/80 bg-slate-900/95 space-y-2 shrink-0">
@@ -1578,58 +1890,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tab Links */}
-        <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
-          <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
-            <span>Navigation Menu</span>
-            <span className="text-[9px] font-mono text-slate-500 font-bold lowercase">{navItems.length} modules</span>
-          </div>
-          {navItems.map((item) => {
-            const isActive = currentTab === item.id;
-            const itemTheme = getNavItemColorTheme(item, isActive, isOwner);
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group ${
-                  isActive
-                    ? isOwner
-                      ? 'bg-gradient-to-r from-amber-600/25 to-amber-700/15 text-white border-l-4 border-amber-500 shadow-sm font-extrabold'
-                      : 'bg-gradient-to-r from-emerald-600/25 to-teal-650/15 text-white border-l-4 border-emerald-500 shadow-sm font-extrabold'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 shadow-xs ${
-                    isActive
-                      ? `${itemTheme.activePill} ${itemTheme.glow}`
-                      : `${itemTheme.pillBg} ${itemTheme.border}`
-                  }`}>
-                    <DynamicIcon 
-                      name={item.icon} 
-                      size={15} 
-                      className={isActive ? itemTheme.activeIcon || itemTheme.icon : itemTheme.icon} 
-                    />
-                  </div>
-                  <span className={`truncate text-xs ${
-                    isActive 
-                      ? (isOwner ? 'text-amber-300 font-black' : 'text-emerald-300 font-black') 
-                      : 'font-semibold text-slate-300 group-hover:text-white'
-                  }`}>
-                    {item.label}
-                  </span>
-                </div>
-                {item.badge > 0 ? (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shrink-0 shadow-sm">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                ) : (
-                  isActive && <ChevronRight size={13} className={isOwner ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Dynamic Navigation / Sub-Menu Area */}
+        {renderNavigationArea(false)}
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-900/95 space-y-1.5 shrink-0">
@@ -1928,7 +2190,15 @@ export default function App() {
             onNavigate={handleNavigate} 
           />
         )}
-        {currentTab === 'profile' && !isParent && <ScoutProfile currentUser={currentUser} initialTab={profileInitialTab} onNavigate={handleNavigate} />}
+        {currentTab === 'profile' && !isParent && (
+          <ScoutProfile 
+            currentUser={currentUser} 
+            initialTab={profileInitialTab} 
+            activeTab={profileSubTab}
+            onTabChange={setProfileSubTab}
+            onNavigate={handleNavigate} 
+          />
+        )}
         {currentTab === 'profile' && isParent && (
           <ParentDashboard 
             currentUser={currentUser} 
@@ -1946,7 +2216,13 @@ export default function App() {
           />
         )}
         {currentTab === 'reports' && isScout && (
-          <ScoutProfile currentUser={currentUser} initialTab="reports" onNavigate={handleNavigate} />
+          <ScoutProfile 
+            currentUser={currentUser} 
+            initialTab="reports" 
+            activeTab={profileSubTab}
+            onTabChange={setProfileSubTab}
+            onNavigate={handleNavigate} 
+          />
         )}
         {currentTab === 'attendance' && isLeaderOrOwner && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
         {currentTab === 'attendance' && isParent && (
@@ -1992,7 +2268,13 @@ export default function App() {
           <ScoutAlertsFeed currentUser={currentUser} onNavigate={handleNavigate} />
         )}
         {(currentTab === 'counselors' || currentTab === 'counselor-directory') && (
-          <ScoutProfile currentUser={currentUser} initialTab="counselors" onNavigate={handleNavigate} />
+          <ScoutProfile 
+            currentUser={currentUser} 
+            initialTab="counselors" 
+            activeTab={profileSubTab}
+            onTabChange={setProfileSubTab}
+            onNavigate={handleNavigate} 
+          />
         )}
         </ErrorBoundary>
       </main>
