@@ -1198,14 +1198,7 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', act
             { id: 'personal', label: isParent ? '👨‍👩‍👧 Family' : isScout ? '💳 ID & Bio' : '👤 Personal', icon: User },
             ...(isScout ? [
               { id: 'medical', label: '❤️ Medical', icon: HeartPulse },
-              { id: 'gear', label: '🎽 Gear', icon: Shirt },
-              { id: 'advancement', label: '⚜️ Ranks', icon: Compass },
-              { id: 'reports', label: '📜 Reports', icon: FileText, badge: publishedReports.length },
-              { id: 'leadership', label: '👑 Leadership', icon: Crown },
-              { id: 'attendance', label: '📋 Attendance', icon: Calendar, badge: attendanceStats.absentCount >= 2 ? attendanceStats.absentCount : null },
-              { id: 'outdoor', label: '🏕️ Camping', icon: Tent },
-              { id: 'tarbiyah', label: '🌙 Tarbiyah', icon: Sparkles },
-              { id: 'service', label: '⏱️ Service', icon: Clock }
+              { id: 'gear', label: '🎽 Gear', icon: Shirt }
             ] : []),
             ...(!isScout ? [
               { id: 'credentials', label: '⚜️ Badges', icon: Award },
@@ -1217,7 +1210,7 @@ export default function ScoutProfile({ currentUser, initialTab = 'personal', act
             { id: 'security', label: '🔐 Security', icon: Lock }
           ].map(t => {
             const isActive = t.id === 'personal'
-              ? (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['advancement', 'roles-guide', 'attendance', 'service', 'credentials', 'spt', 'security', 'reports', 'medical', 'outdoor', 'leadership', 'tarbiyah', 'gear'].includes(activeProfileTab))
+              ? (activeProfileTab === 'personal' || activeProfileTab === 'profile' || !['roles-guide', 'credentials', 'spt', 'security', 'medical', 'gear'].includes(activeProfileTab))
               : activeProfileTab === t.id;
             const Icon = t.icon;
             return (

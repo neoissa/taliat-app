@@ -1064,15 +1064,8 @@ export default function App() {
           description: isParent ? 'Household & emergency data' : 'Digital card & bio'
         },
         ...(isScout ? [
-          { id: 'medical', label: 'Medical & Safety', icon: 'HeartPulse', description: 'Allergies & health notes' },
-          { id: 'gear', label: 'Uniform & Gear', icon: 'Shirt', description: 'Inspection & gear checklist' },
-          { id: 'advancement', label: '7 Ranks Advancement', icon: 'Compass', description: 'Milestones & sign-offs' },
-          { id: 'reports', label: 'Official Reports', icon: 'FileText', badge: unreadAlertsCount || 0, description: 'Certificates & signatures' },
-          { id: 'leadership', label: 'Leadership Clock', icon: 'Crown', description: 'Tenure & Eagle clock' },
-          { id: 'attendance', label: 'My Attendance', icon: 'Calendar', description: 'Session logs & presence' },
-          { id: 'outdoor', label: 'Outdoor & Camping', icon: 'Tent', description: 'Camp nights & trail logs' },
-          { id: 'tarbiyah', label: 'Islamic Tarbiyah', icon: 'Sparkles', description: 'Duas & halqa milestones' },
-          { id: 'service', label: 'Service & Volunteering', icon: 'Clock', description: 'Logged service hours' }
+          { id: 'medical', label: 'Medical & Safety', icon: 'HeartPulse', description: 'AHMR, allergies & health notes' },
+          { id: 'gear', label: 'Uniform & Gear', icon: 'Shirt', description: 'Inspection & 10 Essentials checklist' }
         ] : []),
         ...(!isScout ? [
           { id: 'credentials', label: 'Scouting Credentials', icon: 'Award', description: 'Badges & leadership awards' },
