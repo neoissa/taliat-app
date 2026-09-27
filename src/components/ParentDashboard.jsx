@@ -2720,16 +2720,23 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
       )}
 
       {/* ── 7. TAB 4: STANDALONE ALERTS & ACTIVITY FEED ── */}
-      {activeTab === 'feed' && (
-        <ParentAlertsFeed 
+      {(activeTab === 'feed' || activeTab === 'alerts') && (
+        <ParentMessagingHub 
           currentUser={currentUser} 
           linkedScouts={linkedScouts} 
-          onNavigate={(targetTab) => setActiveTab(targetTab)}
+          allGroups={allGroups}
+          initialSection="alerts"
+          onNavigate={(targetTab) => {
+            if (onNavigate) onNavigate(targetTab);
+            else setActiveTab(targetTab);
+          }}
           onOpenAction={(targetTab, payload) => {
             if (targetTab === 'reports' && payload) {
               setViewingPublishedReport(payload);
             } else if (targetTab === 'tasks' && payload) {
               setSubmittingTask(payload);
+            } else if (onNavigate) {
+              onNavigate(targetTab);
             } else {
               setActiveTab(targetTab);
             }
@@ -5095,6 +5102,22 @@ export default function ParentDashboard({ currentUser = {}, initialTab = 'overvi
           currentUser={currentUser} 
           linkedScouts={linkedScouts} 
           allGroups={allGroups}
+          initialSection="messages"
+          onNavigate={(targetTab) => {
+            if (onNavigate) onNavigate(targetTab);
+            else setActiveTab(targetTab);
+          }}
+          onOpenAction={(targetTab, payload) => {
+            if (targetTab === 'reports' && payload) {
+              setViewingPublishedReport(payload);
+            } else if (targetTab === 'tasks' && payload) {
+              setSubmittingTask(payload);
+            } else if (onNavigate) {
+              onNavigate(targetTab);
+            } else {
+              setActiveTab(targetTab);
+            }
+          }}
         />
       )}
 
