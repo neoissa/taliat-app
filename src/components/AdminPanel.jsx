@@ -833,10 +833,8 @@ A regular troop session focused on character building, scout skills, and youth d
 
 🎒 *Required Gear:* Complete Class A Field Uniform, Scout Handbook, and water bottle
 
-🔗 *RSVP by 5:00 PM today:*
+🔗 *Portal Link:*
 ${appUrl}
-
-🚗 _Side note: reply in this group if you can drive scouts tonight._
 
 📞 *Questions:* message any of the scout leaders directly.
 

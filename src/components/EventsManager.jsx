@@ -473,6 +473,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [whatsappPatrolId, setWhatsappPatrolId] = useState('all');
   const [whatsappCustomNote, setWhatsappCustomNote] = useState('');
   const [whatsappIncludeRsvpLink, setWhatsappIncludeRsvpLink] = useState(true);
+  const [whatsappIncludeCarpool, setWhatsappIncludeCarpool] = useState(false);
   const [whatsappRecipientType, setWhatsappRecipientType] = useState('parent'); // 'parent' | 'scout' | 'leader'
   const [whatsappRecipientName, setWhatsappRecipientName] = useState('');
   const [whatsappRecipientPhone, setWhatsappRecipientPhone] = useState('');
@@ -516,7 +517,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [activitySubtype, setActivitySubtype] = useState('hiking');
   const [customSubtypeText, setCustomSubtypeText] = useState('');
   const [serviceHoursCredited, setServiceHoursCredited] = useState(0);
-  const [requiresRsvp, setRequiresRsvp] = useState(true);
+  const [requiresRsvp, setRequiresRsvp] = useState(false);
   const [mustAttend, setMustAttend] = useState(false);
   const [isFridaySession, setIsFridaySession] = useState(false);
   const [category, setCategory] = useState('meeting'); // 'campout' | 'meeting' | 'service' | 'faith' | 'ceremony'
@@ -894,7 +895,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setActivitySubtype('hiking');
     setCustomSubtypeText('');
     setServiceHoursCredited(0);
-    setRequiresRsvp(true);
+    setRequiresRsvp(false);
     setMustAttend(isFri);
     setIsFridaySession(isFri);
     setCategory('meeting');
@@ -923,7 +924,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setActivitySubtype(ev.activitySubtype || cls.subtype || 'hiking');
     setCustomSubtypeText('');
     setServiceHoursCredited(ev.serviceHoursCredited !== undefined ? ev.serviceHoursCredited : (cls.isService ? 3 : 0));
-    setRequiresRsvp(ev.requiresRsvp !== undefined ? ev.requiresRsvp : true);
+    setRequiresRsvp(ev.requiresRsvp !== undefined ? ev.requiresRsvp : false);
     setMustAttend(ev.mustAttend !== undefined ? ev.mustAttend : (isFri || isMandatoryEvent(ev)));
     setIsFridaySession(isFri);
     setCategory(ev.category || (ev.eventType === 'camp' ? 'campout' : ev.eventType === 'volunteering' ? 'service' : ev.eventType) || 'meeting');
@@ -1472,7 +1473,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       const g = groups.find(grp => grp.id === ev.targetGroupId);
       pName = g?.name ? `${g.name} Patrol` : '';
     }
-
+ 
     return generateEventReminderWhatsApp(ev, {
       patrolName: pName,
       reminderType: type,
@@ -1480,6 +1481,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       recipientName: recipName,
       customNote,
       includeRsvpLink: includeRsvp,
+      includeCarpool,
       appUrl: 'https://taliat-app.vercel.app/'
     });
   };
@@ -1490,7 +1492,20 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     const initialType = 'general';
     const initialPatrolId = ev.targetGroupId || 'all';
     const initialNote = '';
-    const initialIncludeRsvp = true;
+
+    const isRegularMeeting = Boolean(
+      ev.isRegularMeeting ||
+      ev.isFridaySession ||
+      (ev.category === 'meeting' && !ev.category?.includes('camp')) ||
+      /friday|tuesday|weekly\s+meeting|regular\s+meeting|patrol\s+meeting|regular\s+session/i.test(ev.title || '')
+    );
+
+    const initialIncludeRsvp = Boolean(ev.requiresRsvp);
+    const initialIncludeCarpool = Boolean(
+      ev.carpoolNeeded || 
+      (!isRegularMeeting && (ev.category === 'campout' || ev.eventType === 'camp' || ev.category === 'trip'))
+    );
+
     const initialRecipType = directRecipient ? (directRecipient.role === 'scout' ? 'scout' : 'parent') : 'parent';
     const initialRecipName = directRecipient ? (directRecipient.parentName || directRecipient.name || '') : '';
     const initialPhone = directRecipient ? (directRecipient.parentPhone || directRecipient.userPhone || '') : '';
@@ -1499,6 +1514,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setWhatsappPatrolId(initialPatrolId);
     setWhatsappCustomNote(initialNote);
     setWhatsappIncludeRsvpLink(initialIncludeRsvp);
+    setWhatsappIncludeCarpool(initialIncludeCarpool);
     setWhatsappRecipientType(initialRecipType);
     setWhatsappRecipientName(initialRecipName);
     setWhatsappRecipientPhone(initialPhone);
@@ -1510,7 +1526,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       initialNote, 
       initialIncludeRsvp, 
       initialRecipType, 
-      initialRecipName
+      initialRecipName,
+      initialIncludeCarpool
     );
     setWhatsappLiveText(generated);
     setShowWhatsAppModal(true);
@@ -1521,6 +1538,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     const nextPatrolId = changes.patrolId !== undefined ? changes.patrolId : whatsappPatrolId;
     const nextCustomNote = changes.customNote !== undefined ? changes.customNote : whatsappCustomNote;
     const nextIncludeRsvp = changes.includeRsvp !== undefined ? changes.includeRsvp : whatsappIncludeRsvpLink;
+    const nextIncludeCarpool = changes.includeCarpool !== undefined ? changes.includeCarpool : whatsappIncludeCarpool;
     const nextRecipType = changes.recipType !== undefined ? changes.recipType : whatsappRecipientType;
     const nextRecipName = changes.recipName !== undefined ? changes.recipName : whatsappRecipientName;
     const nextPhone = changes.phone !== undefined ? changes.phone : whatsappRecipientPhone;
@@ -1529,6 +1547,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     if (changes.patrolId !== undefined) setWhatsappPatrolId(nextPatrolId);
     if (changes.customNote !== undefined) setWhatsappCustomNote(nextCustomNote);
     if (changes.includeRsvp !== undefined) setWhatsappIncludeRsvpLink(nextIncludeRsvp);
+    if (changes.includeCarpool !== undefined) setWhatsappIncludeCarpool(nextIncludeCarpool);
     if (changes.recipType !== undefined) setWhatsappRecipientType(nextRecipType);
     if (changes.recipName !== undefined) setWhatsappRecipientName(nextRecipName);
     if (changes.phone !== undefined) setWhatsappRecipientPhone(nextPhone);
@@ -1540,7 +1559,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       nextCustomNote,
       nextIncludeRsvp,
       nextRecipType,
-      nextRecipName
+      nextRecipName,
+      nextIncludeCarpool
     );
     setWhatsappLiveText(generated);
   };
@@ -1553,7 +1573,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
       whatsappCustomNote,
       whatsappIncludeRsvpLink,
       whatsappRecipientType,
-      whatsappRecipientName
+      whatsappRecipientName,
+      whatsappIncludeCarpool
     );
     setWhatsappLiveText(generated);
   };
@@ -4527,22 +4548,22 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 </div>
               </div>
 
-              {/* Leader Custom Note Input */}
+              {/* Leader Custom Note Input & Toggles */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-1">
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                     Custom Leader Note (Optional insert)
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Please remember to arrive 15 minutes early for roll call..."
+                    placeholder="e.g. Arrive 15 mins early for roll call..."
                     value={whatsappCustomNote}
                     onChange={(e) => handleUpdateReminderOption({ customNote: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
-                <div className="pt-4 sm:pt-2 flex items-center">
+                <div className="pt-2 sm:pt-4 flex items-center gap-4 sm:col-span-2 flex-wrap">
                   <label className="flex items-center gap-2 text-xs text-slate-300 font-medium cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -4550,7 +4571,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                       onChange={(e) => handleUpdateReminderOption({ includeRsvp: e.target.checked })}
                       className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
                     />
-                    <span>Include Portal & RSVP Link</span>
+                    <span>Include Portal Link</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs text-slate-300 font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={whatsappIncludeCarpool}
+                      onChange={(e) => handleUpdateReminderOption({ includeCarpool: e.target.checked })}
+                      className="rounded border-slate-700 text-teal-500 focus:ring-teal-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                    />
+                    <span>Include Carpool Note (🚗)</span>
                   </label>
                 </div>
               </div>

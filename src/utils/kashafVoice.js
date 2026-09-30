@@ -295,14 +295,41 @@ export function generateEventReminderWhatsApp(event, options = {}) {
     customNote = '',
     rsvpDeadline = '',
     carpoolNote = '',
+    includeCarpool = undefined,
     nextSessionStr = '',
     cancellationReason = '',
     includeRsvpLink = true,
+    forceRsvp = false,
     appUrl = APP_PORTAL_URL
   } = opts;
 
   const mode = templateType || reminderType || 'general';
   const eventTitle = applyIslamicTransliteration(event.title || 'Youth Scouting Program').trim();
+
+  // Determine if this is a regular weekly meeting / session (e.g. Tuesday/Friday regular session)
+  const isRegularMeeting = Boolean(
+    event.isRegularMeeting ||
+    event.isFridaySession ||
+    (event.category === 'meeting' && !event.category?.includes('camp')) ||
+    /friday|tuesday|weekly\s+meeting|regular\s+meeting|patrol\s+meeting|regular\s+session/i.test(event.title || '')
+  );
+
+  // Determine whether RSVP is required for this event (defined when creating event, or forced)
+  const isRsvpRequired = Boolean(
+    forceRsvp ||
+    mode === 'rsvp' ||
+    event.requiresRsvp === true
+  );
+
+  // Determine whether Carpool should be included:
+  // For regular meetings (Tuesday/Friday): carpool is NOT included by default unless explicitly provided or enabled
+  // For non-regular events (campouts, trips, outdoor hikes): carpool is included if not explicitly disabled
+  const shouldIncludeCarpool = Boolean(
+    carpoolNote ||
+    includeCarpool === true ||
+    event.carpoolNeeded === true ||
+    (includeCarpool !== false && !isRegularMeeting && (mode === 'campout' || event.category === 'campout' || event.eventType === 'camp' || event.category === 'trip'))
+  );
 
   // ─────────────────────────────────────────────────────────
   // TEMPLATE E — Day-of Nudge (Rule 2 & Template E)
@@ -311,7 +338,14 @@ export function generateEventReminderWhatsApp(event, options = {}) {
   if (mode === 'nudge' || mode === 'template_e' || mode === 'day_of') {
     const timeClean = (event.time || '7:15–8:30 PM').replace(/\s*(?:-|to)\s*/gi, '–').replace(/\s*at\s*/i, '').trim();
     const whereStr = formatEventWhere(event.location);
-    const linkLine = includeRsvpLink ? `\n\n🔗 *Last-minute RSVP:*\n${appUrl}` : '';
+    let linkLine = '';
+    if (includeRsvpLink) {
+      if (isRsvpRequired) {
+        linkLine = `\n\n🔗 *Last-minute RSVP:*\n${appUrl}`;
+      } else {
+        linkLine = `\n\n🔗 *Portal Link:*\n${appUrl}`;
+      }
+    }
 
     return `📢 *Tonight:* ${eventTitle}, ${timeClean}\n📍 ${whereStr}${linkLine}`;
   }
@@ -350,7 +384,9 @@ export function generateEventReminderWhatsApp(event, options = {}) {
       nextBlock = `\n\n📅 *Next session:* ${nextSessionStr}`;
     }
 
-    const carpoolSideNote = `\n\n🚗 _Side note: shukran to the parents who drove this week._`;
+    const carpoolSideNote = (shouldIncludeCarpool || carpoolNote)
+      ? `\n\n🚗 _Side note: ${carpoolNote || 'shukran to the parents who drove this week.'}_`
+      : '';
     const closing = `\n\n${getLockedClosing(patrolName)}`;
 
     return `${greeting}\n\n${header}\n${accomplishments}${nextBlock}${carpoolSideNote}${closing}`;
@@ -376,10 +412,14 @@ export function generateEventReminderWhatsApp(event, options = {}) {
 
     const deadline = rsvpDeadline || event.registrationDeadline || 'Wednesday, 8:00 PM';
     const rsvpBlock = includeRsvpLink
-      ? `🔗 *RSVP and permission slip by ${deadline}:*\n${appUrl}`
+      ? (isRsvpRequired || event.requiresRsvp !== false
+          ? `🔗 *RSVP and permission slip by ${deadline}:*\n${appUrl}`
+          : `🔗 *Portal Link:*\n${appUrl}`)
       : '';
 
-    const carpoolSideNote = carpoolNote || '🚗 _Side note: reply in this group if you can drive scouts._';
+    const carpoolSideNote = (shouldIncludeCarpool || carpoolNote)
+      ? (carpoolNote ? `🚗 _Side note: ${carpoolNote}_` : '🚗 _Side note: reply in this group if you can drive scouts._')
+      : '';
     const questionsBlock = '📞 *Questions:* message any of the scout leaders directly.';
     const closing = getLockedClosing(patrolName);
 
@@ -433,19 +473,24 @@ export function generateEventReminderWhatsApp(event, options = {}) {
   // Optional Note
   const noteBlock = customNote ? formatNoteBlock(customNote) : (event.notes ? formatNoteBlock(event.notes) : '');
 
-  // RSVP with deadline in label
-  let deadline = rsvpDeadline || event.registrationDeadline || event.deadline;
-  if (!deadline) {
-    deadline = '5:00 PM today';
+  // RSVP block: Only demand RSVP if isRsvpRequired is true; otherwise provide simple portal link or omit
+  let rsvpBlock = '';
+  if (includeRsvpLink) {
+    if (isRsvpRequired) {
+      let deadline = rsvpDeadline || event.registrationDeadline || event.deadline || '5:00 PM today';
+      rsvpBlock = `🔗 *RSVP by ${deadline}:*\n${appUrl}`;
+    } else {
+      rsvpBlock = `🔗 *Portal Link:*\n${appUrl}`;
+    }
   }
-  const rsvpBlock = includeRsvpLink
-    ? (event.requiresRsvp === false
-        ? `🔗 *Portal Link:*\n${appUrl}`
-        : `🔗 *RSVP by ${deadline}:*\n${appUrl}`)
-    : '';
 
-  // Carpool side note
-  const carpoolSideNote = carpoolNote || '🚗 _Side note: reply in this group if you can drive scouts tonight._';
+  // Carpool side note: Only included if shouldIncludeCarpool is true
+  let carpoolSideNote = '';
+  if (shouldIncludeCarpool) {
+    carpoolSideNote = carpoolNote 
+      ? `🚗 _Side note: ${carpoolNote}_` 
+      : '🚗 _Side note: reply in this group if you can drive scouts._';
+  }
 
   // Questions
   const questionsBlock = '📞 *Questions:* message any of the scout leaders directly.';
