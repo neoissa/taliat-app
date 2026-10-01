@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -28,9 +28,23 @@ import {
   Lock,
   Unlock,
   Crown,
-  Info
+  Info,
+  Bold,
+  Italic,
+  Heading3,
+  List,
+  ListOrdered,
+  Indent as IndentIcon,
+  Outdent as OutdentIcon,
+  Maximize2,
+  Minimize2,
+  Eye,
+  Code,
+  Layers,
+  Sparkle,
+  Type
 } from 'lucide-react';
-import { formatKashafLessonPlanWhatsApp, applyIslamicTransliteration } from '../utils/kashafVoice';
+import { formatKashafLessonPlanWhatsApp, applyIslamicTransliteration, formatLessonPlanContentForWhatsApp } from '../utils/kashafVoice';
 
 export default function LessonPlans({ currentUser }) {
   const isOwner = currentUser?.role === 'owner' || currentUser?.email === 'neoissa@gmail.com';
@@ -116,6 +130,291 @@ export default function LessonPlans({ currentUser }) {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // ── Rich Text Editor State & Helpers ──
+  const contentTextareaRef = useRef(null);
+  const islamicTextareaRef = useRef(null);
+  const [editorTab, setEditorTab] = useState('edit'); // 'edit' | 'preview'
+  const [editorHeightMode, setEditorHeightMode] = useState('large'); // 'medium' (14 rows / 320px) | 'large' (22 rows / 480px) | 'max' (32 rows / 650px)
+  const [isFullWidthEditor, setIsFullWidthEditor] = useState(false);
+
+  // Generic Formatting Inserter (Bold, Italic, Quotes, Code, Headings)
+  const insertFormatting = (prefix, suffix = '', defaultText = '', targetRef = contentTextareaRef, setter = setPlanContent) => {
+    const el = targetRef?.current;
+    if (!el) return;
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const currentVal = el.value || '';
+    const selectedText = currentVal.substring(start, end);
+    const textToInsert = selectedText || defaultText;
+    const replacement = `${prefix}${textToInsert}${suffix}`;
+
+    const newVal = currentVal.substring(0, start) + replacement + currentVal.substring(end);
+    setter(newVal);
+
+    setTimeout(() => {
+      el.focus();
+      if (selectedText) {
+        el.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+      } else {
+        el.setSelectionRange(start + prefix.length, start + prefix.length + defaultText.length);
+      }
+    }, 10);
+  };
+
+  // Insert Snippet at Cursor
+  const insertSnippet = (snippet, targetRef = contentTextareaRef, setter = setPlanContent) => {
+    const el = targetRef?.current;
+    if (!el) return;
+
+    const start = el.selectionStart;
+    const currentVal = el.value || '';
+    
+    // Ensure snippet starts on a newline if not at start of line
+    const beforeCursor = currentVal.substring(0, start);
+    const needsLeadingNewline = beforeCursor.length > 0 && !beforeCursor.endsWith('\n');
+    const formattedSnippet = (needsLeadingNewline ? '\n' : '') + snippet;
+
+    const newVal = currentVal.substring(0, start) + formattedSnippet + currentVal.substring(start);
+    setter(newVal);
+
+    setTimeout(() => {
+      el.focus();
+      const newPos = start + formattedSnippet.length;
+      el.setSelectionRange(newPos, newPos);
+    }, 10);
+  };
+
+  // Indentation handler (Tab / Shift+Tab)
+  const handleIndent = (isOutdent = false, targetRef = contentTextareaRef, setter = setPlanContent) => {
+    const el = targetRef?.current;
+    if (!el) return;
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const currentVal = el.value || '';
+
+    // Find the start of the first selected line and end of the last selected line
+    const lineStart = currentVal.lastIndexOf('\n', start - 1) + 1;
+    let lineEnd = currentVal.indexOf('\n', end);
+    if (lineEnd === -1) lineEnd = currentVal.length;
+
+    const selectedLinesText = currentVal.substring(lineStart, lineEnd);
+    const lines = selectedLinesText.split('\n');
+
+    let delta = 0;
+    let modifiedLines;
+
+    if (!isOutdent) {
+      // Indent: Add 3 spaces to the beginning of each line
+      modifiedLines = lines.map(line => '   ' + line);
+      delta = lines.length * 3;
+    } else {
+      // Outdent: Remove up to 3 leading spaces from each line
+      modifiedLines = lines.map(line => {
+        if (line.startsWith('   ')) {
+          delta -= 3;
+          return line.slice(3);
+        } else if (line.startsWith('  ')) {
+          delta -= 2;
+          return line.slice(2);
+        } else if (line.startsWith(' ')) {
+          delta -= 1;
+          return line.slice(1);
+        } else if (line.startsWith('\t')) {
+          delta -= 1;
+          return line.slice(1);
+        }
+        return line;
+      });
+    }
+
+    const replacement = modifiedLines.join('\n');
+    const newVal = currentVal.substring(0, lineStart) + replacement + currentVal.substring(lineEnd);
+    setter(newVal);
+
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(
+        Math.max(lineStart, start + (!isOutdent ? 3 : (delta < 0 ? -3 : 0))),
+        Math.max(lineStart, end + delta)
+      );
+    }, 10);
+  };
+
+  // Smart Keyboard events for indent, bold, italics, list continuation
+  const handleEditorKeyDown = (e, targetRef = contentTextareaRef, setter = setPlanContent) => {
+    // 1. Tab Key for indentation
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      handleIndent(e.shiftKey, targetRef, setter);
+      return;
+    }
+
+    // 2. Ctrl+B / Cmd+B for Bold
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      insertFormatting('**', '**', 'bold text', targetRef, setter);
+      return;
+    }
+
+    // 3. Ctrl+I / Cmd+I for Italics
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      insertFormatting('_', '_', 'italic text', targetRef, setter);
+      return;
+    }
+
+    // 4. Smart Enter Key for lists
+    if (e.key === 'Enter') {
+      const el = targetRef?.current;
+      if (!el) return;
+
+      const start = el.selectionStart;
+      const currentVal = el.value || '';
+      const lineStart = currentVal.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = currentVal.substring(lineStart, start);
+
+      // Check for numbered list: "1. ", "  2. ", etc.
+      const numMatch = currentLine.match(/^(\s*)(\d+)[\.\)]\s*(.*)$/);
+      if (numMatch) {
+        const indent = numMatch[1];
+        const num = parseInt(numMatch[2], 10);
+        const text = numMatch[3].trim();
+
+        if (text === '') {
+          // Empty item, break out of list
+          e.preventDefault();
+          const newVal = currentVal.substring(0, lineStart) + currentVal.substring(start);
+          setter(newVal);
+          setTimeout(() => {
+            el.focus();
+            el.setSelectionRange(lineStart, lineStart);
+          }, 10);
+          return;
+        } else {
+          // Continue numbered list
+          e.preventDefault();
+          const nextItem = `\n${indent}${num + 1}. `;
+          const newVal = currentVal.substring(0, start) + nextItem + currentVal.substring(start);
+          setter(newVal);
+          setTimeout(() => {
+            el.focus();
+            const newPos = start + nextItem.length;
+            el.setSelectionRange(newPos, newPos);
+          }, 10);
+          return;
+        }
+      }
+
+      // Check for bullet list: "• ", "- ", "* ", "▫️ ", etc.
+      const bulletMatch = currentLine.match(/^(\s*)([•\-\*]|▫️)\s*(.*)$/);
+      if (bulletMatch) {
+        const indent = bulletMatch[1];
+        const bulletChar = bulletMatch[2];
+        const text = bulletMatch[3].trim();
+
+        if (text === '') {
+          // Empty bullet, break out of list
+          e.preventDefault();
+          const newVal = currentVal.substring(0, lineStart) + currentVal.substring(start);
+          setter(newVal);
+          setTimeout(() => {
+            el.focus();
+            el.setSelectionRange(lineStart, lineStart);
+          }, 10);
+          return;
+        } else {
+          // Continue bullet list
+          e.preventDefault();
+          const nextBullet = `\n${indent}${bulletChar} `;
+          const newVal = currentVal.substring(0, start) + nextBullet + currentVal.substring(start);
+          setter(newVal);
+          setTimeout(() => {
+            el.focus();
+            const newPos = start + nextBullet.length;
+            el.setSelectionRange(newPos, newPos);
+          }, 10);
+          return;
+        }
+      }
+
+      // Check for sub-focus line: "   * *Focus:* "
+      const subItemMatch = currentLine.match(/^(\s{2,})[\*•\-\s]*\*(Focus|Time|Gear|Lead|Objective|Tarbiyah|Milestone):\*\s*(.*)$/i);
+      if (subItemMatch && subItemMatch[3].trim() !== '') {
+        e.preventDefault();
+        const indent = subItemMatch[1];
+        const nextSub = `\n${indent}* *Focus:* `;
+        const newVal = currentVal.substring(0, start) + nextSub + currentVal.substring(start);
+        setter(newVal);
+        setTimeout(() => {
+          el.focus();
+          const newPos = start + nextSub.length;
+          el.setSelectionRange(newPos, newPos);
+        }, 10);
+        return;
+      }
+    }
+  };
+
+  // Preset Starter Templates
+  const handleLoadTemplate = (templateType) => {
+    if (planContent && planContent.trim().length > 20) {
+      if (!window.confirm("Replace your current content with the starter template?")) {
+        return;
+      }
+    }
+
+    if (templateType === 'standard_session') {
+      setPlanContent(`### 🎯 Session Milestones & Curriculum Breakdown
+
+1. **Patrol Identity & Culture ("The Patrol Way")**
+   * *Focus:* Brotherhood, accountability, self-reliance, and discipline
+   * *Time:* 25 mins
+   * *Lead:* Patrol Leader & Scribe
+
+2. **Scout Skill Workshop (Pioneering & Lashings)**
+   * *Focus:* Square lashings, shear lashing, and tripod pioneering
+   * *Gear:* Spars, lashing ropes, Scout Handbook
+   * *Time:* 45 mins
+
+3. **Troop Challenge & Inspection**
+   * *Focus:* Rapid tripod assembly relay race & uniform roll call
+   * *Time:* 20 mins`);
+    } else if (templateType === 'rank_advancement') {
+      setPlanContent(`### 🎯 Rank Advancement & Sign-Off Workshop
+
+1. **First Class & Second Class Core Requirements**
+   * *Focus:* Map & compass orientation, 5-mile hike planning, water purification
+   * *Time:* 40 mins
+   * *Lead:* Assistant Patrol Leader
+
+2. **First Aid Practical Drills**
+   * *Focus:* Splinting fractured limbs, treatment for shock, burn dressings
+   * *Time:* 30 mins
+   * *Gear:* First aid kit, triangle bandages
+
+3. **Leader Conferences & Sign-Offs**
+   * *Focus:* Reviewing scout handbooks and testing for rank readiness
+   * *Time:* 20 mins`);
+    } else if (templateType === 'campout_prep') {
+      setPlanContent(`### 🎯 Wilderness Campout Preparation
+
+1. **Patrol Duty Roster & Menu Planning**
+   * *Focus:* Assigning cooks, fire masters, quartermasters, and sanitation
+   * *Time:* 30 mins
+
+2. **Gear Inspection & Tent Pitching Drill**
+   * *Focus:* Dome tent pitching in under 8 minutes, ground tarp placement
+   * *Gear:* 2-person tents, stakes, mallets
+   * *Time:* 35 mins
+
+3. **Safety & Campfire Halqa Planning**
+   * *Focus:* Fire safety circle rules and night reflection schedule
+   * *Time:* 25 mins`);
+    }
+  };
 
   // 1. Subscribe to Lesson Plans
   useEffect(() => {
@@ -525,17 +824,28 @@ export default function LessonPlans({ currentUser }) {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsEditing(false)}
-              className="text-slate-400 hover:text-white transition cursor-pointer p-1.5 rounded-xl hover:bg-slate-800"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFullWidthEditor(prev => !prev)}
+                className="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 transition cursor-pointer px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-700 shadow-sm"
+                title={isFullWidthEditor ? "Show Split WhatsApp Preview" : "Expand to Full Width Canvas"}
+              >
+                {isFullWidthEditor ? <Minimize2 size={13} className="text-teal-400" /> : <Maximize2 size={13} className="text-emerald-400" />}
+                <span className="hidden sm:inline">{isFullWidthEditor ? 'Split Preview' : 'Full Canvas'}</span>
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="text-slate-400 hover:text-white transition cursor-pointer p-1.5 rounded-xl hover:bg-slate-800"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Form Column */}
-            <form onSubmit={handleSavePlan} className="lg:col-span-7 space-y-4">
+            <form onSubmit={handleSavePlan} className={`${isFullWidthEditor ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 
                 {/* Patrol Target Selector */}
@@ -589,30 +899,362 @@ export default function LessonPlans({ currentUser }) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-                  Scouting Objectives & Patrol Activities
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="List the scouting rank requirements, knots, first aid drills, and patrol activities scheduled..."
-                  value={planContent}
-                  onChange={(e) => setPlanContent(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed"
-                />
+              {/* ── RICH TEXT CANVAS: SCOUTING OBJECTIVES & PATROL ACTIVITIES ── */}
+              <div className="bg-slate-950/90 border border-slate-750 rounded-2xl p-4 space-y-3 shadow-lg">
+                {/* Editor Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                  <div>
+                    <label className="block text-xs font-black text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+                      <span className="text-emerald-400">🎯</span>
+                      <span>Scouting Objectives & Patrol Activities</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Curriculum milestones, skills, requirements, knot drills, and timing.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    {/* Height Toggle */}
+                    <div className="flex items-center bg-slate-900 border border-slate-750 rounded-xl p-0.5 text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setEditorHeightMode('medium')}
+                        className={`px-2 py-1 rounded-lg transition cursor-pointer ${
+                          editorHeightMode === 'medium' ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Medium Height (14 rows)"
+                      >
+                        Medium
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorHeightMode('large')}
+                        className={`px-2 py-1 rounded-lg transition cursor-pointer ${
+                          editorHeightMode === 'large' ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Large Canvas (22 rows)"
+                      >
+                        Large
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorHeightMode('max')}
+                        className={`px-2 py-1 rounded-lg transition cursor-pointer ${
+                          editorHeightMode === 'max' ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Max Canvas (32 rows)"
+                      >
+                        Max
+                      </button>
+                    </div>
+
+                    {/* Edit vs Preview Tab */}
+                    <div className="flex items-center bg-slate-900 border border-slate-750 rounded-xl p-0.5 text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setEditorTab('edit')}
+                        className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                          editorTab === 'edit' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <Edit3 size={11} />
+                        <span>Editor</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorTab('preview')}
+                        className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                          editorTab === 'preview' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <Eye size={11} />
+                        <span>Preview</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {editorTab === 'edit' ? (
+                  <div className="space-y-2.5">
+                    {/* Primary Formatting Toolbar */}
+                    <div className="bg-slate-900 border border-slate-750 rounded-xl p-2 flex flex-wrap items-center justify-between gap-1.5 shadow-sm">
+                      {/* Left: Text & List Tools */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {/* Bold */}
+                        <button
+                          type="button"
+                          onClick={() => insertFormatting('**', '**', 'bold text')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Bold (Ctrl+B)"
+                        >
+                          <Bold size={12} />
+                          <span className="hidden sm:inline">Bold</span>
+                        </button>
+
+                        {/* Italic */}
+                        <button
+                          type="button"
+                          onClick={() => insertFormatting('_', '_', 'italic text')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-serif italic transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Italics (Ctrl+I)"
+                        >
+                          <Italic size={12} />
+                          <span className="hidden sm:inline">Italic</span>
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-slate-750 mx-0.5" />
+
+                        {/* Heading */}
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet('### 🎯 Session Milestones & Curriculum Breakdown\n\n')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Insert Milestone Header"
+                        >
+                          <Heading3 size={12} className="text-emerald-400" />
+                          <span className="hidden sm:inline">Header</span>
+                        </button>
+
+                        {/* Numbered List */}
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet('1. **[Milestone Title]**\n   * *Focus:* ')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Numbered Milestone"
+                        >
+                          <ListOrdered size={12} className="text-teal-400" />
+                          <span>1. Number</span>
+                        </button>
+
+                        {/* Bullet */}
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet('• ')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Bullet Point"
+                        >
+                          <List size={12} className="text-sky-400" />
+                          <span>• Bullet</span>
+                        </button>
+
+                        {/* Sub-item */}
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet('   * *Focus:* ')}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Indented Focus Sub-item"
+                        >
+                          <span className="text-emerald-400 text-xs font-mono">▫️</span>
+                          <span>Sub-item</span>
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-slate-750 mx-0.5" />
+
+                        {/* Indent */}
+                        <button
+                          type="button"
+                          onClick={() => handleIndent(false)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-mono transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Indent 3 spaces (Tab key)"
+                        >
+                          <IndentIcon size={12} className="text-amber-400" />
+                          <span>Indent ⇥</span>
+                        </button>
+
+                        {/* Outdent */}
+                        <button
+                          type="button"
+                          onClick={() => handleIndent(true)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-mono transition flex items-center gap-1 cursor-pointer border border-slate-700"
+                          title="Outdent 3 spaces (Shift+Tab key)"
+                        >
+                          <OutdentIcon size={12} className="text-amber-400" />
+                          <span>Outdent ⇤</span>
+                        </button>
+                      </div>
+
+                      {/* Right: Clear button */}
+                      <div className="flex items-center gap-1">
+                        {planContent && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm("Clear all text in this editor?")) {
+                                setPlanContent('');
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                            title="Clear Content"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Secondary Quick-Insert Snippets & Templates Bar */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                        <Sparkles size={11} className="text-emerald-400" /> Quick Chips:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippet('   * *Time:* 20 mins')}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 rounded-md border border-slate-700 transition cursor-pointer"
+                      >
+                        ⏱️ Time
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippet('   * *Gear:* ')}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 rounded-md border border-slate-700 transition cursor-pointer"
+                      >
+                        🎒 Gear
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippet('   * *Lead:* ')}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 rounded-md border border-slate-700 transition cursor-pointer"
+                      >
+                        👤 Lead
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippet('   * *Requirement:* ')}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 rounded-md border border-slate-700 transition cursor-pointer"
+                      >
+                        ⚜️ Rank Req
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippet('   * *Tarbiyah:* ')}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-300 rounded-md border border-slate-700 transition cursor-pointer"
+                      >
+                        🕌 Tarbiyah
+                      </button>
+
+                      <div className="ml-auto flex items-center gap-1.5 pt-1 sm:pt-0">
+                        <span className="text-[10px] text-slate-400">Load Starter:</span>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleLoadTemplate(e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                          defaultValue=""
+                          className="bg-slate-950 border border-slate-700 text-emerald-400 text-[10px] font-bold rounded-lg px-2.5 py-1 cursor-pointer focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="" disabled>Choose Starter Plan...</option>
+                          <option value="standard_session">🎯 Standard 3-Milestone Session</option>
+                          <option value="rank_advancement">⚜️ Rank Advancement Sign-Offs</option>
+                          <option value="campout_prep">🏕️ Wilderness Campout Prep</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Main Textarea */}
+                    <textarea
+                      ref={contentTextareaRef}
+                      rows={editorHeightMode === 'max' ? 32 : editorHeightMode === 'large' ? 22 : 14}
+                      style={{
+                        minHeight: editorHeightMode === 'max' ? '600px' : editorHeightMode === 'large' ? '420px' : '260px'
+                      }}
+                      placeholder={`### 🎯 Session Milestones & Curriculum Breakdown\n\n1. **Patrol Identity & Culture ("The Patrol Way")**\n   * *Focus:* Instilling brotherhood, accountability, and discipline\n   * *Time:* 25 mins\n   * *Lead:* Patrol Leader\n\n2. **Scout Skill Workshop (Knots & Lashings)**\n   * *Focus:* Square knot, taut-line hitch, bowline, and pioneering\n   * *Gear:* 6ft cord per scout, Handbook\n   * *Time:* 40 mins`}
+                      value={planContent}
+                      onChange={(e) => setPlanContent(e.target.value)}
+                      onKeyDown={(e) => handleEditorKeyDown(e, contentTextareaRef, setPlanContent)}
+                      className="w-full bg-[#0b141a] border border-[#222e35] focus:border-emerald-500 rounded-2xl p-4 text-xs sm:text-sm font-mono leading-relaxed text-slate-100 resize-y shadow-inner focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                    />
+
+                    {/* Bottom Status & Keybinding Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[10px] text-slate-400 font-mono px-1">
+                      <span className="flex items-center gap-1.5 text-slate-400 flex-wrap">
+                        <span className="text-emerald-400 font-bold">Tab</span> Indent (3 spaces) &bull; <span className="text-emerald-400 font-bold">Shift+Tab</span> Outdent &bull; <span className="text-emerald-400 font-bold">Enter</span> Auto-numbers &bull; <span className="text-emerald-400 font-bold">Ctrl+B</span> Bold
+                      </span>
+                      <span className="text-slate-400 shrink-0">
+                        {planContent.length} chars &bull; {planContent.split('\n').length} lines
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Formatted Preview View */
+                  <div className="space-y-3 bg-[#0b141a] border border-[#222e35] p-4 rounded-2xl min-h-[300px]">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <span className="text-[10px] font-mono text-emerald-400 uppercase font-black tracking-wider flex items-center gap-1">
+                        <Sparkles size={11} /> Live Formatted Milestone Breakdown
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditorTab('edit')}
+                        className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer hover:underline"
+                      >
+                        <Edit3 size={11} /> Return to Edit
+                      </button>
+                    </div>
+
+                    {planContent.trim() ? (
+                      <div className="text-xs text-slate-200 leading-relaxed font-sans whitespace-pre-wrap space-y-2">
+                        {formatLessonPlanContentForWhatsApp(planContent)}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-400 italic text-xs">
+                        No scouting objectives written yet. Switch to Editor to start writing or load a starter template!
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Shia Islamic Preparation section */}
-              <div className="bg-emerald-950/20 border border-emerald-900/40 p-4 rounded-2xl space-y-2">
-                <label className="block text-xs font-black text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
-                  🕌 Shia Islamic Preparation (Tarbiyah / Akhlāq)
-                </label>
+              {/* ── SHIA ISLAMIC PREPARATION SECTION ── */}
+              <div className="bg-emerald-950/20 border border-emerald-900/40 p-4 rounded-2xl space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label className="block text-xs font-black text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>🕌</span>
+                    <span>Shia Islamic Preparation (Tarbiyah / Akhlāq)</span>
+                  </label>
+                  <div className="flex items-center gap-1 flex-wrap text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting('« ', ' »', 'Hadith of Ahl al-Bayt (ʿa)', islamicTextareaRef, setIslamicPrep)}
+                      className="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 rounded border border-emerald-800 text-[10px] font-bold cursor-pointer"
+                      title="Insert Hadith Quotation"
+                    >
+                      « Hadith »
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting('﴿ ', ' ﴾', 'Quranic Reflection', islamicTextareaRef, setIslamicPrep)}
+                      className="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 rounded border border-emerald-800 text-[10px] font-bold cursor-pointer"
+                      title="Insert Quranic Verse"
+                    >
+                      ﴿ Ayah ﴾
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertFormatting('**', '**', 'key lesson', islamicTextareaRef, setIslamicPrep)}
+                      className="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 rounded border border-emerald-800 text-[10px] font-bold cursor-pointer"
+                    >
+                      Bold
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSnippet('• ', islamicTextareaRef, setIslamicPrep)}
+                      className="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 rounded border border-emerald-800 text-[10px] font-bold cursor-pointer"
+                    >
+                      • Bullet
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
-                  rows={3}
-                  placeholder="Enter Hadiths from Ahlul Bayt (A.S.), Quranic reflection, Karbala heroes connection, or moral lesson..."
+                  ref={islamicTextareaRef}
+                  rows={5}
+                  placeholder="Enter Hadiths from Ahl al-Bayt (ʿa), Quranic reflection, Karbala heroes connection, or moral lesson..."
                   value={islamicPrep}
                   onChange={(e) => setIslamicPrep(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed"
+                  onKeyDown={(e) => handleEditorKeyDown(e, islamicTextareaRef, setIslamicPrep)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed resize-y min-h-[120px]"
                 />
               </div>
 
@@ -693,7 +1335,7 @@ export default function LessonPlans({ currentUser }) {
             </form>
 
             {/* Live WhatsApp KashafVoice Preview Column */}
-            <div className="lg:col-span-5 bg-slate-950/90 border border-emerald-500/30 rounded-3xl p-5 flex flex-col justify-between space-y-3">
+            <div className={`${isFullWidthEditor ? 'lg:col-span-12' : 'lg:col-span-5'} bg-slate-950/90 border border-emerald-500/30 rounded-3xl p-5 flex flex-col justify-between space-y-3`}>
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                   <div className="flex items-center gap-2.5">
