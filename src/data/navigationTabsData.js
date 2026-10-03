@@ -73,8 +73,8 @@ export const MASTER_TABS_REGISTRY = [
     labelByRole: {
       scout: 'Weekly Homework',
       parent: 'Scout Homework',
-      leader: 'Homework Tasks',
-      owner: 'Homework Tasks'
+      leader: 'Weekly Homework',
+      owner: 'Weekly Homework'
     },
     defaultIcon: 'BookOpen',
     iconByRole: {
@@ -87,7 +87,7 @@ export const MASTER_TABS_REGISTRY = [
     category: 'academics',
     description: 'Weekly troop homework, skill challenges, worksheets, and file submissions',
     allowedRoles: ['owner', 'admin', 'leader', 'scout', 'parent'],
-    badgeKey: null
+    badgeKey: 'unreadHomeworkCount'
   },
   {
     id: 'knowledge-hub',
@@ -396,7 +396,7 @@ export function getDefaultRoleTabs(userRoleContext) {
   let primaryHubIds = [];
 
   if (isOwner || isExecutive || isLeader) {
-    primaryHubIds = ['home', 'scouts-hub', 'lesson-plans', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub', 'profile'];
+    primaryHubIds = ['home', 'scouts-hub', 'assignments', 'lesson-plans', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub', 'profile'];
   } else if (isParent) {
     primaryHubIds = ['home', 'events', 'assignments', 'communication-hub', 'road-to-eagle', 'knowledge-hub', 'profile'];
   } else {

@@ -375,7 +375,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
 
-          {/* ── 3 Streamlined Primary Action Buttons ── */}
+          {/* ── 4 Streamlined Primary Action Buttons ── */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto shrink-0 items-center">
             {/* 1. Take Roll Call */}
             <button
@@ -387,7 +387,22 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               <span>Take Roll Call</span>
             </button>
 
-            {/* 2. Troop Calendar */}
+            {/* 2. Weekly Homework */}
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('assignments')}
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 hover:border-sky-500/50 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+            >
+              <BookOpen size={14} className="text-sky-400 shrink-0" />
+              <span>Weekly Homework</span>
+              {totalHwPending > 0 && (
+                <span className="bg-sky-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                  {totalHwPending}
+                </span>
+              )}
+            </button>
+
+            {/* 3. Troop Calendar */}
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('events')}
@@ -397,7 +412,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
               <span>Troop Calendar</span>
             </button>
 
-            {/* 3. Review Action Items (or Broadcast) */}
+            {/* 4. Review Action Items (or Broadcast) */}
             {totalPendingApprovals > 0 ? (
               <button
                 type="button"
@@ -423,8 +438,8 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
 
-        {/* ── Streamlined 4-Item Horizontal Pill Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-4 pt-3.5 border-t border-slate-800/80 relative z-10 text-xs">
+        {/* ── Streamlined 5-Item Horizontal Pill Summary Bar ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mt-4 pt-3.5 border-t border-slate-800/80 relative z-10 text-xs">
           {/* 1. Active Scouts */}
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
@@ -466,7 +481,34 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
 
-          {/* 3. Patrol Attendance */}
+          {/* 3. Weekly Homework */}
+          <div 
+            onClick={() => onNavigate && onNavigate('assignments')}
+            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 transition border shadow-xs cursor-pointer ${
+              totalHwPending > 0 
+                ? 'bg-slate-900/90 border-sky-500/40 hover:border-sky-400 hover:shadow-md' 
+                : 'bg-slate-900/90 border-slate-800 hover:border-sky-500/40 hover:shadow-md'
+            }`}
+          >
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <BookOpen size={18} className={totalHwPending > 0 ? "animate-pulse" : ""} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Homework</span>
+                {totalHwPending > 0 && (
+                  <span className="bg-sky-500 text-slate-950 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
+                    {totalHwPending} to Grade
+                  </span>
+                )}
+              </div>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
+                {assignments.length} Active Tasks
+              </strong>
+            </div>
+          </div>
+
+          {/* 4. Patrol Attendance */}
           <div 
             onClick={() => onNavigate && onNavigate('attendance')}
             className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
@@ -489,7 +531,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             </div>
           </div>
 
-          {/* 4. Patrol Units */}
+          {/* 5. Patrol Units */}
           <div 
             onClick={() => onNavigate && onNavigate('roster')}
             className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
@@ -542,7 +584,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
         </div>
 
         {showLeaderGuide && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
             <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
               <div className="flex items-center gap-1.5 text-sky-400 font-bold">
                 <CheckCircle2 size={14} />
@@ -565,8 +607,18 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
               <div className="flex items-center gap-1.5 text-sky-400 font-bold">
+                <BookOpen size={14} />
+                <span>3. Weekly Homework</span>
+              </div>
+              <p className="text-[11px] text-slate-350 leading-relaxed">
+                Click <strong>Weekly Homework</strong> to publish tasks, attach videos/worksheets, and verify scout submissions with 1-click.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
                 <MessageSquare size={14} />
-                <span>3. Parent Inquiries</span>
+                <span>4. Parent Inquiries</span>
               </div>
               <p className="text-[11px] text-slate-350 leading-relaxed">
                 Parent messages, conference requests, and signed progress reports appear in the <strong>Action Center</strong> for 1-click scheduling or replies.
@@ -576,7 +628,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
             <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
               <div className="flex items-center gap-1.5 text-sky-400 font-bold">
                 <Megaphone size={14} />
-                <span>4. Troop Broadcasts</span>
+                <span>5. Troop Broadcasts</span>
               </div>
               <p className="text-[11px] text-slate-350 leading-relaxed">
                 Publish whole-troop announcements and packing lists directly to parent and scout notification feeds with real-time push badges.
@@ -1098,6 +1150,97 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 </div>
               )}
             </>
+          )}
+        </div>
+
+        {/* ── 3.5 WEEKLY HOMEWORK & SKILL CHALLENGES DASHBOARD CARD ── */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold shrink-0 shadow-sm">
+                <BookOpen size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">
+                    Weekly Homework & Skill Challenges
+                  </h3>
+                  {totalHwPending > 0 ? (
+                    <StatusBadge type="warning" size="xs" pulse label={`${totalHwPending} Submissions to Grade`} />
+                  ) : (
+                    <StatusBadge type="info" size="xs" label={`${assignments.length} Active Tasks`} />
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Publish weekly tasks, attach instructional videos or worksheets, and verify scout submissions.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('assignments')}
+                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40 shrink-0"
+              >
+                <BookOpen size={13} />
+                <span>Open Homework Center &rarr;</span>
+              </button>
+            </div>
+          </div>
+
+          {assignments.length === 0 ? (
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <p className="text-xs text-slate-400 italic">No homework assignments published yet.</p>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('assignments')}
+                className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-bold cursor-pointer"
+              >
+                <span>➕ Create & Publish First Assignment</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {assignments.slice(0, 3).map((a) => {
+                const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
+                return (
+                  <div
+                    key={a.id}
+                    onClick={() => onNavigate && onNavigate('assignments')}
+                    className="bg-slate-900/80 border border-slate-800/80 hover:border-sky-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer group"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <StatusBadge type="info" size="xs" label={a.category || 'Scouting'} />
+                        {a.dueDate && (
+                          <StatusBadge 
+                            type={isOverdue ? 'warning' : 'neutral'} 
+                            size="xs" 
+                            label={`Due: ${a.dueDate}`} 
+                          />
+                        )}
+                      </div>
+
+                      <h4 className="text-xs font-black text-white line-clamp-1 leading-snug group-hover:text-sky-300 transition">
+                        {a.title}
+                      </h4>
+
+                      {a.description && (
+                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
+                          {a.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span className="text-sky-400 font-bold group-hover:text-sky-300 transition">Inspect & Grade &rarr;</span>
+                      <span>{a.assignedTarget === 'patrol' ? 'Patrol' : 'Troop'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 

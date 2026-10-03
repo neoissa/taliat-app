@@ -57,8 +57,8 @@ export function getAssignmentStatus(assignment, record) {
       status: 'completed',
       isCompleted: true,
       label: 'Completed & Approved',
-      badgeClass: 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40',
-      iconClass: 'text-emerald-400'
+      badgeClass: 'bg-sky-500/15 text-sky-300 border border-sky-500/40',
+      iconClass: 'text-sky-400'
     };
   }
 
@@ -68,8 +68,8 @@ export function getAssignmentStatus(assignment, record) {
       status: 'submitted',
       isCompleted: false,
       label: 'Submitted (Awaiting Review)',
-      badgeClass: 'bg-sky-950/60 text-sky-300 border border-sky-500/40',
-      iconClass: 'text-sky-400'
+      badgeClass: 'bg-sky-500/25 text-white border border-sky-400 font-bold shadow-xs',
+      iconClass: 'text-sky-300'
     };
   }
 
@@ -93,7 +93,7 @@ export function getAssignmentStatus(assignment, record) {
     return {
       status: 'overdue',
       isCompleted: false,
-      label: diffDays ? `Overdue / Incomplete (${Math.abs(diffDays)}d late)` : 'Overdue / Incomplete',
+      label: diffDays ? `Overdue (${Math.abs(diffDays)}d late)` : 'Overdue',
       badgeClass: 'bg-rose-950/60 text-rose-300 border border-rose-500/50 font-bold',
       iconClass: 'text-rose-400'
     };
@@ -102,7 +102,7 @@ export function getAssignmentStatus(assignment, record) {
   return {
     status: 'incomplete',
     isCompleted: false,
-    label: diffDays === 0 ? 'Due Today (Incomplete)' : diffDays === 1 ? 'Due Tomorrow' : diffDays ? `Due in ${diffDays}d` : 'Incomplete',
+    label: diffDays === 0 ? 'Due Today' : diffDays === 1 ? 'Due Tomorrow' : diffDays ? `Due in ${diffDays}d` : 'Incomplete',
     badgeClass: 'bg-slate-900 text-slate-300 border border-slate-800',
     iconClass: 'text-slate-400'
   };
@@ -121,7 +121,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
   const [loading, setLoading] = useState(true);
   
   // Navigation & Filtering
-  const [leaderViewMode, setLeaderViewMode] = useState('matrix'); // 'matrix' | 'assignments'
+  const [leaderViewMode, setLeaderViewMode] = useState('assignments'); // 'assignments' | 'matrix'
   const [scoutTab, setScoutTab] = useState('active'); // 'active' | 'completed'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'incomplete' | 'overdue' | 'submitted' | 'completed'
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all' | 'Scouting Skills' | 'Islamic Studies' | 'Fitness' | 'General'
@@ -592,25 +592,25 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
   return (
     <div className="space-y-6">
       {/* ── TOP BANNER & METRICS ── */}
-      <div className={`bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-        isEmbeddedInProfile ? 'border-emerald-500/40 bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950/20' : ''
+      <div className={`bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        isEmbeddedInProfile ? 'border-sky-500/40 bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950/20' : ''
       }`}>
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-xl shrink-0 shadow-sm">
-            🎒
+          <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-xl shrink-0 shadow-sm text-sky-400">
+            <BookOpen size={22} />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base sm:text-lg font-black text-white">
-                {isScout ? 'My Homework & Assignments' : 'Assignment & Homework Management'}
+                {isScout ? 'My Homework & Assignments' : 'Weekly Homework & Skill Challenges'}
               </h2>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
-                {isScout ? 'Scout Portal' : 'Leader Verification'}
+              <span className="text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                {isScout ? 'Scout Portal' : 'Leader Management'}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-300 mt-1">
               {isScout 
-                ? 'Watch videos, complete worksheets, submit responses for leader verification, and track approved homework.'
+                ? 'Watch instructional videos, complete worksheets, submit responses for leader review, and track approved homework.'
                 : 'Publish homework tasks, inspect scout submissions, leave feedback notes, and sign off on completion.'}
             </p>
           </div>
@@ -620,24 +620,24 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
         <div className="flex items-center gap-3 flex-wrap">
           {isLeader && (
             <>
-              <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-755 px-3.5 py-2 rounded-2xl">
+              <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3.5 py-2 rounded-2xl shadow-inner">
                 <div className="text-center px-2 border-r border-slate-800">
                   <span className="text-[9px] uppercase font-bold text-slate-400 block">Pending Review</span>
-                  <strong className="text-xs font-black text-blue-400 font-mono">{totalSubmissionsPendingReview}</strong>
+                  <strong className="text-xs font-black text-sky-400 font-mono">{totalSubmissionsPendingReview}</strong>
                 </div>
                 <div className="text-center px-2 border-r border-slate-800">
                   <span className="text-[9px] uppercase font-bold text-slate-400 block">Overdue</span>
-                  <strong className="text-xs font-black text-red-400 font-mono">{totalOverdueIncompleteCount}</strong>
+                  <strong className="text-xs font-black text-rose-400 font-mono">{totalOverdueIncompleteCount}</strong>
                 </div>
                 <div className="text-center px-2">
                   <span className="text-[9px] uppercase font-bold text-slate-400 block">Approved</span>
-                  <strong className="text-xs font-black text-emerald-400 font-mono">{totalCompletedApprovedCount}</strong>
+                  <strong className="text-xs font-black text-sky-200 font-mono">{totalCompletedApprovedCount}</strong>
                 </div>
               </div>
 
               <button
                 onClick={handleOpenNew}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40"
+                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40"
               >
                 <Plus size={15} />
                 <span>Create Assignment</span>
@@ -646,15 +646,15 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
           )}
 
           {isScout && (
-            <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-755 px-4 py-2 rounded-2xl">
+            <div className="flex items-center gap-3 bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-2xl shadow-inner">
               <div className="text-center">
                 <span className="text-[9px] uppercase font-bold text-slate-400 block">Active Due</span>
-                <strong className="text-xs font-black text-amber-400 font-mono">{scoutActiveList.length}</strong>
+                <strong className="text-xs font-black text-sky-400 font-mono">{scoutActiveList.length}</strong>
               </div>
               <div className="w-px h-6 bg-slate-800"></div>
               <div className="text-center">
                 <span className="text-[9px] uppercase font-bold text-slate-400 block">Approved</span>
-                <strong className="text-xs font-black text-emerald-400 font-mono">{scoutCompletedList.length}</strong>
+                <strong className="text-xs font-black text-white font-mono">{scoutCompletedList.length}</strong>
               </div>
             </div>
           )}
@@ -663,22 +663,22 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
       {/* ── LEADER CREATE / EDIT FORM MODAL ── */}
       {showForm && isLeader && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-sky-500/40 rounded-3xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-white text-base flex items-center gap-2">
                 <span>{editingId ? 'Edit Homework Assignment' : 'Create & Publish New Homework Task'}</span>
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {formErr && <p className="text-xs text-red-400 bg-red-950/50 p-3 rounded-xl border border-red-500/50">{formErr}</p>}
-            {formMsg && <p className="text-xs text-emerald-400 bg-emerald-950/50 p-3 rounded-xl border border-emerald-500/50">{formMsg}</p>}
+            {formErr && <p className="text-xs text-rose-300 bg-rose-950/50 p-3 rounded-xl border border-rose-500/50 font-medium">{formErr}</p>}
+            {formMsg && <p className="text-xs text-sky-300 bg-sky-950/50 p-3 rounded-xl border border-sky-500/50 font-medium">{formMsg}</p>}
 
             <form onSubmit={handleSaveAssignment} className="space-y-4">
               <div>
@@ -691,7 +691,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   placeholder="e.g. Knot Tying Video & Square Knot Practice"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 font-medium"
                 />
               </div>
 
@@ -703,7 +703,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                   >
                     <option value="Scouting Skills">⚜️ Scouting Skills & Fieldcraft</option>
                     <option value="Islamic Studies">🕌 Islamic Studies & Knowledge</option>
@@ -714,13 +714,13 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                    <Calendar size={13} className="text-emerald-400" /> Due Date
+                    <Calendar size={13} className="text-sky-400" /> Due Date
                   </label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                   />
                 </div>
               </div>
@@ -733,7 +733,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                   >
                     <option value="video">🎥 Instructional Video</option>
                     <option value="document">📄 Worksheet / PDF Document</option>
@@ -744,14 +744,14 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 uppercase mb-1 flex items-center gap-1">
-                    <ExternalLink size={13} /> Resource URL Link (Optional)
+                    <ExternalLink size={13} className="text-sky-400" /> Resource URL Link (Optional)
                   </label>
                   <input
                     type="url"
                     placeholder="https://youtube.com/... or Google Drive URL"
                     value={link}
                     onChange={(e) => setLink(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -765,7 +765,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   placeholder="Clearly explain what the scout needs to study, practice, or submit for review..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
                 />
               </div>
 
@@ -814,7 +814,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     <select
                       value={targetGroupId}
                       onChange={(e) => setTargetGroupId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
                     >
                       <option value="">Select Patrol...</option>
                       {accessiblePatrols.map(g => (
@@ -829,7 +829,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     <select
                       value={targetScoutUid}
                       onChange={(e) => setTargetScoutUid(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
                     >
                       <option value="">Select Scout...</option>
                       {accessibleScouts.map(s => (
@@ -844,7 +844,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50"
+                  className="flex-1 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-sky-950/40"
                 >
                   <Save size={15} />
                   <span>{saving ? 'Publishing...' : 'Save & Publish Assignment'}</span>
@@ -852,7 +852,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-5 py-3 rounded-xl transition cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs px-5 py-3 rounded-xl transition cursor-pointer border border-slate-700"
                 >
                   Cancel
                 </button>
@@ -865,15 +865,15 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
       {/* ── SCOUT SUBMISSION DRAWER / MODAL ── */}
       {submittingAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 border-2 border-sky-500/40 rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start border-b border-slate-800 pb-3">
               <div>
-                <span className="text-[10px] uppercase font-bold text-emerald-400 block">Submit Homework Task</span>
+                <span className="text-[10px] uppercase font-bold text-sky-400 block">Submit Homework Task</span>
                 <h3 className="font-extrabold text-white text-base mt-0.5">{submittingAssignment.title}</h3>
               </div>
               <button
                 onClick={() => setSubmittingAssignment(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
               >
                 <X size={18} />
               </button>
@@ -887,21 +887,21 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
             )}
 
             {submittingAssignment.link && (
-              <div className="p-3 bg-emerald-950/30 border border-emerald-700/50 rounded-xl flex items-center justify-between">
-                <span className="text-xs text-emerald-300 font-semibold">Attached Resource:</span>
+              <div className="p-3 bg-slate-950 border border-sky-500/30 rounded-xl flex items-center justify-between">
+                <span className="text-xs text-sky-300 font-semibold">Attached Resource:</span>
                 <a
                   href={submittingAssignment.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                  className="text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-xs"
                 >
                   <ExternalLink size={12} /> Open Link
                 </a>
               </div>
             )}
 
-            {submissionErr && <p className="text-xs text-red-400 bg-red-950/50 p-3 rounded-xl border border-red-500/50">{submissionErr}</p>}
-            {submissionMsg && <p className="text-xs text-emerald-400 bg-emerald-950/50 p-3 rounded-xl border border-emerald-500/50">{submissionMsg}</p>}
+            {submissionErr && <p className="text-xs text-rose-300 bg-rose-950/50 p-3 rounded-xl border border-rose-500/50 font-medium">{submissionErr}</p>}
+            {submissionMsg && <p className="text-xs text-sky-300 bg-sky-950/50 p-3 rounded-xl border border-sky-500/50 font-medium">{submissionMsg}</p>}
 
             <form onSubmit={handleSubmitForReview} className="space-y-4">
               <div>
@@ -914,13 +914,13 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   placeholder="Describe how you completed the assignment, what you learned, or paste links to your uploaded worksheet / video..."
                   value={submissionNotes}
                   onChange={(e) => setSubmissionNotes(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans leading-relaxed"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500 font-sans leading-relaxed"
                 />
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400">
                 <p>
-                  ℹ️ <strong>Strict Verification Note:</strong> Submitting will mark this task as <span className="text-blue-400 font-bold">Submitted (Awaiting Review)</span>. Your leader will review and grant official sign-off.
+                  ℹ️ <strong>Verification Note:</strong> Submitting will mark this task as <span className="text-sky-300 font-bold">Submitted (Awaiting Review)</span>. Your leader will review and grant official sign-off.
                 </p>
               </div>
 
@@ -928,7 +928,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 <button
                   type="submit"
                   disabled={submissionSaving}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-sky-950/40"
                 >
                   <Send size={15} />
                   <span>{submissionSaving ? 'Submitting...' : 'Submit for Leader Review'}</span>
@@ -936,7 +936,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 <button
                   type="button"
                   onClick={() => setSubmittingAssignment(null)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-5 py-3 rounded-xl transition cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs px-5 py-3 rounded-xl transition cursor-pointer border border-slate-700"
                 >
                   Cancel
                 </button>
@@ -949,7 +949,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
       {/* ── LEADER FEEDBACK & SIGN-OFF MODAL ── */}
       {feedbackModalRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+          <div className="bg-slate-900 border-2 border-sky-500/40 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-start border-b border-slate-800 pb-3">
               <div className="flex items-center gap-3 min-w-0">
                 {(() => {
@@ -957,7 +957,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   const photo = s.photoURL || s.avatar || s.photo || s.profilePic;
                   const name = s.fullName || s.username || 'Scout';
                   return (
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-sm shrink-0 overflow-hidden shadow-md">
+                    <div className="w-11 h-11 rounded-2xl bg-sky-500/10 border-2 border-sky-500/40 flex items-center justify-center font-black text-sky-300 text-sm shrink-0 overflow-hidden shadow-md">
                       {photo ? (
                         <img 
                           src={photo} 
@@ -965,12 +965,12 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                           className="w-full h-full object-cover" 
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=047857&color=fff&bold=true`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0284c7&color=fff&bold=true`;
                           }}
                         />
                       ) : (
                         <img 
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=065f46&color=34d399&bold=true&size=128`} 
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0369a1&color=e0f2fe&bold=true&size=128`} 
                           alt={name} 
                           className="w-full h-full object-cover" 
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -980,7 +980,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   );
                 })()}
                 <div className="min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-emerald-400 block">Leader Review & Sign-Off</span>
+                  <span className="text-[10px] uppercase font-bold text-sky-400 block">Leader Review & Sign-Off</span>
                   <h3 className="font-extrabold text-white text-base truncate">
                     {feedbackModalRecord.scout.fullName || feedbackModalRecord.scout.username}
                   </h3>
@@ -1007,7 +1007,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
               </div>
             )}
 
-            {feedbackMsg && <p className="text-xs text-emerald-400 bg-emerald-950/50 p-3 rounded-xl border border-emerald-500/50">{feedbackMsg}</p>}
+            {feedbackMsg && <p className="text-xs text-sky-300 bg-sky-950/50 p-3 rounded-xl border border-sky-500/50 font-medium">{feedbackMsg}</p>}
 
             <div className="space-y-3">
               <div>
@@ -1019,7 +1019,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   placeholder="Great work on completing the knots! Excellent demonstration..."
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500 font-sans"
                 />
               </div>
 
@@ -1028,7 +1028,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                   type="button"
                   onClick={handleSaveFeedbackModal}
                   disabled={feedbackSaving}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-sky-950/40"
                 >
                   <CheckCheck size={15} />
                   <span>{feedbackSaving ? 'Signing Off...' : 'Approve & Mark Completed'}</span>
@@ -1036,7 +1036,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 <button
                   type="button"
                   onClick={() => handleReopenIncomplete(feedbackModalRecord.assignment, feedbackModalRecord.scout, feedbackText)}
-                  className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-3 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                  className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 text-xs font-bold px-4 py-3 rounded-xl transition cursor-pointer flex items-center gap-1.5"
                   title="Return to incomplete for scout revision"
                 >
                   <RotateCcw size={14} />
@@ -1049,27 +1049,27 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
       )}
 
       {/* ── FILTER & SEARCH CONTROLS ── */}
-      <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-lg">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-lg">
         {/* Sub-tabs / View Mode */}
         {isLeader ? (
           <div className="flex gap-2 w-full md:w-auto">
             <button
-              onClick={() => setLeaderViewMode('matrix')}
-              className={`flex-1 md:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-                leaderViewMode === 'matrix' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 border border-slate-755 text-slate-400 hover:text-white'
-              }`}
-            >
-              <Users size={14} />
-              <span>Patrol Submission Matrix</span>
-            </button>
-            <button
               onClick={() => setLeaderViewMode('assignments')}
               className={`flex-1 md:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-                leaderViewMode === 'assignments' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 border border-slate-755 text-slate-400 hover:text-white'
+                leaderViewMode === 'assignments' ? 'bg-sky-500 text-slate-950 font-black shadow-md shadow-sky-950/40' : 'bg-slate-950 border border-slate-800 text-slate-300 hover:text-white'
               }`}
             >
               <BookOpen size={14} />
               <span>Assignments Directory ({assignments.length})</span>
+            </button>
+            <button
+              onClick={() => setLeaderViewMode('matrix')}
+              className={`flex-1 md:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
+                leaderViewMode === 'matrix' ? 'bg-sky-500 text-slate-950 font-black shadow-md shadow-sky-950/40' : 'bg-slate-950 border border-slate-800 text-slate-300 hover:text-white'
+              }`}
+            >
+              <Users size={14} />
+              <span>Patrol Matrix</span>
             </button>
           </div>
         ) : (
@@ -1077,7 +1077,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
             <button
               onClick={() => setScoutTab('active')}
               className={`flex-1 md:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-                scoutTab === 'active' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 border border-slate-755 text-slate-400 hover:text-white'
+                scoutTab === 'active' ? 'bg-sky-500 text-slate-950 font-black shadow-md shadow-sky-950/40' : 'bg-slate-950 border border-slate-800 text-slate-300 hover:text-white'
               }`}
             >
               <Clock size={14} />
@@ -1086,7 +1086,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
             <button
               onClick={() => setScoutTab('completed')}
               className={`flex-1 md:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-                scoutTab === 'completed' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-900 border border-slate-755 text-slate-400 hover:text-white'
+                scoutTab === 'completed' ? 'bg-sky-500 text-slate-950 font-black shadow-md shadow-sky-950/40' : 'bg-slate-950 border border-slate-800 text-slate-300 hover:text-white'
               }`}
             >
               <CheckCircle2 size={14} />
@@ -1101,7 +1101,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
             <select
               value={selectedPatrolFilter}
               onChange={(e) => setSelectedPatrolFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 cursor-pointer font-medium"
             >
               <option value="all">
                 {isSuperUser(currentUser) ? '⚜️ All Patrols (Full Troop)' : '🛡️ All My Patrols'}
@@ -1115,7 +1115,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 cursor-pointer"
           >
             <option value="all">All Categories</option>
             <option value="Scouting Skills">⚜️ Scouting Skills</option>
@@ -1131,7 +1131,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
             />
           </div>
         </div>
@@ -1139,8 +1139,8 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
       {/* ── 1. LEADER VIEW: PATROL SUBMISSION MATRIX ── */}
       {isLeader && leaderViewMode === 'matrix' && (
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl overflow-hidden shadow-xl space-y-4">
-          <div className="p-5 border-b border-slate-700 flex items-center justify-between flex-wrap gap-3">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl space-y-4">
+          <div className="p-5 border-b border-slate-800 flex items-center justify-between flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-white text-base flex items-center gap-2">
                 <span>📋 Patrol Homework Verification Matrix</span>
@@ -1149,7 +1149,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 Inspect scout completion statuses, review notes, and click "Mark Completed" to certify assignments.
               </p>
             </div>
-            <span className="text-xs font-mono text-slate-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-755">
+            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
               {scoutsList.length} Scouts &bull; {visibleAssignments.length} Assignments
             </span>
           </div>
@@ -1167,9 +1167,9 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-700">
+                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
                   <tr>
-                    <th className="p-4 min-w-[180px] sticky left-0 bg-slate-900 z-10">Scout Member</th>
+                    <th className="p-4 min-w-[180px] sticky left-0 bg-slate-950 z-10 border-r border-slate-800">Scout Member</th>
                     <th className="p-4 min-w-[200px]">Assignment Task</th>
                     <th className="p-4 min-w-[110px]">Category</th>
                     <th className="p-4 min-w-[110px]">Due Date</th>
@@ -1178,7 +1178,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     <th className="p-4 min-w-[160px] text-right">Leader Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-755">
+                <tbody className="divide-y divide-slate-800/80">
                   {scoutsList.map(scout => {
                     const scoutPatrol = getScoutPatrolName(scout, groups);
                     
@@ -1187,15 +1187,15 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                       const st = getAssignmentStatus(assign, rec);
 
                       return (
-                        <tr key={`${scout.uid}_${assign.id}`} className="hover:bg-slate-750/40 transition">
+                        <tr key={`${scout.uid}_${assign.id}`} className="hover:bg-slate-850/60 transition">
                           {/* Scout Column */}
-                          <td className="p-4 sticky left-0 bg-slate-800/95 z-10 border-r border-slate-755">
+                          <td className="p-4 sticky left-0 bg-slate-900 z-10 border-r border-slate-800">
                             <div className="flex items-center gap-3">
                               {(() => {
                                 const photo = scout.photoURL || scout.avatar || scout.photo || scout.profilePic;
                                 const name = scout.fullName || scout.username || 'Scout';
                                 return (
-                                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600/30 to-teal-700/20 border-2 border-emerald-500/50 flex items-center justify-center font-black text-emerald-300 text-xs shrink-0 overflow-hidden shadow-md">
+                                  <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border-2 border-sky-500/40 flex items-center justify-center font-black text-sky-300 text-xs shrink-0 overflow-hidden shadow-md">
                                     {photo ? (
                                       <img 
                                         src={photo} 
@@ -1203,12 +1203,12 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                                         className="w-full h-full object-cover" 
                                         onError={(e) => {
                                           e.currentTarget.onerror = null;
-                                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=047857&color=fff&bold=true`;
+                                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0284c7&color=fff&bold=true`;
                                         }}
                                       />
                                     ) : (
                                       <img 
-                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=065f46&color=34d399&bold=true&size=128`} 
+                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0369a1&color=e0f2fe&bold=true&size=128`} 
                                         alt={name} 
                                         className="w-full h-full object-cover" 
                                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -1233,7 +1233,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                                   href={assign.link}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1"
+                                  className="text-[10px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1"
                                 >
                                   <ExternalLink size={10} /> View Material
                                 </a>
@@ -1243,7 +1243,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
 
                           {/* Category */}
                           <td className="p-4">
-                            <span className="text-[10px] bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-slate-300 font-mono">
+                            <span className="text-[10px] bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-full text-slate-300 font-mono">
                               {assign.category || 'Scouting'}
                             </span>
                           </td>
@@ -1268,14 +1268,14 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                           <td className="p-4 text-xs">
                             <div className="space-y-1">
                               {rec?.scoutNotes ? (
-                                <p className="text-slate-300 line-clamp-2 text-[11px] bg-slate-900/80 p-2 rounded-lg border border-slate-755">
+                                <p className="text-slate-300 line-clamp-2 text-[11px] bg-slate-950 p-2 rounded-lg border border-slate-800">
                                   "{rec.scoutNotes}"
                                 </p>
                               ) : (
                                 <span className="text-slate-500 text-[11px] italic">No submission text yet</span>
                               )}
                               {rec?.leaderFeedback && (
-                                <p className="text-emerald-400 text-[10px] font-semibold flex items-center gap-1">
+                                <p className="text-sky-300 text-[10px] font-semibold flex items-center gap-1">
                                   <span>💬 Leader Feedback:</span> {rec.leaderFeedback}
                                 </p>
                               )}
@@ -1287,13 +1287,13 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                             <div className="flex items-center justify-end gap-1.5">
                               {st.status === 'completed' ? (
                                 <div className="flex items-center gap-1">
-                                  <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1 mr-2">
+                                  <span className="text-[11px] text-sky-300 font-bold flex items-center gap-1 mr-2">
                                     <CheckCheck size={14} /> Approved
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => handleReopenIncomplete(assign, scout)}
-                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-amber-400 border border-slate-755 transition cursor-pointer"
+                                    className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition cursor-pointer"
                                     title="Revert to Incomplete / Reopen"
                                   >
                                     <RotateCcw size={13} />
@@ -1304,7 +1304,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                                   <button
                                     type="button"
                                     onClick={() => handleMarkCompleted(assign, scout)}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-sm"
+                                    className="bg-sky-500 hover:bg-sky-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-sm"
                                     title="Quick 1-Click Approval"
                                   >
                                     <Check size={12} /> Mark Completed
@@ -1315,7 +1315,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                                       setFeedbackModalRecord({ assignment: assign, scout, record: rec });
                                       setFeedbackText(rec?.leaderFeedback || '');
                                     }}
-                                    className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-755 transition cursor-pointer"
+                                    className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition cursor-pointer"
                                     title="Add Feedback & Review Notes"
                                   >
                                     <MessageSquare size={13} />
@@ -1340,7 +1340,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleAssignments.length === 0 ? (
-              <div className="col-span-full text-center py-12 bg-slate-800 rounded-3xl border border-slate-700 text-slate-400 text-xs">
+              <div className="col-span-full text-center py-12 bg-slate-900 rounded-3xl border border-slate-800 text-slate-400 text-xs">
                 No assignments created yet. Click "Create Assignment" above to assign homework.
               </div>
             ) : (
@@ -1360,31 +1360,31 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                 });
 
                 return (
-                  <div key={assign.id} className="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
+                  <div key={assign.id} className="bg-slate-900 border border-slate-800 hover:border-sky-500/40 rounded-3xl p-5 shadow-xl space-y-4 transition">
                     <div className="flex justify-between items-start gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2.5 py-0.5 rounded-full">
                             {assign.category || 'Scouting'}
                           </span>
-                          <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-755 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-full">
                             Due: {assign.dueDate || 'Ongoing'}
                           </span>
                         </div>
                         <h4 className="font-extrabold text-white text-base">{assign.title}</h4>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => handleOpenEdit(assign)}
-                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                          className="p-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition cursor-pointer"
                           title="Edit"
                         >
                           <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteAssignment(assign.id)}
-                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-red-600/80 text-slate-400 hover:text-white transition"
+                          className="p-2 rounded-xl bg-slate-950 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-800 transition cursor-pointer"
                           title="Delete"
                         >
                           <Trash2 size={14} />
@@ -1399,20 +1399,20 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     )}
 
                     {/* Progress Bar & Counts */}
-                    <div className="bg-slate-900 p-3 rounded-2xl border border-slate-755 space-y-2">
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold">Patrol Completion</span>
-                        <strong className="text-emerald-400 font-mono font-black">{completedCount}/{totalTargeted} Scouts</strong>
+                        <strong className="text-sky-300 font-mono font-black">{completedCount}/{totalTargeted} Scouts</strong>
                       </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
-                        <div className="bg-emerald-500 h-full" style={{ width: `${totalTargeted ? (completedCount / totalTargeted) * 100 : 0}%` }}></div>
-                        <div className="bg-blue-500 h-full" style={{ width: `${totalTargeted ? (submittedCount / totalTargeted) * 100 : 0}%` }}></div>
-                        <div className="bg-red-500 h-full" style={{ width: `${totalTargeted ? (overdueCount / totalTargeted) * 100 : 0}%` }}></div>
+                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden flex">
+                        <div className="bg-sky-500 h-full" style={{ width: `${totalTargeted ? (completedCount / totalTargeted) * 100 : 0}%` }}></div>
+                        <div className="bg-sky-300 h-full" style={{ width: `${totalTargeted ? (submittedCount / totalTargeted) * 100 : 0}%` }}></div>
+                        <div className="bg-rose-500 h-full" style={{ width: `${totalTargeted ? (overdueCount / totalTargeted) * 100 : 0}%` }}></div>
                       </div>
                       <div className="flex justify-between text-[10px] text-slate-400 font-mono pt-1">
-                        <span className="text-emerald-400 font-bold">✓ {completedCount} Approved</span>
-                        <span className="text-blue-400 font-bold">⏱️ {submittedCount} Submitted</span>
-                        <span className="text-red-400 font-bold">🚨 {overdueCount} Overdue</span>
+                        <span className="text-sky-300 font-bold">✓ {completedCount} Approved</span>
+                        <span className="text-white font-bold">⏱️ {submittedCount} Submitted</span>
+                        <span className="text-rose-400 font-bold">🚨 {overdueCount} Overdue</span>
                       </div>
                     </div>
 
@@ -1421,7 +1421,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                         href={assign.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:underline font-bold"
+                        className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 hover:underline font-bold"
                       >
                         <ExternalLink size={12} /> Open Resource Link
                       </a>
@@ -1440,25 +1440,25 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
           {scoutTab === 'active' ? (
             <div className="space-y-3">
               {scoutActiveList.length === 0 ? (
-                <div className="text-center py-12 bg-slate-800 rounded-3xl border border-slate-700 text-slate-400 text-xs">
+                <div className="text-center py-12 bg-slate-900 rounded-3xl border border-slate-800 text-slate-400 text-xs">
                   🎉 MāshāʾAllāh! You have no active homework due right now.
                 </div>
               ) : (
                 scoutActiveList.map(({ assignment, record, statusInfo }) => (
                   <div
                     key={assignment.id}
-                    className={`bg-slate-800 border rounded-3xl p-5 shadow-xl transition space-y-4 ${
+                    className={`bg-slate-900 border rounded-3xl p-5 shadow-xl transition space-y-4 ${
                       statusInfo.status === 'overdue'
-                        ? 'border-red-500/60 bg-red-950/15'
+                        ? 'border-rose-500/60 bg-rose-950/15'
                         : statusInfo.status === 'submitted'
-                        ? 'border-blue-500/50 bg-blue-950/15'
-                        : 'border-slate-700 hover:border-slate-600'
+                        ? 'border-sky-500/50 bg-sky-950/20'
+                        : 'border-slate-800 hover:border-sky-500/40'
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold bg-slate-900 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full">
+                          <span className="text-[10px] font-bold bg-slate-950 border border-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full">
                             {assignment.category || 'Scouting Skills'}
                           </span>
 
@@ -1469,7 +1469,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                           </span>
 
                           {assignment.dueDate && (
-                            <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                            <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded-full border border-slate-800">
                               📅 Due: {assignment.dueDate}
                             </span>
                           )}
@@ -1481,11 +1481,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                       <button
                         type="button"
                         onClick={() => handleOpenScoutSubmission(assignment)}
-                        className={`text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shrink-0 ${
-                          statusInfo.status === 'submitted'
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        }`}
+                        className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-sky-950/40 shrink-0"
                       >
                         {statusInfo.status === 'submitted' ? (
                           <>
@@ -1500,7 +1496,7 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     </div>
 
                     {assignment.description && (
-                      <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap bg-slate-900/60 p-3.5 rounded-2xl border border-slate-755">
+                      <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
                         {assignment.description}
                       </p>
                     )}
@@ -1508,26 +1504,26 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
                     {/* Scout Submission Note / Feedback Status */}
                     {record?.scoutNotes && (
                       <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
-                        <strong className="text-[10px] font-bold text-blue-400 uppercase block mb-0.5">Your Submitted Proof / Notes:</strong>
+                        <strong className="text-[10px] font-bold text-sky-400 uppercase block mb-0.5">Your Submitted Proof / Notes:</strong>
                         <p className="text-slate-300 leading-relaxed">{record.scoutNotes}</p>
                       </div>
                     )}
 
                     {record?.leaderFeedback && (
-                      <div className="bg-amber-950/40 p-3 rounded-xl border border-amber-600/50 text-xs text-amber-200">
-                        <strong className="text-[10px] font-bold text-amber-400 uppercase block mb-0.5">Leader Revision Note:</strong>
+                      <div className="bg-slate-950 p-3 rounded-xl border border-sky-500/40 text-xs text-slate-200">
+                        <strong className="text-[10px] font-bold text-sky-300 uppercase block mb-0.5">Leader Revision Note:</strong>
                         <p className="leading-relaxed">{record.leaderFeedback}</p>
                       </div>
                     )}
 
                     {/* Attached Material Link */}
                     {assignment.link && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-755/70">
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
                         <a
                           href={assignment.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5"
+                          className="text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1.5"
                         >
                           <ExternalLink size={13} /> Open Study Link / Resource Video
                         </a>
@@ -1540,36 +1536,36 @@ export default function AssignmentsManager({ currentUser, scoutId: propScoutId, 
           ) : (
             <div className="space-y-3">
               {scoutCompletedList.length === 0 ? (
-                <div className="text-center py-12 bg-slate-800 rounded-3xl border border-slate-700 text-slate-400 text-xs">
+                <div className="text-center py-12 bg-slate-900 rounded-3xl border border-slate-800 text-slate-400 text-xs">
                   No completed homework archive yet. Submit your active assignments to get approved!
                 </div>
               ) : (
                 scoutCompletedList.map(({ assignment, record }) => (
                   <div
                     key={assignment.id}
-                    className="bg-emerald-950/20 border border-emerald-600/40 rounded-3xl p-5 shadow-xl space-y-3"
+                    className="bg-slate-900 border border-sky-500/30 rounded-3xl p-5 shadow-xl space-y-3"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full">
+                          <span className="text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800 px-2.5 py-0.5 rounded-full">
                             {assignment.category || 'Scouting Skills'}
                           </span>
-                          <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full border font-bold bg-emerald-900/60 text-emerald-300 border-emerald-600">
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full border font-bold bg-sky-500/15 text-sky-300 border-sky-500/40">
                             <CheckCheck size={11} /> Verified & Signed Off
                           </span>
                         </div>
                         <h4 className="font-extrabold text-white text-base">{assignment.title}</h4>
                       </div>
 
-                      <span className="text-xs font-mono text-emerald-400 font-bold shrink-0">
+                      <span className="text-xs font-mono text-sky-300 font-bold shrink-0">
                         ✓ Completed {record?.completedDate || record?.completedAt?.split('T')[0] || ''}
                       </span>
                     </div>
 
                     {record?.leaderFeedback && (
-                      <div className="bg-slate-900/80 p-3 rounded-xl border border-emerald-800/40 text-xs">
-                        <strong className="text-[10px] font-bold text-emerald-400 uppercase block mb-0.5">Leader Feedback & Sign-Off:</strong>
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
+                        <strong className="text-[10px] font-bold text-sky-400 uppercase block mb-0.5">Leader Feedback & Sign-Off:</strong>
                         <p className="text-slate-300">{record.leaderFeedback}</p>
                       </div>
                     )}

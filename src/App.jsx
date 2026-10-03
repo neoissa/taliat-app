@@ -1101,6 +1101,7 @@ export default function App() {
           { id: 'roster', label: 'Patrol Roster', icon: 'Users', description: 'Active scouts & member profiles' },
           { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare', description: 'Session check-in & logs' },
           { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award', description: 'Rank requirements & approvals' },
+          { id: 'assignments', label: 'Weekly Homework', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Assign, Grade & Review Scout Homework' },
           { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' }
         ]
       };
@@ -1826,12 +1827,14 @@ export default function App() {
               { id: 'roster', label: 'Patrol Roster', icon: 'Users', description: 'Active scouts & member profiles' },
               { id: 'attendance', label: 'Attendance & Roll Call', icon: 'CheckSquare', description: 'Session check-in & logs' },
               { id: 'advancement', label: 'Advancement & Sign-Offs', icon: 'Award', description: 'Rank requirements & approvals' },
+              { id: 'assignments', label: 'Weekly Homework', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Assign, Grade & Review Scout Homework' },
               { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' }
             ]}
           >
             {scoutsHubSubTab === 'roster' && <PatrolRoster currentUser={currentUser} />}
             {scoutsHubSubTab === 'attendance' && <PatrolAttendance currentUser={currentUser} initialData={attendanceInitialData} />}
             {scoutsHubSubTab === 'advancement' && <ScoutList currentUser={currentUser} />}
+            {scoutsHubSubTab === 'assignments' && <AssignmentsManager currentUser={currentUser} />}
             {scoutsHubSubTab === 'reports' && <LeaderReportsCenter currentUser={currentUser} onNavigate={handleNavigate} />}
           </HubSubNav>
         )}

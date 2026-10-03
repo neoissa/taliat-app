@@ -23,6 +23,14 @@ export const LEADER_OWNER_TABS = [
     badgeKey: null
   },
   {
+    id: 'assignments',
+    label: 'Weekly Homework',
+    icon: 'BookOpen',
+    theme: 'sky',
+    description: 'Assign, Grade & Review Scout Homework',
+    badgeKey: 'unreadHomeworkCount'
+  },
+  {
     id: 'lesson-plans',
     label: 'Lesson Curriculum',
     icon: 'GraduationCap',
