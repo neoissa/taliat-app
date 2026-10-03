@@ -396,21 +396,21 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
   return (
     <div className="space-y-3.5 pb-6">
       {/* ── 1. WELCOME HERO CARD ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950/40 border border-emerald-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-sky-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
         {/* Background decorative watermark */}
         <div className="absolute right-4 top-2 opacity-5 pointer-events-none">
-          <Trophy size={180} className="text-emerald-400" />
+          <Trophy size={180} className="text-sky-400" />
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative z-10">
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border-2 border-emerald-500/50 flex items-center justify-center p-2 shadow-xl shadow-emerald-950/50 shrink-0">
-              <RankIcon rankId={latestAchievedRank.id} className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-400 drop-shadow-md" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-sky-500/15 border-2 border-sky-500/40 flex items-center justify-center p-2 shadow-xl shadow-sky-950/40 shrink-0">
+              <RankIcon rankId={latestAchievedRank.id} className="w-10 h-10 sm:w-12 sm:h-12 text-sky-400 drop-shadow-md" />
             </div>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1.5 bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
                   <span>⚜️</span>
                   <span>{activeRank} Rank</span>
                 </span>
@@ -421,7 +421,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
                   </span>
                 )}
                 {nextTargetRank.id !== latestAchievedRank.id && (
-                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 bg-sky-500/10 border border-sky-500/25 text-sky-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                     <span>Target: {nextTargetRank.name}</span>
                     <span className="font-mono text-[11px] opacity-80">({targetRankProgress.percentage}%)</span>
                   </span>
@@ -439,20 +439,20 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           <div className="flex flex-wrap gap-2 shrink-0">
             <button
               onClick={() => onNavigate && onNavigate('advancement')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 hover:scale-[1.02]"
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-sky-950/40 hover:scale-[1.02]"
             >
               <Award size={14} />
               <span>⚜️ My Advancement</span>
             </button>
             <button
               onClick={() => onNavigate && onNavigate('assignments')}
-              className="bg-orange-600 hover:bg-orange-500 text-white font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-orange-950/40 hover:scale-[1.02]"
+              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-bold text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs hover:scale-[1.02]"
             >
               <BookOpen size={14} />
               <span>Weekly Homework</span>
               {homeworkAnalysis.pendingCount > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  homeworkAnalysis.overdueCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-orange-950 text-orange-200'
+                  homeworkAnalysis.overdueCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-950 text-sky-300 border border-sky-500/30'
                 }`}>
                   {homeworkAnalysis.pendingCount}
                 </span>
@@ -460,7 +460,7 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
             </button>
             <button
               onClick={() => onNavigate && onNavigate('road-to-eagle')}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xl shadow-amber-950/60 hover:scale-[1.02]"
+              className="bg-slate-800 hover:bg-slate-750 text-sky-300 border border-sky-500/30 font-bold text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs hover:scale-[1.02]"
             >
               <span>🦅 Road to Eagle</span>
             </button>
@@ -469,10 +469,10 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
               onClick={() => setShowPendingModal(true)}
               className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 hover:border-slate-600"
             >
-              <Clock size={14} className={totalPendingPortalItems > 0 ? "text-amber-400 animate-pulse" : "text-slate-400"} />
+              <Clock size={14} className={totalPendingPortalItems > 0 ? "text-sky-400 animate-pulse" : "text-slate-400"} />
               <span>Pending Tasks ({totalPendingPortalItems})</span>
               {unreadNotifsCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
               )}
             </button>
           </div>
@@ -483,14 +483,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 1. Active Rank */}
           <div 
             onClick={() => onNavigate && onNavigate('advancement')}
-            className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition hover:bg-slate-900"
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-xs cursor-pointer transition hover:bg-slate-900"
           >
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <ShieldCheck size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Current Rank</span>
-              <strong className="text-xs sm:text-sm font-black text-emerald-400 capitalize block truncate">
+              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Current Rank</span>
+              <strong className="text-xs sm:text-sm font-black text-white capitalize block truncate">
                 {activeRank}
               </strong>
             </div>
@@ -499,36 +499,18 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 2. Weekly Homework Tile */}
           <div 
             onClick={() => onNavigate && onNavigate('assignments')}
-            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
-              homeworkAnalysis.overdueCount > 0
-                ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
-                : homeworkAnalysis.dueTodayCount > 0
-                ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : homeworkAnalysis.pendingCount > 0
-                ? 'bg-orange-950/30 border-orange-500/40 hover:border-orange-400'
-                : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900'
-            }`}
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition hover:bg-slate-900 shadow-xs"
           >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              homeworkAnalysis.overdueCount > 0
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                : homeworkAnalysis.dueTodayCount > 0
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                : homeworkAnalysis.pendingCount > 0
-                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
-                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-            }`}>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <BookOpen size={18} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
-                <span className={`text-[10px] block uppercase font-bold tracking-wider ${
-                  homeworkAnalysis.overdueCount > 0 ? 'text-rose-400' : homeworkAnalysis.dueTodayCount > 0 ? 'text-amber-400' : 'text-slate-400'
-                }`}>Homework</span>
+                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Homework</span>
                 {homeworkAnalysis.overdueCount > 0 ? (
                   <span className="text-[9px] px-1 rounded font-bold uppercase bg-rose-500/30 text-rose-300">Late</span>
                 ) : homeworkAnalysis.dueTodayCount > 0 ? (
-                  <span className="text-[9px] px-1 rounded font-bold uppercase bg-amber-500/30 text-amber-300">Today</span>
+                  <span className="text-[9px] px-1 rounded font-bold uppercase bg-sky-500/30 text-sky-300">Today</span>
                 ) : null}
               </div>
               <strong className="text-xs sm:text-sm font-black text-white block truncate">
@@ -540,31 +522,17 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 3. Attendance Standing Tile */}
           <div 
             onClick={() => onNavigate && onNavigate('profile', 'attendance')}
-            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition border shadow-xs ${
-              attendanceStats.riskLevel === 'red'
-                ? 'bg-rose-950/40 border-rose-500/60 hover:border-rose-400'
-                : attendanceStats.riskLevel === 'yellow'
-                ? 'bg-amber-950/40 border-amber-500/60 hover:border-amber-400'
-                : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900'
-            }`}
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition hover:bg-slate-900 shadow-xs"
           >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              attendanceStats.riskLevel === 'red'
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                : attendanceStats.riskLevel === 'yellow'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-            }`}>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Calendar size={17} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
-                <span className={`text-[10px] block uppercase font-bold tracking-wider ${
-                  attendanceStats.riskLevel === 'red' ? 'text-rose-400' : attendanceStats.riskLevel === 'yellow' ? 'text-amber-400' : 'text-slate-400'
-                }`}>Attendance</span>
+                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Attendance</span>
                 {attendanceStats.riskLevel !== 'green' && (
                   <span className={`text-[9px] px-1 rounded font-bold uppercase ${
-                    attendanceStats.riskLevel === 'red' ? 'bg-rose-500/30 text-rose-300' : 'bg-amber-500/30 text-amber-300'
+                    attendanceStats.riskLevel === 'red' ? 'bg-rose-500/30 text-rose-300' : 'bg-sky-500/30 text-sky-300'
                   }`}>Alert</span>
                 )}
               </div>
@@ -577,14 +545,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 4. Merit Badges */}
           <div 
             onClick={() => onNavigate && onNavigate('merit-badges')}
-            className="bg-slate-900/80 border border-slate-800 hover:border-amber-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
           >
-            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Star size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Merit Badges</span>
-              <strong className="text-xs sm:text-sm font-black text-amber-400 block truncate">
+              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Merit Badges</span>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
                 {meritBadgesCount} / 21 Earned
               </strong>
             </div>
@@ -593,14 +561,14 @@ export default function StudentHome({ currentUser, onNavigate, unreadChatCount =
           {/* 5. Service Hours */}
           <div 
             onClick={() => onNavigate && onNavigate('service-log')}
-            className="bg-slate-900/80 border border-slate-800 hover:border-sky-400/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
+            className="bg-slate-900/80 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:bg-slate-900"
           >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
               <Heart size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Service Hours</span>
-              <strong className="text-xs sm:text-sm font-black text-sky-400 block truncate">
+              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Service Hours</span>
+              <strong className="text-xs sm:text-sm font-black text-white block truncate">
                 {serviceHours} Hours
               </strong>
             </div>

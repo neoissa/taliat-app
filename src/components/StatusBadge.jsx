@@ -3,58 +3,58 @@ import { CheckCircle2, Clock, AlertTriangle, AlertCircle, Info, Shield, Award, S
 
 const STATUS_VARIANTS = {
   success: {
-    badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60',
-    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: CheckCircle2
   },
   completed: {
-    badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/60',
-    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: CheckCircle2
   },
   warning: {
-    badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60',
-    iconColor: 'text-amber-600 dark:text-amber-400',
+    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    iconColor: 'text-amber-400',
     DefaultIcon: AlertTriangle
   },
   pending: {
-    badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60',
-    iconColor: 'text-amber-600 dark:text-amber-400',
+    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    iconColor: 'text-amber-400',
     DefaultIcon: Clock
   },
   in_review: {
-    badge: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/60',
-    iconColor: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: Clock
   },
   info: {
-    badge: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-400 border-sky-200/60 dark:border-sky-800/60',
-    iconColor: 'text-sky-600 dark:text-sky-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: Info
   },
   danger: {
-    badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60',
-    iconColor: 'text-rose-600 dark:text-rose-400',
+    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+    iconColor: 'text-rose-400',
     DefaultIcon: AlertCircle
   },
   overdue: {
-    badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/60',
-    iconColor: 'text-rose-600 dark:text-rose-400',
+    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+    iconColor: 'text-rose-400',
     DefaultIcon: AlertCircle
   },
   indigo: {
-    badge: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-800/60',
-    iconColor: 'text-indigo-600 dark:text-indigo-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: Shield
   },
   purple: {
-    badge: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/60',
-    iconColor: 'text-purple-600 dark:text-purple-400',
+    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    iconColor: 'text-sky-400',
     DefaultIcon: Sparkles
   },
   neutral: {
-    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-    iconColor: 'text-slate-500 dark:text-slate-400',
+    badge: 'bg-slate-800/90 text-slate-200 border-slate-700',
+    iconColor: 'text-sky-400',
     DefaultIcon: Info
   }
 };

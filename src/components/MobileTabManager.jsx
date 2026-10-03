@@ -235,13 +235,9 @@ export default function MobileTabManager({
       <div className="relative w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden z-10">
         
         {/* Header */}
-        <div className={`p-4 sm:p-5 border-b flex items-center justify-between shrink-0 ${
-          isOwner ? 'border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-slate-900 to-slate-950' : 'border-slate-800 bg-slate-900/60'
-        }`}>
+        <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-              isOwner ? 'bg-amber-500/20 border border-amber-500/50 text-amber-400' : 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
-            }`}>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg bg-sky-500/15 border border-sky-500/30 text-sky-400">
               <Sliders size={20} />
             </div>
             <div>
@@ -272,7 +268,7 @@ export default function MobileTabManager({
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Smartphone size={15} className="text-emerald-400" />
+                <Smartphone size={15} className="text-sky-400" />
                 <h3 className="text-xs font-black text-white uppercase tracking-wider">
                   Mobile Bottom Quick Bar Preview ({bottomTabIds.length}/4 Slots)
                 </h3>
@@ -296,7 +292,7 @@ export default function MobileTabManager({
                     <span className="text-[9px] font-bold truncate max-w-[64px] text-center text-slate-200">
                       {tabObj.label}
                     </span>
-                    <span className="text-[8px] text-emerald-400 font-mono font-bold">
+                    <span className="text-[8px] text-sky-400 font-mono font-bold">
                       Slot {idx + 1}
                     </span>
                   </div>
@@ -318,7 +314,7 @@ export default function MobileTabManager({
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Layers size={14} className="text-amber-400" />
+                <Layers size={14} className="text-sky-400" />
                 <span>All Modules & Navigation Tabs ({tabs.length})</span>
               </span>
               <span className="text-[11px] text-slate-400">
@@ -338,7 +334,7 @@ export default function MobileTabManager({
                       !tab.visible
                         ? 'bg-slate-900/30 border-slate-800/60 opacity-60'
                         : isPinned
-                        ? 'bg-slate-900 border-emerald-500/40 shadow-sm'
+                        ? 'bg-slate-900 border-sky-500/40 shadow-sm'
                         : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                     }`}
                   >
@@ -379,7 +375,7 @@ export default function MobileTabManager({
                             title="Click to customize icon"
                           >
                             <DynamicIcon name={tab.icon} size={18} className={tabTheme.icon} />
-                            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-amber-500 border border-slate-900 group-hover:block hidden" />
+                            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-sky-400 border border-slate-900 group-hover:block hidden" />
                           </button>
                         );
                       })()}
@@ -396,7 +392,7 @@ export default function MobileTabManager({
                             </span>
                           )}
                           {isPinned && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
+                            <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-1.5 py-0.2 rounded font-black uppercase shrink-0">
                               ★ Slot {pinSlotIndex + 1}
                             </span>
                           )}
@@ -415,12 +411,12 @@ export default function MobileTabManager({
                         onClick={() => togglePinBottom(tab.id)}
                         className={`min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-bold transition cursor-pointer ${
                           isPinned
-                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30'
+                            ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 hover:bg-sky-500/30'
                             : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'
                         }`}
                         title={isPinned ? 'Unpin from quick bar' : 'Pin to quick bar'}
                       >
-                        {isPinned ? <Pin size={15} className="fill-emerald-400 text-emerald-400" /> : <PinOff size={15} />}
+                        {isPinned ? <Pin size={15} className="fill-sky-400 text-sky-400" /> : <PinOff size={15} />}
                         <span className="hidden md:inline text-[11px]">{isPinned ? 'Pinned' : 'Pin'}</span>
                       </button>
 
@@ -486,11 +482,7 @@ export default function MobileTabManager({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition cursor-pointer min-h-[44px] shadow-lg ${
-                isOwner
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-950/50'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/50'
-              }`}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition cursor-pointer min-h-[44px] shadow-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sky-950/50"
             >
               {saving ? (
                 <span>Saving...</span>
@@ -510,7 +502,7 @@ export default function MobileTabManager({
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400">
                   <Sparkles size={16} />
                 </div>
                 <div>
@@ -540,7 +532,7 @@ export default function MobileTabManager({
                   value={iconSearchQuery}
                   onChange={(e) => setIconSearchQuery(e.target.value)}
                   placeholder="Search icons (e.g. Tent, Flame, Shield, Award, Compass)..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                 />
               </div>
 
@@ -551,7 +543,7 @@ export default function MobileTabManager({
                   onClick={() => setSelectedIconCategory('all')}
                   className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
                     selectedIconCategory === 'all'
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-sky-500 text-slate-950 font-black'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
@@ -564,7 +556,7 @@ export default function MobileTabManager({
                     onClick={() => setSelectedIconCategory(cat.id)}
                     className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
                       selectedIconCategory === cat.id
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-sky-500 text-slate-950 font-black'
                         : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
@@ -588,8 +580,8 @@ export default function MobileTabManager({
                       onClick={() => handleSelectIcon(iconItem.id)}
                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer min-h-[64px] ${
                         isCurrent
-                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg scale-105'
-                          : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-emerald-500 hover:text-white hover:bg-slate-850'
+                          ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-lg scale-105 font-bold'
+                          : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-sky-500 hover:text-white hover:bg-slate-850'
                       }`}
                     >
                       <IconComp size={22} className="mb-1.5" />

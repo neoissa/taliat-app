@@ -18,49 +18,13 @@ export default function HubSubNav({
   children
 }) {
   const getThemeStyles = (isActive) => {
-    switch (colorTheme) {
-      case 'amber':
-        return {
-          mobileActive: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md shadow-amber-950/40 border-amber-400',
-          mobileInactive: 'text-slate-300 hover:text-amber-200 hover:bg-slate-800/80 border-transparent',
-          iconActive: 'text-slate-950',
-          iconInactive: 'text-amber-400 group-hover:text-amber-300',
-          badgeActive: 'bg-slate-950 text-amber-300'
-        };
-      case 'sky':
-        return {
-          mobileActive: 'bg-gradient-to-r from-sky-500 to-sky-600 text-white font-black shadow-md shadow-sky-950/40 border-sky-400',
-          mobileInactive: 'text-slate-300 hover:text-sky-200 hover:bg-slate-800/80 border-transparent',
-          iconActive: 'text-white',
-          iconInactive: 'text-sky-400 group-hover:text-sky-300',
-          badgeActive: 'bg-slate-950 text-sky-300'
-        };
-      case 'indigo':
-        return {
-          mobileActive: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-black shadow-md shadow-indigo-950/40 border-indigo-400',
-          mobileInactive: 'text-slate-300 hover:text-indigo-200 hover:bg-slate-800/80 border-transparent',
-          iconActive: 'text-white',
-          iconInactive: 'text-indigo-400 group-hover:text-indigo-300',
-          badgeActive: 'bg-slate-950 text-indigo-300'
-        };
-      case 'purple':
-        return {
-          mobileActive: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black shadow-md shadow-purple-950/40 border-purple-400',
-          mobileInactive: 'text-slate-300 hover:text-purple-200 hover:bg-slate-800/80 border-transparent',
-          iconActive: 'text-white',
-          iconInactive: 'text-purple-400 group-hover:text-purple-300',
-          badgeActive: 'bg-slate-950 text-purple-300'
-        };
-      case 'emerald':
-      default:
-        return {
-          mobileActive: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-950 font-black shadow-md shadow-emerald-950/40 border-emerald-400',
-          mobileInactive: 'text-slate-300 hover:text-emerald-200 hover:bg-slate-800/80 border-transparent',
-          iconActive: 'text-slate-950',
-          iconInactive: 'text-emerald-400 group-hover:text-emerald-300',
-          badgeActive: 'bg-slate-950 text-emerald-300'
-        };
-    }
+    return {
+      mobileActive: 'bg-gradient-to-r from-sky-500 to-sky-600 text-slate-950 font-black shadow-md shadow-sky-950/40 border-sky-400',
+      mobileInactive: 'text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 border-transparent',
+      iconActive: 'text-slate-950',
+      iconInactive: 'text-sky-400 group-hover:text-sky-300',
+      badgeActive: 'bg-slate-950 text-sky-300'
+    };
   };
 
   return (

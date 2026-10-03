@@ -10,7 +10,7 @@ export const LEADER_OWNER_TABS = [
     id: 'home',
     label: 'Command Center',
     icon: 'Shield',
-    theme: 'indigo',
+    theme: 'sky',
     description: 'Unit Command Center & Executive Overview',
     badgeKey: null
   },
@@ -18,7 +18,7 @@ export const LEADER_OWNER_TABS = [
     id: 'scouts-hub',
     label: 'Scouts & Patrols',
     icon: 'Users',
-    theme: 'emerald',
+    theme: 'sky',
     description: 'Patrol Roster, Attendance, Advancement & Reports',
     badgeKey: null
   },
@@ -26,7 +26,7 @@ export const LEADER_OWNER_TABS = [
     id: 'lesson-plans',
     label: 'Lesson Curriculum',
     icon: 'GraduationCap',
-    theme: 'purple',
+    theme: 'sky',
     description: 'Patrol Lesson Plans & Weekly Agendas',
     badgeKey: null
   },
@@ -42,7 +42,7 @@ export const LEADER_OWNER_TABS = [
     id: 'communication-hub',
     label: 'Communications',
     icon: 'MessageSquare',
-    theme: 'amber',
+    theme: 'sky',
     description: 'Parent DMs, Broadcasts & Patrol Chat',
     badgeKey: 'unreadDirectMessagesCount'
   },
@@ -50,7 +50,7 @@ export const LEADER_OWNER_TABS = [
     id: 'admin-hub',
     label: 'Leader Admin Console',
     icon: 'Sliders',
-    theme: 'teal',
+    theme: 'sky',
     description: 'User Management & Security Governance',
     badgeKey: null
   },
@@ -58,7 +58,7 @@ export const LEADER_OWNER_TABS = [
     id: 'profile',
     label: 'My Profile & Training (SPT)',
     icon: 'ShieldCheck',
-    theme: 'emerald',
+    theme: 'sky',
     description: 'Leader Profile, Credentials & Safety Protection Training',
     badgeKey: null
   }
@@ -69,7 +69,7 @@ export const SCOUT_TABS = [
     id: 'home',
     label: 'My Dashboard',
     icon: 'Home',
-    theme: 'emerald',
+    theme: 'sky',
     description: 'My Scout Dashboard & Next Milestones',
     badgeKey: null
   },
@@ -77,7 +77,7 @@ export const SCOUT_TABS = [
     id: 'advancement-hub',
     label: 'My Advancement',
     icon: 'Award',
-    theme: 'emerald',
+    theme: 'sky',
     description: '7 Ranks, Merit Badges & Eagle Roadmap',
     badgeKey: null
   },
@@ -93,7 +93,7 @@ export const SCOUT_TABS = [
     id: 'tarbiyah-hub',
     label: 'Patrol & Tarbiyah',
     icon: 'Sparkles',
-    theme: 'amber',
+    theme: 'sky',
     description: 'Patrol Chat, Islamic Knowledge & Guides',
     badgeKey: 'unreadChatCount'
   },
@@ -101,7 +101,7 @@ export const SCOUT_TABS = [
     id: 'profile',
     label: 'My Profile',
     icon: 'User',
-    theme: 'teal',
+    theme: 'sky',
     description: 'Scout Profile, Credentials & Service Log',
     badgeKey: null
   }
@@ -112,7 +112,7 @@ export const PARENT_TABS = [
     id: 'home',
     label: 'Family Overview',
     icon: 'Home',
-    theme: 'emerald',
+    theme: 'sky',
     description: 'Family Dashboard & Child Summary',
     badgeKey: null
   },
@@ -128,7 +128,7 @@ export const PARENT_TABS = [
     id: 'communication-hub',
     label: 'Messages & Alerts',
     icon: 'MessageSquare',
-    theme: 'amber',
+    theme: 'sky',
     description: 'Leader Inquiries, Meeting Requests & Alerts',
     badgeKey: 'unreadDirectMessagesCount'
   },
@@ -136,7 +136,7 @@ export const PARENT_TABS = [
     id: 'road-to-eagle',
     label: 'Eagle & Progress',
     icon: 'Mountain',
-    theme: 'teal',
+    theme: 'sky',
     description: 'Eagle Scout Roadmap & Child Advancement',
     badgeKey: null
   },
@@ -144,7 +144,7 @@ export const PARENT_TABS = [
     id: 'profile',
     label: 'Family Profile',
     icon: 'User',
-    theme: 'indigo',
+    theme: 'sky',
     description: 'Family Profile & Contacts',
     badgeKey: null
   }
@@ -179,7 +179,7 @@ export function getRoleNavigationConfig(userRoleContext, customPreferences = nul
           id: customTab.id,
           label: customTab.label,
           icon: customTab.icon || defaultTab?.icon || 'Home',
-          theme: defaultTab?.theme || (customTab.category === 'leadership' ? 'indigo' : customTab.category === 'communication' ? 'amber' : customTab.category === 'academics' ? 'amber' : 'emerald'),
+          theme: 'sky',
           description: customTab.description || defaultTab?.description || '',
           badgeKey: customTab.badgeKey || defaultTab?.badgeKey || null
         };

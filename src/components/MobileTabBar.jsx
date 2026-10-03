@@ -51,7 +51,7 @@ export default function MobileTabBar({
       {roleTabs.map((tab) => {
         const isActive = currentTab === tab.id || (!currentTab && tab.id === 'home');
         const badgeCount = getBadgeCount(tab.badgeKey, tab.id);
-        const themeStyles = getIconTheme(tab.theme || 'emerald', isActive);
+        const themeStyles = getIconTheme(tab.theme || 'sky', isActive);
 
         return (
           <button
