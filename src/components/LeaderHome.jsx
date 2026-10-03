@@ -331,69 +331,59 @@ export default function LeaderHome({ currentUser, onNavigate }) {
   const totalHwPending = Object.values(pendingMap || {}).reduce((sum, item) => sum + (item?.assignments || 0), 0);
   const scoutsWithPending = (scouts || []).filter(s => s?.uid && (pendingMap[s.uid]?.total || 0) > 0);
 
+  const nextEvent = events[0] || allEvents[0] || null;
+
   return (
-    <div className="space-y-3.5 pb-6 font-sans">
-      {/* ── 1. LEADER / OWNER HERO COMMAND CARD ── */}
-      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-sky-500/30 shadow-sky-950/20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5 relative z-10">
+    <div className="space-y-4 pb-8 font-sans max-w-7xl mx-auto">
+      {/* ── 1. CLEAN HERO CARD ── */}
+      <div className="rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden bg-slate-900 border border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center p-2 shadow-lg shrink-0 text-2xl sm:text-3xl bg-sky-500/15 border-2 border-sky-500/40 text-sky-300 shadow-sky-950/40">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl bg-slate-800 border border-sky-500/30 text-sky-300 shadow-md shrink-0">
               {isOwner ? '👑' : '⚜️'}
             </div>
 
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
-                {isOwner ? (
-                  <StatusBadge type="info" size="xs" label="👑 Troop Owner" />
-                ) : (
-                  <StatusBadge type="info" size="xs" label={`⚜️ ${roleLabel}`} />
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                  {isOwner ? '👑 Troop Owner' : `⚜️ ${roleLabel}`}
+                </span>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  {scouts.length} Scouts
+                </span>
+                {nextEvent && (
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-sky-300 border border-slate-700 flex items-center gap-1">
+                    <Calendar size={11} className="text-sky-400" />
+                    <span>Next: {nextEvent.title || nextEvent.date}</span>
+                  </span>
                 )}
-                <StatusBadge type="neutral" size="xs" label={`${scouts.length} Scouts`} />
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('profile')}
-                  className="cursor-pointer transition-transform hover:scale-105"
-                  title="Click to view or update Safety/Protection Training (SPT) in your profile"
-                >
-                  <StatusBadge 
-                    type={(currentUser?.spt || currentUser?.sptDate || currentUser?.sptFileUrl || currentUser?.yptCompleted) ? 'info' : 'warning'} 
-                    size="xs" 
-                    label={`SPT: ${(currentUser?.spt || currentUser?.sptDate) ? `✓ ${currentUser?.spt || currentUser?.sptDate}` : ((currentUser?.sptFileUrl || currentUser?.yptCompleted) ? '✓ Certified' : 'Pending')}`} 
-                  />
-                </button>
               </div>
 
-              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}! {isOwner ? '👑' : '⚜️'}
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Assalāmu ʿAlaykum, {currentUser?.fullName || currentUser?.username || (isOwner ? 'Owner' : 'Leader')}!
               </h2>
-              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
-                {isOwner 
-                  ? 'Command Center: Monitor scout advancement, verify testing submissions, take roll call, and manage troop activities.'
-                  : 'Leadership Hub: Monitor scout advancement, verify testing submissions, take roll call, and schedule troop events.'
-                }
+              <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
+                Dhulfiqār Scouts Command Center — 4 Main Hubs
               </p>
             </div>
           </div>
 
-          {/* ── 4 Streamlined Primary Action Buttons ── */}
-          <div className="flex flex-wrap gap-2 w-full md:w-auto shrink-0 items-center">
-            {/* 1. Take Roll Call */}
+          {/* 2 Primary Actions */}
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             <button
               type="button"
-              onClick={() => onNavigate && onNavigate('attendance')}
-              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-sky-950/40"
+              onClick={() => onNavigate && onNavigate('preparation-hub', { subTab: 'attendance' })}
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-md shadow-sky-950/40"
             >
-              <CheckCircle2 size={15} className="shrink-0 text-slate-950" />
+              <CheckCircle2 size={16} />
               <span>Take Roll Call</span>
             </button>
-
-            {/* 2. Weekly Homework */}
             <button
               type="button"
-              onClick={() => onNavigate && onNavigate('assignments')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 hover:border-sky-500/50 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              onClick={() => onNavigate && onNavigate('education-hub', { subTab: 'homework' })}
+              className="bg-slate-850 hover:bg-slate-800 text-white border border-sky-500/40 hover:border-sky-400 font-extrabold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
             >
-              <BookOpen size={14} className="text-sky-400 shrink-0" />
+              <BookOpen size={15} className="text-sky-400" />
               <span>Weekly Homework</span>
               {totalHwPending > 0 && (
                 <span className="bg-sky-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
@@ -401,1011 +391,274 @@ export default function LeaderHome({ currentUser, onNavigate }) {
                 </span>
               )}
             </button>
-
-            {/* 3. Troop Calendar */}
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('events')}
-              className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
-            >
-              <Calendar size={14} className="text-sky-400 shrink-0" />
-              <span>Troop Calendar</span>
-            </button>
-
-            {/* 4. Review Action Items (or Broadcast) */}
-            {totalPendingApprovals > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPendingScoutId(null);
-                  setShowPendingModal(true);
-                }}
-                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-sky-950/40 animate-pulse"
-              >
-                <Clock size={14} className="shrink-0" />
-                <span>Review ({totalPendingApprovals})</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('broadcasts')}
-                className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
-              >
-                <Megaphone size={14} className="text-sky-400 shrink-0" />
-                <span>Broadcast</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Streamlined 5-Item Horizontal Pill Summary Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mt-4 pt-3.5 border-t border-slate-800/80 relative z-10 text-xs">
-          {/* 1. Active Scouts */}
-          <div 
-            onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Users size={18} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Troop Members</span>
-              <strong className="text-xs sm:text-sm font-black text-white block truncate">
-                {scouts.length} Registered Scouts
-              </strong>
-            </div>
-          </div>
-
-          {/* 2. Pending Reviews */}
-          <div 
-            onClick={() => {
-              if (totalPendingApprovals > 0) {
-                setSelectedPendingScoutId(null);
-                setShowPendingModal(true);
-              }
-            }}
-            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 transition border shadow-xs ${
-              totalPendingApprovals > 0 
-                ? 'bg-slate-900/90 border-sky-500/40 cursor-pointer hover:border-sky-400 hover:shadow-md' 
-                : 'bg-slate-900/90 border-slate-800/80 hover:border-slate-700'
-            }`}
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Clock size={18} className={totalPendingApprovals > 0 ? "animate-pulse" : ""} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Pending Reviews</span>
-              <strong className="text-xs sm:text-sm font-black text-white block truncate">
-                {totalPendingApprovals} Action Items
-              </strong>
-            </div>
-          </div>
-
-          {/* 3. Weekly Homework */}
-          <div 
-            onClick={() => onNavigate && onNavigate('assignments')}
-            className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 transition border shadow-xs cursor-pointer ${
-              totalHwPending > 0 
-                ? 'bg-slate-900/90 border-sky-500/40 hover:border-sky-400 hover:shadow-md' 
-                : 'bg-slate-900/90 border-slate-800 hover:border-sky-500/40 hover:shadow-md'
-            }`}
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <BookOpen size={18} className={totalHwPending > 0 ? "animate-pulse" : ""} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Homework</span>
-                {totalHwPending > 0 && (
-                  <span className="bg-sky-500 text-slate-950 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
-                    {totalHwPending} to Grade
-                  </span>
-                )}
-              </div>
-              <strong className="text-xs sm:text-sm font-black text-white block truncate">
-                {assignments.length} Active Tasks
-              </strong>
-            </div>
-          </div>
-
-          {/* 4. Patrol Attendance */}
-          <div 
-            onClick={() => onNavigate && onNavigate('attendance')}
-            className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <CheckCircle2 size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">Attendance</span>
-                {patrolRedRiskCount > 0 && (
-                  <span className="bg-rose-500/30 border border-rose-500/50 text-rose-300 text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
-                    {patrolRedRiskCount} Risk
-                  </span>
-                )}
-              </div>
-              <strong className="text-xs sm:text-sm font-black text-white block truncate">
-                {attendanceSessions.length} Sessions Logged
-              </strong>
-            </div>
-          </div>
-
-          {/* 5. Patrol Units */}
-          <div 
-            onClick={() => onNavigate && onNavigate('roster')}
-            className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center gap-3 cursor-pointer transition shadow-xs hover:shadow-md"
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Shield size={18} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] text-sky-400 block uppercase font-bold tracking-wider">
-                {isTroopWideAuthority ? 'Patrol Units' : 'Assigned Unit'}
-              </span>
-              <strong className="text-xs sm:text-sm font-black text-white block truncate">
-                {isTroopWideAuthority 
-                  ? `${groups.length} Patrol Units` 
-                  : (myGroup ? `🛡️ ${myGroup.name}` : 'Assigned Unit')}
-              </strong>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* ── 1.6 EDUCATIONAL LEADER WORKFLOW GUIDE ── */}
-      <div className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 rounded-3xl p-4 sm:p-5 shadow-lg transition space-y-3">
-        <div 
-          onClick={() => setShowLeaderGuide(!showLeaderGuide)}
-          className="flex items-center justify-between cursor-pointer group"
-        >
+      {/* ── OPTIONAL URGENT ALERT BANNER (If items await review) ── */}
+      {totalPendingApprovals > 0 && (
+        <div className="bg-slate-900 border border-sky-500/40 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Sparkles size={16} />
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Clock size={18} className="animate-pulse" />
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
-                <span>⚜️ Troop Leadership Workflow & Quick Guide</span>
-                <span className="text-[10px] text-sky-300 bg-sky-500/15 border border-sky-500/30 px-2 py-0.2 rounded-full font-bold uppercase">
-                  How-To
+              <h4 className="text-xs sm:text-sm font-extrabold text-white">
+                {totalPendingApprovals} Action Items Awaiting Review
+              </h4>
+              <p className="text-xs text-slate-300">
+                {totalRanksPending > 0 && `${totalRanksPending} rank testing • `}
+                {totalHwPending > 0 && `${totalHwPending} homework submissions • `}
+                {parentRequests.filter(r => r.status === 'pending_review').length > 0 && `${parentRequests.filter(r => r.status === 'pending_review').length} parent requests`}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('approvals-hub')}
+            className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md shadow-sky-950/30"
+          >
+            <CheckCheck size={14} />
+            <span>Open Approvals &rarr;</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── 2. THE 4 CORE HUBS COMMAND BOARD ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 pt-1">
+        
+        {/* ── HUB 1: APPROVALS ── */}
+        <div 
+          onClick={() => onNavigate && onNavigate('approvals-hub')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
+                <CheckCheck size={24} />
+              </div>
+              {totalPendingApprovals > 0 ? (
+                <span className="bg-sky-500 text-slate-950 text-xs font-black px-2.5 py-1 rounded-full animate-pulse shadow-sm">
+                  {totalPendingApprovals} Pending
                 </span>
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Key steps for taking roll call, verifying oral submissions, communicating with parents, and managing patrols.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="text-xs text-sky-400 hover:text-sky-300 font-bold p-1 rounded-lg bg-slate-800 group-hover:bg-slate-750 transition cursor-pointer"
-          >
-            {showLeaderGuide ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-        </div>
-
-        {showLeaderGuide && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-slate-800/80 animate-fadeIn text-xs">
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <CheckCircle2 size={14} />
-                <span>1. Take Roll Call</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Click <strong>Take Roll Call</strong> during weekly sessions to log attendance. Absences marked with parent notices automatically record as Excused.
-              </p>
-            </div>
-
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <Clock size={14} />
-                <span>2. Test & Sign-off</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Click <strong>Review Action Items</strong> to open the testing queue. Ask candidates their oral prompt, then click <em>Conduct Test & Sign-off</em>.
-              </p>
-            </div>
-
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <BookOpen size={14} />
-                <span>3. Weekly Homework</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Click <strong>Weekly Homework</strong> to publish tasks, attach videos/worksheets, and verify scout submissions with 1-click.
-              </p>
-            </div>
-
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <MessageSquare size={14} />
-                <span>4. Parent Inquiries</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Parent messages, conference requests, and signed progress reports appear in the <strong>Action Center</strong> for 1-click scheduling or replies.
-              </p>
-            </div>
-
-            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1">
-              <div className="flex items-center gap-1.5 text-sky-400 font-bold">
-                <Megaphone size={14} />
-                <span>5. Troop Broadcasts</span>
-              </div>
-              <p className="text-[11px] text-slate-350 leading-relaxed">
-                Publish whole-troop announcements and packing lists directly to parent and scout notification feeds with real-time push badges.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── 1.7 UNIFIED LEADER ACTION CENTER & INQUIRIES ── */}
-      {(() => {
-        const unreadDms = directThreads.filter(t => t.unreadByLeader);
-        const pendingMeetingReqs = parentRequests.filter(r => r.status === 'pending_review' && r.requestType === 'meeting_request');
-        const pendingOtherReqs = parentRequests.filter(r => r.status === 'pending_review' && r.requestType !== 'meeting_request');
-        const confirmedConferences = parentRequests.filter(r => r.status === 'confirmed' && r.requestType === 'meeting_request');
-
-        const totalActionCount = unreadDms.length + pendingMeetingReqs.length + pendingOtherReqs.length;
-        if (totalActionCount === 0 && confirmedConferences.length === 0) return null;
-
-        return (
-          <div className="bg-slate-900 border border-sky-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 animate-fadeIn">
-            {/* Action Center Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold shrink-0 shadow-sm">
-                  <Zap size={18} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-extrabold text-sm sm:text-base text-white">
-                      Leader Action Center & Inquiries
-                    </h3>
-                    {totalActionCount > 0 ? (
-                      <StatusBadge type="danger" size="xs" pulse label={`${totalActionCount} Action Required`} />
-                    ) : (
-                      <StatusBadge type="success" size="xs" label="Up to Date" />
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Parent communications, conference scheduling requests, and upcoming confirmed appointments.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setShowScheduleMeetingModal(true)}
-                  className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-sky-300 border border-sky-500/30 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <Plus size={13} />
-                  <span>Schedule Meeting</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('communication-hub')}
-                  className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40"
-                >
-                  <MessageSquare size={13} />
-                  <span>Communication Hub &rarr;</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Grid of Action Items */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {/* 1. Unread DMs */}
-              {unreadDms.length > 0 && (
-                <div className="bg-slate-900/90 border border-sky-500/30 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-xs">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">💬</span>
-                        <span className="text-xs font-bold text-sky-300">Direct Messages</span>
-                      </div>
-                      <StatusBadge type="danger" size="xs" label={`${unreadDms.length} Unread`} />
-                    </div>
-                    <p className="text-xs text-white font-semibold line-clamp-1">
-                      From {unreadDms[0]?.parentName}: &ldquo;{unreadDms[0]?.lastMessage || unreadDms[0]?.subject}&rdquo;
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('direct-messages')}
-                    className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                  >
-                    <MessageSquare size={13} />
-                    <span>Reply to Message ({unreadDms.length}) &rarr;</span>
-                  </button>
-                </div>
-              )}
-
-              {/* 2. Conference Requests */}
-              {pendingMeetingReqs.map(req => (
-                <div
-                  key={req.id || req.requestId}
-                  className="bg-slate-900/90 border border-sky-500/30 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-xs"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">🤝</span>
-                        <span className="text-xs font-bold text-sky-300">Conference Request</span>
-                      </div>
-                      <StatusBadge type="info" size="xs" label={req.patrolName || 'Patrol'} />
-                    </div>
-                    <div className="text-xs text-slate-200">
-                      <strong className="text-white">{req.parentName}</strong> for <strong className="text-sky-300">{req.scoutName}</strong>
-                    </div>
-                    <div className="text-[11px] text-sky-200 font-mono bg-slate-950/80 border border-sky-500/20 px-2.5 py-1 rounded-lg">
-                      📅 {req.proposedDate || 'Flexible'} @ {req.proposedTime || 'Evening'}
-                      {req.meetingTopic && <span className="block italic text-slate-300 mt-0.5">&ldquo;{req.meetingTopic}&rdquo;</span>}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('parent-requests', { requestId: req.id || req.requestId, confirmMeeting: true })}
-                    className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                  >
-                    <Calendar size={13} />
-                    <span>Confirm & Schedule Conference &rarr;</span>
-                  </button>
-                </div>
-              ))}
-
-              {/* 3. General Parent Requests */}
-              {pendingOtherReqs.length > 0 && (
-                <div className="bg-slate-900/90 border border-sky-500/30 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-xs">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">📝</span>
-                        <span className="text-xs font-bold text-sky-300">Parent Requests / Absences</span>
-                      </div>
-                      <StatusBadge type="info" size="xs" label={`${pendingOtherReqs.length} Pending`} />
-                    </div>
-                    <p className="text-xs text-slate-200 line-clamp-1">
-                      From <strong className="text-white">{pendingOtherReqs[0].parentName}</strong> ({pendingOtherReqs[0].scoutName}): &ldquo;{pendingOtherReqs[0].message}&rdquo;
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('parent-requests', { requestId: pendingOtherReqs[0].id || pendingOtherReqs[0].requestId })}
-                    className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                  >
-                    <span>Review Submissions ({pendingOtherReqs.length}) &rarr;</span>
-                  </button>
-                </div>
-              )}
-
-              {/* 4. Confirmed Conferences */}
-              {confirmedConferences.length > 0 && (
-                <div className="bg-slate-900/90 border border-sky-500/30 p-4 rounded-2xl flex flex-col justify-between gap-3 shadow-xs">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">📅</span>
-                        <span className="text-xs font-bold text-sky-300">Scheduled Conference</span>
-                      </div>
-                      <StatusBadge type="success" size="xs" label={`${confirmedConferences.length} Upcoming`} />
-                    </div>
-                    <p className="text-xs text-slate-200">
-                      With <strong className="text-white">{confirmedConferences[0].parentName}</strong> ({confirmedConferences[0].scoutName}) on <strong className="text-sky-300">{confirmedConferences[0].confirmedDate} at {confirmedConferences[0].confirmedTime}</strong>
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <ConferenceCountdown
-                      date={confirmedConferences[0].confirmedDate}
-                      time={confirmedConferences[0].confirmedTime}
-                      variant="pill"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onNavigate && onNavigate('parent-requests', { filterTab: 'all' })}
-                      className="text-xs text-sky-400 hover:text-sky-300 font-bold cursor-pointer hover:underline"
-                    >
-                      View Details &rarr;
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      <LiveClockAndCalendar currentUser={currentUser} onNavigate={onNavigate} />
-
-      {/* ── 1.9 RECENT TROOP BROADCASTS & NOTIFICATIONS ── */}
-      {recentBroadcasts.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold shrink-0 shadow-sm">
-                <Megaphone size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-extrabold text-sm sm:text-base text-white">
-                    Recent Troop Announcements & Broadcasts
-                  </h3>
-                  <StatusBadge type="success" size="xs" label="Active Feed" />
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Published updates pushed directly to parents, scouts, and patrol messenger streams.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('broadcasts')}
-                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40 shrink-0"
-              >
-                <Megaphone size={13} />
-                <span>Open Broadcast Center &rarr;</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {recentBroadcasts.map((b) => (
-              <div
-                key={b.id || b.broadcastId}
-                className="bg-slate-900/80 border border-slate-800/80 hover:border-sky-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <StatusBadge type="neutral" size="xs" label={b.category || 'General'} />
-                    <StatusBadge 
-                      type={b.priority === 'urgent' ? 'danger' : b.priority === 'high' ? 'warning' : 'neutral'} 
-                      size="xs" 
-                      pulse={b.priority === 'urgent'}
-                      label={b.priority || 'Normal'} 
-                    />
-                  </div>
-
-                  <h4 className="text-xs font-black text-white line-clamp-1 leading-snug">
-                    {b.title}
-                  </h4>
-
-                  <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
-                    {b.message}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span className="truncate">By {b.authorName || 'Leader'}</span>
-                  <span>{b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. SLEEK ACTIONABLE NOTIFICATION & TESTING CENTER ── */}
-      {totalPendingApprovals > 0 ? (
-        <div className="bg-slate-900 border border-sky-500/30 rounded-2xl p-5 shadow-xl space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold shrink-0 shadow-sm">
-                <Clock size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-extrabold text-sm sm:text-base text-white">
-                    Pending Submissions & Oral Testing ({totalPendingApprovals})
-                  </h4>
-                  <StatusBadge type="warning" size="xs" pulse label="Action Required" />
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {scoutsWithPending.length} scout{scoutsWithPending.length !== 1 ? 's' : ''} awaiting leader verification and oral sign-off.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedPendingScoutId(null);
-                setShowPendingModal(true);
-              }}
-              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40 self-start sm:self-auto shrink-0"
-            >
-              <CheckCheck size={14} />
-              <span>Open Testing Queue & Batch Sign-off &rarr;</span>
-            </button>
-          </div>
-
-          {/* Breakdown Pills: Domains & Scouts */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
-            {/* Category Breakdown Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mr-0.5">Awaiting:</span>
-              {totalRanksPending > 0 && (
-                <StatusBadge type="info" size="xs" label={`⚜️ ${totalRanksPending} Rank Reqs`} />
-              )}
-              {totalIslamicPending > 0 && (
-                <StatusBadge type="info" size="xs" label={`🕌 ${totalIslamicPending} Islamic Tests`} />
-              )}
-              {totalHwPending > 0 && (
-                <StatusBadge type="neutral" size="xs" label={`🎒 ${totalHwPending} Homework`} />
-              )}
-              {totalMeritPending > 0 && (
-                <StatusBadge type="info" size="xs" label={`🏅 ${totalMeritPending} Badges`} />
-              )}
-            </div>
-
-            {/* Scout Direct Jump Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mr-0.5">Scouts:</span>
-              {scoutsWithPending.slice(0, 6).map(s => (
-                <button
-                  key={s.uid}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPendingScoutId(s.uid);
-                    setShowPendingModal(true);
-                  }}
-                  className="bg-slate-900 hover:bg-slate-800 border border-sky-500/40 hover:border-sky-400 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  title="Click to review this scout's queue directly"
-                >
-                  <span>{s.fullName?.split(' ')[0] || s.username}</span>
-                  <span className="bg-sky-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">
-                    {pendingMap[s.uid]?.total || 1}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-xs shadow-xs">
-          <div className="flex items-center gap-2 text-slate-300">
-            <CheckCircle2 size={16} className="text-sky-400 shrink-0" />
-            <span>All submissions up-to-date (0 pending sign-offs in your queue).</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigate && onNavigate('reports')}
-            className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
-          >
-            <span>Reports Center</span>
-            <ChevronRight size={13} />
-          </button>
-        </div>
-      )}
-
-      {/* ── 3. MAIN HUB: PATROL OVERVIEW & UPCOMING ACTIVITIES ── */}
-      <div className="space-y-3.5">
-        {/* Patrol Summary / Unit Focus */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          {isTroopWideAuthority ? (
-            <>
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
-                  <Users size={16} className="text-sky-400" />
-                  <span>Taliʿat Patrol Units ({groups.length})</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('roster')}
-                  className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Full Roster</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {groups.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic p-3 col-span-3">No patrol groups registered yet.</p>
-                ) : (
-                  groups.map((g) => {
-                    const pScouts = scouts.filter(s => isScoutInPatrol(s, g.id, groups));
-                    const pPending = pScouts.reduce((sum, s) => sum + (pendingMap[s.uid]?.total || 0), 0);
-                    return (
-                      <div
-                        key={g.id}
-                        onClick={() => onNavigate && onNavigate('roster')}
-                        className="bg-slate-900/80 border border-slate-800/80 hover:border-sky-500/50 p-4 rounded-2xl transition-all duration-200 cursor-pointer space-y-2 group shadow-xs hover:shadow-md"
-                      >
-                        <div className="flex items-center justify-between">
-                          <strong className="text-xs font-bold text-white group-hover:text-sky-300 transition">
-                            🛡️ {g.name} Patrol
-                          </strong>
-                          <span className="text-[10px] bg-slate-850 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold border border-slate-750">
-                            {pScouts.length} Scouts
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {g.description || 'Active Dhulfiqār scouting patrol unit'}
-                        </p>
-                        {pPending > 0 && (
-                          <div className="pt-1">
-                            <span className="text-[9px] bg-sky-500 text-slate-950 font-black px-2 py-0.5 rounded-full">
-                              {pPending} Pending Tasks
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between border-b border-slate-750 pb-3">
-                <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
-                  <Shield size={16} className="text-sky-400" />
-                  <span>My Assigned Patrol Unit</span>
-                </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('chat')}
-                    className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Patrol Chat</span>
-                    <ChevronRight size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate && onNavigate('roster')}
-                    className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Patrol Roster</span>
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-              </div>
-
-              {myGroup ? (
-                <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950 border border-sky-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-black text-sky-300 bg-sky-500/10 border border-sky-500/30 px-2.5 py-0.5 rounded-full">
-                          🛡️ Assigned Patrol Unit
-                        </span>
-                        <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono font-bold border border-slate-700">
-                          {scouts.length} Assigned Scouts
-                        </span>
-                        {totalPendingApprovals > 0 && (
-                          <span className="text-[10px] bg-sky-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full shadow-sm">
-                            {totalPendingApprovals} Pending Sign-Offs
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-base sm:text-lg font-black text-white pt-1">
-                        🛡️ {myGroup.name} Patrol
-                      </h4>
-                      {myGroup.description && (
-                        <p className="text-xs text-slate-300 leading-relaxed">
-                          {myGroup.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Quick Action CTAs */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => onNavigate && onNavigate('roster')}
-                        className="bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/40 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Users size={13} />
-                        <span>View Roster</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onNavigate && onNavigate('chat')}
-                        className="bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <MessageSquare size={13} />
-                        <span>Patrol Chat</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Roster Member Chips */}
-                  {scouts.length > 0 ? (
-                    <div className="pt-3 border-t border-slate-800/80">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
-                        Unit Scouts ({scouts.length}):
-                      </span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {scouts.map((s) => (
-                          <div
-                            key={s.uid}
-                            onClick={() => onNavigate && onNavigate('roster')}
-                            className="bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/40 text-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-                          >
-                            <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0"></span>
-                            <span>{s.fullName || s.username}</span>
-                            {s.rank && (
-                              <span className="text-[10px] text-sky-400/80 font-mono">({s.rank})</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="pt-3 border-t border-slate-800/80">
-                      <p className="text-xs text-slate-400 italic">No scouts currently assigned to this patrol unit.</p>
-                    </div>
-                  )}
-                </div>
               ) : (
-                <div className="bg-slate-900/80 border border-sky-500/30 p-5 rounded-2xl text-center space-y-2">
-                  <span className="text-2xl">🛡️</span>
-                  <h4 className="text-sm font-bold text-sky-300">No Patrol Unit Assigned</h4>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    You are currently not assigned to a specific patrol unit. Please contact a troop administrator to assign you to your patrol.
-                  </p>
-                </div>
+                <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
+                  Up to Date
+                </span>
               )}
-            </>
-          )}
-        </div>
-
-        {/* ── 3.5 WEEKLY HOMEWORK & SKILL CHALLENGES DASHBOARD CARD ── */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold shrink-0 shadow-sm">
-                <BookOpen size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-extrabold text-sm sm:text-base text-white">
-                    Weekly Homework & Skill Challenges
-                  </h3>
-                  {totalHwPending > 0 ? (
-                    <StatusBadge type="warning" size="xs" pulse label={`${totalHwPending} Submissions to Grade`} />
-                  ) : (
-                    <StatusBadge type="info" size="xs" label={`${assignments.length} Active Tasks`} />
-                  )}
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Publish weekly tasks, attach instructional videos or worksheets, and verify scout submissions.
-                </p>
-              </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('assignments')}
-                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-sky-950/40 shrink-0"
-              >
-                <BookOpen size={13} />
-                <span>Open Homework Center &rarr;</span>
-              </button>
-            </div>
-          </div>
-
-          {assignments.length === 0 ? (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
-              <p className="text-xs text-slate-400 italic">No homework assignments published yet.</p>
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('assignments')}
-                className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-bold cursor-pointer"
-              >
-                <span>➕ Create & Publish First Assignment</span>
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {assignments.slice(0, 3).map((a) => {
-                const isOverdue = a.dueDate && new Date(a.dueDate) < new Date();
-                return (
-                  <div
-                    key={a.id}
-                    onClick={() => onNavigate && onNavigate('assignments')}
-                    className="bg-slate-900/80 border border-slate-800/80 hover:border-sky-500/50 p-4 rounded-2xl space-y-2.5 transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer group"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <StatusBadge type="info" size="xs" label={a.category || 'Scouting'} />
-                        {a.dueDate && (
-                          <StatusBadge 
-                            type={isOverdue ? 'warning' : 'neutral'} 
-                            size="xs" 
-                            label={`Due: ${a.dueDate}`} 
-                          />
-                        )}
-                      </div>
-
-                      <h4 className="text-xs font-black text-white line-clamp-1 leading-snug group-hover:text-sky-300 transition">
-                        {a.title}
-                      </h4>
-
-                      {a.description && (
-                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed font-sans">
-                          {a.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span className="text-sky-400 font-bold group-hover:text-sky-300 transition">Inspect & Grade &rarr;</span>
-                      <span>{a.assignedTarget === 'patrol' ? 'Patrol' : 'Troop'}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* ── UPCOMING TROOP EVENTS & ATTENDANCE ROLL CALL MONITOR ── */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
-              <h3 className="font-extrabold text-white text-sm sm:text-base flex items-center gap-2">
-                <Calendar size={18} className="text-sky-400" />
-                <span>Troop Events & Attendance Roll Call</span>
+              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
+                Approvals Hub
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Scheduled troop events automatically sync with patrol roll call & attendance tracking.
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                All testing sign-offs, weekly homework grading, and parent conference requests together in one queue.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('attendance')}
-                className="bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
-              >
-                <span>📋 Attendance Hub</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate('events')}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
-              >
-                <span>All Events</span>
-                <ChevronRight size={13} />
-              </button>
+            {/* Sub-features list */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Award size={13} className="text-sky-400" />
+                  <span>Rank Testing Sign-offs</span>
+                </span>
+                <span className="font-bold text-white font-mono">{totalRanksPending}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <BookOpen size={13} className="text-sky-400" />
+                  <span>Homework Submissions to Grade</span>
+                </span>
+                <span className="font-bold text-white font-mono">{totalHwPending}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <MessageSquare size={13} className="text-sky-400" />
+                  <span>Parent Conference Requests</span>
+                </span>
+                <span className="font-bold text-white font-mono">{parentRequests.filter(r => r.status === 'pending_review').length}</span>
+              </div>
             </div>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setEventAttendanceFilter('all')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border ${
-                eventAttendanceFilter === 'all'
-                  ? 'bg-sky-500 text-slate-950 font-black border-sky-400 shadow-xs'
-                  : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border-slate-800'
-              }`}
-            >
-              All Events ({allEvents.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setEventAttendanceFilter('pending')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                eventAttendanceFilter === 'pending'
-                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/60 shadow-xs'
-                  : 'bg-slate-900/90 text-slate-400 hover:text-sky-300 border-slate-800'
-              }`}
-            >
-              <span>⚠️ Roll Call Pending</span>
-              <span className="bg-sky-500/30 text-sky-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                {pendingRollCallCount}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setEventAttendanceFilter('recorded')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                eventAttendanceFilter === 'recorded'
-                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/60 shadow-xs'
-                  : 'bg-slate-900/90 text-slate-400 hover:text-sky-300 border-slate-800'
-              }`}
-            >
-              <span>🟢 Logged Sessions</span>
-              <span className="bg-sky-500/30 text-sky-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                {recordedRollCallCount}
-              </span>
-            </button>
-          </div>
-
-          {/* Event List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredEvents.length === 0 ? (
-              <div className="col-span-1 md:col-span-2 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
-                <p className="text-xs text-slate-400 italic">
-                  {eventAttendanceFilter === 'pending'
-                    ? '🎉 Awesome! All scheduled events have attendance logs completed.'
-                    : eventAttendanceFilter === 'recorded'
-                    ? 'No attendance sessions logged yet for scheduled events.'
-                    : 'No upcoming troop events found in the schedule.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigate && onNavigate('events')}
-                  className="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 font-bold cursor-pointer"
-                >
-                  <span>➕ Schedule New Troop Event</span>
-                </button>
-              </div>
-            ) : (
-              filteredEvents.slice(0, 8).map(ev => {
-                const info = getEventAttendanceInfo(ev);
-                const aud = getEventAudienceInfo(ev, currentUser, groups);
-                return (
-                  <div
-                    key={ev.id}
-                    className={`bg-slate-900/80 border rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between gap-3 shadow-xs hover:shadow-md ${
-                      info.recorded
-                        ? 'border-sky-500/30 hover:border-sky-500/60'
-                        : 'border-slate-800 hover:border-sky-500/50'
-                    }`}
-                  >
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <StatusBadge type="info" size="xs" label={ev.date || 'Upcoming'} />
-                        {ev.time && (
-                          <StatusBadge type="neutral" size="xs" label={ev.time} />
-                        )}
-                        <StatusBadge type="neutral" size="xs" label={ev.category || ev.type || 'Event'} />
-                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${aud.colorClass}`}>
-                          <span>{aud.icon}</span>
-                          <span className="font-bold">{aud.badge}</span>
-                        </span>
-                        {info.recorded ? (
-                          <StatusBadge type="success" size="xs" label={`Logged: ${info.presentCount}/${info.totalCount} (${info.turnoutPct}%)`} />
-                        ) : (
-                          <StatusBadge type="warning" size="xs" pulse label="Roll Call Pending" />
-                        )}
-                      </div>
-
-                      <h4 className="font-extrabold text-sm text-white pt-0.5">{ev.title}</h4>
-
-                      {ev.location && (
-                        <p className="text-[11px] text-sky-300 flex items-center gap-1.5 font-medium bg-slate-950/80 border border-sky-500/20 px-2.5 py-0.5 rounded-lg w-fit max-w-full">
-                          <MapPin size={11} className="text-sky-400 shrink-0" />
-                          <span className="truncate">{ev.location}</span>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Action CTA Button */}
-                    <div className="pt-2 border-t border-slate-850 flex justify-end">
-                      {info.recorded ? (
-                        <button
-                          type="button"
-                          onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                          className="w-full sm:w-auto bg-slate-850 hover:bg-slate-800 text-sky-300 border border-sky-500/40 hover:border-sky-400 text-xs px-3.5 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                        >
-                          <span>✏️ Update Roll Call</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => onNavigate && onNavigate('attendance', { date: ev.date, eventType: info.mappedType, notes: ev.title })}
-                          className="w-full sm:w-auto bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs px-4 py-2 rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-sky-950/40 hover:scale-[1.02]"
-                        >
-                          <Calendar size={13} />
-                          <span>📋 Take Attendance</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Approvals Hub</span>
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
+
+        {/* ── HUB 2: PREPARATION ── */}
+        <div 
+          onClick={() => onNavigate && onNavigate('preparation-hub')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
+                <Calendar size={24} />
+              </div>
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
+                {allEvents.length} Events Scheduled
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
+                Preparation Hub
+              </h3>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                Troop schedule, meeting agendas, and weekly roll call check-in organized together.
+              </p>
+            </div>
+
+            {/* Sub-features list */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Calendar size={13} className="text-sky-400" />
+                  <span>Master Calendar & Events</span>
+                </span>
+                <span className="font-bold text-white font-mono">{allEvents.length} total</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <CheckCircle2 size={13} className="text-sky-400" />
+                  <span>Roll Call & Session Logs</span>
+                </span>
+                <span className="font-bold text-white font-mono">{attendanceSessions.length} logged</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Clock size={13} className="text-sky-400" />
+                  <span>Next Upcoming Meeting</span>
+                </span>
+                <span className="font-bold text-sky-300 truncate max-w-[140px]">
+                  {nextEvent?.title || 'None Scheduled'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Preparation Hub</span>
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </div>
+        </div>
+
+        {/* ── HUB 3: EDUCATION ── */}
+        <div 
+          onClick={() => onNavigate && onNavigate('education-hub')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
+                <BookOpen size={24} />
+              </div>
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
+                {assignments.length} Active Tasks
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
+                Education Hub
+              </h3>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                Weekly troop homework, patrol curriculum lesson plans, Tarbiyah, and field handbooks in one place.
+              </p>
+            </div>
+
+            {/* Sub-features list */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <BookOpen size={13} className="text-sky-400" />
+                  <span>Weekly Homework & Challenges</span>
+                </span>
+                <span className="font-bold text-white font-mono">{assignments.length}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <FileText size={13} className="text-sky-400" />
+                  <span>Lesson Plans & Agendas</span>
+                </span>
+                <span className="font-bold text-sky-300">Curriculum</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Sparkles size={13} className="text-sky-400" />
+                  <span>Islamic Tarbiyah & Duas</span>
+                </span>
+                <span className="font-bold text-sky-300">Tarbiyah</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Education Hub</span>
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </div>
+        </div>
+
+        {/* ── HUB 4: ADMIN & OPERATIONS ── */}
+        <div 
+          onClick={() => onNavigate && onNavigate('admin-hub')}
+          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
+                <Sliders size={24} />
+              </div>
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
+                {scouts.length} Scouts • {groups.length} Patrols
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
+                Admin & Operations Hub
+              </h3>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                Patrol rosters, troop announcements, parent direct messages, reports, and governance.
+              </p>
+            </div>
+
+            {/* Sub-features list */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Users size={13} className="text-sky-400" />
+                  <span>Patrol Rosters & Profiles</span>
+                </span>
+                <span className="font-bold text-white font-mono">{scouts.length}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <Megaphone size={13} className="text-sky-400" />
+                  <span>Troop Broadcasts & Alerts</span>
+                </span>
+                <span className="font-bold text-white font-mono">{recentBroadcasts.length} recent</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-slate-300 flex items-center gap-2">
+                  <MessageSquare size={13} className="text-sky-400" />
+                  <span>Parent Messages & Inquiries</span>
+                </span>
+                <span className="font-bold text-white font-mono">{directThreads.length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Admin Hub</span>
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </div>
+        </div>
+
       </div>
 
       {/* Universal Pending Queue Modal */}

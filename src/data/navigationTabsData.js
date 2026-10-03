@@ -29,6 +29,63 @@ export const MASTER_TABS_REGISTRY = [
     isPermanent: true
   },
   {
+    id: 'approvals-hub',
+    defaultLabel: 'Approvals',
+    labelByRole: {
+      owner: 'Approvals',
+      admin: 'Approvals',
+      leader: 'Approvals'
+    },
+    defaultIcon: 'CheckCheck',
+    iconByRole: {
+      owner: 'CheckCheck',
+      admin: 'CheckCheck',
+      leader: 'CheckCheck'
+    },
+    category: 'leadership',
+    description: 'Homework Grading, Rank Sign-Offs & Requests',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: 'totalPendingApprovals'
+  },
+  {
+    id: 'preparation-hub',
+    defaultLabel: 'Preparation',
+    labelByRole: {
+      owner: 'Preparation',
+      admin: 'Preparation',
+      leader: 'Preparation'
+    },
+    defaultIcon: 'Calendar',
+    iconByRole: {
+      owner: 'Calendar',
+      admin: 'Calendar',
+      leader: 'Calendar'
+    },
+    category: 'outdoors',
+    description: 'Troop Schedule, Roll Call & Meeting Prep',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: null
+  },
+  {
+    id: 'education-hub',
+    defaultLabel: 'Education',
+    labelByRole: {
+      owner: 'Education',
+      admin: 'Education',
+      leader: 'Education'
+    },
+    defaultIcon: 'BookOpen',
+    iconByRole: {
+      owner: 'BookOpen',
+      admin: 'BookOpen',
+      leader: 'BookOpen'
+    },
+    category: 'academics',
+    description: 'Weekly Homework, Curriculum & Tarbiyah',
+    allowedRoles: ['owner', 'admin', 'leader'],
+    badgeKey: 'unreadHomeworkCount'
+  },
+  {
     id: 'advancement-hub',
     defaultLabel: 'My Advancement',
     labelByRole: {
@@ -396,7 +453,7 @@ export function getDefaultRoleTabs(userRoleContext) {
   let primaryHubIds = [];
 
   if (isOwner || isExecutive || isLeader) {
-    primaryHubIds = ['home', 'scouts-hub', 'assignments', 'lesson-plans', 'events', 'communication-hub', 'knowledge-hub', 'admin-hub', 'profile'];
+    primaryHubIds = ['home', 'approvals-hub', 'preparation-hub', 'education-hub', 'admin-hub', 'profile'];
   } else if (isParent) {
     primaryHubIds = ['home', 'events', 'assignments', 'communication-hub', 'road-to-eagle', 'knowledge-hub', 'profile'];
   } else {
@@ -431,7 +488,7 @@ export function getDefaultBottomTabIds(userRoleContext) {
   const { isOwner, isLeader, isExecutive, isParent } = userRoleContext || {};
   
   if (isOwner || isExecutive || isLeader) {
-    return ['home', 'scouts-hub', 'lesson-plans', 'events'];
+    return ['home', 'approvals-hub', 'preparation-hub', 'education-hub', 'admin-hub'];
   }
   if (isParent) {
     return ['home', 'events', 'assignments', 'communication-hub'];

@@ -11,64 +11,40 @@ export const LEADER_OWNER_TABS = [
     label: 'Command Center',
     icon: 'Shield',
     theme: 'sky',
-    description: 'Unit Command Center & Executive Overview',
+    description: 'Unit Overview & 4-Hub Command Board',
     badgeKey: null
   },
   {
-    id: 'scouts-hub',
-    label: 'Scouts & Patrols',
-    icon: 'Users',
+    id: 'approvals-hub',
+    label: 'Approvals',
+    icon: 'CheckCheck',
     theme: 'sky',
-    description: 'Patrol Roster, Attendance, Advancement & Reports',
+    description: 'Homework Grading, Rank Sign-Offs & Requests',
+    badgeKey: 'totalPendingApprovals'
+  },
+  {
+    id: 'preparation-hub',
+    label: 'Preparation',
+    icon: 'Calendar',
+    theme: 'sky',
+    description: 'Troop Schedule, Roll Call & Meeting Prep',
     badgeKey: null
   },
   {
-    id: 'assignments',
-    label: 'Weekly Homework',
+    id: 'education-hub',
+    label: 'Education',
     icon: 'BookOpen',
     theme: 'sky',
-    description: 'Assign, Grade & Review Scout Homework',
+    description: 'Weekly Homework, Curriculum & Tarbiyah',
     badgeKey: 'unreadHomeworkCount'
   },
   {
-    id: 'lesson-plans',
-    label: 'Lesson Curriculum',
-    icon: 'GraduationCap',
-    theme: 'sky',
-    description: 'Patrol Lesson Plans & Weekly Agendas',
-    badgeKey: null
-  },
-  {
-    id: 'events',
-    label: 'Calendar & Events',
-    icon: 'Calendar',
-    theme: 'sky',
-    description: 'Troop Schedule, RSVPs & Ingestion',
-    badgeKey: null
-  },
-  {
-    id: 'communication-hub',
-    label: 'Communications',
-    icon: 'MessageSquare',
-    theme: 'sky',
-    description: 'Parent DMs, Broadcasts & Patrol Chat',
-    badgeKey: 'unreadDirectMessagesCount'
-  },
-  {
     id: 'admin-hub',
-    label: 'Leader Admin Console',
+    label: 'Admin',
     icon: 'Sliders',
     theme: 'sky',
-    description: 'User Management & Security Governance',
-    badgeKey: null
-  },
-  {
-    id: 'profile',
-    label: 'My Profile & Training (SPT)',
-    icon: 'ShieldCheck',
-    theme: 'sky',
-    description: 'Leader Profile, Credentials & Safety Protection Training',
-    badgeKey: null
+    description: 'Patrol Rosters, Broadcasts & Governance',
+    badgeKey: 'unreadDirectMessagesCount'
   }
 ];
 
