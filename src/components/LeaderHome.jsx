@@ -29,7 +29,8 @@ import {
   Phone,
   Video,
   Megaphone,
-  Zap
+  Zap,
+  Sliders
 } from 'lucide-react';
 import UniversalPendingQueueModal from './UniversalPendingQueueModal';
 import LiveClockAndCalendar from './LiveClockAndCalendar';
