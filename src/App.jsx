@@ -1161,14 +1161,14 @@ export default function App() {
     if (currentTab === 'approvals-hub' && (isLeaderOrOwner || isExecutive)) {
       return {
         id: 'approvals-hub',
-        title: 'Approvals Hub',
+        title: 'Approvals',
         colorTheme: 'sky',
         activeTabId: approvalsHubSubTab,
         onSelect: (subId) => setApprovalsHubSubTab(subId),
         items: [
-          { id: 'queue', label: 'Testing & Sign-Offs', icon: 'CheckCheck', badge: unreadHomeworkCount + unreadRequestsCount, description: 'Universal pending testing queue' },
-          { id: 'homework', label: 'Homework Grading', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Review & grade scout submissions' },
-          { id: 'requests', label: 'Parent Requests', icon: 'Inbox', badge: unreadRequestsCount, description: 'Conference & meeting reviews' }
+          { id: 'queue', label: 'Testing Queue', icon: 'CheckCheck', badge: unreadHomeworkCount + unreadRequestsCount },
+          { id: 'homework', label: 'Homework', icon: 'BookOpen', badge: unreadHomeworkCount },
+          { id: 'requests', label: 'Parent Requests', icon: 'Inbox', badge: unreadRequestsCount }
         ]
       };
     }
@@ -1176,13 +1176,13 @@ export default function App() {
     if (currentTab === 'preparation-hub' && (isLeaderOrOwner || isExecutive)) {
       return {
         id: 'preparation-hub',
-        title: 'Preparation Hub',
+        title: 'Preparation',
         colorTheme: 'sky',
         activeTabId: prepHubSubTab,
         onSelect: (subId) => setPrepHubSubTab(subId),
         items: [
-          { id: 'schedule', label: 'Troop Schedule & Prep', icon: 'Calendar', description: 'Upcoming meetings & activities' },
-          { id: 'attendance', label: 'Roll Call & Attendance', icon: 'CheckSquare', description: 'Log session attendance' }
+          { id: 'schedule', label: 'Schedule', icon: 'Calendar' },
+          { id: 'attendance', label: 'Attendance', icon: 'CheckSquare' }
         ]
       };
     }
@@ -1190,15 +1190,15 @@ export default function App() {
     if (currentTab === 'education-hub' && (isLeaderOrOwner || isExecutive)) {
       return {
         id: 'education-hub',
-        title: 'Education Hub',
+        title: 'Education',
         colorTheme: 'sky',
         activeTabId: educationHubSubTab,
         onSelect: (subId) => setEducationHubSubTab(subId),
         items: [
-          { id: 'homework', label: 'Weekly Homework', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Create, assign & view homework' },
-          { id: 'curriculum', label: 'Curriculum & Agendas', icon: 'GraduationCap', description: 'Patrol lesson plans & guides' },
-          { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles', description: 'Duas, halqas & character' },
-          { id: 'handbooks', label: 'Field Handbooks & Guides', icon: 'Book', description: 'Scouting handbooks & references' }
+          { id: 'homework', label: 'Homework', icon: 'BookOpen', badge: unreadHomeworkCount },
+          { id: 'curriculum', label: 'Curriculum', icon: 'GraduationCap' },
+          { id: 'islamic', label: 'Islamic Tarbiyah', icon: 'Sparkles' },
+          { id: 'handbooks', label: 'Handbooks', icon: 'Book' }
         ]
       };
     }
@@ -1206,16 +1206,16 @@ export default function App() {
     if ((currentTab === 'admin-hub' || currentTab === 'admin') && (isLeaderOrOwner || isExecutive)) {
       return {
         id: 'admin-hub',
-        title: 'Admin Hub',
+        title: 'Admin',
         colorTheme: 'sky',
         activeTabId: adminHubSubTab,
         onSelect: (subId) => setAdminHubSubTab(subId),
         items: [
-          { id: 'roster', label: 'Patrol Rosters', icon: 'Users', description: 'Active scouts & member profiles' },
-          { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', description: 'Announcements & SMS/Email' },
-          { id: 'messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount, description: '1-on-1 private messaging' },
-          { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' },
-          { id: 'governance', label: 'Troop Governance', icon: 'Sliders', description: 'User management & settings' }
+          { id: 'roster', label: 'Patrol Rosters', icon: 'Users' },
+          { id: 'broadcasts', label: 'Broadcasts', icon: 'Megaphone' },
+          { id: 'messages', label: 'Parent Messages', icon: 'MessageSquare', badge: unreadDirectMessagesCount },
+          { id: 'reports', label: 'Reports', icon: 'FileText' },
+          { id: 'governance', label: 'Governance & Settings', icon: 'Sliders' }
         ]
       };
     }
@@ -1333,37 +1333,25 @@ export default function App() {
     if (activeSubMenu) {
       return (
         <nav className={`flex-1 ${isMobile ? 'p-3' : 'px-3 py-1'} space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800`}>
-          {/* Back to Main Menu Button */}
+          {/* Back to All Hubs Button */}
           <button
             type="button"
             onClick={() => setSidebarViewMode('main')}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 transition-all duration-200 cursor-pointer shadow-md group select-none"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-slate-850 hover:bg-slate-800 text-sky-400 hover:text-white border border-slate-800 transition cursor-pointer select-none"
           >
-            <div className="w-6 h-6 rounded-lg bg-slate-700/80 border border-slate-600/60 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:-translate-x-0.5 transition-transform shrink-0">
-              <ArrowLeft size={13} />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <span className="block text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Return to</span>
-              <span className="block text-xs font-black truncate text-emerald-400 group-hover:text-emerald-300">Main Menu</span>
-            </div>
+            <ArrowLeft size={14} className="shrink-0" />
+            <span className="truncate">All Hubs</span>
           </button>
 
           {/* Section Header */}
-          <div className="pt-1 px-1 flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 truncate">
-              <Layers size={12} className="text-slate-400 shrink-0" />
-              <span>{activeSubMenu.title} Sections</span>
-            </span>
-            <span className="text-[9px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full border border-slate-700/50 shrink-0 font-bold">
-              {activeSubMenu.items.length} {activeSubMenu.items.length === 1 ? 'section' : 'sections'}
-            </span>
+          <div className="px-1 pt-1 pb-0.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            {activeSubMenu.title}
           </div>
 
           {/* Sub-Menu Items */}
-          <div className="space-y-1 pt-0.5">
+          <div className="space-y-1">
             {activeSubMenu.items.map((subItem) => {
               const isSubActive = activeSubMenu.activeTabId === subItem.id;
-              const itemTheme = getSubItemTheme(subItem, isSubActive, activeSubMenu.colorTheme);
 
               return (
                 <button
@@ -1373,49 +1361,30 @@ export default function App() {
                     activeSubMenu.onSelect(subItem.id);
                     if (isMobile) setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-left group min-h-[42px] border ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer text-left ${
                     isSubActive
-                      ? itemTheme.activeContainer
-                      : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border-transparent'
+                      ? 'bg-sky-500 text-slate-950 font-black shadow-sm'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-850'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-1.5">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 shadow-xs ${
-                      isSubActive ? itemTheme.activeIconBox : itemTheme.inactiveIconBox
-                    }`}>
-                      <DynamicIcon
-                        name={subItem.icon}
-                        size={15}
-                        className={isSubActive ? itemTheme.activeIcon : itemTheme.inactiveIcon}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <span className={`block truncate ${isSubActive ? 'font-black' : 'font-semibold'}`}>
-                        {subItem.label}
-                      </span>
-                      {subItem.description && (
-                        <span className={`block text-[10px] truncate ${isSubActive ? itemTheme.activeDesc : 'text-slate-400'}`}>
-                          {subItem.description}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <DynamicIcon
+                      name={subItem.icon}
+                      size={15}
+                      className={isSubActive ? 'text-slate-950' : 'text-sky-400'}
+                    />
+                    <span className="truncate">
+                      {subItem.label}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {subItem.badge > 0 && (
-                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-xs ${
-                        isSubActive ? itemTheme.activeBadge : 'bg-red-500 text-white animate-pulse'
-                      }`}>
-                        {subItem.badge > 99 ? '99+' : subItem.badge}
-                      </span>
-                    )}
-                    <ChevronRight
-                      size={13}
-                      className={`transition-transform duration-200 ${
-                        isSubActive ? 'opacity-90 translate-x-0.5' : 'opacity-0 group-hover:opacity-60'
-                      }`}
-                    />
-                  </div>
+                  {subItem.badge > 0 && (
+                    <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full shrink-0 ${
+                      isSubActive ? 'bg-slate-950 text-sky-300' : 'bg-sky-500 text-slate-950'
+                    }`}>
+                      {subItem.badge > 99 ? '99+' : subItem.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1433,13 +1402,13 @@ export default function App() {
           <button
             type="button"
             onClick={() => setSidebarViewMode('auto')}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-sky-950/40 hover:bg-sky-900/50 text-sky-300 border border-sky-500/40 transition mb-2 shadow-xs cursor-pointer group"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-slate-850 hover:bg-slate-800 text-sky-400 hover:text-white border border-slate-800 transition mb-2 cursor-pointer group"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <Layers size={13} className="text-sky-400 shrink-0" />
-              <span className="truncate">Open {currentSubMenuConfig.title} Sub-Menu</span>
+              <Layers size={13} className="shrink-0" />
+              <span className="truncate">{currentSubMenuConfig.title} Sub-Menu</span>
             </div>
-            <ChevronRight size={13} className="text-sky-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+            <ChevronRight size={13} className="shrink-0" />
           </button>
         )}
 
@@ -1948,15 +1917,14 @@ export default function App() {
         {/* ── 1.5 APPROVALS HUB (LEADER / OWNER) ── */}
         {currentTab === 'approvals-hub' && (isLeaderOrOwner || isExecutive) && (
           <HubSubNav
-            hubTitle="Approvals Hub"
-            hubSubtitle="Review rank testing, grade scout homework submissions, and manage parent conference requests."
+            hubTitle="Approvals"
             colorTheme="sky"
             activeTab={approvalsHubSubTab}
             onChange={(tabId) => setApprovalsHubSubTab(tabId)}
             tabs={[
-              { id: 'queue', label: 'Testing & Sign-Offs', icon: 'CheckCheck', badge: unreadHomeworkCount + unreadRequestsCount, description: 'Universal pending testing queue' },
-              { id: 'homework', label: 'Homework Grading', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Review & grade scout submissions' },
-              { id: 'requests', label: 'Parent Requests', icon: 'Inbox', badge: unreadRequestsCount, description: 'Conference & meeting reviews' }
+              { id: 'queue', label: 'Testing Queue', icon: 'CheckCheck', badge: unreadHomeworkCount + unreadRequestsCount },
+              { id: 'homework', label: 'Homework', icon: 'BookOpen', badge: unreadHomeworkCount },
+              { id: 'requests', label: 'Requests', icon: 'Inbox', badge: unreadRequestsCount }
             ]}
           >
             {approvalsHubSubTab === 'queue' && <ScoutList currentUser={currentUser} initialFilter="pending" onNavigate={handleNavigate} />}
@@ -1976,14 +1944,13 @@ export default function App() {
         {/* ── 1.6 PREPARATION HUB (LEADER / OWNER) ── */}
         {currentTab === 'preparation-hub' && (isLeaderOrOwner || isExecutive) && (
           <HubSubNav
-            hubTitle="Preparation Hub"
-            hubSubtitle="Troop schedule, meeting preparation, roll call, and session attendance tracking."
+            hubTitle="Preparation"
             colorTheme="sky"
             activeTab={prepHubSubTab}
             onChange={(tabId) => setPrepHubSubTab(tabId)}
             tabs={[
-              { id: 'schedule', label: 'Troop Schedule & Prep', icon: 'Calendar', description: 'Upcoming meetings & activities' },
-              { id: 'attendance', label: 'Roll Call & Attendance', icon: 'CheckSquare', description: 'Log session attendance' }
+              { id: 'schedule', label: 'Schedule', icon: 'Calendar' },
+              { id: 'attendance', label: 'Attendance', icon: 'CheckSquare' }
             ]}
           >
             {prepHubSubTab === 'schedule' && <EventsManager currentUser={currentUser} onNavigate={handleNavigate} />}
@@ -1994,16 +1961,15 @@ export default function App() {
         {/* ── 1.7 EDUCATION HUB (LEADER / OWNER) ── */}
         {currentTab === 'education-hub' && (isLeaderOrOwner || isExecutive) && (
           <HubSubNav
-            hubTitle="Education Hub"
-            hubSubtitle="Weekly homework, curriculum lesson plans, Islamic Tarbiyah, and scouting handbooks."
+            hubTitle="Education"
             colorTheme="sky"
             activeTab={educationHubSubTab}
             onChange={(tabId) => setEducationHubSubTab(tabId)}
             tabs={[
-              { id: 'homework', label: 'Weekly Homework', icon: 'BookOpen', badge: unreadHomeworkCount, description: 'Create, assign & view homework' },
-              { id: 'curriculum', label: 'Curriculum & Agendas', icon: 'GraduationCap', description: 'Patrol lesson plans & guides' },
-              { id: 'islamic', label: 'Islamic Tarbiyah & Duas', icon: 'Sparkles', description: 'Duas, halqas & character' },
-              { id: 'handbooks', label: 'Field Handbooks & Guides', icon: 'Book', description: 'Scouting handbooks & references' }
+              { id: 'homework', label: 'Homework', icon: 'BookOpen', badge: unreadHomeworkCount },
+              { id: 'curriculum', label: 'Curriculum', icon: 'GraduationCap' },
+              { id: 'islamic', label: 'Islamic Tarbiyah', icon: 'Sparkles' },
+              { id: 'handbooks', label: 'Handbooks', icon: 'Book' }
             ]}
           >
             {educationHubSubTab === 'homework' && <AssignmentsManager currentUser={currentUser} />}
@@ -2079,17 +2045,16 @@ export default function App() {
         {/* ── 5. ADMIN & OPERATIONS HUB (LEADER / OWNER) ── */}
         {currentTab === 'admin-hub' && (isLeaderOrOwner || isExecutive) && (
           <HubSubNav
-            hubTitle="Admin & Operations Hub"
-            hubSubtitle="Patrol rosters, troop broadcasts, parent messaging, reports, and troop governance."
+            hubTitle="Admin"
             colorTheme="sky"
             activeTab={adminHubSubTab}
             onChange={(tabId) => setAdminHubSubTab(tabId)}
             tabs={[
-              { id: 'roster', label: 'Patrol Rosters', icon: 'Users', description: 'Active scouts & member profiles' },
-              { id: 'broadcasts', label: 'Troop Broadcasts', icon: 'Megaphone', description: 'Announcements & SMS/Email' },
-              { id: 'messages', label: 'Parent Inquiries & DMs', icon: 'MessageSquare', badge: unreadDirectMessagesCount, description: '1-on-1 private messaging' },
-              { id: 'reports', label: 'Reports & Audits', icon: 'FileText', description: 'Official PDF reports & records' },
-              { id: 'governance', label: 'Troop Governance', icon: 'Sliders', description: 'User management & settings' }
+              { id: 'roster', label: 'Patrol Rosters', icon: 'Users' },
+              { id: 'broadcasts', label: 'Broadcasts', icon: 'Megaphone' },
+              { id: 'messages', label: 'Parent Messages', icon: 'MessageSquare', badge: unreadDirectMessagesCount },
+              { id: 'reports', label: 'Reports', icon: 'FileText' },
+              { id: 'governance', label: 'Governance & Settings', icon: 'Sliders' }
             ]}
           >
             {adminHubSubTab === 'roster' && <PatrolRoster currentUser={currentUser} />}

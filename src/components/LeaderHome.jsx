@@ -426,237 +426,181 @@ export default function LeaderHome({ currentUser, onNavigate }) {
       )}
 
       {/* ── 2. THE 4 CORE HUBS COMMAND BOARD ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 pt-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
         
         {/* ── HUB 1: APPROVALS ── */}
         <div 
           onClick={() => onNavigate && onNavigate('approvals-hub')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+          className="bg-slate-900 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-850/80 rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
-                <CheckCheck size={24} />
+              <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0">
+                <CheckCheck size={20} />
               </div>
               {totalPendingApprovals > 0 ? (
-                <span className="bg-sky-500 text-slate-950 text-xs font-black px-2.5 py-1 rounded-full animate-pulse shadow-sm">
+                <span className="bg-sky-500 text-slate-950 text-xs font-black px-2.5 py-0.5 rounded-full animate-pulse shadow-sm">
                   {totalPendingApprovals} Pending
                 </span>
               ) : (
-                <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
+                <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
                   Up to Date
                 </span>
               )}
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
-                Approvals Hub
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-sky-300 transition">
+                Approvals
               </h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                All testing sign-offs, weekly homework grading, and parent conference requests together in one queue.
-              </p>
             </div>
 
-            {/* Sub-features list */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Award size={13} className="text-sky-400" />
-                  <span>Rank Testing Sign-offs</span>
-                </span>
-                <span className="font-bold text-white font-mono">{totalRanksPending}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <BookOpen size={13} className="text-sky-400" />
-                  <span>Homework Submissions to Grade</span>
-                </span>
-                <span className="font-bold text-white font-mono">{totalHwPending}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <MessageSquare size={13} className="text-sky-400" />
-                  <span>Parent Conference Requests</span>
-                </span>
-                <span className="font-bold text-white font-mono">{parentRequests.filter(r => r.status === 'pending_review').length}</span>
-              </div>
+            {/* Quick Section Pills */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Testing Queue {totalRanksPending > 0 ? `(${totalRanksPending})` : ''}
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Homework {totalHwPending > 0 ? `(${totalHwPending})` : ''}
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Parent Requests {parentRequests.filter(r => r.status === 'pending_review').length > 0 ? `(${parentRequests.filter(r => r.status === 'pending_review').length})` : ''}
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
-            <span>Open Approvals Hub</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Approvals</span>
+            <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
         {/* ── HUB 2: PREPARATION ── */}
         <div 
           onClick={() => onNavigate && onNavigate('preparation-hub')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+          className="bg-slate-900 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-850/80 rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
-                <Calendar size={24} />
+              <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0">
+                <Calendar size={20} />
               </div>
-              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
-                {allEvents.length} Events Scheduled
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
+                {allEvents.length} Events
               </span>
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
-                Preparation Hub
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-sky-300 transition">
+                Preparation
               </h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                Troop schedule, meeting agendas, and weekly roll call check-in organized together.
-              </p>
             </div>
 
-            {/* Sub-features list */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Calendar size={13} className="text-sky-400" />
-                  <span>Master Calendar & Events</span>
-                </span>
-                <span className="font-bold text-white font-mono">{allEvents.length} total</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <CheckCircle2 size={13} className="text-sky-400" />
-                  <span>Roll Call & Session Logs</span>
-                </span>
-                <span className="font-bold text-white font-mono">{attendanceSessions.length} logged</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Clock size={13} className="text-sky-400" />
-                  <span>Next Upcoming Meeting</span>
-                </span>
-                <span className="font-bold text-sky-300 truncate max-w-[140px]">
-                  {nextEvent?.title || 'None Scheduled'}
-                </span>
-              </div>
+            {/* Quick Section Pills */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Schedule ({allEvents.length})
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Roll Call & Attendance
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
-            <span>Open Preparation Hub</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Preparation</span>
+            <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
         {/* ── HUB 3: EDUCATION ── */}
         <div 
           onClick={() => onNavigate && onNavigate('education-hub')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+          className="bg-slate-900 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-850/80 rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
-                <BookOpen size={24} />
+              <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0">
+                <BookOpen size={20} />
               </div>
-              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
-                {assignments.length} Active Tasks
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
+                {assignments.length} Tasks
               </span>
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
-                Education Hub
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-sky-300 transition">
+                Education
               </h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                Weekly troop homework, patrol curriculum lesson plans, Tarbiyah, and field handbooks in one place.
-              </p>
             </div>
 
-            {/* Sub-features list */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <BookOpen size={13} className="text-sky-400" />
-                  <span>Weekly Homework & Challenges</span>
-                </span>
-                <span className="font-bold text-white font-mono">{assignments.length}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <FileText size={13} className="text-sky-400" />
-                  <span>Lesson Plans & Agendas</span>
-                </span>
-                <span className="font-bold text-sky-300">Curriculum</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Sparkles size={13} className="text-sky-400" />
-                  <span>Islamic Tarbiyah & Duas</span>
-                </span>
-                <span className="font-bold text-sky-300">Tarbiyah</span>
-              </div>
+            {/* Quick Section Pills */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Homework ({assignments.length})
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Curriculum
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Islamic Tarbiyah
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Handbooks
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
-            <span>Open Education Hub</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Education</span>
+            <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
         {/* ── HUB 4: ADMIN & OPERATIONS ── */}
         <div 
           onClick={() => onNavigate && onNavigate('admin-hub')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-850/80 rounded-3xl p-6 shadow-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
+          className="bg-slate-900 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-850/80 rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0 shadow-sm">
-                <Sliders size={24} />
+              <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform shrink-0">
+                <Sliders size={20} />
               </div>
-              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-700">
-                {scouts.length} Scouts • {groups.length} Patrols
+              <span className="bg-slate-800 text-sky-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
+                {scouts.length} Scouts
               </span>
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-white group-hover:text-sky-300 transition">
-                Admin & Operations Hub
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-sky-300 transition">
+                Admin
               </h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                Patrol rosters, troop announcements, parent direct messages, reports, and governance.
-              </p>
             </div>
 
-            {/* Sub-features list */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Users size={13} className="text-sky-400" />
-                  <span>Patrol Rosters & Profiles</span>
-                </span>
-                <span className="font-bold text-white font-mono">{scouts.length}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <Megaphone size={13} className="text-sky-400" />
-                  <span>Troop Broadcasts & Alerts</span>
-                </span>
-                <span className="font-bold text-white font-mono">{recentBroadcasts.length} recent</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <span className="text-slate-300 flex items-center gap-2">
-                  <MessageSquare size={13} className="text-sky-400" />
-                  <span>Parent Messages & Inquiries</span>
-                </span>
-                <span className="font-bold text-white font-mono">{directThreads.length}</span>
-              </div>
+            {/* Quick Section Pills */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Patrol Rosters ({scouts.length})
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Broadcasts ({recentBroadcasts.length})
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Messages ({directThreads.length})
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Reports
+              </span>
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 text-slate-300">
+                Settings
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
-            <span>Open Admin Hub</span>
-            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
+            <span>Open Admin</span>
+            <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
