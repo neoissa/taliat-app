@@ -475,7 +475,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
         </div>
 
-        {/* ── HUB 2: PREPARATION ── */}
+        {/* ── HUB 2: MEETINGS ── */}
         <div 
           onClick={() => onNavigate && onNavigate('preparation-hub')}
           className="bg-slate-900 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-850/80 rounded-2xl p-5 shadow-lg transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4"
@@ -492,7 +492,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
 
             <div>
               <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-sky-300 transition">
-                Preparation
+                Meetings
               </h3>
             </div>
 
@@ -508,7 +508,7 @@ export default function LeaderHome({ currentUser, onNavigate }) {
           </div>
 
           <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-bold group-hover:text-sky-300">
-            <span>Open Preparation</span>
+            <span>Open Meetings</span>
             <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>

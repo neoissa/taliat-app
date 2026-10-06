@@ -527,6 +527,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
   const [quranVerse, setQuranVerse] = useState('');
   const [groups, setGroups] = useState([]);
   const [targetGroupId, setTargetGroupId] = useState(isExecutive ? 'all' : (currentUser?.groupId || 'all'));
+  const [uniformRequired, setUniformRequired] = useState('Complete Class A Field Uniform');
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -914,6 +916,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setQuranVerse('');
     const defaultScope = isExecutive ? 'all' : (currentUser?.groupId || currentUser?.patrolId || currentUser?.assignedPatrol || 'all');
     setTargetGroupId(defaultScope);
+    setShowMoreOptions(false);
     setError('');
     setMsg('');
     setShowForm(true);
@@ -949,6 +952,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     setEndTime(ev.endTime || parsed.end);
     setIsAllDay(!!parsed.isAllDay);
     setTimeMode(parsed.isCustom ? 'custom' : 'picker');
+    setShowMoreOptions(false);
     setError('');
     setMsg('');
     setShowForm(true);
@@ -1899,18 +1903,18 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 setGeneratorSuccessMsg('');
                 setGeneratorError('');
               }}
-              className="bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 shrink-0 border border-amber-400/30"
+              className="bg-slate-900 hover:bg-slate-850 text-sky-400 hover:text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-md shrink-0 border border-sky-500/40"
               title="Automated Recurring Calendar Generator for 2026-2027"
             >
-              <Zap size={15} className="text-amber-200 animate-pulse" />
-              <span>⚡ Auto-Generate 2026–2027 Calendar</span>
+              <Zap size={15} className="text-sky-400" />
+              <span>⚡ Auto-Generate Calendar</span>
             </button>
           )}
 
           {isLeader && (
             <button
               onClick={handleOpenNew}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 shrink-0"
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs px-4 py-3 rounded-2xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-sky-950/40 shrink-0"
             >
               <Plus size={16} />
               <span>Publish Event</span>
@@ -1928,14 +1932,14 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               onClick={() => setTimeHorizon('upcoming')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 timeHorizon === 'upcoming'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950/50'
+                  ? 'bg-sky-500 text-slate-950 shadow-md'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <CalendarDays size={15} />
               <span>Upcoming Events</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                timeHorizon === 'upcoming' ? 'bg-black/30 text-white' : 'bg-slate-850 text-slate-400'
+                timeHorizon === 'upcoming' ? 'bg-black/25 text-slate-950' : 'bg-slate-850 text-slate-400'
               }`}>
                 {standaloneStats.upcomingCount}
               </span>
@@ -1945,7 +1949,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               onClick={() => setTimeHorizon('past')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 timeHorizon === 'past'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-950/50'
+                  ? 'bg-slate-800 text-white shadow-md border border-slate-700'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
@@ -2392,9 +2396,15 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-100">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-extrabold text-white text-base">
-                {editingId ? 'Edit Event Details' : 'Publish Planned Event'}
-              </h3>
+              <div>
+                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                  <span className="text-sky-400">⚡</span>
+                  <span>{editingId ? 'Edit Event Details' : 'Quick Event Creator'}</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {editingId ? 'Update event parameters for the troop calendar.' : 'Pick a template or choose a date to auto-generate all details.'}
+                </p>
+              </div>
               <button
                 onClick={() => setShowForm(false)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
@@ -2407,73 +2417,80 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
             {msg && <p className="text-xs text-sky-400 bg-sky-950/60 p-3 rounded-xl border border-sky-500/40">{msg}</p>}
 
             <form onSubmit={handleSaveEvent} className="space-y-4 text-xs">
-              {/* Predefined Quick Meeting & Event Templates (Auto-fills Title, Date & Time) */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+              {/* 1-Click Quick Meeting & Event Templates */}
+              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
                     <span className="text-sky-400">⚡</span>
-                    <span>Predefined Templates (Auto-fills Title, Date & Calendar Sync):</span>
+                    <span>1-Click Quick Templates (Auto-fills Title, Date, Time & Gear):</span>
                   </label>
-                  <span className="text-[10px] text-sky-400 font-semibold">Auto-populates title & date</span>
+                  <span className="text-[10px] text-sky-400 font-semibold">2-Click Ready</span>
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {[
                     { label: 'Friday Troop Meeting', icon: '🏕️', title: 'Friday Weekly Troop Meeting', type: 'meeting', cat: 'meeting', start: '18:30', end: '21:30', uniform: 'Complete Class A Field Uniform', gear: 'friday_meeting', dayOfWeek: 'friday' },
                     { label: 'Tuesday Youth Program', icon: '🕌', title: 'Tuesday Youth Program & Halqa', type: 'faith', cat: 'faith', start: '19:15', end: '20:30', uniform: 'Activity Uniform (Class B Shirt)', gear: 'tuesday_halqa', dayOfWeek: 'tuesday' },
-                    { label: 'PLC Leaders Council', icon: '📋', title: 'Patrol Leaders Council (PLC) Meeting', type: 'meeting', cat: 'meeting', start: '18:00', end: '19:00', uniform: 'Complete Class A Field Uniform' },
-                    { label: 'Court of Honor', icon: '🎖️', title: 'Court of Honor & Advancement Ceremony', type: 'ceremony', cat: 'ceremony', start: '17:00', end: '19:30', uniform: 'Complete Class A Field Uniform' },
-                    { label: 'Troop Day Hike', icon: '🥾', title: 'Troop Morning Day Hike', type: 'scouting', cat: 'scouting', start: '08:30', end: '13:00' },
+                    { label: 'PLC Leaders Council', icon: '📋', title: 'Patrol Leaders Council (PLC) Meeting', type: 'meeting', cat: 'meeting', start: '18:00', end: '19:00', uniform: 'Complete Class A Field Uniform', dayOfWeek: 'friday' },
+                    { label: 'Court of Honor', icon: '🎖️', title: 'Court of Honor & Advancement Ceremony', type: 'ceremony', cat: 'ceremony', start: '17:00', end: '19:30', uniform: 'Complete Class A Field Uniform', dayOfWeek: 'friday' },
+                    { label: 'Troop Day Hike', icon: '🥾', title: 'Troop Morning Day Hike', type: 'scouting', cat: 'scouting', start: '08:30', end: '13:00', uniform: 'Activity Uniform (Class B Shirt)' },
                     { label: 'Community Service', icon: '🤝', title: 'Community Service Project', type: 'volunteering', cat: 'service', start: '10:00', end: '13:00', serviceHrs: 3, gear: 'service_project' }
-                  ].map(tmpl => (
-                    <button
-                      key={tmpl.label}
-                      type="button"
-                      onClick={() => {
-                        setTitle(tmpl.title); // Auto-fills Title!
-                        setEventType(tmpl.type);
-                        setCategory(tmpl.cat);
+                  ].map(tmpl => {
+                    const isSelectedTmpl = title === tmpl.title;
+                    return (
+                      <button
+                        key={tmpl.label}
+                        type="button"
+                        onClick={() => {
+                          setTitle(tmpl.title);
+                          setEventType(tmpl.type);
+                          setCategory(tmpl.cat);
 
-                        // Auto-calculate date & check against auto-loaded calendar
-                        let resolvedStart = tmpl.start;
-                        let resolvedEnd = tmpl.end;
+                          let resolvedStart = tmpl.start;
+                          let resolvedEnd = tmpl.end;
 
-                        if (tmpl.dayOfWeek === 'friday') {
-                          const fDate = nextScheduledDays.nextFriday.date;
-                          setDate(fDate);
-                          const session = nextScheduledDays.nextFriday.calendarSession;
-                          if (session) {
-                            if (session.startTime) resolvedStart = session.startTime;
-                            if (session.endTime) resolvedEnd = session.endTime;
-                            if (session.location) setLocation(session.location);
+                          if (tmpl.dayOfWeek === 'friday') {
+                            const fDate = nextScheduledDays.nextFriday.date;
+                            setDate(fDate);
+                            const session = nextScheduledDays.nextFriday.calendarSession;
+                            if (session) {
+                              if (session.startTime) resolvedStart = session.startTime;
+                              if (session.endTime) resolvedEnd = session.endTime;
+                              if (session.location) setLocation(session.location);
+                            }
+                          } else if (tmpl.dayOfWeek === 'tuesday') {
+                            const tDate = nextScheduledDays.nextTuesday.date;
+                            setDate(tDate);
+                            const session = nextScheduledDays.nextTuesday.calendarSession;
+                            if (session) {
+                              if (session.startTime) resolvedStart = session.startTime;
+                              if (session.endTime) resolvedEnd = session.endTime;
+                              if (session.location) setLocation(session.location);
+                            }
                           }
-                        } else if (tmpl.dayOfWeek === 'tuesday') {
-                          const tDate = nextScheduledDays.nextTuesday.date;
-                          setDate(tDate);
-                          const session = nextScheduledDays.nextTuesday.calendarSession;
-                          if (session) {
-                            if (session.startTime) resolvedStart = session.startTime;
-                            if (session.endTime) resolvedEnd = session.endTime;
-                            if (session.location) setLocation(session.location);
-                          }
-                        }
 
-                        setStartTime(resolvedStart);
-                        setEndTime(resolvedEnd);
-                        setTime(`${formatTime12h(resolvedStart)} – ${formatTime12h(resolvedEnd)}`);
+                          setStartTime(resolvedStart);
+                          setEndTime(resolvedEnd);
+                          setTime(`${formatTime12h(resolvedStart)} – ${formatTime12h(resolvedEnd)}`);
 
-                        if (tmpl.uniform) setUniformRequired(tmpl.uniform);
-                        if (tmpl.serviceHrs) setServiceHoursCredited(tmpl.serviceHrs);
-                        if (tmpl.gear) handleApplyGearPackage(tmpl.gear);
-                      }}
-                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 hover:border-sky-500/50 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                    >
-                      <span>{tmpl.icon}</span>
-                      <span>{tmpl.label}</span>
-                    </button>
-                  ))}
+                          if (tmpl.uniform) setUniformRequired(tmpl.uniform);
+                          if (tmpl.serviceHrs) setServiceHoursCredited(tmpl.serviceHrs);
+                          if (tmpl.gear) handleApplyGearPackage(tmpl.gear);
+                        }}
+                        className={`px-2.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-2 border text-left ${
+                          isSelectedTmpl
+                            ? 'bg-sky-500/15 border-sky-400 text-sky-200 ring-1 ring-sky-500/50 shadow-sm'
+                            : 'bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border-slate-750'
+                        }`}
+                      >
+                        <span className="text-base">{tmpl.icon}</span>
+                        <span className="truncate">{tmpl.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Event Title */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Event Title *</label>
                 <input
@@ -2482,7 +2499,7 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   placeholder="e.g. Friday Weekly Troop Meeting"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-semibold"
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-semibold"
                 />
               </div>
 
@@ -2490,10 +2507,10 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold text-slate-300 uppercase">Event Date *</label>
-                  <span className="text-[10px] text-sky-400 font-semibold">Checks auto-loaded calendar</span>
+                  <span className="text-[10px] text-sky-400 font-semibold">Auto-checked with calendar</span>
                 </div>
 
-                {/* Quick Target Day Chips (Next Tuesday, Next Friday) */}
+                {/* Quick Target Day Chips */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {nextScheduledDays.todayTuesday && (
                     <button
@@ -2544,28 +2561,33 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
                 {/* Auto-Loaded Calendar Verification Banner */}
                 {calendarCheckForSelectedDate ? (
-                  <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 transition ${
+                  <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2.5 transition ${
                     calendarCheckForSelectedDate.isBlackout
                       ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
                       : 'bg-slate-950 border-sky-500/40 text-sky-200 shadow-sm'
                   }`}>
-                    <Calendar size={16} className="text-sky-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="font-bold text-white text-xs truncate">
-                          📅 Calendar Match: {calendarCheckForSelectedDate.title}
-                        </span>
-                        <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold shrink-0">
-                          Found in Auto-Loaded Calendar
-                        </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Calendar size={15} className="text-sky-400 shrink-0" />
+                      <div className="truncate text-xs">
+                        <strong className="text-white">📅 {calendarCheckForSelectedDate.title}</strong>
+                        {calendarCheckForSelectedDate.time && (
+                          <span className="text-slate-300 ml-1.5 font-mono">({calendarCheckForSelectedDate.time})</span>
+                        )}
                       </div>
-                      {calendarCheckForSelectedDate.time && (
-                        <div className="text-[11px] text-slate-300">
-                          Time: <strong className="text-white">{calendarCheckForSelectedDate.time}</strong>
-                          {calendarCheckForSelectedDate.location && ` &bull; ${calendarCheckForSelectedDate.location}`}
-                        </div>
-                      )}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (calendarCheckForSelectedDate.startTime) setStartTime(calendarCheckForSelectedDate.startTime);
+                        if (calendarCheckForSelectedDate.endTime) setEndTime(calendarCheckForSelectedDate.endTime);
+                        if (calendarCheckForSelectedDate.time) setTime(calendarCheckForSelectedDate.time);
+                        if (calendarCheckForSelectedDate.location) setLocation(calendarCheckForSelectedDate.location);
+                        if (calendarCheckForSelectedDate.title) setTitle(calendarCheckForSelectedDate.title);
+                      }}
+                      className="px-2 py-0.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-lg text-[10px] font-bold shrink-0 cursor-pointer"
+                    >
+                      Sync Details
+                    </button>
                   </div>
                 ) : (
                   <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pl-1">
@@ -2575,614 +2597,473 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 )}
               </div>
 
-              {/* ── ACTIVITY CLASSIFICATION ENGINE: EVENT TYPE ── */}
-              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">🎯</span>
-                    <label className="text-xs font-black text-slate-200 uppercase tracking-wide">
-                      Activity Classification & Event Type *
-                    </label>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-medium">Select primary category</span>
-                </div>
-
-                {/* Primary Category Grid (6 Types) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {EVENT_TYPES.map(t => {
-                    const isSelected = eventType === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => {
-                          setEventType(t.id);
-                          // Auto-fill title if generic or empty
-                          if (!title.trim() || title.includes('Meeting') || title.includes('Program') || title.includes('Activity') || title.includes('Hike') || title.includes('Campout') || title.includes('Service') || title.includes('Ceremony')) {
-                            if (t.id === 'meeting') setTitle('Troop / Patrol Meeting');
-                            else if (t.id === 'volunteering') setTitle('Community Service & Volunteering');
-                            else if (t.id === 'camp') setTitle('Overnight Troop Campout');
-                            else if (t.id === 'faith') setTitle('Islamic Halqa & Study Circle');
-                            else if (t.id === 'ceremony') setTitle('Court of Honor & Advancement Ceremony');
-                            else setTitle('Scouting Outdoor Activity');
-                          }
-                          const subtypes = ACTIVITY_SUBTYPES[t.id] || [];
-                          if (subtypes.length > 0) {
-                            setActivitySubtype(subtypes[0].id);
-                          }
-                          setCustomSubtypeText('');
-                          if (t.id === 'volunteering' || t.id === 'service') {
-                            if (!serviceHoursCredited || serviceHoursCredited === 0) {
-                              setServiceHoursCredited(3);
-                            }
-                          } else {
-                            setServiceHoursCredited(0);
-                          }
-                          if (t.id === 'camp') setCategory('campout');
-                          else if (t.id === 'volunteering') setCategory('service');
-                          else if (t.id === 'meeting') setCategory('meeting');
-                          else if (t.id === 'faith') setCategory('faith');
-                          else if (t.id === 'ceremony') setCategory('ceremony');
-                          else setCategory('meeting');
-                        }}
-                        className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? 'bg-sky-500/15 border-sky-400 text-sky-200 ring-1 ring-sky-500/50 shadow-md'
-                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-base">{t.icon}</span>
-                          {isSelected && <span className="text-[10px] text-sky-400 font-black">✓ Active</span>}
-                        </div>
-                        <div className="mt-1.5">
-                          <strong className="text-xs font-bold text-white block leading-tight">{t.label}</strong>
-                          <span className="text-[10px] text-slate-400 block line-clamp-1 mt-0.5">{t.description}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Dynamic Granular Activity Subtype Selector */}
-                <div className="pt-2 border-t border-slate-850 space-y-2">
+              {/* ── TIME & LOCATION (COMPACT 2-COLUMN ROW) ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5">
+                {/* Time Column */}
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <span>📌</span>
-                      <span>Granular Activity Subtype:</span>
+                    <label className="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <Clock size={13} className="text-sky-400" />
+                      <span>Event Time</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {activitySubtype ? (ACTIVITY_SUBTYPES[eventType]?.find(s => s.id === activitySubtype)?.label || activitySubtype) : 'None'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {(ACTIVITY_SUBTYPES[eventType] || ACTIVITY_SUBTYPES.scouting).map(st => {
-                      const isSubSelected = activitySubtype === st.id && !customSubtypeText;
-                      return (
-                        <button
-                          key={st.id}
-                          type="button"
-                          onClick={() => {
-                            setActivitySubtype(st.id);
-                            setCustomSubtypeText('');
-                            // Auto-fill title to match selected subtype
-                            if (!title.trim() || title === 'Troop / Patrol Meeting' || title === 'Community Service & Volunteering' || title === 'Scouting Outdoor Activity' || title === 'Overnight Troop Campout' || title === 'Islamic Halqa & Study Circle' || title === 'Court of Honor & Advancement Ceremony') {
-                              setTitle(st.label);
-                            }
-                            if (st.id.includes('service') || st.id.includes('cleanup') || st.id.includes('food_drive')) {
-                              if (!serviceHoursCredited || serviceHoursCredited === 0) setServiceHoursCredited(3);
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
-                            isSubSelected
-                              ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm font-bold'
-                              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850'
-                          }`}
-                        >
-                          <span>{st.icon}</span>
-                          <span>{st.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Custom Subtype Text Option */}
-                  <div className="pt-1">
-                    <input
-                      type="text"
-                      placeholder="Or specify custom activity subtype (e.g. Pioneering Tower, River Kayaking, Food Pantry)..."
-                      value={customSubtypeText}
-                      onChange={(e) => {
-                        setCustomSubtypeText(e.target.value);
-                        if (e.target.value.trim()) {
-                          setActivitySubtype(e.target.value.trim().toLowerCase().replace(/\s+/g, '_'));
-                        }
-                      }}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Service Hours Credited Field (Highlighted for Volunteering/Service) */}
-                {(eventType === 'volunteering' || eventType === 'service' || activitySubtype.includes('service') || activitySubtype.includes('cleanup') || activitySubtype.includes('food_drive') || Number(serviceHoursCredited) > 0) && (
-                  <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 space-y-2 animate-fadeIn">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-black text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
-                        <span className="text-sm">⏳</span>
-                        <span>Service Hours Credited to Scouts</span>
-                      </label>
-                      <span className="text-[10px] text-amber-400 font-bold bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-full">
-                        BSA Rank Credit
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      Attendance recorded for this event will automatically award these service hours toward scouts' rank advancement (Tenderfoot through Eagle).
-                    </p>
-
-                    <div className="flex items-center gap-3 flex-wrap pt-1">
-                      <div className="flex items-center gap-1">
-                        {SERVICE_HOURS_PRESETS.map(h => (
-                          <button
-                            key={h}
-                            type="button"
-                            onClick={() => setServiceHoursCredited(h)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${
-                              Number(serviceHoursCredited) === h
-                                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
-                                : 'bg-slate-900 border-amber-500/30 text-amber-300 hover:bg-amber-950'
-                            }`}
-                          >
-                            {h} hr{h > 1 ? 's' : ''}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min="0"
-                          max="48"
-                          step="0.5"
-                          value={serviceHoursCredited}
-                          onChange={(e) => setServiceHoursCredited(parseFloat(e.target.value) || 0)}
-                          className="w-20 bg-slate-900 border border-amber-500/50 rounded-xl px-2.5 py-1 text-xs text-amber-200 text-center font-mono font-bold focus:outline-none focus:border-amber-400"
-                        />
-                        <span className="text-xs text-amber-300 font-medium">hrs total</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* RSVP & Attendance Requirement Control */}
-                <div className="pt-2 border-t border-slate-850 flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
+                    <label className="flex items-center gap-1 text-[10px] text-slate-400 font-medium cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={requiresRsvp}
-                        onChange={(e) => setRequiresRsvp(e.target.checked)}
-                        className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                        checked={isAllDay}
+                        onChange={(e) => handleToggleAllDay(e.target.checked)}
+                        className="rounded border-slate-700 text-sky-500 focus:ring-sky-500 w-3 h-3 bg-slate-900 cursor-pointer"
                       />
-                      <span>Pre-Event Attendance RSVP Required</span>
-                    </label>
-                    <p className="text-[10px] text-slate-400 ml-6 mt-0.5">
-                      {requiresRsvp 
-                        ? 'Families will be asked to confirm attendance, carpool seats, and dietary restrictions.' 
-                        : 'Open attendance event — no RSVP required, all scouts and families welcome.'}
-                    </p>
-                  </div>
-
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    requiresRsvp 
-                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
-                      : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                  }`}>
-                    {requiresRsvp ? '📝 RSVP Enabled' : '🔓 Open Attendance'}
-                  </span>
-                </div>
-
-                {/* Mandatory Event Attendance Flag */}
-                <div className="pt-2 border-t border-slate-850 flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-amber-300 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={mustAttend}
-                        onChange={(e) => setMustAttend(e.target.checked)}
-                        className="rounded border-amber-500/50 text-amber-500 focus:ring-amber-500 w-4 h-4 bg-slate-900 cursor-pointer"
-                      />
-                      <span>⭐ Mandatory Event (Active Attendance & Rank Compliance)</span>
-                    </label>
-                    <p className="text-[10px] text-slate-400 ml-6 mt-0.5">
-                      {mustAttend
-                        ? 'Required event tracked for BSA active attendance compliance, absence warnings, and rank advancement.'
-                        : 'Optional session — absence will not negatively impact scout attendance rate or compliance.'}
-                    </p>
-                  </div>
-
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    mustAttend 
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
-                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                  }`}>
-                    {mustAttend ? '⭐ Mandatory Event' : '🌿 Optional Session'}
-                  </span>
-                </div>
-              </div>
-
-              {/* ── TIME RANGE SELECTOR ── */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Clock size={15} className="text-emerald-400" />
-                    <label className="text-xs font-bold text-slate-200 uppercase tracking-wide">
-                      Time Range & Schedule
+                      <span>All Day</span>
                     </label>
                   </div>
 
-                  {/* Mode Tabs */}
-                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setTimeMode('picker')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                        timeMode === 'picker'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      ⏱️ Time Picker
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTimeMode('presets')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                        timeMode === 'presets'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      ⚡ Presets
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTimeMode('custom')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                        timeMode === 'custom'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      ✏️ Custom
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mode 1: Interactive Time Picker */}
-                {timeMode === 'picker' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  {!isAllDay ? (
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                          Start Time
-                        </label>
+                        <span className="block text-[9px] text-slate-400 mb-0.5">Start</span>
                         <input
                           type="time"
                           value={startTime}
-                          disabled={isAllDay}
                           onChange={(e) => handleStartTimeChange(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed font-mono"
+                          className="w-full bg-slate-900 border border-slate-750 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
                         />
                       </div>
-
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                          End Time
-                        </label>
+                        <span className="block text-[9px] text-slate-400 mb-0.5">End</span>
                         <input
                           type="time"
                           value={endTime}
-                          disabled={isAllDay}
                           onChange={(e) => handleEndTimeChange(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed font-mono"
+                          className="w-full bg-slate-900 border border-slate-750 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
                         />
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-800/60">
-                      <label className="flex items-center gap-2 text-xs text-slate-300 font-medium cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={isAllDay}
-                          onChange={(e) => handleToggleAllDay(e.target.checked)}
-                          className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500 w-4 h-4 bg-slate-900 cursor-pointer"
-                        />
-                        <span>All Day Event</span>
-                      </label>
-
-                      {/* Live Badge Preview */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-semibold shadow-sm">
-                          <span>🕒</span>
-                          <span>{time}</span>
-                        </span>
-                        {!isAllDay && calculateDuration(startTime, endTime) && (
-                          <span className="text-[11px] font-mono text-slate-300 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg">
-                            ⏱️ {calculateDuration(startTime, endTime)}
-                          </span>
-                        )}
-                      </div>
+                  ) : (
+                    <div className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-center text-xs text-sky-300 font-bold">
+                      🌅 All Day Event (Full Day Schedule)
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Mode 2: Quick Presets */}
-                {timeMode === 'presets' && (
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-slate-400">
-                      Select a standard Kashaf Scout troop schedule to apply instantly:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {SCOUT_TIME_PRESETS.map((p) => {
-                        const isCurrent = (!p.isAllDay && !isAllDay && startTime === p.start && endTime === p.end) || (p.isAllDay && isAllDay);
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => handleSelectPreset(p)}
-                            className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
-                              isCurrent
-                                ? 'bg-emerald-950/50 border-emerald-500 text-white'
-                                : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold text-white">{p.label}</span>
-                              {isCurrent && <span className="text-[10px] text-emerald-400 font-bold">✓ Selected</span>}
-                            </div>
-                            <div className="flex justify-between items-center mt-1 text-[11px] text-slate-400 font-mono">
-                              <span>{p.desc}</span>
-                              {!p.isAllDay && (
-                                <span className="text-emerald-400/90 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                                  {calculateDuration(p.start, p.end)}
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-[10px] font-mono text-sky-400 font-semibold truncate">
+                      {time}
+                    </span>
+                    {!isAllDay && calculateDuration(startTime, endTime) && (
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded">
+                        ⏱️ {calculateDuration(startTime, endTime)}
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {/* Mode 3: Freeform Custom Text */}
-                {timeMode === 'custom' && (
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">
-                      Custom Time Text
+                {/* Location Column */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                      <MapPin size={13} className="text-sky-400" />
+                      <span>Location / Venue</span>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. After Maghrib – 9:30 PM, or Overnight Fri-Sun"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                    <p className="text-[10px] text-slate-400 italic">
-                      Use this for non-standard schedules, prayer-anchored times, or multi-day campout descriptions.
-                    </p>
+                    <span className="text-[10px] text-slate-400">Headquarters / Address</span>
                   </div>
-                )}
+
+                  <input
+                    type="text"
+                    placeholder="e.g. Highview Elementary School"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-medium"
+                  />
+
+                  {/* Quick Venue Chips */}
+                  <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setLocation('Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)')}
+                      className="text-[9px] font-semibold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                    >
+                      🏫 Highview HQ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocation('6514 Kinloch St, Dearborn Heights, MI 48127')}
+                      className="text-[9px] font-semibold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                    >
+                      🏠 Leader Hassan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocation('Hype Athletics (23302 W Warren Ave, Dearborn Heights, MI 48127)')}
+                      className="text-[9px] font-semibold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                    >
+                      🏟️ Hype Athletics
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocation("D' Bar A Scout Ranch (880 E Sutton Rd, Metamora, MI 48455)")}
+                      className="text-[9px] font-semibold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                    >
+                      🏕️ D' Bar A
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocation('Masjid / Community Hall (Dearborn Heights, MI)')}
+                      className="text-[9px] font-semibold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                    >
+                      🕌 Masjid Hall
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                    <MapPin size={13} className="text-emerald-400" /> Location / Venue Address
+              {/* Push Scope & Visibility */}
+              {isExecutive && (
+                <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+                  <label className="text-[11px] font-bold text-slate-300 uppercase shrink-0">
+                    Event Visibility & Scope:
                   </label>
-                  <span className="text-[10px] text-slate-400">Headquarters or venue name</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="e.g. Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
-                />
-                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setLocation('Highview Elementary School (25225 Richardson St, Dearborn Heights, MI 48127)')}
-                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-emerald-950 hover:text-emerald-300 text-slate-300 border border-slate-750 hover:border-emerald-700 rounded-lg transition cursor-pointer"
-                  >
-                    🏫 Highview Elementary (25225 Richardson St)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocation('6514 Kinloch St, Dearborn Heights, MI 48127')}
-                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-amber-950 hover:text-amber-300 text-slate-300 border border-slate-750 hover:border-amber-700 rounded-lg transition cursor-pointer"
-                  >
-                    🏠 Leader Hassan Issa (6514 Kinloch St)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocation('Hype Athletics (23302 W Warren Ave, Dearborn Heights, MI 48127)')}
-                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-purple-950 hover:text-purple-300 text-slate-300 border border-slate-750 hover:border-purple-700 rounded-lg transition cursor-pointer"
-                  >
-                    🏟️ Hype Athletics (23302 W Warren Ave)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocation("D' Bar A Scout Ranch (880 E Sutton Rd, Metamora, MI 48455)")}
-                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-sky-950 hover:text-sky-300 text-slate-300 border border-slate-750 hover:border-sky-700 rounded-lg transition cursor-pointer"
-                  >
-                    🏕️ D' Bar A Scout Ranch
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocation('Masjid / Community Hall (Dearborn Heights, MI)')}
-                    className="text-[10px] font-bold px-2.5 py-1 bg-slate-900 hover:bg-teal-950 hover:text-teal-300 text-slate-300 border border-slate-750 hover:border-teal-700 rounded-lg transition cursor-pointer"
-                  >
-                    🕌 Masjid / Community Hall
-                  </button>
-                </div>
-              </div>
-
-              {/* Push Scope & Executive Controls */}
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
-                <label className="block text-xs font-bold text-slate-300 uppercase">
-                  Event Visibility & Scope
-                </label>
-                {isExecutive ? (
                   <select
                     value={targetGroupId}
                     onChange={(e) => setTargetGroupId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 cursor-pointer flex-1 min-w-[200px]"
                   >
                     <option value="all">⚡ Push to Entire Troop (All Patrols)</option>
                     {groups.map(g => (
                       <option key={g.id} value={g.id}>{g.name} Patrol Only</option>
                     ))}
                   </select>
-                ) : (
-                  <p className="text-xs text-slate-400">
-                    Scoped to your assigned patrol: <strong className="text-emerald-400">{groups.find(g => g.id === currentUser?.groupId)?.name || 'My'} Patrol</strong>
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Event Description & Program Details</label>
-                <textarea
-                  rows={3}
-                  placeholder="Detailed schedule, objective, and instructions for parents & scouts..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                />
-              </div>
-
-              {/* ── INTERACTIVE REQUIRED GEAR & PACKING CHECKLIST ── */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                  <div>
-                    <label className="text-xs font-bold text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
-                      <CheckSquare size={14} className="text-emerald-400" />
-                      <span>Required Gear & Items Checklist</span>
-                    </label>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Select checkboxes to automatically build the required gear list, or type custom items below.
-                    </p>
-                  </div>
-
-                  {/* Quick Package Presets */}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => handleApplyGearPackage('friday_meeting')}
-                      className="text-[10px] font-bold px-2 py-1 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/50 rounded-lg transition cursor-pointer"
-                      title="Class A, Handbook, Pen & Notebook, Water Bottle"
-                    >
-                      🏕️ Friday Meeting
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyGearPackage('tuesday_halqa')}
-                      className="text-[10px] font-bold px-2 py-1 bg-teal-950/60 hover:bg-teal-900 text-teal-300 border border-teal-600/50 rounded-lg transition cursor-pointer"
-                      title="Class B, Handbook, Materials, Water Bottle"
-                    >
-                      🕌 Tuesday Halqa
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyGearPackage('overnight_camp')}
-                      className="text-[10px] font-bold px-2 py-1 bg-sky-950/60 hover:bg-sky-900 text-sky-300 border border-sky-600/50 rounded-lg transition cursor-pointer"
-                      title="Full Camping Pack: Sleeping Bag, Mess Kit, Boots, First Aid, Prayer Rug, etc."
-                    >
-                      ⛺ Campout
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyGearPackage('service_project')}
-                      className="text-[10px] font-bold px-2 py-1 bg-amber-950/60 hover:bg-amber-900 text-amber-300 border border-amber-600/50 rounded-lg transition cursor-pointer"
-                      title="Class B, Work Gloves, Water Bottle, First Aid"
-                    >
-                      🤝 Service
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyGearPackage('clear')}
-                      className="text-[10px] font-semibold px-1.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
-                      title="Clear checklist"
-                    >
-                      Clear
-                    </button>
-                  </div>
                 </div>
+              )}
 
-                {/* Checkbox Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {STANDARD_GEAR_OPTIONS.map((gear) => {
-                    const checked = isGearItemChecked(gear.label);
-                    return (
-                      <button
-                        key={gear.id}
-                        type="button"
-                        onClick={() => handleToggleGearItem(gear.label)}
-                        className={`text-left p-2 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer ${
-                          checked
-                            ? 'bg-emerald-950/50 border-emerald-500 text-white shadow-sm'
-                            : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm shrink-0">{gear.icon}</span>
-                          <span className="text-xs font-medium truncate">{gear.label}</span>
-                        </div>
-                        <div className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold shrink-0 border ${
-                          checked
-                            ? 'bg-emerald-500 border-emerald-400 text-slate-950'
-                            : 'border-slate-700 bg-slate-950 text-transparent'
-                        }`}>
-                          ✓
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Editable Freeform Text Box for Custom / Additional Gear */}
-                <div className="pt-2 border-t border-slate-850">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                    Compiled Gear List & Custom Additions (Editable Text)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Complete Class A Field Uniform, Scout Handbook, Water Bottle, Swim Trunks..."
-                    value={requiredItems}
-                    onChange={(e) => setRequiredItems(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
+              {/* ── PRIMARY ACTION BUTTON (2-CLICK PUBLISH) ── */}
+              <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-black text-xs py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-sky-950/40"
                 >
                   <Save size={15} />
-                  <span>{saving ? 'Saving...' : 'Publish Event'}</span>
+                  <span>{saving ? 'Saving...' : (editingId ? 'Save Changes' : '⚡ Save & Publish Event')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl transition cursor-pointer"
                 >
                   Cancel
                 </button>
+              </div>
+
+              {/* ── COLLAPSIBLE ADVANCED OPTIONS ── */}
+              <div className="border-t border-slate-800/80 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreOptions(prev => !prev)}
+                  className="w-full py-2 px-3 rounded-xl border border-slate-800 bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-white flex items-center justify-between text-xs font-bold transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-sky-400">{showMoreOptions ? '▲' : '▼'}</span>
+                    <span>{showMoreOptions ? 'Hide Advanced Options' : 'More Options (Gear Checklist, RSVP, Service Hours, Description)'}</span>
+                  </span>
+                  <span className="text-[10px] text-sky-400 font-semibold">{showMoreOptions ? 'Collapse' : 'Expand'}</span>
+                </button>
+
+                {showMoreOptions && (
+                  <div className="space-y-4 pt-3 animate-fadeIn">
+                    {/* Activity Classification & Subtypes */}
+                    <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                        <label className="text-xs font-black text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                          <span>🎯</span>
+                          <span>Activity Classification</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Primary category & subtype</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {EVENT_TYPES.map(t => {
+                          const isSelected = eventType === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                setEventType(t.id);
+                                if (!title.trim() || title.includes('Meeting') || title.includes('Program') || title.includes('Activity') || title.includes('Hike') || title.includes('Campout') || title.includes('Service') || title.includes('Ceremony')) {
+                                  if (t.id === 'meeting') setTitle('Troop / Patrol Meeting');
+                                  else if (t.id === 'volunteering') setTitle('Community Service & Volunteering');
+                                  else if (t.id === 'camp') setTitle('Overnight Troop Campout');
+                                  else if (t.id === 'faith') setTitle('Islamic Halqa & Study Circle');
+                                  else if (t.id === 'ceremony') setTitle('Court of Honor & Advancement Ceremony');
+                                  else setTitle('Scouting Outdoor Activity');
+                                }
+                                const subtypes = ACTIVITY_SUBTYPES[t.id] || [];
+                                if (subtypes.length > 0) {
+                                  setActivitySubtype(subtypes[0].id);
+                                }
+                                setCustomSubtypeText('');
+                                if (t.id === 'volunteering' || t.id === 'service') {
+                                  if (!serviceHoursCredited || serviceHoursCredited === 0) setServiceHoursCredited(3);
+                                } else {
+                                  setServiceHoursCredited(0);
+                                }
+                                if (t.id === 'camp') setCategory('campout');
+                                else if (t.id === 'volunteering') setCategory('service');
+                                else if (t.id === 'meeting') setCategory('meeting');
+                                else if (t.id === 'faith') setCategory('faith');
+                                else if (t.id === 'ceremony') setCategory('ceremony');
+                                else setCategory('meeting');
+                              }}
+                              className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-sky-500/15 border-sky-400 text-sky-200 ring-1 ring-sky-500/50 shadow-md'
+                                  : 'bg-slate-900 border-slate-800 hover:border-slate-750 text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-base">{t.icon}</span>
+                                {isSelected && <span className="text-[10px] text-sky-400 font-bold">✓ Active</span>}
+                              </div>
+                              <div className="mt-1.5">
+                                <strong className="text-xs font-bold text-white block leading-tight">{t.label}</strong>
+                                <span className="text-[10px] text-slate-400 block line-clamp-1 mt-0.5">{t.description}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Granular Subtypes */}
+                      <div className="pt-2 border-t border-slate-850 space-y-2">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                          <span>📌</span>
+                          <span>Granular Subtype:</span>
+                        </label>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(ACTIVITY_SUBTYPES[eventType] || ACTIVITY_SUBTYPES.scouting).map(st => {
+                            const isSubSelected = activitySubtype === st.id && !customSubtypeText;
+                            return (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => {
+                                  setActivitySubtype(st.id);
+                                  setCustomSubtypeText('');
+                                  if (!title.trim() || title === 'Troop / Patrol Meeting' || title === 'Community Service & Volunteering' || title === 'Scouting Outdoor Activity' || title === 'Overnight Troop Campout' || title === 'Islamic Halqa & Study Circle' || title === 'Court of Honor & Advancement Ceremony') {
+                                    setTitle(st.label);
+                                  }
+                                  if (st.id.includes('service') || st.id.includes('cleanup') || st.id.includes('food_drive')) {
+                                    if (!serviceHoursCredited || serviceHoursCredited === 0) setServiceHoursCredited(3);
+                                  }
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
+                                  isSubSelected
+                                    ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm font-bold'
+                                    : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850'
+                                }`}
+                              >
+                                <span>{st.icon}</span>
+                                <span>{st.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Or specify custom subtype (e.g. Pioneering Tower, River Kayaking)..."
+                          value={customSubtypeText}
+                          onChange={(e) => {
+                            setCustomSubtypeText(e.target.value);
+                            if (e.target.value.trim()) {
+                              setActivitySubtype(e.target.value.trim().toLowerCase().replace(/\s+/g, '_'));
+                            }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Service Hours Credited */}
+                    {(eventType === 'volunteering' || eventType === 'service' || activitySubtype.includes('service') || activitySubtype.includes('cleanup') || activitySubtype.includes('food_drive') || Number(serviceHoursCredited) > 0) && (
+                      <div className="bg-slate-950/80 border border-sky-500/30 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-sky-300 uppercase tracking-wide flex items-center gap-1.5">
+                            <span>⏳</span>
+                            <span>Service Hours Credited (Rank Advancement)</span>
+                          </label>
+                          <span className="text-[10px] text-sky-400 font-bold bg-sky-500/20 border border-sky-500/30 px-2 py-0.5 rounded-full">
+                            BSA Credit
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <div className="flex items-center gap-1">
+                            {SERVICE_HOURS_PRESETS.map(h => (
+                              <button
+                                key={h}
+                                type="button"
+                                onClick={() => setServiceHoursCredited(h)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                                  Number(serviceHoursCredited) === h
+                                    ? 'bg-sky-500 text-slate-950 border-sky-400 font-black'
+                                    : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                                }`}
+                              >
+                                {h} hr{h > 1 ? 's' : ''}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="48"
+                              step="0.5"
+                              value={serviceHoursCredited}
+                              onChange={(e) => setServiceHoursCredited(parseFloat(e.target.value) || 0)}
+                              className="w-20 bg-slate-900 border border-slate-750 rounded-xl px-2.5 py-1 text-xs text-white text-center font-mono font-bold focus:outline-none focus:border-sky-400"
+                            />
+                            <span className="text-xs text-slate-400">hrs total</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Attendance Requirements */}
+                    <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2.5">
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={requiresRsvp}
+                          onChange={(e) => setRequiresRsvp(e.target.checked)}
+                          className="rounded border-slate-700 text-sky-500 focus:ring-sky-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                        />
+                        <span>Pre-Event Attendance RSVP Required</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={mustAttend}
+                          onChange={(e) => setMustAttend(e.target.checked)}
+                          className="rounded border-slate-700 text-sky-500 focus:ring-sky-500 w-4 h-4 bg-slate-900 cursor-pointer"
+                        />
+                        <span>⭐ Mandatory Event (Active Attendance Compliance)</span>
+                      </label>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Event Description & Program Details</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Detailed schedule, objective, and instructions for parents & scouts..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-400 font-sans"
+                      />
+                    </div>
+
+                    {/* Required Gear & Checklist */}
+                    <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-850 pb-2">
+                        <label className="text-xs font-bold text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                          <CheckSquare size={14} className="text-sky-400" />
+                          <span>Required Gear & Items Checklist</span>
+                        </label>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleApplyGearPackage('friday_meeting')}
+                            className="text-[10px] font-bold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-sky-300 border border-sky-500/30 rounded-lg transition cursor-pointer"
+                          >
+                            🏕️ Friday Meeting
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyGearPackage('tuesday_halqa')}
+                            className="text-[10px] font-bold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-sky-300 border border-sky-500/30 rounded-lg transition cursor-pointer"
+                          >
+                            🕌 Tuesday Halqa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyGearPackage('overnight_camp')}
+                            className="text-[10px] font-bold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-sky-300 border border-sky-500/30 rounded-lg transition cursor-pointer"
+                          >
+                            ⛺ Campout
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyGearPackage('service_project')}
+                            className="text-[10px] font-bold px-2 py-0.5 bg-slate-900 hover:bg-slate-850 text-sky-300 border border-sky-500/30 rounded-lg transition cursor-pointer"
+                          >
+                            🤝 Service
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyGearPackage('clear')}
+                            className="text-[10px] font-semibold px-1.5 py-0.5 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white border border-slate-750 rounded-lg transition cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                        {STANDARD_GEAR_OPTIONS.map((gear) => {
+                          const checked = isGearItemChecked(gear.label);
+                          return (
+                            <button
+                              key={gear.id}
+                              type="button"
+                              onClick={() => handleToggleGearItem(gear.label)}
+                              className={`text-left p-1.5 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer ${
+                                checked
+                                  ? 'bg-sky-500/15 border-sky-400 text-white shadow-xs'
+                                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm shrink-0">{gear.icon}</span>
+                                <span className="text-xs font-medium truncate">{gear.label}</span>
+                              </div>
+                              <div className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] font-bold shrink-0 border ${
+                                checked
+                                  ? 'bg-sky-500 border-sky-400 text-slate-950'
+                                  : 'border-slate-750 bg-slate-950 text-transparent'
+                              }`}>
+                                ✓
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          Compiled Gear List (Editable Text)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Complete Class A Field Uniform, Scout Handbook, Water Bottle..."
+                          value={requiredItems}
+                          onChange={(e) => setRequiredItems(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-sans"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quran Verse / Spiritual Focus */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Qur’an Verse or Spiritual Reflection (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Surah Al-Ma'un (107:1-7) or Hadith on community service..."
+                        value={quranVerse}
+                        onChange={(e) => setQuranVerse(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           </div>

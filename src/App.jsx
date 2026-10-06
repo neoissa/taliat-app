@@ -643,7 +643,7 @@ export default function App() {
       setMobileMenuOpen(false);
       return;
     }
-    if (tab === 'preparation-hub' || tab === 'preparation' || tab === 'prep') {
+    if (tab === 'meetings-hub' || tab === 'meetings' || tab === 'preparation-hub' || tab === 'preparation' || tab === 'prep') {
       if (extraData?.subTab) setPrepHubSubTab(extraData.subTab);
       setCurrentTab('preparation-hub');
       setMobileMenuOpen(false);
@@ -1176,7 +1176,7 @@ export default function App() {
     if (currentTab === 'preparation-hub' && (isLeaderOrOwner || isExecutive)) {
       return {
         id: 'preparation-hub',
-        title: 'Preparation',
+        title: 'Meetings',
         colorTheme: 'sky',
         activeTabId: prepHubSubTab,
         onSelect: (subId) => setPrepHubSubTab(subId),
@@ -1941,10 +1941,10 @@ export default function App() {
           </HubSubNav>
         )}
 
-        {/* ── 1.6 PREPARATION HUB (LEADER / OWNER) ── */}
+        {/* ── 1.6 MEETINGS HUB (LEADER / OWNER) ── */}
         {currentTab === 'preparation-hub' && (isLeaderOrOwner || isExecutive) && (
           <HubSubNav
-            hubTitle="Preparation"
+            hubTitle="Meetings"
             colorTheme="sky"
             activeTab={prepHubSubTab}
             onChange={(tabId) => setPrepHubSubTab(tabId)}
