@@ -83,6 +83,7 @@ export default function ScheduleParentMeetingModal({
 
   // Meeting Details
   const [selectedTopicId, setSelectedTopicId] = useState('scoutmaster_conf');
+  const [meetingTitle, setMeetingTitle] = useState('Scoutmaster Conference');
   const [customTopicTitle, setCustomTopicTitle] = useState('');
   const [meetingDate, setMeetingDate] = useState(() => {
     const d = new Date();
@@ -96,6 +97,19 @@ export default function ScheduleParentMeetingModal({
   const [meetingAgenda, setMeetingAgenda] = useState('');
   const [leaderNotes, setLeaderNotes] = useState('');
   const [rsvpRequired, setRsvpRequired] = useState(true);
+
+  // Predefined selector that automatically populates the title
+  const handleSelectPreset = (preset) => {
+    setSelectedTopicId(preset.id);
+    if (preset.id !== 'custom') {
+      setMeetingTitle(preset.label);
+    } else {
+      setMeetingTitle('');
+    }
+    if (preset.defaultDuration) {
+      setMeetingDuration(preset.defaultDuration);
+    }
+  };
 
   // Submission State
   const [submitting, setSubmitting] = useState(false);
@@ -310,7 +324,7 @@ export default function ScheduleParentMeetingModal({
         meetingTime,
         meetingDuration,
         meetingLocation: finalLocation,
-        meetingTopic: topicTitle,
+        meetingTopic: meetingTitle || topicTitle,
         meetingAgenda: meetingAgenda.trim(),
         leaderNotes: leaderNotes.trim(),
         rsvpRequired,
@@ -340,285 +354,197 @@ export default function ScheduleParentMeetingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fadeIn">
-      <div className="bg-slate-900 border border-emerald-500/40 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-100">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-100">
         
         {/* ── HEADER ── */}
-        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 px-6 py-4.5 border-b border-emerald-500/30 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-xl text-emerald-400 shadow-inner">
-              🤝
+        <div className="bg-slate-900 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Calendar size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full tracking-wider">
-                  Leader Console
-                </span>
-                <span className="text-xs text-emerald-300 font-bold">
-                  {leaderName} ({leaderRole})
-                </span>
-              </div>
-              <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
-                Schedule Conference / Meeting with Parents
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Schedule Meeting
               </h3>
+              <p className="text-[11px] text-slate-400">
+                {leaderName} &bull; {leaderRole}
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* ── BODY (Scrollable) ── */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
           
           {/* Success Banner */}
           {successMsg && (
-            <div className="bg-emerald-950/90 border border-emerald-400 text-emerald-200 p-4 rounded-2xl flex items-center gap-3 animate-fadeIn">
-              <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />
-              <div className="text-sm font-bold">{successMsg}</div>
+            <div className="bg-sky-950/80 border border-sky-500/40 text-sky-200 p-3 rounded-xl flex items-center gap-2.5">
+              <CheckCircle2 size={18} className="text-sky-400 shrink-0" />
+              <div className="text-xs font-bold">{successMsg}</div>
             </div>
           )}
 
           {/* Error Banner */}
           {errorMsg && (
-            <div className="bg-red-950/90 border border-red-500/60 text-red-200 p-4 rounded-2xl flex items-center gap-3 animate-fadeIn">
-              <AlertCircle size={22} className="text-red-400 shrink-0" />
-              <div className="text-sm font-semibold">{errorMsg}</div>
+            <div className="bg-red-950/80 border border-red-500/60 text-red-200 p-3 rounded-xl flex items-center gap-2.5">
+              <AlertCircle size={18} className="text-red-400 shrink-0" />
+              <div className="text-xs font-semibold">{errorMsg}</div>
             </div>
           )}
 
-          {/* ── STEP 1: SCOPE SELECTOR ── */}
-          <div className="space-y-3">
-            <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Users size={14} className="text-emerald-400" />
-              <span>1. Choose Meeting Audience & Scope</span>
+          {/* ── AUDIENCE SELECTOR ── */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-300 block">
+              Meeting Audience:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setTargetType('single_parent')}
-                className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
-                  targetType === 'single_parent'
-                    ? 'bg-emerald-950/60 border-emerald-400 text-white shadow-lg ring-1 ring-emerald-500'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-lg">👤</span>
-                  {targetType === 'single_parent' && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
-                </div>
-                <div className="mt-2">
-                  <div className="font-extrabold text-xs text-white">1-on-1 Parent Conference</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">Individual Scout & Parent</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTargetType('patrol_parents')}
-                className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
-                  targetType === 'patrol_parents'
-                    ? 'bg-emerald-950/60 border-emerald-400 text-white shadow-lg ring-1 ring-emerald-500'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-lg">👥</span>
-                  {targetType === 'patrol_parents' && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
-                </div>
-                <div className="mt-2">
-                  <div className="font-extrabold text-xs text-white">Patrol Parents Meeting</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">All parents of a selected patrol</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTargetType('all_unit')}
-                className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
-                  targetType === 'all_unit'
-                    ? 'bg-emerald-950/60 border-emerald-400 text-white shadow-lg ring-1 ring-emerald-500'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-lg">🏛️</span>
-                  {targetType === 'all_unit' && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
-                </div>
-                <div className="mt-2">
-                  <div className="font-extrabold text-xs text-white">All Unit Parents</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">Troop & Pack general assembly</div>
-                </div>
-              </button>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'single_parent', label: '1-on-1 Parent' },
+                { id: 'patrol_parents', label: 'Patrol Parents' },
+                { id: 'all_unit', label: 'All Parents' }
+              ].map(mode => {
+                const isSel = targetType === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setTargetType(mode.id)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition cursor-pointer text-center border ${
+                      isSel
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* ── STEP 1.1: TARGET RECIPIENT SELECTION ── */}
+          {/* Recipient Dropdown */}
           {targetType === 'single_parent' && (
-            <div className="bg-slate-950/60 border border-slate-800 p-4.5 rounded-2xl space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Select Scout & Linked Family:
-                </label>
-                <select
-                  value={selectedScoutId}
-                  onChange={(e) => setSelectedScoutId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  required
-                >
-                  <option value="">-- Choose Scout from Roster --</option>
-                  {accessibleScouts.map(scout => (
-                    <option key={scout.uid} value={scout.uid}>
-                      {scout.fullName || scout.username} &bull; {scout.patrolName || 'Patrol Member'} ({scout.rank || 'Scout'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-slate-300">
+                Select Scout:
+              </label>
+              <select
+                value={selectedScoutId}
+                onChange={(e) => setSelectedScoutId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none cursor-pointer"
+                required
+              >
+                <option value="">-- Choose Scout from Roster --</option>
+                {accessibleScouts.map(scout => (
+                  <option key={scout.uid} value={scout.uid}>
+                    {scout.fullName || scout.username} ({scout.patrolName || 'Patrol'}) &bull; Rank: {scout.rank || 'Scout'}
+                  </option>
+                ))}
+              </select>
               {currentScout && (
-                <div className="bg-slate-900 border border-emerald-500/30 p-3.5 rounded-xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <User size={13} className="text-emerald-400" />
-                      Scout: {currentScout.fullName || currentScout.username}
-                    </span>
-                    <span className="text-[11px] text-emerald-300 font-mono bg-emerald-950/80 px-2 py-0.5 rounded-md">
-                      Rank: {currentScout.rank || 'Scout'}
-                    </span>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase">Linked Parent Contact:</span>
-                      <strong className="text-white">{resolvedParent?.fullName || currentScout.parentName || 'Parent / Guardian'}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase">Email & Phone:</span>
-                      <span className="text-slate-200">{resolvedParent?.email || currentScout.parentEmail || 'No email'} &bull; {resolvedParent?.phone || currentScout.parentPhone || 'No phone'}</span>
-                    </div>
-                  </div>
+                <div className="text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center justify-between">
+                  <span>Parent: <strong className="text-white">{resolvedParent?.fullName || currentScout.parentName || 'Parent / Guardian'}</strong></span>
+                  <span className="text-sky-300">{resolvedParent?.email || currentScout.parentEmail || 'No email'}</span>
                 </div>
               )}
             </div>
           )}
 
           {targetType === 'patrol_parents' && (
-            <div className="bg-slate-950/60 border border-slate-800 p-4.5 rounded-2xl space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Select Target Patrol / Troop Group:
-                </label>
-                <select
-                  value={selectedPatrolId}
-                  onChange={(e) => setSelectedPatrolId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  required
-                >
-                  <option value="">-- Choose Patrol --</option>
-                  {accessiblePatrols.map(group => (
-                    <option key={group.id} value={group.id}>
-                      🛡️ {group.name} Patrol &bull; ({allScouts.filter(s => isScoutInPatrol(s, group.id, groups)).length} Scouts)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedPatrolId && (
-                <div className="flex items-center justify-between text-xs bg-slate-900 p-3 rounded-xl border border-slate-750">
-                  <span className="text-slate-300">
-                    Targeted Audience: <strong className="text-white">{targetedParentsList.length} Parent Accounts</strong>
-                  </span>
-                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    ✓ Multi-Parent Batch Routing
-                  </span>
-                </div>
-              )}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-slate-300">
+                Select Patrol:
+              </label>
+              <select
+                value={selectedPatrolId}
+                onChange={(e) => setSelectedPatrolId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none cursor-pointer"
+                required
+              >
+                <option value="">-- Choose Patrol --</option>
+                {accessiblePatrols.map(group => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} Patrol ({allScouts.filter(s => isScoutInPatrol(s, group.id, groups)).length} Scouts)
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
-          {targetType === 'all_unit' && (
-            <div className="bg-slate-950/60 border border-slate-800 p-4.5 rounded-2xl text-xs space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300">
-                  Unit Scope: <strong className="text-white">All Active Troop & Pack Families</strong>
-                </span>
-                <span className="text-emerald-400 font-bold font-mono">
-                  {targetedParentsList.length} Parents Targeted
-                </span>
-              </div>
-              <p className="text-slate-400 text-[11px]">
-                An individual meeting invitation and push notification will be dispatched to each registered family in the troop directory.
-              </p>
+          {/* ── PREDEFINED TEMPLATES (AUTO-FILLS TITLE) ── */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-300">
+                Predefined Templates (Auto-fills Title):
+              </label>
+              <span className="text-[10px] text-sky-400 font-semibold">Click to select</span>
             </div>
-          )}
-
-          {/* ── STEP 2: TOPIC & AGENDA ── */}
-          <div className="space-y-3">
-            <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <FileText size={14} className="text-emerald-400" />
-              <span>2. Select Meeting Purpose & Agenda Preset</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {TOPIC_PRESETS.map(preset => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedTopicId(preset.id);
-                    setMeetingDuration(preset.defaultDuration);
-                  }}
-                  className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                    selectedTopicId === preset.id
-                      ? 'bg-emerald-950/50 border-emerald-400 text-white ring-1 ring-emerald-500 shadow-md'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="font-bold text-xs text-white">{preset.label}</div>
-                  <div className="text-[10px] text-slate-400 mt-1 leading-snug line-clamp-2">{preset.desc}</div>
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-1.5">
+              {TOPIC_PRESETS.map(preset => {
+                const isSelected = selectedTopicId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer select-none border ${
+                      isSelected
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
             </div>
-
-            {selectedTopicId === 'custom' && (
-              <div className="mt-2">
-                <input
-                  type="text"
-                  value={customTopicTitle}
-                  onChange={(e) => setCustomTopicTitle(e.target.value)}
-                  placeholder="Enter custom meeting topic or purpose..."
-                  className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-400"
-                  required
-                />
-              </div>
-            )}
           </div>
 
-          {/* ── STEP 3: DATE, TIME & VENUE ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* ── EDITABLE MEETING TITLE FIELD ── */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-300 mb-1">
+              Meeting Title / Topic *
+            </label>
+            <input
+              type="text"
+              required
+              value={meetingTitle}
+              onChange={(e) => setMeetingTitle(e.target.value)}
+              placeholder="e.g. Scoutmaster Conference"
+              className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none font-semibold"
+            />
+          </div>
+
+          {/* ── DATE, TIME & DURATION ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                📅 Meeting Date:
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                Date *
               </label>
               <input
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none font-mono"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                ⏰ Meeting Time:
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                Time
               </label>
               <select
                 value={meetingTime}
                 onChange={(e) => setMeetingTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
               >
                 {TIME_PRESETS.map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -627,13 +553,13 @@ export default function ScheduleParentMeetingModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                ⏳ Duration:
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                Duration
               </label>
               <select
                 value={meetingDuration}
                 onChange={(e) => setMeetingDuration(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
               >
                 {DURATION_PRESETS.map(d => (
                   <option key={d} value={d}>{d}</option>
@@ -642,28 +568,29 @@ export default function ScheduleParentMeetingModal({
             </div>
           </div>
 
-          {/* Venue Selector */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-300">
-              📍 Location / Meeting Format:
+          {/* ── VENUE / FORMAT ── */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold text-slate-300">
+              Format / Venue:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {VENUE_PRESETS.map(v => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {[
+                { label: 'Troop Headquarters (Highview Elementary School)', shortLabel: 'Headquarters', type: 'physical' },
+                { label: 'Google Meet / Zoom Video Call', shortLabel: 'Google Meet', type: 'virtual' },
+                { label: 'Direct Phone Conference Call', shortLabel: 'Phone Call', type: 'phone' },
+                { label: 'Custom Location', shortLabel: 'Custom', type: 'custom' }
+              ].map(v => (
                 <button
                   key={v.label}
                   type="button"
                   onClick={() => setVenueType(v.label)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium text-left transition cursor-pointer flex items-center gap-2 ${
+                  className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer text-center truncate border ${
                     venueType === v.label
-                      ? 'bg-emerald-950/70 border-emerald-400 text-white font-bold'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
+                      ? 'bg-sky-500 text-slate-950 border-sky-400 font-bold shadow-sm'
+                      : 'bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800'
                   }`}
                 >
-                  {v.type === 'virtual' && <Video size={13} className="text-teal-400 shrink-0" />}
-                  {v.type === 'phone' && <Phone size={13} className="text-teal-400 shrink-0" />}
-                  {v.type === 'physical' && <MapPin size={13} className="text-emerald-400 shrink-0" />}
-                  {v.type === 'custom' && <Compass size={13} className="text-amber-400 shrink-0" />}
-                  <span className="truncate">{v.label}</span>
+                  {v.shortLabel}
                 </button>
               ))}
             </div>
@@ -674,7 +601,7 @@ export default function ScheduleParentMeetingModal({
                 value={customVenueDetails}
                 onChange={(e) => setCustomVenueDetails(e.target.value)}
                 placeholder="Paste video call link (e.g. https://meet.google.com/xyz)..."
-                className="w-full bg-slate-950 border border-teal-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-400 mt-1"
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none mt-1"
               />
             )}
 
@@ -684,53 +611,34 @@ export default function ScheduleParentMeetingModal({
                 value={customVenueDetails}
                 onChange={(e) => setCustomVenueDetails(e.target.value)}
                 placeholder="Enter specific room number, building, or address..."
-                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 mt-1"
+                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none mt-1"
               />
             )}
           </div>
 
-          {/* ── STEP 4: MESSAGE & AGENDA EDITOR ── */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-300">
-                📝 Meeting Agenda & Parent Invitation Message:
-              </label>
-              <span className="text-[10px] text-slate-400">
-                Will be included in the email and notification
-              </span>
-            </div>
+          {/* ── AGENDA ── */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-300 block">
+              Meeting Agenda / Notes:
+            </label>
             <textarea
-              rows={4}
+              rows={3}
               value={meetingAgenda}
               onChange={(e) => setMeetingAgenda(e.target.value)}
-              placeholder="Provide agenda items or notes for the parent..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
+              placeholder="Provide agenda items for the meeting..."
+              className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl p-2.5 text-xs text-white focus:outline-none leading-relaxed font-sans"
             />
-          </div>
-
-          {/* RSVP Checkbox */}
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="rsvpRequired"
-              checked={rsvpRequired}
-              onChange={(e) => setRsvpRequired(e.target.checked)}
-              className="w-4 h-4 rounded text-emerald-600 bg-slate-950 border-slate-700 focus:ring-emerald-500"
-            />
-            <label htmlFor="rsvpRequired" className="text-xs text-slate-300 cursor-pointer">
-              Require Interactive Parent RSVP (*Accept / Reschedule / Decline*) in the Parent Portal
-            </label>
           </div>
 
         </form>
 
         {/* ── FOOTER ── */}
-        <div className="bg-slate-950 px-6 py-4 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition cursor-pointer"
           >
             Cancel
           </button>
@@ -739,17 +647,14 @@ export default function ScheduleParentMeetingModal({
             type="button"
             onClick={handleSubmit}
             disabled={submitting || (targetType === 'single_parent' && !selectedScoutId)}
-            className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-950/50 flex items-center gap-2 transition cursor-pointer"
+            className="px-5 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
           >
             {submitting ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Dispatching Invitations...</span>
-              </>
+              <span>Scheduling...</span>
             ) : (
               <>
-                <Send size={14} />
-                <span>🚀 Schedule & Dispatch Meeting Invites ({targetedParentsList.length})</span>
+                <Send size={13} />
+                <span>Schedule Meeting</span>
               </>
             )}
           </button>

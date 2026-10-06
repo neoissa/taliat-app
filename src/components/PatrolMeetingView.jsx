@@ -40,6 +40,44 @@ import {
 import { isSuperUser, getAccessiblePatrols } from '../utils/patrolScoping';
 import StatusBadge from './StatusBadge';
 
+const PATROL_MEETING_PRESETS = [
+  { 
+    id: 'weekly_halqa', 
+    label: 'Weekly Halqa', 
+    title: 'Weekly Patrol Meeting & Halqa', 
+    duration: '1 hour',
+    agenda: '1. Opening Dua & Surah recitation\n2. Islamic character reminder & discussion\n3. Scout skill practice\n4. Patrol announcements & closing'
+  },
+  { 
+    id: 'plc_council', 
+    label: 'PLC Leaders', 
+    title: 'Patrol Leaders Council (PLC)', 
+    duration: '45 mins',
+    agenda: '1. Review past week events & attendance\n2. Upcoming troop activities & assignments\n3. Patrol Leader feedback'
+  },
+  { 
+    id: 'knot_skills', 
+    label: 'Knot Tying & Skills', 
+    title: 'Scout Skills & Knot Tying Workshop', 
+    duration: '1 hour',
+    agenda: '1. Square knot, two half-hitches, and taut-line hitch\n2. Practical challenge & lashings introduction\n3. Skills sign-off'
+  },
+  { 
+    id: 'camp_prep', 
+    label: 'Campout Prep', 
+    title: 'Campout Logistics & Gear Huddle', 
+    duration: '30 mins',
+    agenda: '1. Personal gear checklist & weather check\n2. Patrol duty roster (cook, water, fire, cleanup)\n3. Departure time & drop-off details'
+  },
+  { 
+    id: 'quick_huddle', 
+    label: 'Virtual Huddle', 
+    title: 'Virtual Patrol Quick Huddle', 
+    duration: '30 mins',
+    agenda: '1. Fast check-in & morale\n2. Action items review for upcoming weekend'
+  }
+];
+
 export default function PatrolMeetingView({ currentUser, onNavigate }) {
   const [groups, setGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -347,22 +385,22 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* ── 1. HEADER & PATROL SELECTOR ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border-2 border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0 shadow-lg shadow-indigo-950/50">
-              <Video size={24} className="animate-pulse" />
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-lg">
+              <Video size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-0.5 rounded-full">
-                  🛡️ Patrol Meeting Room
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2.5 py-0.5 rounded-full">
+                  Patrol Meeting Room
                 </span>
                 <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${meetingStatus.colorClass}`}>
                   {meetingStatus.label}
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 {patrolGroup?.name ? `${patrolGroup.name} Patrol Meeting` : 'Patrol Meetings & Halqa'}
               </h2>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -374,8 +412,8 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
           {/* Patrol Selector for Multi-Patrol Leaders & Superusers */}
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
             {accessiblePatrols.length > 1 && (
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-bold shadow-inner">
-                <Users size={13} className="text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-750 px-3 py-1.5 rounded-xl text-xs font-bold">
+                <Users size={13} className="text-sky-400 shrink-0" />
                 <select
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
@@ -394,7 +432,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
               <button
                 type="button"
                 onClick={handleOpenEditModal}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-indigo-950/40 hover:scale-[1.02]"
+                className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
               >
                 <Edit3 size={13} />
                 <span>Edit Meeting Link</span>
@@ -405,43 +443,38 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
       </div>
 
       {/* ── 2. HERO CARD: NEXT PATROL MEETING & GOOGLE MEET LINK ── */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6 relative overflow-hidden">
-        {/* Background glow when Google Meet is attached */}
-        {hasGoogleMeet && (
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-        )}
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-800/80 pb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl space-y-6 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-800 pb-6">
           <div className="space-y-3 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-xl">
-                {patrolGroup?.name ? `${patrolGroup.name} Patrol` : 'Dhulfiqār Patrol'}
+              <span className="text-xs font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-3 py-1 rounded-xl">
+                {patrolGroup?.name ? `${patrolGroup.name} Patrol` : 'Patrol'}
               </span>
               {hasGoogleMeet ? (
-                <span className="text-xs font-bold text-teal-300 bg-teal-500/15 border border-teal-500/30 px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-xs">
-                  <Video size={13} className="text-teal-400" />
+                <span className="text-xs font-bold text-sky-300 bg-sky-500/15 border border-sky-500/30 px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-xs">
+                  <Video size={13} className="text-sky-400" />
                   <span>Google Meet Attached</span>
                 </span>
               ) : (
-                <span className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-xl flex items-center gap-1.5">
-                  <MapPin size={13} className="text-amber-400" />
+                <span className="text-xs font-bold text-slate-300 bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl flex items-center gap-1.5">
+                  <MapPin size={13} className="text-slate-400" />
                   <span>In-Person Meeting</span>
                 </span>
               )}
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
+            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
               {nextMeeting.title}
             </h3>
 
             {/* Date & Time Pills */}
             <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs sm:text-sm text-slate-200">
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-xl font-bold">
-                <Calendar size={15} className="text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl font-bold">
+                <Calendar size={15} className="text-sky-400 shrink-0" />
                 <span>{nextMeeting.date || 'Weekly Session'}</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-xl font-bold font-mono">
-                <Clock size={15} className="text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl font-bold font-mono">
+                <Clock size={15} className="text-sky-400 shrink-0" />
                 <span>{nextMeeting.time} ({nextMeeting.duration})</span>
               </div>
               <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium">
@@ -458,11 +491,11 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                 <button
                   type="button"
                   onClick={handleOpenJoinMeeting}
-                  className="bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-600 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-sm sm:text-base px-6 py-3.5 sm:py-4 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2.5 shadow-xl shadow-teal-950/60 hover:scale-[1.03] active:scale-[0.98] border border-teal-300"
+                  className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm sm:text-base px-6 py-3 rounded-2xl transition cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:scale-[1.01] active:scale-[0.98]"
                 >
-                  <Video size={20} className="text-slate-950 animate-bounce" />
+                  <Video size={18} />
                   <span>Join Google Meet</span>
-                  <ExternalLink size={16} className="text-slate-900" />
+                  <ExternalLink size={15} />
                 </button>
 
                 <div className="flex items-center gap-2 justify-center">
@@ -471,13 +504,13 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                     onClick={handleCopyLink}
                     className="text-xs bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 font-bold px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
                   >
-                    {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    {copiedLink ? <Check size={14} className="text-sky-400" /> : <Copy size={14} />}
                     <span>{copiedLink ? 'Link Copied!' : 'Copy Meeting Link'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => onNavigate && onNavigate('tarbiyah-hub', { subTab: 'chat' })}
-                    className="text-xs bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border border-slate-700 font-bold px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                    className="text-xs bg-slate-800 hover:bg-slate-750 text-sky-300 hover:text-white border border-slate-700 font-bold px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
                     title="Go to Patrol Live Chat"
                   >
                     <MessageSquare size={14} />
@@ -487,7 +520,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
               </>
             ) : (
               <div className="text-center sm:text-right space-y-2">
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-xs text-slate-300 max-w-xs">
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-300 max-w-xs">
                   <span className="font-bold text-white block mb-0.5">Physical In-Person Session</span>
                   <span>Meet with your patrol at the assigned troop location.</span>
                 </div>
@@ -495,7 +528,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   <button
                     type="button"
                     onClick={handleOpenEditModal}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+                    className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
                   >
                     <Plus size={14} />
                     <span>Attach Google Meet Link</span>
@@ -508,20 +541,20 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
 
         {/* ── GOOGLE MEET LINK DIRECT BAR ── */}
         {hasGoogleMeet && (
-          <div className="bg-slate-950/90 border border-teal-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 shrink-0">
-                <Radio size={18} className="animate-pulse" />
+              <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                <Radio size={18} />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block">
                   Official Google Meet Video Room URL:
                 </span>
                 <a
                   href={normalizedMeetLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs sm:text-sm font-mono font-bold text-white hover:text-teal-300 underline truncate block transition"
+                  className="text-xs sm:text-sm font-mono font-bold text-white hover:text-sky-300 underline truncate block transition"
                 >
                   {normalizedMeetLink}
                 </a>
@@ -534,13 +567,13 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                 onClick={handleCopyLink}
                 className="bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
               >
-                {copiedLink ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                {copiedLink ? <Check size={13} className="text-sky-400" /> : <Copy size={13} />}
                 <span>{copiedLink ? 'Copied' : 'Copy'}</span>
               </button>
               <button
                 type="button"
                 onClick={handleOpenJoinMeeting}
-                className="bg-teal-600 hover:bg-teal-500 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-teal-950/50"
+                className="bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
               >
                 <span>Open Room</span>
                 <ExternalLink size={13} />
@@ -551,9 +584,9 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
 
         {/* ── MEETING AGENDA & DISCUSSION TOPICS ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-2.5">
-            <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Sparkles size={14} className="text-indigo-400" />
+          <div className="md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles size={14} className="text-sky-400" />
               <span>Meeting Agenda & Discussion Topics</span>
             </h4>
             {nextMeeting.agenda ? (
@@ -567,10 +600,10 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
             )}
           </div>
 
-          <div className="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between">
+          <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between">
             <div>
-              <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2">
-                <Shield size={14} className="text-indigo-400" />
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2">
+                <Shield size={14} className="text-sky-400" />
                 <span>Patrol Host & Coordination</span>
               </h4>
               <p className="text-xs text-slate-300 leading-relaxed">
@@ -584,7 +617,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('tarbiyah-hub', { subTab: 'chat' })}
-              className="w-full bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white text-xs font-bold py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full bg-slate-800 hover:bg-slate-750 text-sky-300 hover:text-white text-xs font-bold py-2 rounded-xl border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5"
             >
               <MessageSquare size={13} />
               <span>Open Patrol Chat Channel</span>
@@ -595,18 +628,18 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
 
       {/* ── 3. UPCOMING TROOP CALENDAR SESSIONS ── */}
       {upcomingEvents.length > 1 && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-lg space-y-3.5">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-lg space-y-3.5">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
-              <Calendar className="text-indigo-400" size={17} />
-              <h3 className="font-black text-white text-sm sm:text-base">
+              <Calendar className="text-sky-400" size={17} />
+              <h3 className="font-bold text-white text-sm sm:text-base">
                 Upcoming Troop & Patrol Schedule
               </h3>
             </div>
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('events')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer flex items-center gap-1"
+              className="text-xs text-sky-400 hover:text-sky-300 font-bold cursor-pointer flex items-center gap-1"
             >
               <span>Full Calendar</span>
               <ChevronRight size={13} />
@@ -619,7 +652,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
               return (
                 <div
                   key={ev.id}
-                  className="bg-slate-950/70 border border-slate-800 hover:border-indigo-500/40 p-3.5 rounded-2xl flex items-center justify-between gap-3 transition"
+                  className="bg-slate-950 border border-slate-800 hover:border-sky-500/40 p-3.5 rounded-2xl flex items-center justify-between gap-3 transition"
                 >
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -627,17 +660,17 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                         {ev.date}
                       </span>
                       {ev.time && (
-                        <span className="text-[10px] font-bold text-indigo-400 font-mono">
+                        <span className="text-[10px] font-bold text-sky-400 font-mono">
                           {ev.time}
                         </span>
                       )}
                       {evHasMeet && (
-                        <span className="text-[9px] font-bold text-teal-300 bg-teal-500/20 px-1.5 py-0.2 rounded border border-teal-500/30">
+                        <span className="text-[9px] font-bold text-sky-300 bg-sky-500/15 px-1.5 py-0.5 rounded border border-sky-500/30">
                           Google Meet
                         </span>
                       )}
                     </div>
-                    <h4 className="font-extrabold text-xs sm:text-sm text-white truncate">{ev.title}</h4>
+                    <h4 className="font-bold text-xs sm:text-sm text-white truncate">{ev.title}</h4>
                     {ev.location && (
                       <p className="text-[11px] text-slate-400 truncate">{ev.location}</p>
                     )}
@@ -659,18 +692,18 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
 
       {/* ── 4. LEADER MODAL: EDIT PATROL MEETING & GOOGLE MEET LINK ── */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-indigo-500/40 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
                   <Edit3 size={17} />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black text-white">
+                  <h3 className="text-sm sm:text-base font-bold text-white">
                     Update Next Patrol Meeting
                   </h3>
-                  <span className="text-[11px] text-indigo-400 font-semibold">
+                  <span className="text-[11px] text-sky-400 font-semibold">
                     {patrolGroup?.name ? `${patrolGroup.name} Patrol` : 'Patrol'}
                   </span>
                 </div>
@@ -678,20 +711,53 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition"
               >
                 <X size={17} />
               </button>
             </div>
 
             {saveSuccess && (
-              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2">
-                <CheckCircle2 size={16} />
+              <div className="p-3 bg-sky-950/80 border border-sky-500/40 rounded-xl text-sky-200 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-sky-400 shrink-0" />
                 <span>{saveSuccess}</span>
               </div>
             )}
 
             <form onSubmit={handleSaveMeeting} className="space-y-4 text-xs">
+              {/* Quick Predefined Templates */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-300">
+                    Predefined Templates (Auto-fills Title & Details):
+                  </label>
+                  <span className="text-[10px] text-sky-400 font-semibold">Click to select</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {PATROL_MEETING_PRESETS.map((preset) => {
+                    const isSel = meetingTitle === preset.title;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setMeetingTitle(preset.title);
+                          if (preset.duration) setMeetingDuration(preset.duration);
+                          if (preset.agenda) setMeetingAgenda(preset.agenda);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer select-none border ${
+                          isSel
+                            ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Meeting Title */}
               <div>
                 <label className="font-bold text-slate-300 block mb-1">
@@ -703,7 +769,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   value={meetingTitle}
                   onChange={(e) => setMeetingTitle(e.target.value)}
                   placeholder="e.g. Weekly Patrol Halqa & Knot Tying"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                  className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3.5 py-2.5 text-white focus:outline-none text-xs font-semibold"
                 />
               </div>
 
@@ -718,7 +784,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                     required
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                    className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-white focus:outline-none text-xs font-semibold"
                   />
                 </div>
                 <div>
@@ -731,7 +797,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                     value={meetingTime}
                     onChange={(e) => setMeetingTime(e.target.value)}
                     placeholder="e.g. 6:30 PM"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                    className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-white focus:outline-none text-xs font-semibold"
                   />
                 </div>
               </div>
@@ -745,7 +811,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   <select
                     value={meetingDuration}
                     onChange={(e) => setMeetingDuration(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                    className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-white focus:outline-none text-xs font-semibold"
                   >
                     <option value="30 mins">30 mins</option>
                     <option value="45 mins">45 mins</option>
@@ -763,22 +829,22 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                     value={meetingLocation}
                     onChange={(e) => setMeetingLocation(e.target.value)}
                     placeholder="e.g. Google Meet (Virtual)"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-xs font-semibold"
+                    className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-white focus:outline-none text-xs font-semibold"
                   />
                 </div>
               </div>
 
               {/* Google Meet Link Field */}
-              <div className="p-3.5 bg-slate-950 border border-teal-500/40 rounded-2xl space-y-2">
+              <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-teal-300 flex items-center gap-1.5">
-                    <Video size={14} className="text-teal-400" />
+                  <label className="font-bold text-sky-300 flex items-center gap-1.5">
+                    <Video size={14} className="text-sky-400" />
                     <span>Google Meet Link (Virtual Video Call):</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleCreateInstantGoogleMeet}
-                    className="text-[10px] text-teal-300 hover:text-white bg-teal-500/20 hover:bg-teal-500/40 border border-teal-500/40 px-2 py-0.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
+                    className="text-[10px] text-sky-300 hover:text-white bg-sky-500/15 hover:bg-sky-500/30 border border-sky-500/30 px-2 py-0.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer"
                   >
                     <Plus size={10} />
                     <span>Create on Google Meet</span>
@@ -789,7 +855,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   value={meetLink}
                   onChange={(e) => setMeetLink(e.target.value)}
                   placeholder="Paste URL e.g. https://meet.google.com/abc-defg-hij"
-                  className="w-full bg-slate-900 border border-teal-500/40 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-teal-300 font-mono text-xs"
+                  className="w-full bg-slate-900 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-2 text-white focus:outline-none font-mono text-xs"
                 />
                 <p className="text-[10px] text-slate-400">
                   Scouts will see a prominent <strong>"Join Google Meet"</strong> button that opens this room in 1-click.
@@ -806,7 +872,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   value={meetingAgenda}
                   onChange={(e) => setMeetingAgenda(e.target.value)}
                   placeholder="1. Opening Dua & Surah recitation&#10;2. Tenderfoot knots practice&#10;3. Upcoming campout discussion"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 text-xs font-sans leading-relaxed"
+                  className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl p-3 text-white focus:outline-none text-xs font-sans leading-relaxed"
                 />
               </div>
 
@@ -817,7 +883,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   id="postToChatCheck"
                   checked={postToChat}
                   onChange={(e) => setPostToChat(e.target.checked)}
-                  className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="w-4 h-4 rounded bg-slate-950 border-slate-750 text-sky-500 focus:ring-sky-400 cursor-pointer"
                 />
                 <label htmlFor="postToChatCheck" className="text-xs text-slate-300 font-semibold cursor-pointer">
                   📢 Post meeting update & Google Meet link to Patrol Chat channel
@@ -836,7 +902,7 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                 <button
                   type="submit"
                   disabled={savingMeeting}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition cursor-pointer shadow-lg shadow-indigo-950/50 flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-5 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl transition cursor-pointer shadow-lg flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {savingMeeting ? 'Saving...' : 'Save & Publish Meeting'}
                 </button>

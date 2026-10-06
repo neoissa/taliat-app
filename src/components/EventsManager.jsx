@@ -1977,21 +1977,21 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
         {/* Subcategory Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {[
-            { id: 'all', label: 'All Categories' },
-            { id: 'standalone', label: '⚡ Standalone Weekly Meetings' },
-            { id: 'scouting', label: '🏕️ Scouting Activities (Hikes, Fishing, Sports)' },
-            { id: 'volunteering', label: '🤝 Volunteering & Service (Credited Hours)' },
-            { id: 'camp', label: '⛺ Overnight Campouts' },
-            { id: 'faith', label: '🕌 Halqas & Faith' },
-            { id: 'meeting', label: '📋 Troop Meetings' }
+            { id: 'all', label: 'All' },
+            { id: 'meeting', label: 'Troop Meetings' },
+            { id: 'standalone', label: 'Weekly Meetings' },
+            { id: 'scouting', label: 'Scouting' },
+            { id: 'volunteering', label: 'Service' },
+            { id: 'camp', label: 'Campouts' },
+            { id: 'faith', label: 'Halqas' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilterTab(tab.id)}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                 filterTab === tab.id
-                  ? 'bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950 border border-transparent'
+                  ? 'bg-sky-500 text-slate-950 font-black shadow-sm'
+                  : 'bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-850 border border-slate-800'
               }`}
             >
               {tab.label}
@@ -2379,8 +2379,8 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
 
       {/* ── CREATE / EDIT EVENT MODAL ── */}
       {showForm && isLeader && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-slate-100">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-white text-base">
                 {editingId ? 'Edit Event Details' : 'Publish Planned Event'}
@@ -2394,30 +2394,71 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
             </div>
 
             {error && <p className="text-xs text-red-400 bg-red-950/60 p-3 rounded-xl border border-red-600">{error}</p>}
-            {msg && <p className="text-xs text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-600">{msg}</p>}
+            {msg && <p className="text-xs text-sky-400 bg-sky-950/60 p-3 rounded-xl border border-sky-500/40">{msg}</p>}
 
-            <form onSubmit={handleSaveEvent} className="space-y-4">
+            <form onSubmit={handleSaveEvent} className="space-y-4 text-xs">
+              {/* Predefined Quick Meeting & Event Templates (Auto-fills Title) */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                    <span className="text-sky-400">⚡</span>
+                    <span>Predefined Templates (Click to Auto-fill Title & Time):</span>
+                  </label>
+                  <span className="text-[10px] text-sky-400 font-semibold">Auto-populates title</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { label: 'Friday Troop Meeting', icon: '🏕️', title: 'Friday Weekly Troop Meeting', type: 'meeting', cat: 'meeting', start: '18:30', end: '21:30', uniform: 'Complete Class A Field Uniform', gear: 'friday_meeting' },
+                    { label: 'Tuesday Youth Program', icon: '🕌', title: 'Tuesday Youth Program & Halqa', type: 'faith', cat: 'faith', start: '19:15', end: '20:30', uniform: 'Activity Uniform (Class B Shirt)', gear: 'tuesday_halqa' },
+                    { label: 'PLC Leaders Council', icon: '📋', title: 'Patrol Leaders Council (PLC) Meeting', type: 'meeting', cat: 'meeting', start: '18:00', end: '19:00', uniform: 'Complete Class A Field Uniform' },
+                    { label: 'Court of Honor', icon: '🎖️', title: 'Court of Honor & Advancement Ceremony', type: 'ceremony', cat: 'ceremony', start: '17:00', end: '19:30', uniform: 'Complete Class A Field Uniform' },
+                    { label: 'Troop Day Hike', icon: '🥾', title: 'Troop Morning Day Hike', type: 'scouting', cat: 'scouting', start: '08:30', end: '13:00' },
+                    { label: 'Community Service', icon: '🤝', title: 'Community Service Project', type: 'volunteering', cat: 'service', start: '10:00', end: '13:00', serviceHrs: 3, gear: 'service_project' }
+                  ].map(tmpl => (
+                    <button
+                      key={tmpl.label}
+                      type="button"
+                      onClick={() => {
+                        setTitle(tmpl.title); // Auto-fills Title!
+                        setEventType(tmpl.type);
+                        setCategory(tmpl.cat);
+                        setStartTime(tmpl.start);
+                        setEndTime(tmpl.end);
+                        setTime(`${formatTime12h(tmpl.start)} – ${formatTime12h(tmpl.end)}`);
+                        if (tmpl.uniform) setUniformRequired(tmpl.uniform);
+                        if (tmpl.serviceHrs) setServiceHoursCredited(tmpl.serviceHrs);
+                        if (tmpl.gear) handleApplyGearPackage(tmpl.gear);
+                      }}
+                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-750 hover:border-sky-500/50 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <span>{tmpl.icon}</span>
+                      <span>{tmpl.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Event Title *</label>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Event Title *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Fall Camporee & Pioneering Workshop"
+                  placeholder="e.g. Friday Weekly Troop Meeting"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-semibold"
                 />
               </div>
 
               {/* Date & Date Info */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Date *</label>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Date *</label>
                 <input
                   type="date"
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                  className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
                 />
               </div>
 
@@ -2443,6 +2484,15 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                         type="button"
                         onClick={() => {
                           setEventType(t.id);
+                          // Auto-fill title if generic or empty
+                          if (!title.trim() || title.includes('Meeting') || title.includes('Program') || title.includes('Activity') || title.includes('Hike') || title.includes('Campout') || title.includes('Service') || title.includes('Ceremony')) {
+                            if (t.id === 'meeting') setTitle('Troop / Patrol Meeting');
+                            else if (t.id === 'volunteering') setTitle('Community Service & Volunteering');
+                            else if (t.id === 'camp') setTitle('Overnight Troop Campout');
+                            else if (t.id === 'faith') setTitle('Islamic Halqa & Study Circle');
+                            else if (t.id === 'ceremony') setTitle('Court of Honor & Advancement Ceremony');
+                            else setTitle('Scouting Outdoor Activity');
+                          }
                           const subtypes = ACTIVITY_SUBTYPES[t.id] || [];
                           if (subtypes.length > 0) {
                             setActivitySubtype(subtypes[0].id);
@@ -2464,13 +2514,13 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                         }}
                         className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? `${t.badgeClass} ring-1 ring-emerald-500 shadow-md`
+                            ? 'bg-sky-500/15 border-sky-400 text-sky-200 ring-1 ring-sky-500/50 shadow-md'
                             : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-base">{t.icon}</span>
-                          {isSelected && <span className="text-[10px] text-emerald-400 font-black">✓ Active</span>}
+                          {isSelected && <span className="text-[10px] text-sky-400 font-black">✓ Active</span>}
                         </div>
                         <div className="mt-1.5">
                           <strong className="text-xs font-bold text-white block leading-tight">{t.label}</strong>
@@ -2503,13 +2553,17 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                           onClick={() => {
                             setActivitySubtype(st.id);
                             setCustomSubtypeText('');
+                            // Auto-fill title to match selected subtype
+                            if (!title.trim() || title === 'Troop / Patrol Meeting' || title === 'Community Service & Volunteering' || title === 'Scouting Outdoor Activity' || title === 'Overnight Troop Campout' || title === 'Islamic Halqa & Study Circle' || title === 'Court of Honor & Advancement Ceremony') {
+                              setTitle(st.label);
+                            }
                             if (st.id.includes('service') || st.id.includes('cleanup') || st.id.includes('food_drive')) {
                               if (!serviceHoursCredited || serviceHoursCredited === 0) setServiceHoursCredited(3);
                             }
                           }}
                           className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 border ${
                             isSubSelected
-                              ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm font-bold'
+                              ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm font-bold'
                               : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-850'
                           }`}
                         >
