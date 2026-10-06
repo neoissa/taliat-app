@@ -94,6 +94,7 @@ import {
 } from '../utils/calendarGenerator';
 import { cancelMeetingByLeader } from '../services/parentRequestService';
 import { isFridayDate, isFridayProgramEvent, isMandatoryEvent, isAttendanceTracked } from '../utils/attendanceCompliance';
+import { resolveNextScheduledDays, checkAutoLoadedCalendar } from '../utils/calendarDateUtils';
 
 // ── ACTIVITY CLASSIFICATION ENGINE CONSTANTS ──
 export const EVENT_TYPES = [
@@ -622,6 +623,15 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
     });
     return () => unsubRsvp();
   }, [selectedEvent?.id]);
+
+  // Auto-loaded Calendar Checks for Tuesdays, Fridays, and selected dates
+  const nextScheduledDays = useMemo(() => {
+    return resolveNextScheduledDays(events);
+  }, [events]);
+
+  const calendarCheckForSelectedDate = useMemo(() => {
+    return checkAutoLoadedCalendar(date, events);
+  }, [date, events]);
 
   // 6. Subscribe to Confirmed Parent Conferences
   const [confirmedConferences, setConfirmedConferences] = useState([]);
@@ -2397,19 +2407,19 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
             {msg && <p className="text-xs text-sky-400 bg-sky-950/60 p-3 rounded-xl border border-sky-500/40">{msg}</p>}
 
             <form onSubmit={handleSaveEvent} className="space-y-4 text-xs">
-              {/* Predefined Quick Meeting & Event Templates (Auto-fills Title) */}
+              {/* Predefined Quick Meeting & Event Templates (Auto-fills Title, Date & Time) */}
               <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                     <span className="text-sky-400">⚡</span>
-                    <span>Predefined Templates (Click to Auto-fill Title & Time):</span>
+                    <span>Predefined Templates (Auto-fills Title, Date & Calendar Sync):</span>
                   </label>
-                  <span className="text-[10px] text-sky-400 font-semibold">Auto-populates title</span>
+                  <span className="text-[10px] text-sky-400 font-semibold">Auto-populates title & date</span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[
-                    { label: 'Friday Troop Meeting', icon: '🏕️', title: 'Friday Weekly Troop Meeting', type: 'meeting', cat: 'meeting', start: '18:30', end: '21:30', uniform: 'Complete Class A Field Uniform', gear: 'friday_meeting' },
-                    { label: 'Tuesday Youth Program', icon: '🕌', title: 'Tuesday Youth Program & Halqa', type: 'faith', cat: 'faith', start: '19:15', end: '20:30', uniform: 'Activity Uniform (Class B Shirt)', gear: 'tuesday_halqa' },
+                    { label: 'Friday Troop Meeting', icon: '🏕️', title: 'Friday Weekly Troop Meeting', type: 'meeting', cat: 'meeting', start: '18:30', end: '21:30', uniform: 'Complete Class A Field Uniform', gear: 'friday_meeting', dayOfWeek: 'friday' },
+                    { label: 'Tuesday Youth Program', icon: '🕌', title: 'Tuesday Youth Program & Halqa', type: 'faith', cat: 'faith', start: '19:15', end: '20:30', uniform: 'Activity Uniform (Class B Shirt)', gear: 'tuesday_halqa', dayOfWeek: 'tuesday' },
                     { label: 'PLC Leaders Council', icon: '📋', title: 'Patrol Leaders Council (PLC) Meeting', type: 'meeting', cat: 'meeting', start: '18:00', end: '19:00', uniform: 'Complete Class A Field Uniform' },
                     { label: 'Court of Honor', icon: '🎖️', title: 'Court of Honor & Advancement Ceremony', type: 'ceremony', cat: 'ceremony', start: '17:00', end: '19:30', uniform: 'Complete Class A Field Uniform' },
                     { label: 'Troop Day Hike', icon: '🥾', title: 'Troop Morning Day Hike', type: 'scouting', cat: 'scouting', start: '08:30', end: '13:00' },
@@ -2422,9 +2432,35 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                         setTitle(tmpl.title); // Auto-fills Title!
                         setEventType(tmpl.type);
                         setCategory(tmpl.cat);
-                        setStartTime(tmpl.start);
-                        setEndTime(tmpl.end);
-                        setTime(`${formatTime12h(tmpl.start)} – ${formatTime12h(tmpl.end)}`);
+
+                        // Auto-calculate date & check against auto-loaded calendar
+                        let resolvedStart = tmpl.start;
+                        let resolvedEnd = tmpl.end;
+
+                        if (tmpl.dayOfWeek === 'friday') {
+                          const fDate = nextScheduledDays.nextFriday.date;
+                          setDate(fDate);
+                          const session = nextScheduledDays.nextFriday.calendarSession;
+                          if (session) {
+                            if (session.startTime) resolvedStart = session.startTime;
+                            if (session.endTime) resolvedEnd = session.endTime;
+                            if (session.location) setLocation(session.location);
+                          }
+                        } else if (tmpl.dayOfWeek === 'tuesday') {
+                          const tDate = nextScheduledDays.nextTuesday.date;
+                          setDate(tDate);
+                          const session = nextScheduledDays.nextTuesday.calendarSession;
+                          if (session) {
+                            if (session.startTime) resolvedStart = session.startTime;
+                            if (session.endTime) resolvedEnd = session.endTime;
+                            if (session.location) setLocation(session.location);
+                          }
+                        }
+
+                        setStartTime(resolvedStart);
+                        setEndTime(resolvedEnd);
+                        setTime(`${formatTime12h(resolvedStart)} – ${formatTime12h(resolvedEnd)}`);
+
                         if (tmpl.uniform) setUniformRequired(tmpl.uniform);
                         if (tmpl.serviceHrs) setServiceHoursCredited(tmpl.serviceHrs);
                         if (tmpl.gear) handleApplyGearPackage(tmpl.gear);
@@ -2450,9 +2486,54 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                 />
               </div>
 
-              {/* Date & Date Info */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Date *</label>
+              {/* Date & Auto-Loaded Calendar Verification */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase">Event Date *</label>
+                  <span className="text-[10px] text-sky-400 font-semibold">Checks auto-loaded calendar</span>
+                </div>
+
+                {/* Quick Target Day Chips (Next Tuesday, Next Friday) */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {nextScheduledDays.todayTuesday && (
+                    <button
+                      type="button"
+                      onClick={() => setDate(nextScheduledDays.todayTuesday.date)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                        date === nextScheduledDays.todayTuesday.date
+                          ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                          : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-750'
+                      }`}
+                    >
+                      {nextScheduledDays.todayTuesday.friendlyLabel}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setDate(nextScheduledDays.nextTuesday.date)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      date === nextScheduledDays.nextTuesday.date
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-750'
+                    }`}
+                  >
+                    Next Tuesday ({nextScheduledDays.nextTuesday.friendlyLabel})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDate(nextScheduledDays.nextFriday.date)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      date === nextScheduledDays.nextFriday.date
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-900 hover:bg-slate-850 text-slate-300 border-slate-750'
+                    }`}
+                  >
+                    Next Friday ({nextScheduledDays.nextFriday.friendlyLabel})
+                  </button>
+                </div>
+
                 <input
                   type="date"
                   required
@@ -2460,6 +2541,38 @@ export default function EventsManager({ currentUser, onNavigate, linkedScouts: p
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
                 />
+
+                {/* Auto-Loaded Calendar Verification Banner */}
+                {calendarCheckForSelectedDate ? (
+                  <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 transition ${
+                    calendarCheckForSelectedDate.isBlackout
+                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                      : 'bg-slate-950 border-sky-500/40 text-sky-200 shadow-sm'
+                  }`}>
+                    <Calendar size={16} className="text-sky-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-bold text-white text-xs truncate">
+                          📅 Calendar Match: {calendarCheckForSelectedDate.title}
+                        </span>
+                        <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold shrink-0">
+                          Found in Auto-Loaded Calendar
+                        </span>
+                      </div>
+                      {calendarCheckForSelectedDate.time && (
+                        <div className="text-[11px] text-slate-300">
+                          Time: <strong className="text-white">{calendarCheckForSelectedDate.time}</strong>
+                          {calendarCheckForSelectedDate.location && ` &bull; ${calendarCheckForSelectedDate.location}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pl-1">
+                    <CheckCircle2 size={13} className="text-sky-400 shrink-0" />
+                    <span>Open date &bull; No conflicting sessions on auto-loaded calendar.</span>
+                  </div>
+                )}
               </div>
 
               {/* ── ACTIVITY CLASSIFICATION ENGINE: EVENT TYPE ── */}

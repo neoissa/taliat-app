@@ -24,6 +24,7 @@ import {
   isScoutInPatrol, 
   filterScoutsForUser 
 } from '../utils/patrolScoping';
+import { resolveNextScheduledDays, checkAutoLoadedCalendar } from '../utils/calendarDateUtils';
 
 const TOPIC_PRESETS = [
   { id: 'scoutmaster_conf', label: 'Scoutmaster Conference', defaultDuration: '30 mins', desc: 'Advancement review and character check-in' },
@@ -97,6 +98,15 @@ export default function ScheduleParentMeetingModal({
   const [meetingAgenda, setMeetingAgenda] = useState('');
   const [leaderNotes, setLeaderNotes] = useState('');
   const [rsvpRequired, setRsvpRequired] = useState(true);
+
+  // Auto-loaded calendar checks for conferences
+  const nextScheduledDays = useMemo(() => {
+    return resolveNextScheduledDays();
+  }, []);
+
+  const calendarCheckForParentMeeting = useMemo(() => {
+    return checkAutoLoadedCalendar(meetingDate);
+  }, [meetingDate]);
 
   // Predefined selector that automatically populates the title
   const handleSelectPreset = (preset) => {
@@ -523,49 +533,123 @@ export default function ScheduleParentMeetingModal({
           </div>
 
           {/* ── DATE, TIME & DURATION ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                Date *
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-300">
+                Conference Date & Time:
               </label>
-              <input
-                type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none font-mono"
-                required
-              />
+              <span className="text-[10px] text-sky-400 font-semibold">Checks auto-loaded calendar</span>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                Time
-              </label>
-              <select
-                value={meetingTime}
-                onChange={(e) => setMeetingTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
+            {/* Quick Target Day Chips (Next Tuesday, Next Friday) */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {nextScheduledDays.todayTuesday && (
+                <button
+                  type="button"
+                  onClick={() => setMeetingDate(nextScheduledDays.todayTuesday.date)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                    meetingDate === nextScheduledDays.todayTuesday.date
+                      ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                      : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                  }`}
+                >
+                  {nextScheduledDays.todayTuesday.friendlyLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setMeetingDate(nextScheduledDays.nextTuesday.date)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                  meetingDate === nextScheduledDays.nextTuesday.date
+                    ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                    : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                }`}
               >
-                {TIME_PRESETS.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+                Next Tuesday ({nextScheduledDays.nextTuesday.friendlyLabel})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMeetingDate(nextScheduledDays.nextFriday.date)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                  meetingDate === nextScheduledDays.nextFriday.date
+                    ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                    : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                }`}
+              >
+                Next Friday ({nextScheduledDays.nextFriday.friendlyLabel})
+              </button>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                Duration
-              </label>
-              <select
-                value={meetingDuration}
-                onChange={(e) => setMeetingDuration(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
-              >
-                {DURATION_PRESETS.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Time
+                </label>
+                <select
+                  value={meetingTime}
+                  onChange={(e) => setMeetingTime(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  {TIME_PRESETS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Duration
+                </label>
+                <select
+                  value={meetingDuration}
+                  onChange={(e) => setMeetingDuration(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer"
+                >
+                  {DURATION_PRESETS.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            {/* Auto-Loaded Calendar Verification Card */}
+            {calendarCheckForParentMeeting && (
+              <div className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 ${
+                calendarCheckForParentMeeting.isBlackout
+                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                  : 'bg-slate-950 border-sky-500/40 text-sky-200'
+              }`}>
+                <Calendar size={15} className="text-sky-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <span className="font-bold text-white text-[11px] truncate">
+                      📅 Auto-Loaded Calendar: {calendarCheckForParentMeeting.title}
+                    </span>
+                    <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.2 rounded font-bold">
+                      Troop Session on Calendar
+                    </span>
+                  </div>
+                  {calendarCheckForParentMeeting.time && (
+                    <div className="text-[10px] text-slate-300">
+                      Scheduled: {calendarCheckForParentMeeting.time}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── VENUE / FORMAT ── */}

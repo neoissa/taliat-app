@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { isSuperUser, getAccessiblePatrols } from '../utils/patrolScoping';
 import StatusBadge from './StatusBadge';
+import { resolveNextScheduledDays, checkAutoLoadedCalendar } from '../utils/calendarDateUtils';
 
 const PATROL_MEETING_PRESETS = [
   { 
@@ -253,6 +254,15 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
     normalizedMeetLink && 
     (normalizedMeetLink.includes('meet.google.com') || normalizedMeetLink.includes('http'))
   );
+
+  // Auto-loaded calendar checks for next patrol meeting date
+  const nextScheduledDays = useMemo(() => {
+    return resolveNextScheduledDays(upcomingEvents);
+  }, [upcomingEvents]);
+
+  const calendarCheckForPatrolDate = useMemo(() => {
+    return checkAutoLoadedCalendar(meetingDate, upcomingEvents);
+  }, [meetingDate, upcomingEvents]);
 
   // Compute live meeting status (e.g. "Live Now", "Today", "In X days")
   const meetingStatus = useMemo(() => {
@@ -744,6 +754,10 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                           setMeetingTitle(preset.title);
                           if (preset.duration) setMeetingDuration(preset.duration);
                           if (preset.agenda) setMeetingAgenda(preset.agenda);
+                          // Auto-fill date if Weekly Halqa
+                          if (preset.id === 'weekly_halqa' && !meetingDate) {
+                            setMeetingDate(nextScheduledDays.nextFriday.date);
+                          }
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer select-none border ${
                           isSel
@@ -771,6 +785,53 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   placeholder="e.g. Weekly Patrol Halqa & Knot Tying"
                   className="w-full bg-slate-950 border border-slate-750 focus:border-sky-400 rounded-xl px-3.5 py-2.5 text-white focus:outline-none text-xs font-semibold"
                 />
+              </div>
+
+              {/* Quick Target Day Selector */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-300">
+                    Quick Select Date:
+                  </label>
+                  <span className="text-[10px] text-sky-400 font-semibold">Checks auto-loaded calendar</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {nextScheduledDays.todayTuesday && (
+                    <button
+                      type="button"
+                      onClick={() => setMeetingDate(nextScheduledDays.todayTuesday.date)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                        meetingDate === nextScheduledDays.todayTuesday.date
+                          ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`}
+                    >
+                      {nextScheduledDays.todayTuesday.friendlyLabel}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setMeetingDate(nextScheduledDays.nextTuesday.date)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      meetingDate === nextScheduledDays.nextTuesday.date
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                    }`}
+                  >
+                    Next Tuesday ({nextScheduledDays.nextTuesday.friendlyLabel})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMeetingDate(nextScheduledDays.nextFriday.date)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      meetingDate === nextScheduledDays.nextFriday.date
+                        ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                        : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                    }`}
+                  >
+                    Next Friday ({nextScheduledDays.nextFriday.friendlyLabel})
+                  </button>
+                </div>
               </div>
 
               {/* Date & Time Row */}
@@ -801,6 +862,32 @@ export default function PatrolMeetingView({ currentUser, onNavigate }) {
                   />
                 </div>
               </div>
+
+              {/* Auto-Loaded Calendar Verification Card */}
+              {calendarCheckForPatrolDate && (
+                <div className={`p-2.5 rounded-xl border text-xs flex items-start gap-2 ${
+                  calendarCheckForPatrolDate.isBlackout
+                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                    : 'bg-slate-950 border-sky-500/40 text-sky-200'
+                }`}>
+                  <Calendar size={15} className="text-sky-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <span className="font-bold text-white text-[11px] truncate">
+                        📅 Auto-Loaded Calendar: {calendarCheckForPatrolDate.title}
+                      </span>
+                      <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.2 rounded font-bold">
+                        Verified
+                      </span>
+                    </div>
+                    {calendarCheckForPatrolDate.time && (
+                      <div className="text-[10px] text-slate-300">
+                        Troop Session: {calendarCheckForPatrolDate.time}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Duration & Location */}
               <div className="grid grid-cols-2 gap-3">
